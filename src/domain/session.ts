@@ -70,12 +70,20 @@ function withNoWarnings<T extends Session>(session: T): T {
   return { ...session, warnings: [] };
 }
 
+/**
+ * castParticipant가 내부에서 Date.now()로 채우는 confirmedAt을 reducer의 `now` 인자로
+ * 덮어써 순수성을 보장한다(동일 입력에 대해 항상 동일한 출력을 내도록 함).
+ */
+function withConfirmedAtNow(ballots: Ballot[], now: number): Ballot[] {
+  return ballots.map((b) => (b.memberId === 'PARTICIPANT' ? { ...b, confirmedAt: now } : b));
+}
+
 /** 참가자 표가 아직 없으면 UNCAST로 채워 5석을 완성한다. */
-function ensureParticipantUncast(ballots: Ballot[], motionId: string): Ballot[] {
+function ensureParticipantUncast(ballots: Ballot[], motionId: string, now: number): Ballot[] {
   if (ballots.some((b) => b.memberId === 'PARTICIPANT')) {
     return ballots;
   }
-  return castParticipant(ballots, motionId, 'UNCAST');
+  return withConfirmedAtNow(castParticipant(ballots, motionId, 'UNCAST'), now);
 }
 
 /**
@@ -203,7 +211,10 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.pendingVote === null) {
         return ignore(session, '선택한 표가 없어 확정할 수 없습니다.');
       }
-      const ballots = castParticipant(session.ballots, session.finalMotion.id, session.pendingVote);
+      const ballots = withConfirmedAtNow(
+        castParticipant(session.ballots, session.finalMotion.id, session.pendingVote),
+        now,
+      );
       return withNoWarnings({
         ...session,
         stage: 'RESULT',
@@ -219,7 +230,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         return ignore(session, '만료는 진행 중인 세션에만 적용됩니다.');
       }
       if (session.finalMotion) {
-        const ballots = ensureParticipantUncast(session.ballots, session.finalMotion.id);
+        const ballots = ensureParticipantUncast(session.ballots, session.finalMotion.id, now);
         return withNoWarnings({
           ...session,
           stage: 'RESULT',
@@ -231,7 +242,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       }
       const finalMotion = freezeOriginal(action.scenario, now);
       const boardBallots = decideBoard(action.scenario, finalMotion);
-      const ballots = ensureParticipantUncast(boardBallots, finalMotion.id);
+      const ballots = ensureParticipantUncast(boardBallots, finalMotion.id, now);
       return withNoWarnings({
         ...session,
         stage: 'RESULT',
