@@ -15,6 +15,7 @@ import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
 import { OpinionsScreen } from '../components/screens/OpinionsScreen';
+import { DiscussScreen } from '../components/screens/DiscussScreen';
 import '../styles/screens/shell.css';
 
 interface SessionContextValue {
@@ -100,6 +101,17 @@ function StageRouter() {
         return null;
       }
       return <OpinionsScreen scenario={scenario} onNext={() => dispatch({ type: 'NEXT_STAGE' })} />;
+
+    case 'DISCUSS':
+      if (!scenario) {
+        return null;
+      }
+      return (
+        <DiscussScreen
+          scenario={scenario}
+          onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
+        />
+      );
 
     default:
       return (

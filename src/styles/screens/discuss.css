@@ -1,0 +1,191 @@
+.discuss-screen__title {
+  margin: 0;
+}
+
+.discuss-screen__section-label {
+  margin: 0 0 var(--space-1);
+  font-size: 20px;
+  color: var(--text-muted);
+}
+
+.discuss-screen__body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.discuss-screen__phrase-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.discuss-screen__editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.phrase-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-height: var(--touch-min);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  cursor: pointer;
+}
+
+.phrase-card:hover {
+  background-color: var(--panel-active);
+}
+
+.phrase-card--selected {
+  border-color: var(--accent);
+}
+
+.phrase-card__checkbox {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.phrase-card__text {
+  color: var(--text);
+}
+
+.draft-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.draft-editor__textarea {
+  width: 100%;
+  min-height: 200px;
+  resize: vertical;
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.draft-editor__textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.draft-editor__meta {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.draft-editor__count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-editor__count--over {
+  color: var(--vote-no);
+}
+
+.draft-editor__error {
+  margin: 0;
+  color: var(--vote-no);
+}
+
+.rebuild-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--panel-active);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+}
+
+.rebuild-confirm__message {
+  margin: 0;
+  color: var(--text);
+}
+
+.rebuild-confirm__actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.rebuild-confirm__rebuild {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.condition-chips__label {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+}
+
+.condition-chips__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.condition-chip {
+  min-height: 40px;
+  padding: 4px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.condition-chip--accepted {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.condition-chips__conflicts {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-2);
+  color: var(--vote-no);
+}
+
+.condition-chips__hint {
+  color: var(--text-muted);
+}
+
+.discuss-screen__submit-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.discuss-screen__submit-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__body {
+    grid-template-columns: 1fr;
+  }
+}
