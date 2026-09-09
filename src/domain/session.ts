@@ -261,13 +261,17 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     }
 
     case 'MARK_SUMMARY_SHOWN': {
-      if (session.stage !== 'RESULT') {
-        return ignore(session, '자료 정리 표시는 RESULT 단계에서만 가능합니다.');
+      // 지시서 5장: BRIEFING에서 자동 정리 카드가 실제 렌더되면 세션당 한 번 기록한다.
+      // 자동 표시는 참가자 활동이 아니므로 lastActivityAt을 갱신하지 않는다.
+      if (session.stage !== 'BRIEFING') {
+        return ignore(session, '자료 정리 표시 기록은 BRIEFING 단계에서만 가능합니다.');
+      }
+      if (session.assistantActions.includes('SUMMARY_SHOWN')) {
+        return ignore(session, '자료 정리 표시는 세션당 한 번만 기록합니다.');
       }
       return withNoWarnings({
         ...session,
         assistantActions: [...session.assistantActions, 'SUMMARY_SHOWN'],
-        lastActivityAt: now,
       });
     }
 

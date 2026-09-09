@@ -11,6 +11,9 @@ function sessionAtReactions(now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
+  // BRIEFING: 자동 정리 카드가 렌더되면 세션당 한 번만 기록한다(지시서 5장). 중복은 무시.
+  session = reduce(session, { type: 'MARK_SUMMARY_SHOWN' }, now);
+  session = reduce(session, { type: 'MARK_SUMMARY_SHOWN' }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(
@@ -56,8 +59,7 @@ describe('정상 완주', () => {
     expect(session.outcome).toBe('HOLD');
     expect(session.warnings).toEqual([]);
 
-    session = reduce(session, { type: 'MARK_SUMMARY_SHOWN' }, T0);
-    expect(session.assistantActions).toContain('SUMMARY_SHOWN');
+    expect(session.assistantActions).toEqual(['SUMMARY_SHOWN']);
   });
 
   it('deadline은 SELECT_SCENARIO 시점부터 240초로 계산한다', () => {
