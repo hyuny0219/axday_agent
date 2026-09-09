@@ -54,7 +54,7 @@
 - 만들 것: `src/domain/voting.ts` — `evalPredicate(p, ctx:{conditionIds:string[], executionMode:string})`, `decideMember(rules, ctx)`(첫 일치 행, 없으면 throw), `decideBoard(scenario, motion)`(임원 4명 Ballot), `tally(ballots)`(YES≥3 PASS, NO≥3 REJECT, 그 외 HOLD; counts에 UNCAST 별도; 의석 5 아니면 throw), `castParticipant(ballots, motionId, vote)`(motionId 불일치·중복 의석·확정 후 재투표 거부). `tests/domain/voting.test.ts` — (1) ② 허용 조합 24개 × 참가자 4표 전수: 규칙 총괄성, 5석, 세 결론 도달, OPEN_ALL이면 항상 REJECT, 네 임원 각각 YES 행 존재; (2) 문서 대표 경로표를 표 데이터로 옮겨 행마다 임원 표와 결론이 일치; (3) 차단 규칙.
 - 허용 경로: `src/domain/voting.ts`, `tests/domain/`.
 - 하지 말 것: 세션·UI. Motion 타입은 지시서 6장 인터페이스를 `src/domain/types.ts`에 그대로 두되 이 카드에서는 타입만 추가.
-- 완료 확인: `npm run check` 성공. 대표 경로 테스트 케이스 수가 문서 행 수(13)와 같음.
+- 완료 확인: `npm run check` 성공. 대표 경로 테스트 케이스 수가 문서 행 수(12)와 같음.
 - 크기: M.
 
 ## T05 초안과 조건 제안
