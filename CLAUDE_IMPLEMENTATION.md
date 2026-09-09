@@ -7,7 +7,7 @@
 1. 본 문서: 최신 기능 요구사항과 완료 기준
 2. [상세 시나리오](docs/SCENARIO_AI_ASSISTANT.md): 첫 안건의 대사·조건·결과 규칙
 3. [디자인 명세](docs/design/DESIGN_SPEC.md): 화면별 레이아웃·디자인 토큰·인터랙션
-4. [개정 PPT](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx): 16장, 특히 8P 의견 입력 / 11P 최종 투표 / 12P 결과
+4. [개정 PPT](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx): v0.7 · 18장, 8P AI 브리핑 / 9P 의견 입력 / 12P 최종 투표 / 13P 결과 / 15P 안건③ 최종안
 5. 기존 `AX_Day_2026_Boardroom_Plan.md`: 세 안건의 전체 기획 배경
 
 기존 기획서와 충돌하면 이 구현 지시서의 최신 UX를 따른다. 이미지 속 장식 문구보다 본 문서의 동작·접근성 규칙을 우선한다. 저장소에 별도 작업 지침이 있으면 먼저 읽고, 기존 앱·패키지·사용자 변경을 보존한다.

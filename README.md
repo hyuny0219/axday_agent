@@ -14,7 +14,7 @@
 - [안건 ② 상세 시나리오·표결 분기](docs/SCENARIO_AI_ASSISTANT.md)
 - [디자인 명세·화면 이미지](docs/design/DESIGN_SPEC.md)
 - [CSS 디자인 토큰](docs/design/tokens.css)
-- [개정 PPT · 16장](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx)
+- [개정 PPT v0.7 · 18장](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx)
 
 ## 반드시 유지할 체험
 
@@ -26,6 +26,8 @@
 
 현장 입력 확정(2026-09-09): 기본 조작은 PC 마우스 한 번 클릭입니다. 직접 입력은 물리 키보드를 사용하며 추천 문구만으로도 완주합니다. 이전 터치 키보드·롱프레스 필수 요건은 대체되었고 운영 메뉴는 화면의 ‘운영’ 버튼 클릭으로 엽니다.
 
-v0.6 반영 이력: [검토 반영표](docs/REVISION_DECISIONS_v0.6.md) · [진행 요원 가이드](docs/FACILITATOR_GUIDE.md) · [규칙 검증](docs/VALIDATION_v0.6.md). 안건③은 원안 기본절차를 유지한 확대/선검증 판단으로 개정했습니다. 기존 PPT·result.png는 v0.5 시각 참고로만 보존하며 표결 숫자를 최신 예시로 사용하지 않습니다.
+v0.6 반영 이력: [검토 반영표](docs/REVISION_DECISIONS_v0.6.md) · [진행 요원 가이드](docs/FACILITATOR_GUIDE.md) · [규칙 검증](docs/VALIDATION_v0.6.md). 안건③은 원안 기본절차를 유지한 확대/선검증 판단으로 개정했습니다. PPT와 이미지 7종은 v0.7로 교체했습니다. 안건② 네 조건+참가자 찬성 결과는 찬성5·보류0·반대0입니다.
 
 최신 v0.7: [검토 반영표](docs/REVISION_DECISIONS_v0.7.md) · [변경 확인](docs/VALIDATION_v0.7.md). 관람 창 실행·③ 표결 영향 설명·제안 꼬리표·선택 문구·P0 범위를 명확히 했으며 표결 규칙은 v0.6과 같습니다.
+
+2026-09-09 시각 자료 동기화: AI 자동 정리 브리핑과 안건③ 검증안(확대 재심의) 화면을 추가했습니다. [자산 버전표](docs/design/assets/README.md)에서 PPT 페이지·파일·검증 내역을 확인할 수 있습니다.
