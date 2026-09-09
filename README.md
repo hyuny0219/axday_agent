@@ -6,6 +6,15 @@
 
 참가자는 특별 이사로 가상 임원 4명과 토론하고 마지막에 한 표를 행사합니다. 현재 저장소는 기획·디자인·개발 인계 자료이며 앱 구현 전입니다.
 
+## 실행 명령
+
+```
+npm install
+npm run dev      # 로컬 개발 서버
+npm run check    # lint + typecheck + unit test
+npm run build && npx playwright test   # 오프라인 빌드 확인 + e2e(1920×1080, 1280×720)
+```
+
 ## Claude Code 시작점
 
 [CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 안건 ② 프로토타입부터 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
