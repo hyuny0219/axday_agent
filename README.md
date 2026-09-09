@@ -8,7 +8,9 @@
 
 [CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 안건 ② 프로토타입부터 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
 
-- [기획서 v0.3](AX_Day_2026_Boardroom_Plan.md)
+- [기획서 v0.4](AX_Day_2026_Boardroom_Plan.md)
+- [안건 ① 상세 시나리오·표결 분기](docs/SCENARIO_CUSTOMER_SUPPORT.md)
+- [안건 ③ 상세 시나리오·표결 분기](docs/SCENARIO_PREVENTION.md)
 - [안건 ② 상세 시나리오·표결 분기](docs/SCENARIO_AI_ASSISTANT.md)
 - [디자인 명세·화면 이미지](docs/design/DESIGN_SPEC.md)
 - [CSS 디자인 토큰](docs/design/tokens.css)
@@ -19,3 +21,5 @@
 토론은 추천 문구 복수 선택 또는 직접 입력·수정 → 의견 전달 → 임원 반응입니다. 투표는 최종 안건 확인 이후 마지막에만 합니다. CFO·CAIO는 한 사람이며 참가자를 포함해 총 5석입니다.
 
 모든 안건·인물·자료·의결 규칙은 체험용 가상 설정입니다. 이미지들은 AI로 생성된 콘셉트 목업이며 실제 서비스 캡처나 실제 임원 사진이 아닙니다.
+
+2026-09-09 검토 반영: AI 자동 정리 상시 표시, 찬성·반대 양방향 결정 경로, 세 안건 구조화, 무입력90초 복귀와 현장 검수 기준. 최신 구현 지시서는 v1.1입니다. PPT·이미지는 시각 레퍼런스이며 최신 문서의 동작·수량·비실사 아바타 기준을 우선합니다.
