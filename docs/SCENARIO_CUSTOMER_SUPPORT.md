@@ -1,6 +1,6 @@
 # 안건 ① — 고객의 기다림을 줄여라
 
-버전 1.0 · 2026-09-09 · P1 구현 기준. 모든 자료·대사·규칙은 체험용 가상 설정이며 실제 삼성화재 자료나 의결 규정이 아니다. 현장 리허설 후 조정할 수 있다.
+버전 1.1 · 2026-09-09 · P1 구현 기준. 모든 자료·대사·규칙은 체험용 가상 설정이며 실제 삼성화재 자료나 의결 규정이 아니다. 현장 리허설 후 조정할 수 있다.
 
 ## 브리핑
 
@@ -79,26 +79,33 @@ ID는 scenarioId로 구분한다. P6의 검증 요청을 최종 HOLD 표로 추�
 | CIO | AUTO_ALL 있음 | NO |
 | CIO | ESCALATE_REVIEW 있음 | YES |
 | CIO | ESCALATE_REVIEW 없음 | NO |
-| CISO | DATA_ACCESS 없음 | NO |
+| CISO | AUTO_ALL 있음 | NO |
+| CISO | DATA_ACCESS 및 ESCALATE_REVIEW 있음 | YES |
 | CISO | DATA_ACCESS 있음 | HOLD |
+| CISO | 나머지 | NO |
 
-CISO의 HOLD는 데이터 조건 제안 후에도 실제 검증이 남는다는 뜻이다. YES≥3 가결, NO≥3 부결, 나머지 보류. UNCAST는 별도 집계한다. 전체 의석은 5석이다.
+CISO는 정보 사용 조건과 검토 절차가 함께 포함되면 착수 전 실제 권한 검증을 전제로 찬성한다. 파일럿·측정 문구의 개수를 찬성 기준으로 삼지 않는다. 반응: “정보 사용 조건과 검토 절차를 갖춘 안건에 찬성합니다. 실행 전 권한 검증은 필요합니다.” 다른 임원도 운영·투자 우려를 유지할 수 있다.
 
-## 대표 경로
+## 대표 경로 — v0.6
 
-임원 표 순서: CEO / CFO·CAIO / CIO / CISO. 각 행은 독립적인 체험이다.
+임원 순서: CEO / CFO·CAIO / CIO / CISO. 마지막 원안·UNCAST 행은 고정 안건 없이 240초 만료된 경우에도 적용한다. 무입력90초 복귀는 집계 없이 종료한다.
 
-| 확인 조건 | 임원 표 | 참가자 표 | 집계·결론 |
+| 조건 | 임원 표 | 참가자 표 | 집계·결론 |
 | --- | --- | --- | --- |
-| LIMITED_PILOT, ESCALATE_REVIEW, DATA_ACCESS, QUALITY_GATE | YES / YES / YES / HOLD | YES | 찬성4·보류1, 수정안 가결 |
-| LIMITED_PILOT, ESCALATE_REVIEW, DATA_ACCESS, QUALITY_GATE | YES / YES / YES / HOLD | NO | 찬성3·보류1·반대1, 가결; 소수 반대 기록 |
-| ESCALATE_REVIEW, DATA_ACCESS | YES / HOLD / YES / HOLD | YES | 찬성3·보류2, 가결 |
-| ESCALATE_REVIEW, DATA_ACCESS | YES / HOLD / YES / HOLD | HOLD | 찬성2·보류3, 보류; 위 행과 내 표만 다름 |
-| 없음 | YES / HOLD / NO / NO | NO | 찬성1·보류1·반대3, 부결 |
-| 없음 | YES / HOLD / NO / NO | YES | 찬성2·보류1·반대2, 보류; 위 행과 내 표만 다름 |
-| AUTO_ALL | HOLD / NO / NO / NO | YES | 찬성1·보류1·반대3, 부결; 내 표가 결론을 바꾸지 않음 |
-| ESCALATE_REVIEW, DATA_ACCESS | YES / HOLD / YES / HOLD | UNCAST | 찬성2·보류2·미표결1, 보류 |
-| 시간 만료, 고정 안건 없음 → 원안 | YES / HOLD / NO / NO | UNCAST | 찬성1·보류1·반대2·미표결1, 보류 |
+| LIMITED_PILOT, ESCALATE_REVIEW, DATA_ACCESS, QUALITY_GATE | YES / YES / YES / YES | YES | 찬성5, 가결 |
+| LIMITED_PILOT, ESCALATE_REVIEW, DATA_ACCESS, QUALITY_GATE | YES / YES / YES / YES | NO | 찬성4·반대1, 가결 |
+| ESCALATE_REVIEW, DATA_ACCESS | YES / HOLD / YES / YES | YES | 찬성4·보류1, 가결 |
+| ESCALATE_REVIEW, DATA_ACCESS | YES / HOLD / YES / YES | HOLD | 찬성3·보류2, 가결 |
+| 없음 (원안) | YES / HOLD / NO / NO | NO | 찬성1·보류1·반대3, 부결 |
+| 없음 (원안) | YES / HOLD / NO / NO | YES | 찬성2·보류1·반대2, 보류 |
+| AUTO_ALL | HOLD / NO / NO / NO | YES | 찬성1·보류1·반대3, 부결 |
+| LIMITED_PILOT, QUALITY_GATE | YES / YES / NO / NO | YES | 찬성3·반대2, 가결 |
+| LIMITED_PILOT, QUALITY_GATE | YES / YES / NO / NO | NO | 찬성2·반대3, 부결 |
+| LIMITED_PILOT, QUALITY_GATE | YES / YES / NO / NO | HOLD | 찬성2·보류1·반대2, 보류 |
+| LIMITED_PILOT, QUALITY_GATE | YES / YES / NO / NO | UNCAST | 찬성2·반대2·미표결1, 보류 |
+| 없음 (원안) | YES / HOLD / NO / NO | UNCAST | 찬성1·보류1·반대2·미표결1, 보류 |
+
+LIMITED_PILOT+QUALITY_GATE만 있으면 임원은 YES/YES/NO/NO다. 참가자 YES/NO/HOLD에 따라 가결/부결/보류가 갈린다. 네 조건 모두에서는 참가자 표가 달라도 가결이며 소수 의견을 그대로 기록한다.
 
 ## 결과 기록과 검증
 
@@ -109,3 +116,5 @@ CISO의 HOLD는 데이터 조건 제안 후에도 실제 검증이 남는다는 
 - 추가 AI 도움은 E1~E4를 근거로 의견 공통점, 원안/확인 조건 차이, 내 발언 정리만 제공한다. 사실·효과·표를 생성하지 않는다.
 - 입력300자·편집 보존·충돌 확인·시간240초·무입력90초·세션 초기화·늦은 응답은 [구현 지시서](../CLAUDE_IMPLEMENTATION.md)를 따른다. 무입력 복귀는 결과 집계 없이 세션을 폐기한다.
 - 대표 경로뿐 아니라 허용 조건 조합×참가자 YES/HOLD/NO/UNCAST를 검사한다. 각 임원 규칙의 총괄성, 5표 유지, 찬성·반대 양쪽 결정 경로, 결론 불변 경로를 검증한다.
+
+버전 1.1 · 최종 수정 2026-09-09: CISO의 역할 관련 찬성 경로 및 결정 표 경로 추가. 기존 PPT/result.png의 찬성4·보류1은 v0.5 예시이며 이 버전의 동일 조건 결과는 찬성5다. 최신 표결 기준은 본 문서이며 시각 자료는 docs/design/DESIGN_SPEC.md의 이력 표시 기준을 따른다.

@@ -79,26 +79,33 @@ P5는 검토상 충돌을 드러내는 가상 대안이다. ACCESS와 OPEN_ALL�
 | CIO | OPEN_ALL 있음 | NO |
 | CIO | REVIEW 있음 | YES |
 | CIO | REVIEW 없음 | NO |
-| CISO | OPEN_ALL 있음 또는 ACCESS 없음 | NO |
+| CISO | OPEN_ALL 있음 | NO |
+| CISO | ACCESS 및 REVIEW 있음 | YES |
 | CISO | ACCESS 있음 | HOLD |
+| CISO | 나머지 | NO |
 
-CISO는 ACCESS가 있어도 실제 권한 검증 전이므로 HOLD를 유지한다. 따라서 모든 임원이 쉽게 찬성으로 바뀌는 게임이 아니다. 이 초기 규칙에서 원안 승인은 도달하지 않으며, 임의로 원안 승인 경로를 강제하지 않는다. 집계 엔진 자체는 어떤 안건에도 적용할 수 있게 만든다.
+CISO는 정보 사용 조건과 검토 절차가 함께 포함되면 착수 전 실제 권한 검증을 전제로 찬성한다. 파일럿·측정 문구의 개수를 찬성 기준으로 삼지 않는다. 반응: “정보 사용 조건과 검토 절차를 갖춘 안건에 찬성합니다. 실행 전 권한 검증은 필요합니다.” 다른 임원도 운영·투자 우려를 유지할 수 있다.
 
-## 검증 가능한 대표 경로
+## 대표 경로 — v0.6
 
-임원 표 순서: CEO / CFO·CAIO / CIO / CISO. 모든 경로에서 참가자는 마지막에 자유롭게 표를 선택한다.
+임원 순서: CEO / CFO·CAIO / CIO / CISO. 마지막 원안·UNCAST 행은 고정 안건 없이 240초 만료된 경우에도 적용한다. 무입력90초 복귀는 집계 없이 종료한다.
 
-| 확인 조건 | 임원 표 | 참가자 최종 표 | 집계·결론 |
+| 조건 | 임원 표 | 참가자 표 | 집계·결론 |
 | --- | --- | --- | --- |
-| PILOT, REVIEW, ACCESS, MEASURE | YES / YES / YES / HOLD | YES | 찬성4·보류1, 수정안 가결 — PPT 예시 |
-| 동일 조건 | YES / YES / YES / HOLD | NO | 찬성3·보류1·반대1, 가결; 내 반대 기록 |
-| REVIEW, ACCESS | YES / HOLD / YES / HOLD | YES | 찬성3·보류2, 가결 |
-| REVIEW, ACCESS | YES / HOLD / YES / HOLD | HOLD | 찬성2·보류3, 보류 — 참가자의 한 표가 결론에 영향 |
-| 없음 | YES / HOLD / NO / NO | NO | 찬성1·보류1·반대3, 부결 — 참가자 반대가 결론에 영향 |
-| 없음 | YES / HOLD / NO / NO | YES | 찬성2·보류1·반대2, 보류 — 위 행과 참가자 표만 다름 |
+| PILOT, REVIEW, ACCESS, MEASURE | YES / YES / YES / YES | YES | 찬성5, 가결 |
+| PILOT, REVIEW, ACCESS, MEASURE | YES / YES / YES / YES | NO | 찬성4·반대1, 가결 |
+| REVIEW, ACCESS | YES / HOLD / YES / YES | YES | 찬성4·보류1, 가결 |
+| REVIEW, ACCESS | YES / HOLD / YES / YES | HOLD | 찬성3·보류2, 가결 |
+| 없음 (원안) | YES / HOLD / NO / NO | NO | 찬성1·보류1·반대3, 부결 |
+| 없음 (원안) | YES / HOLD / NO / NO | YES | 찬성2·보류1·반대2, 보류 |
 | OPEN_ALL | HOLD / NO / NO / NO | YES | 찬성1·보류1·반대3, 부결 |
-| REVIEW, ACCESS; 투표 미확정 | YES / HOLD / YES / HOLD | UNCAST | 찬성2·보류2·미표결1, 보류 |
-| 토론 중 시간 만료, motion 없음 | 원안 기준 YES / HOLD / NO / NO | UNCAST | 찬성1·보류1·반대2·미표결1, 보류; 미확정 조건 제외 |
+| PILOT, MEASURE | YES / YES / NO / NO | YES | 찬성3·반대2, 가결 |
+| PILOT, MEASURE | YES / YES / NO / NO | NO | 찬성2·반대3, 부결 |
+| PILOT, MEASURE | YES / YES / NO / NO | HOLD | 찬성2·보류1·반대2, 보류 |
+| PILOT, MEASURE | YES / YES / NO / NO | UNCAST | 찬성2·반대2·미표결1, 보류 |
+| 없음 (원안) | YES / HOLD / NO / NO | UNCAST | 찬성1·보류1·반대2·미표결1, 보류 |
+
+PILOT+MEASURE만 있으면 임원은 YES/YES/NO/NO다. 참가자 YES/NO/HOLD에 따라 가결/부결/보류가 갈린다. 네 조건 모두에서는 참가자 표가 달라도 가결이며 소수 의견을 그대로 기록한다.
 
 ## 결과와 AI 효율 체험
 
@@ -113,3 +120,5 @@ CISO는 ACCESS가 있어도 실제 권한 검증 전이므로 HOLD를 유지한�
 - 효율 체감은 자료 4장 → 근거가 연결된 요약 → 내 발언에 적용의 과정을 통해 보여준다. 검증되지 않은 ‘업무시간 80% 절감’ 같은 수치는 금지.
 
 개정 2026-09-09: CIO는 REVIEW가 없으면 NO. 조건 없음의 참가자 반대 경로와 원안 시간 만료 경로를 재계산했다. 자동 요약 표시·세션 운영은 [구현 지시서](../CLAUDE_IMPLEMENTATION.md)를 따른다.
+
+버전 1.1 · 최종 수정 2026-09-09: CISO의 역할 관련 찬성 경로 및 결정 표 경로 추가. 기존 PPT/result.png의 찬성4·보류1은 v0.5 예시이며 이 버전의 동일 조건 결과는 찬성5다. 최신 표결 기준은 본 문서이며 시각 자료는 docs/design/DESIGN_SPEC.md의 이력 표시 기준을 따른다.
