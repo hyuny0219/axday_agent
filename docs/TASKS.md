@@ -113,7 +113,7 @@
 - 목표: 나머지 네 화면을 만들어 완주 가능하게 한다.
 - 읽을 것: 구현 지시서 3장 상태표(REACTIONS~RESULT 행), docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"·"결과와 AI 효율 체험" 절, DESIGN_SPEC 3장 해당 4행과 4장 "최종 투표 radio".
 - 만들 것: `screens/ReactionsScreen`(내 발언 인용, 확정 조건별 관련 임원 반응, 나머지 임원은 기존 의견 유지 표시, 후속 질문 1회: 선택지 버튼 + 직접 입력 + '앞선 의견 유지'; 두 번째 후속 없음), `screens/MotionScreen`(원안 문장, 확정 조건 목록, 남은 확인 사항, '이 안건으로 표결' → FREEZE_MOTION), `screens/VoteScreen`(안건 카드, 찬성/보류/반대 radio 초기 미선택, '최종 투표 확정'은 선택 전 비활성, 클릭 즉시 비활성화로 이중 확정 방지 → CONFIRM_VOTE), `screens/ResultScreen`(결론 제목 = resultCopy, 같은 크기 5석 카드에 표 상태 색+텍스트, 내 원문과 실제 포함된 조건만 "반영"으로 표시, 남은 과제, 'AI가 도운 일' 자리(T12에서 채움), '체험 종료' → OPERATOR_RESET 없이 ATTRACT 복귀+세션 초기화). `e2e/flow-full.spec.ts`(추천 문구만으로 완주, 결과 5석·결론 표시).
-- 허용 경로: `src/components/`, `src/styles/screens/`, `e2e/`.
+- 허용 경로: `src/components/`, `src/styles/screens/`, `e2e/`, `src/app/App.tsx`(StageRouter에 네 화면 연결만).
 - 하지 말 것: 타이머 표시·운영 메뉴(T11).
 - 완료 확인: `npm run check && npx playwright test flow-full` 성공. 토론 화면 어디에도 찬성/보류/반대 버튼이 없음(E2E에서 확인).
 - 크기: M.
