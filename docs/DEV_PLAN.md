@@ -129,6 +129,7 @@ P0 합계 참고 소요: 약 7.5일(1인). 현장 마우스·물리 키보드 �
 
 ## 7. 브랜치·커밋·PR 운영
 
+- 실행 방식: 마일스톤을 작업 카드(docs/TASKS.md)로 나누고, 카드마다 builder → reviewer → fix 반복을 `task-cycle` 워크플로로 돌린다. 역할·토큰 절약 규칙·실행 방법은 docs/AGENT_WORKFLOW.md를 따른다.
 - 개발 브랜치: `claude/ax-day-2026-samsung-booth-syt4do`. main에 직접 커밋하지 않는다.
 - 커밋 단위: 마일스톤마다 1개 이상. 메시지는 `feat(engine): …`, `feat(ui): …`, `test: …`, `docs: …` 형식.
 - PR: P0 완료 시 1개(M0~M6), P1 완료 시 1개, P2는 조건 충족 시. PR 본문에 지시서 7장 완료 기준을 체크리스트로 옮기고 각 항목의 증빙(테스트 이름·스크린샷 경로)을 적는다.
