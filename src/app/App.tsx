@@ -1,6 +1,8 @@
 // 앱 골격: SessionProvider(useReducer + appClock + useTicker)와 stage별 화면 라우팅.
 // ATTRACT~RESULT의 아홉 화면 모두 여기서 StageRouter로 연결한다(T09·T10). T11에서
 // 타이머 표시, 무입력 안내·복귀, 운영 메뉴, 활동 감지, 요청 레지스트리를 붙였다.
+// T12에서 DISCUSS·REACTIONS에 sessionId와 RECORD_ASSISTANT_ACTION dispatch를 얇게
+// 연결해 AssistantPanel(src/components/parts)이 쓰도록 했다(AI 비서실장 사용 기록).
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 import type { ReactNode } from 'react';
@@ -160,7 +162,9 @@ function StageRouter() {
       return (
         <DiscussScreen
           scenario={scenario}
+          sessionId={session.sessionId}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
+          onAssistantAction={(label) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', label })}
         />
       );
 
@@ -171,9 +175,11 @@ function StageRouter() {
       return (
         <ReactionsScreen
           scenario={scenario}
+          sessionId={session.sessionId}
           opinions={session.opinions}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
+          onAssistantAction={(label) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', label })}
         />
       );
 

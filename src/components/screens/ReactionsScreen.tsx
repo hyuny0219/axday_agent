@@ -2,6 +2,7 @@
 // 임원은 기존 의견을 유지한다(docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문").
 // 후속 질문은 세션당 1회이며 선택지 버튼(그중 하나는 '앞선 의견 유지') + 직접 입력을
 // 제공한다. 조건 제안·충돌·확정은 discuss와 동일하게 domain/conditions.ts에 위임한다.
+// T12에서 AssistantPanel을 붙였다.
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -11,6 +12,7 @@ import { confirmConditions, findConflicts, proposeFromText } from '../../domain/
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { ConditionChips } from '../parts/ConditionChips';
+import { AssistantPanel } from '../parts/AssistantPanel';
 import '../../styles/screens/reactions.css';
 
 export interface ReactionsFollowupPayload {
@@ -21,9 +23,12 @@ export interface ReactionsFollowupPayload {
 
 export interface ReactionsScreenProps {
   scenario: Scenario;
+  sessionId: string;
   opinions: Opinion[];
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
   onKeepPrevious: () => void;
+  /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
+  onAssistantAction: (label: string) => void;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -38,9 +43,11 @@ function uniqueInOrder(ids: string[]): string[] {
 
 export function ReactionsScreen({
   scenario,
+  sessionId,
   opinions,
   onSubmitFollowup,
   onKeepPrevious,
+  onAssistantAction,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
   const previousConfirmedIds = useMemo(
@@ -208,6 +215,14 @@ export function ReactionsScreen({
           conflictPairs={conflictPairs}
           showNoMatchHint={showNoMatchHint}
           onToggle={handleToggleCondition}
+        />
+        <AssistantPanel
+          scenario={scenario}
+          sessionId={sessionId}
+          selectedConditionIds={confirmedConditionIds}
+          draftText={textValue}
+          onApplyDraft={handleTextChange}
+          onAssistantAction={onAssistantAction}
         />
         <button
           type="button"

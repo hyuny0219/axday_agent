@@ -2,7 +2,8 @@
 // draftText로 모아 '의견 전달'로 SUBMIT_OPINION을 낸다(CLAUDE_IMPLEMENTATION.md 4장).
 // selectedPhraseIds와 draftText를 분리하고, 실제 제출값은 항상 화면에 보이는
 // draftText다. 편집 손실 방지 규칙(직접 수정 후 체크 변경 시 확인)과 조건 제안·충돌
-// 판정은 모두 src/domain의 순수 함수(draft.ts, conditions.ts)에 위임한다.
+// 판정은 모두 src/domain의 순수 함수(draft.ts, conditions.ts)에 위임한다. T12에서
+// AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다.
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -18,6 +19,7 @@ import { PhraseCard } from '../parts/PhraseCard';
 import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
+import { AssistantPanel } from '../parts/AssistantPanel';
 import '../../styles/screens/discuss.css';
 
 export interface DiscussSubmitPayload {
@@ -28,7 +30,10 @@ export interface DiscussSubmitPayload {
 
 export interface DiscussScreenProps {
   scenario: Scenario;
+  sessionId: string;
   onSubmit: (payload: DiscussSubmitPayload) => void;
+  /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
+  onAssistantAction: (label: string) => void;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -41,7 +46,7 @@ function uniqueInOrder(ids: string[]): string[] {
   return result;
 }
 
-export function DiscussScreen({ scenario, onSubmit }: DiscussScreenProps) {
+export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
@@ -168,6 +173,14 @@ export function DiscussScreen({ scenario, onSubmit }: DiscussScreenProps) {
           />
         </div>
       </div>
+      <AssistantPanel
+        scenario={scenario}
+        sessionId={sessionId}
+        selectedConditionIds={confirmedConditionIds}
+        draftText={draft.draftText}
+        onApplyDraft={handleDraftTextChange}
+        onAssistantAction={onAssistantAction}
+      />
       <div className="discuss-screen__submit-row">
         <button
           type="button"
