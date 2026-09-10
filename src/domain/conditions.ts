@@ -1,84 +1,20 @@
 // 조건 제안·충돌·확정 순수 함수. CLAUDE_IMPLEMENTATION.md 4장: 자동 추출은 확정이
 // 아닌 제안이며, 부정문·상충 문구를 단순 키워드로 자동 확정하지 않는다.
-// 조건 키워드는 시나리오 데이터(조건 라벨·문구 텍스트)에서만 파생한다.
+// 조건 키워드는 시나리오 데이터(Condition.keywords)에 명시된 것만 쓰고,
+// 라벨·문구 텍스트에서 토큰을 파생하지 않는다.
 
 import type { ConflictPair, Scenario } from '../content/types';
 
-// 조건 라벨/문구가 어떤 언어든 이 세 부정어 근처에서는 조건을 제안하지 않는다(4장 명시 예).
+// 이 세 부정어 뒤쪽에서는 조건을 제안하지 않는다(4장 명시 예). 부정어 창은 키워드
+// 뒤쪽 NEGATION_WINDOW자만 본다. 키워드 자체에 부정어가 포함된 경우(예: OPEN_ALL의
+// '권한 검토 없이')는 그 부정어가 키워드 범위 안에 있어 창에 들어오지 않으므로
+// 자기 부정으로 처리되지 않는다.
 const NEGATION_MARKERS = ['없이', '생략', '말고'];
 const NEGATION_WINDOW = 8;
 
-// 문구 문장에서 조사를 떼어 명사만 남기기 위한 일반 한국어 문법 어미 목록.
-// 시나리오별 조건 키워드가 아니라 언어 처리용 공통 어미이므로 여기 둔다.
-const TRAILING_PARTICLES = [
-  '합시다',
-  '합니다',
-  '해야',
-  '하고',
-  '해서',
-  '으로',
-  '에서',
-  '에게',
-  '에는',
-  '에도',
-  '이나',
-  '라도',
-  '까지',
-  '부터',
-  '에',
-  '은',
-  '는',
-  '이',
-  '가',
-  '을',
-  '를',
-  '의',
-  '와',
-  '과',
-  '도',
-  '만',
-  '한',
-].sort((a, b) => b.length - a.length);
-
-function stripTrailingParticle(token: string): string {
-  for (const particle of TRAILING_PARTICLES) {
-    if (token.length > particle.length + 1 && token.endsWith(particle)) {
-      return token.slice(0, token.length - particle.length);
-    }
-  }
-  return token;
-}
-
-function tokenizeLabel(label: string): string[] {
-  return label
-    .split(/[\s·,/]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2);
-}
-
-function tokenizePhraseText(text: string): string[] {
-  return text
-    .split(/[\s.,!?·]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2)
-    .map(stripTrailingParticle)
-    .filter((token) => token.length >= 2);
-}
-
-/** 조건 라벨과 그 조건에 연결된 문구 텍스트에서 제안용 키워드를 파생한다. */
-function conditionKeywords(scenario: Scenario, conditionId: string): string[] {
-  const condition = scenario.conditions.find((c) => c.id === conditionId);
-  const labelTokens = condition ? tokenizeLabel(condition.label) : [];
-  const phraseTokens = scenario.phrases
-    .filter((phrase) => phrase.conditionId === conditionId)
-    .flatMap((phrase) => tokenizePhraseText(phrase.text));
-  return Array.from(new Set([...labelTokens, ...phraseTokens]));
-}
-
-function isNegatedAt(text: string, index: number, keywordLength: number): boolean {
-  const start = Math.max(0, index - NEGATION_WINDOW);
-  const end = Math.min(text.length, index + keywordLength + NEGATION_WINDOW);
-  const window = text.slice(start, end);
+function isNegatedAfter(text: string, index: number, keywordLength: number): boolean {
+  const end = index + keywordLength;
+  const window = text.slice(end, end + NEGATION_WINDOW);
   return NEGATION_MARKERS.some((marker) => window.includes(marker));
 }
 
@@ -87,7 +23,8 @@ function textMentionsConditionUnnegated(
   text: string,
   conditionId: string,
 ): boolean {
-  const keywords = conditionKeywords(scenario, conditionId);
+  const condition = scenario.conditions.find((c) => c.id === conditionId);
+  const keywords = condition?.keywords ?? [];
   for (const keyword of keywords) {
     let searchFrom = 0;
     for (;;) {
@@ -95,7 +32,7 @@ function textMentionsConditionUnnegated(
       if (index === -1) {
         break;
       }
-      if (!isNegatedAt(text, index, keyword.length)) {
+      if (!isNegatedAfter(text, index, keyword.length)) {
         return true;
       }
       searchFrom = index + keyword.length;
@@ -117,8 +54,8 @@ export function proposeFromPhrases(scenario: Scenario, phraseIds: string[]): str
 }
 
 /**
- * 자유 입력 텍스트에서 조건 라벨/문구 키워드를 찾아 제안만 한다(확정 아님).
- * "없이·생략·말고" 근처에 나오는 언급은 부정문으로 보고 제안하지 않는다.
+ * 자유 입력 텍스트에서 조건별 명시 키워드(Condition.keywords)를 찾아 제안만 한다(확정 아님).
+ * 키워드 뒤쪽에 "없이·생략·말고"가 나오면 부정문으로 보고 제안하지 않는다.
  */
 export function proposeFromText(scenario: Scenario, text: string): string[] {
   return scenario.conditions

@@ -44,6 +44,9 @@ export interface Phrase {
 export interface Condition {
   id: string;
   label: string;
+  /** 자유 입력 텍스트에서 이 조건을 제안할 때 찾는 명시 키워드. 라벨·문구 텍스트에서
+   * 자동 파생하지 않고 시나리오 데이터에 직접 적는다(CLAUDE_IMPLEMENTATION.md 4장). */
+  keywords: string[];
 }
 
 export type ConflictPair = [string, string];

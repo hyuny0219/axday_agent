@@ -3,6 +3,7 @@
 // 책임이 아니다(T07). 이 파일은 주어진 action을 받아 상태를 결정적으로 바꿀 뿐이다.
 
 import type { Scenario } from '../content/types';
+import { findConflicts } from './conditions';
 import { EMPTY_DRAFT_STATE } from './draft';
 import { freezeMotion, freezeOriginal } from './motion';
 import type { Ballot, Opinion, PendingVote, Session } from './types';
@@ -179,6 +180,12 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     case 'FREEZE_MOTION': {
       if (session.stage !== 'MOTION' || session.finalMotion !== null) {
         return ignore(session, '최종 안건 고정은 MOTION 단계에서 한 번만 가능합니다.');
+      }
+      // 화면에서 막더라도 엔진에서 다시 검사한다: 병합된 확정 조건 집합에 충돌쌍이
+      // 남아 있으면 고정을 거부하고 경고만 남긴다(구현 지시서 4장 "충돌 조건은 동시
+      // 확정할 수 없도록 한다").
+      if (findConflicts(action.scenario, action.confirmedConditionIds).length > 0) {
+        return ignore(session, '충돌하는 조건이 함께 있어 최종 안건을 고정할 수 없습니다.');
       }
       const finalMotion = freezeMotion(action.scenario, action.confirmedConditionIds, now);
       const ballots = decideBoard(action.scenario, finalMotion);

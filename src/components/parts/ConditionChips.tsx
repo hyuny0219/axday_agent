@@ -19,6 +19,21 @@ function conditionLabel(scenario: Scenario, conditionId: string): string {
   return scenario.conditions.find((condition) => condition.id === conditionId)?.label ?? conditionId;
 }
 
+// ACCESS/OPEN_ALL 충돌은 docs/SCENARIO_AI_ASSISTANT.md "추천 문구와 구조화 조건" 절의
+// 문구를 그대로 쓴다. 다른 충돌쌍은 라벨을 채운 일반 템플릿을 쓴다.
+const ACCESS_OPEN_ALL_MESSAGE =
+  '권한 확인 후 사용 / 권한 검토 없이 연결 중 어떤 의견을 전달할까요?';
+
+function conflictMessage(scenario: Scenario, pair: ConflictPair): string {
+  const [a, b] = pair;
+  const isAccessOpenAll =
+    (a === 'ACCESS' && b === 'OPEN_ALL') || (a === 'OPEN_ALL' && b === 'ACCESS');
+  if (isAccessOpenAll) {
+    return ACCESS_OPEN_ALL_MESSAGE;
+  }
+  return `'${conditionLabel(scenario, a)}'와 '${conditionLabel(scenario, b)}' 중 하나만 선택해 주세요.`;
+}
+
 export function ConditionChips({
   scenario,
   proposedIds,
@@ -33,7 +48,7 @@ export function ConditionChips({
     }
     return (
       <p className="condition-chips__hint" data-testid="condition-chips-hint">
-        말씀은 회의 기록에 남깁니다. 반영할 조건이 있으면 선택해 주세요.
+        말씀은 회의 기록에 남깁니다. 반영할 조건이 있으면 선택해 주세요
       </p>
     );
   }
@@ -61,10 +76,7 @@ export function ConditionChips({
       {conflictPairs.length > 0 && (
         <ul className="condition-chips__conflicts" role="alert" data-testid="condition-chips-conflicts">
           {conflictPairs.map(([a, b]) => (
-            <li key={`${a}-${b}`}>
-              '{conditionLabel(scenario, a)}'와 '{conditionLabel(scenario, b)}' 중 하나만 선택해
-              주세요.
-            </li>
+            <li key={`${a}-${b}`}>{conflictMessage(scenario, [a, b])}</li>
           ))}
         </ul>
       )}

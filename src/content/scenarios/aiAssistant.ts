@@ -80,11 +80,31 @@ export const aiAssistantScenario: Scenario = {
     },
   ],
   conditions: [
-    { id: 'PILOT', label: '작은 범위로 시작' },
-    { id: 'REVIEW', label: '출처·기준일 표시 후 담당자 검토' },
-    { id: 'ACCESS', label: '권한·공유 범위 확인' },
-    { id: 'MEASURE', label: '준비시간·수정량 확인 후 확대' },
-    { id: 'OPEN_ALL', label: '권한 검토 없이 전체 연결' },
+    {
+      id: 'PILOT',
+      label: '작은 범위로 시작',
+      keywords: ['작은 범위', '파일럿', '시범', '주간 보고 초안'],
+    },
+    {
+      id: 'REVIEW',
+      label: '출처·기준일 표시 후 담당자 검토',
+      keywords: ['담당자 검토', '담당자가 검토', '출처', '기준일'],
+    },
+    {
+      id: 'ACCESS',
+      label: '권한·공유 범위 확인',
+      keywords: ['권한', '공유 범위', '접근 권한'],
+    },
+    {
+      id: 'MEASURE',
+      label: '준비시간·수정량 확인 후 확대',
+      keywords: ['준비시간', '수정량', '효과를 확인'],
+    },
+    {
+      id: 'OPEN_ALL',
+      label: '권한 검토 없이 전체 연결',
+      keywords: ['권한 검토 없이', '모든 부서', '바로 연결', '전부 연결'],
+    },
   ],
   conflicts: [['ACCESS', 'OPEN_ALL']],
   reactions: [

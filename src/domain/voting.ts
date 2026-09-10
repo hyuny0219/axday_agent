@@ -91,11 +91,10 @@ export function castParticipant(ballots: Ballot[], motionId: string, vote: Vote)
   if (referenceMotionId === undefined || motionId !== referenceMotionId) {
     throw new Error('잘못된 안건 ID에 대한 투표는 반영할 수 없습니다.');
   }
-  const existingSeat = ballots.find((b) => b.memberId === 'PARTICIPANT');
-  if (existingSeat) {
-    if (existingSeat.confirmedAt !== null) {
-      throw new Error('확정된 표는 다시 표결할 수 없습니다.');
-    }
+  // 참가자 의석은 생성 시 항상 confirmedAt이 채워지므로(reducer가 즉시 now로 덮어씀)
+  // "이미 있지만 아직 미확정"인 상태는 나오지 않는다. 이미 의석이 있으면 재투표든
+  // 중복 생성이든 같은 이유(의석 중복)로 막는다.
+  if (ballots.some((b) => b.memberId === 'PARTICIPANT')) {
     throw new Error('참가자 의석은 중복으로 만들 수 없습니다.');
   }
   const participantBallot: Ballot = {

@@ -97,7 +97,11 @@ export function ReactionsScreen({
   );
 
   const showNoMatchHint = textValue.trim() !== '' && proposedConditionIds.length === 0;
-  const canSubmit = textValue.trim() !== '' && textValue.length <= DRAFT_MAX_LENGTH;
+  // 이전에 확정한 조건과 새 제안을 병합한 acceptedConditionIds 안에 충돌쌍이 함께
+  // 선택돼 있으면(예: DISCUSS에서 ACCESS 확정 후 여기서 OPEN_ALL도 선택) 전달을
+  // 막는다. ConditionChips가 같은 목록으로 안내 문구를 보여준다.
+  const canSubmit =
+    textValue.trim() !== '' && textValue.length <= DRAFT_MAX_LENGTH && conflictPairs.length === 0;
 
   function reactionsFor(memberId: (typeof EXEC_MEMBER_ORDER)[number]) {
     if (previousConfirmedIds.length === 0) {

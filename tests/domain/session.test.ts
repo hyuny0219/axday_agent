@@ -115,6 +115,37 @@ describe('후속 1회 제한', () => {
   });
 });
 
+describe('FREEZE_MOTION 충돌 조건 방어', () => {
+  it('충돌하는 두 조건을 함께 넘기면 고정을 거부하고 warnings만 남긴다', () => {
+    const session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
+    expect(session.stage).toBe('MOTION');
+
+    const result = reduce(
+      session,
+      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['ACCESS', 'OPEN_ALL'] },
+      T0,
+    );
+
+    expect(result.stage).toBe('MOTION');
+    expect(result.finalMotion).toBeNull();
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('충돌이 없으면 정상적으로 VOTE로 넘어간다', () => {
+    const session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
+
+    const result = reduce(
+      session,
+      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['ACCESS'] },
+      T0,
+    );
+
+    expect(result.stage).toBe('VOTE');
+    expect(result.finalMotion).not.toBeNull();
+    expect(result.warnings).toEqual([]);
+  });
+});
+
 describe('시간 만료', () => {
   it('안건이 이미 고정된 뒤 만료되면 그 안건으로 종료하고 참가자는 UNCAST다', () => {
     let session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);

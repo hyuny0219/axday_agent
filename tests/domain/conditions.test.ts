@@ -45,6 +45,41 @@ describe('proposeFromText', () => {
     const proposed = proposeFromText(scenario, '권한 확인은 생략하고 진행합시다.');
     expect(proposed).not.toContain('ACCESS');
   });
+
+  it('P1~P5 각 문구 문장은 정확히 자기 조건 하나만 제안한다', () => {
+    expect(proposeFromText(scenario, '주간 보고 초안부터 작은 범위로 시작합시다.')).toEqual([
+      'PILOT',
+    ]);
+    expect(
+      proposeFromText(scenario, '출처와 기준일을 표시하고 담당자가 검토한 뒤 공유합시다.'),
+    ).toEqual(['REVIEW']);
+    expect(
+      proposeFromText(scenario, '사용자 권한과 공유 범위를 확인한 자료만 사용합시다.'),
+    ).toEqual(['ACCESS']);
+    expect(proposeFromText(scenario, '준비시간과 수정량을 확인한 뒤 확대합시다.')).toEqual([
+      'MEASURE',
+    ]);
+    expect(
+      proposeFromText(scenario, '권한 검토 없이 모든 부서 자료를 바로 연결합시다.'),
+    ).toEqual(['OPEN_ALL']);
+  });
+
+  it('P6 문장과 조건 무관 문장은 빈 배열을 제안한다', () => {
+    expect(
+      proposeFromText(scenario, '아직 확인할 것이 많습니다. 검증 자료를 더 요청합시다.'),
+    ).toEqual([]);
+    expect(proposeFromText(scenario, '확인 부탁드립니다.')).toEqual([]);
+  });
+
+  it('"권한 검토 없이 모든 부서 자료를 바로 연결합시다."는 OPEN_ALL만 제안한다', () => {
+    expect(
+      proposeFromText(scenario, '권한 검토 없이 모든 부서 자료를 바로 연결합시다.'),
+    ).toEqual(['OPEN_ALL']);
+  });
+
+  it('"검토 없이 공유"는 REVIEW를 제안하지 않는다', () => {
+    expect(proposeFromText(scenario, '검토 없이 공유')).not.toContain('REVIEW');
+  });
 });
 
 describe('findConflicts', () => {

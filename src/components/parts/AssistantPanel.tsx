@@ -27,6 +27,9 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
 };
 
 const FALLBACK_MESSAGE = '기본 안내로 전환했습니다.';
+// 내 발언 정리 실패 시 문구는 CLAUDE_IMPLEMENTATION.md "실제 AI 범위와 실패 처리" 절
+// 원문 그대로 쓴다(다른 두 기능은 FALLBACK_MESSAGE를 그대로 유지).
+const REFINE_FALLBACK_MESSAGE = '정리하지 못했습니다. 원문으로 진행할 수 있습니다';
 
 export interface AssistantPanelProps {
   scenario: Scenario;
@@ -175,7 +178,7 @@ export function AssistantPanel({
           )}
           {status === 'error' && (
             <p role="alert" data-testid="assistant-error">
-              {FALLBACK_MESSAGE}
+              {activeFeature === 'refine' ? REFINE_FALLBACK_MESSAGE : FALLBACK_MESSAGE}
             </p>
           )}
           {status === 'done' && activeFeature === 'summary' && summaryResult && (
