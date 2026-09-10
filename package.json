@@ -13,6 +13,7 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "server": "tsx server/index.ts",
+    "eval:live": "tsx scripts/live-eval.ts",
     "check": "npm run lint && npm run typecheck && npm run typecheck:server && npm run test"
   },
   "dependencies": {
