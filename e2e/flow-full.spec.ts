@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 5석과 결론이 보인다', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-assistant').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();

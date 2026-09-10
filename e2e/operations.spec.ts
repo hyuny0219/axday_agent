@@ -35,7 +35,7 @@ async function enterScenario(page: Page): Promise<void> {
 }
 
 test('240초 만료 시 결과 화면에 원안 자동 고정 안내가 보인다', async ({ page }) => {
-  await page.goto('/?testClock=1');
+  await page.goto('/?testClock=1&mode=scripted');
   await enterScenario(page);
 
   await expect(page.getByTestId('ai-summary-card')).toBeVisible();
@@ -50,7 +50,7 @@ test('240초 만료 시 결과 화면에 원안 자동 고정 안내가 보인�
 });
 
 test('무입력 75초 안내에서 계속 체험을 누르면 세션이 유지된다', async ({ page }) => {
-  await page.goto('/?testClock=1');
+  await page.goto('/?testClock=1&mode=scripted');
   await enterScenario(page);
 
   await advanceClock(page, 75_000);
@@ -66,7 +66,7 @@ test('무입력 75초 안내에서 계속 체험을 누르면 세션이 유지�
 });
 
 test('무입력 90초가 지나면 대기 화면으로 복귀한다', async ({ page }) => {
-  await page.goto('/?testClock=1');
+  await page.goto('/?testClock=1&mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   await advanceClock(page, 90_000);
@@ -75,7 +75,7 @@ test('무입력 90초가 지나면 대기 화면으로 복귀한다', async ({ p
 });
 
 test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await enterScenario(page);
   await expect(page.getByTestId('ai-summary-card')).toBeVisible();
 
@@ -98,7 +98,7 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
 });
 
 test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await enterScenario(page);
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();

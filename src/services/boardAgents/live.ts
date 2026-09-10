@@ -7,6 +7,12 @@
 // 서버 응답이 배열이 아니거나 개별 항목이 예상한 필드를 갖추지 못하면(네트워크 중간 오류·
 // 스키마 변경 등) 해당 역할을 failed로 남길 뿐 예외를 던지지 않는다 — 늦거나 깨진 응답으로
 // 세션이 멈추지 않게 한다.
+//
+// T30 live E2E 전용: 페이지 URL의 `?mock=fault:role[,fault:role...]` 쿼리(예:
+// `?mock=timeout:cio`)가 있으면 그 role의 mock 장애 주입을 요청 본문의 mock 필드로 실어
+// 보낸다. server/handlers/round·vote.ts는 이미 이 필드를 읽어 mock provider(T27/T28)에
+// 전달하므로 서버 쪽은 바꾸지 않는다. 쿼리가 없으면 이 필드는 아예 만들지 않는다(운영 요청과
+// 동일한 모양을 유지).
 
 import type { ExecMemberId, Vote } from '../../content/types';
 import type { StatementStage } from '../../domain/types';
@@ -23,6 +29,27 @@ export const MAX_ROUND_TIMEOUT_MS = 8000;
 
 function timeoutMsFor(ctx: BoardAgentsContext): number {
   return Math.max(0, Math.min(MAX_ROUND_TIMEOUT_MS, ctx.budgetMs));
+}
+
+/** `?mock=timeout:cio,invalid:ceo` 형태를 `{ CIO: 'timeout', CEO: 'invalid' }`로 바꾼다.
+ * 값이 없거나 형식이 안 맞으면 undefined(요청 본문에 mock 필드를 넣지 않는다). */
+function mockOverridesFromLocation(): Record<string, string> | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+  const raw = new URLSearchParams(window.location.search).get('mock');
+  if (!raw) {
+    return undefined;
+  }
+  const overrides: Record<string, string> = {};
+  for (const entry of raw.split(',')) {
+    const [fault, roleId] = entry.split(':');
+    if (!fault || !roleId) {
+      continue;
+    }
+    overrides[roleId.trim().toUpperCase()] = fault.trim();
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -102,6 +129,7 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage) {
     participantOpinion: latestParticipantOpinion(ctx),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMsFor(ctx),
+    mock: mockOverridesFromLocation(),
   };
 }
 
@@ -183,6 +211,7 @@ function buildVoteBody(ctx: BoardAgentsContext) {
       effectiveConditionIds: motion.effectiveConditionIds,
       executionMode: motion.executionMode,
     },
+    mock: mockOverridesFromLocation(),
   };
 }
 

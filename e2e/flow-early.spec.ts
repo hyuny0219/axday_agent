@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택할 수 없다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
 
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();

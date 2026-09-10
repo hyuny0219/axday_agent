@@ -32,7 +32,7 @@ async function capture(page: Page, projectName: string, screenName: string) {
 }
 
 test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   // SELECT: 안건 카드 3열 중 활성 안건을 선택한 상태.

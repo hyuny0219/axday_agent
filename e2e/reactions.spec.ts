@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test';
  * 막는지 확인한다(T25 만들 것 2: 누적 조건 충돌 재검사).
  */
 async function reachReactionsWithAccessConfirmed(page: Page) {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-assistant').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();

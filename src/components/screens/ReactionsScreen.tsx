@@ -2,17 +2,20 @@
 // 임원은 기존 의견을 유지한다(docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문").
 // 후속 질문은 세션당 1회이며 선택지 버튼(그중 하나는 '앞선 의견 유지') + 직접 입력을
 // 제공한다. 조건 제안·충돌·확정은 discuss와 동일하게 domain/conditions.ts에 위임한다.
-// T12에서 AssistantPanel을 붙였다.
+// T12에서 AssistantPanel을 붙였다. live 모드에서는 상단 임원 카드 행을 scenario.reactions
+// 대신 실제 REACTIONS 라운드 결과(roleStatus·statements)로 바꾼다(T30). 후속 보완 입력·
+// 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다.
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Scenario } from '../../content/types';
-import type { Opinion } from '../../domain/types';
+import type { ExecMemberId, Scenario } from '../../content/types';
+import type { Opinion, RoleStatus, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
+import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/reactions.css';
 
 export interface ReactionsFollowupPayload {
@@ -25,6 +28,9 @@ export interface ReactionsScreenProps {
   scenario: Scenario;
   sessionId: string;
   opinions: Opinion[];
+  mode: 'live' | 'scripted';
+  roleStatus: Record<ExecMemberId, RoleStatus>;
+  statements: Statement[];
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
   onKeepPrevious: () => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
@@ -45,6 +51,9 @@ export function ReactionsScreen({
   scenario,
   sessionId,
   opinions,
+  mode,
+  roleStatus,
+  statements,
   onSubmitFollowup,
   onKeepPrevious,
   onAssistantAction,
@@ -158,33 +167,37 @@ export function ReactionsScreen({
       <blockquote className="reactions-screen__quote" data-testid="reactions-quote">
         {lastOpinion?.originalText}
       </blockquote>
-      <div className="reactions-screen__cards">
-        {EXEC_MEMBER_ORDER.map((memberId) => {
-          const reactions = reactionsFor(memberId);
-          const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
-          return (
-            <article
-              key={memberId}
-              className="reaction-card"
-              data-testid={`reaction-card-${memberId}`}
-            >
-              <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
-              {reactions.length > 0 ? (
-                <ul className="reaction-card__texts">
-                  {reactions.map((reaction, index) => (
-                    <li key={index}>{reaction.text}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="reaction-card__maintained">
-                  <span className="reaction-card__maintained-label">기존 의견 유지</span>
-                  {initial?.text}
-                </p>
-              )}
-            </article>
-          );
-        })}
-      </div>
+      {mode === 'live' ? (
+        <LiveStatementCards scenario={scenario} stage="REACTIONS" roleStatus={roleStatus} statements={statements} />
+      ) : (
+        <div className="reactions-screen__cards">
+          {EXEC_MEMBER_ORDER.map((memberId) => {
+            const reactions = reactionsFor(memberId);
+            const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
+            return (
+              <article
+                key={memberId}
+                className="reaction-card"
+                data-testid={`reaction-card-${memberId}`}
+              >
+                <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
+                {reactions.length > 0 ? (
+                  <ul className="reaction-card__texts">
+                    {reactions.map((reaction, index) => (
+                      <li key={index}>{reaction.text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="reaction-card__maintained">
+                    <span className="reaction-card__maintained-label">기존 의견 유지</span>
+                    {initial?.text}
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
       <div className="reactions-screen__followup">
         <h3 className="reactions-screen__section-label">{scenario.followUp.question}</h3>
         <div className="reactions-screen__options">

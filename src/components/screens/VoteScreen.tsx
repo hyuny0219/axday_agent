@@ -1,16 +1,22 @@
 // 최종 투표 화면: 안건 카드 아래 찬성/보류/반대 radio(초기 미선택)와 별도 확정
 // CTA를 둔다. 확정 버튼은 선택 전 비활성이며, 클릭 즉시 비활성화해 이중 확정을
-// 막는다(DESIGN_SPEC.md 4장 "최종 투표 radio").
+// 막는다(DESIGN_SPEC.md 4장 "최종 투표 radio"). live 모드에서 참가자가 확정한 뒤에도
+// 임원 표가 아직 도착하지 않았으면(execBallotsPending) "임원 판단을 기다리는 중"을
+// 보여준다(T30, AGENT_BOARDROOM_SPEC.md 6장 "8초 또는 deadline을 넘지 않는다"). 임원
+// 표 자체는 이 화면에서 절대 보여주지 않는다 — RESULT 전 비공개다.
 
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
-import type { Motion, PendingVote } from '../../domain/types';
+import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import '../../styles/screens/vote.css';
+import '../../styles/screens/live.css';
 
 export interface VoteScreenProps {
   scenario: Scenario;
   motion: Motion;
   pendingVote: PendingVote | null;
+  mode: SessionMode;
+  execBallotsPending: boolean;
   onSelectVote: (vote: PendingVote) => void;
   onConfirmVote: () => void;
 }
@@ -23,7 +29,15 @@ const VOTE_LABELS: Record<PendingVote, string> = {
   NO: '반대',
 };
 
-export function VoteScreen({ scenario, motion, pendingVote, onSelectVote, onConfirmVote }: VoteScreenProps) {
+export function VoteScreen({
+  scenario,
+  motion,
+  pendingVote,
+  mode,
+  execBallotsPending,
+  onSelectVote,
+  onConfirmVote,
+}: VoteScreenProps) {
   // CONFIRM_VOTE는 reducer에서도 재확정을 막지만, 화면 전환 전 빠른 재클릭까지
   // 막기 위해 클릭 즉시 로컬 상태로도 버튼을 비활성화한다.
   const [submitted, setSubmitted] = useState(false);
@@ -74,6 +88,11 @@ export function VoteScreen({ scenario, motion, pendingVote, onSelectVote, onConf
           </label>
         ))}
       </fieldset>
+      {mode === 'live' && submitted && execBallotsPending && (
+        <p className="vote-screen__waiting" data-testid="vote-waiting-execs">
+          임원 판단을 기다리는 중…
+        </p>
+      )}
       <div className="screen__sticky-footer">
         <button
           type="button"

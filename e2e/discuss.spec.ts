@@ -3,7 +3,7 @@ import { aiAssistantScenario } from '../src/content/scenarios/aiAssistant';
 import { buildDraftText } from '../src/domain/draft';
 
 async function reachDiscuss(page: Page) {
-  await page.goto('/');
+  await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-assistant').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();

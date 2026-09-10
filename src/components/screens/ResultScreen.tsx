@@ -3,16 +3,20 @@
 // 운영자 새 체험(OPERATOR_RESET, 확인 절차 포함) 없이 바로 세션을 초기화하고
 // ATTRACT로 돌아간다. 'AI가 도운 일'은 항상 자료 자동 정리를 포함하고, 그 밖의 도움은
 // session.assistantActions(AssistantPanel이 남긴 레이블)이 있을 때만 보여준다(T12).
+// T30: live 모드 임원 좌석에는 판단 근거(ballot.reason, ≤160자)와 남은 우려를 더하고,
+// UNCAST 좌석은 사유를 함께 보여준다. 응답 장애로 판단이 제한됐으면(tally().limitedBy
+// Unavailable) 공통 안내를 띄운다. scripted 표에는 reason이 없으므로 그대로 조용하다.
 
 import { useMemo } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Ballot, MemberId, Session } from '../../domain/types';
-import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { Avatar } from '../parts/Avatar';
 import '../../styles/screens/result.css';
+import '../../styles/screens/live.css';
 
 export interface ResultScreenProps {
   scenario: Scenario;
@@ -36,6 +40,11 @@ const VOTE_TEXT: Record<Ballot['vote'], string> = {
   UNCAST: '미표결',
 };
 
+const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
+  live: '실시간(LIVE) 임원 에이전트 판단입니다.',
+  scripted: '사전 구성 시뮬레이션 결과입니다.',
+};
+
 export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
 
@@ -43,6 +52,8 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
     () => describeAdditionalHelp(session.assistantActions),
     [session.assistantActions],
   );
+
+  const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
 
   const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions), [session.opinions]);
   const includedIds = useMemo(
@@ -75,6 +86,14 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
         </p>
       )}
+      <p className="result-screen__mode-notice" data-testid="result-mode-notice">
+        {MODE_NOTICE_TEXT[session.mode]}
+      </p>
+      {tallyResult.limitedByUnavailable && (
+        <p className="result-screen__limited-notice" data-testid="result-limited-notice">
+          일부 임원 미표결로 판단이 제한되었습니다.
+        </p>
+      )}
       <div className="result-screen__seats">
         {SEAT_ORDER.map((memberId) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);
@@ -88,6 +107,21 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
               <Avatar memberId={memberId} />
               <h3 className="result-seat__member">{seatLabel(memberId)}</h3>
               <p className="result-seat__vote">{VOTE_TEXT[vote]}</p>
+              {ballot?.reason && (
+                <p className="result-seat__reason" data-testid={`result-seat-reason-${memberId}`}>
+                  {ballot.reason}
+                </p>
+              )}
+              {ballot?.remainingConcerns && ballot.remainingConcerns.length > 0 && (
+                <p className="result-seat__concerns" data-testid={`result-seat-concerns-${memberId}`}>
+                  남은 우려: {ballot.remainingConcerns.join(', ')}
+                </p>
+              )}
+              {vote === 'UNCAST' && ballot?.unavailableReason && (
+                <p className="result-seat__unavailable" data-testid={`result-seat-unavailable-${memberId}`}>
+                  {ballot.unavailableReason}
+                </p>
+              )}
             </article>
           );
         })}

@@ -36,6 +36,27 @@
   gap: var(--space-1);
 }
 
+/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30). 세션 시작 전 고정된 값을 그대로
+   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). */
+.mode-badge {
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mode-badge--live {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mode-badge--scripted {
+  color: var(--text-muted);
+}
+
 .app-header__timer {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;

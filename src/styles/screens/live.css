@@ -1,0 +1,104 @@
+/* live 모드 전용 공통 스타일: 임원 발언 카드(OPINIONS·REACTIONS), 최종 표 대기 문구,
+   결과의 판단 근거·미표결 사유·제한 안내. scripted 모드는 이 클래스들을 쓰지 않는다. */
+
+.live-round__cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.live-statement {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+}
+
+.live-statement--failed {
+  border-color: var(--vote-no);
+}
+
+.live-statement__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.live-statement__member {
+  margin: 0;
+  font-size: 18px;
+}
+
+.live-statement__text {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.live-statement__evidence {
+  margin: 0;
+  padding-left: var(--space-2);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.live-statement__references {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.live-statement__status-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.live-statement--failed .live-statement__status-text {
+  color: var(--vote-no);
+  font-style: normal;
+}
+
+@media (max-width: 1280px) {
+  .live-round__cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* VOTE: 참가자 확정 후 임원 판단을 기다리는 동안(최대 8초) 보여주는 문구. */
+.vote-screen__waiting {
+  margin: 0;
+  padding: var(--space-2);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+}
+
+/* RESULT: 역할별 판단 근거·남은 우려·미표결 사유, 그리고 응답 장애로 판단이 제한됐을 때의
+   공통 안내. */
+.result-seat__reason,
+.result-seat__concerns,
+.result-seat__unavailable {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.result-screen__mode-notice {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.result-screen__limited-notice {
+  margin: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--vote-hold);
+  background-color: var(--panel);
+  color: var(--vote-hold);
+}
