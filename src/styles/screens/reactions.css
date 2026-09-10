@@ -82,6 +82,7 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
+  transition: border-color var(--transition-fast) ease, color var(--transition-fast) ease;
 }
 
 .reactions-screen__option--selected {

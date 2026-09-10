@@ -80,6 +80,8 @@
   border-radius: var(--radius-card);
   padding: var(--space-2);
   cursor: pointer;
+  /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
+  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease;
 }
 
 .phrase-card:hover {
@@ -198,6 +200,7 @@
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
+  transition: border-color var(--transition-fast) ease, color var(--transition-fast) ease;
 }
 
 .condition-chip--accepted {

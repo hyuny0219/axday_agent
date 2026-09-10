@@ -43,6 +43,16 @@ const VOTE_TEXT: Record<Ballot['vote'], string> = {
   UNCAST: '미표결',
 };
 
+// 반대·보류·미표결은 색만으로 구분하지 않고 아이콘을 더한다(DESIGN_SPEC.md 4장
+// "반대·보류·미표결은 색+텍스트+아이콘"). 찬성은 색+텍스트만으로도 구분에 문제가
+// 없어 아이콘을 더하지 않는다. 장식이므로 스크린리더에는 노출하지 않는다
+// (텍스트 라벨이 이미 접근 가능한 이름을 제공한다).
+const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
+  HOLD: '⏸',
+  NO: '✕',
+  UNCAST: '–',
+};
+
 const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
   live: '실시간(LIVE) 임원 에이전트 판단입니다.',
   scripted: '사전 구성 시뮬레이션 결과입니다.',
@@ -109,7 +119,14 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             >
               <Avatar memberId={memberId} />
               <h3 className="result-seat__member">{seatLabel(memberId)}</h3>
-              <p className="result-seat__vote">{VOTE_TEXT[vote]}</p>
+              <p className="result-seat__vote">
+                {VOTE_ICON[vote] && (
+                  <span className="result-seat__vote-icon" aria-hidden="true">
+                    {VOTE_ICON[vote]}
+                  </span>
+                )}
+                {VOTE_TEXT[vote]}
+              </p>
               {ballot?.reason && (
                 <p className="result-seat__reason" data-testid={`result-seat-reason-${memberId}`}>
                   {ballot.reason}

@@ -46,6 +46,10 @@
   font-weight: 700;
 }
 
+.result-seat__vote-icon {
+  margin-right: 4px;
+}
+
 .result-seat--yes {
   border-color: var(--accent);
 }

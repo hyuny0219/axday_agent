@@ -21,6 +21,23 @@
   border-color: var(--vote-no);
 }
 
+/* 임원 발언 강조: 얇은 glow 1회(DESIGN_SPEC.md 4장 "임원 발언 강조는 얇은 glow 1회").
+   status가 'answered'로 바뀔 때만 클래스가 붙으므로 애니메이션이 한 번만 재생되고,
+   이후 리렌더로는 class 값이 그대로라 다시 재생되지 않는다. */
+.live-statement--answered {
+  animation: exec-statement-glow 900ms ease-out;
+}
+
+@keyframes exec-statement-glow {
+  from {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  to {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .live-statement__head {
   display: flex;
   align-items: center;

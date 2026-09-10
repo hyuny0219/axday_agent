@@ -35,6 +35,8 @@
   cursor: pointer;
   min-height: 160px;
   font-family: inherit;
+  /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
+  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease;
 }
 
 .scenario-card:hover:not(:disabled) {
