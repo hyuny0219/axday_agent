@@ -20,7 +20,9 @@ echo "[offline-check] 1/3 프로덕션 빌드"
 npm run build
 
 echo "[offline-check] 2/3 vite preview 기동 (포트 ${PORT})"
-npm run preview -- --port "${PORT}" --strictPort &
+# `npm run preview`(sh 래퍼) 대신 vite 바이너리를 직접 실행해, 종료 시 자식 프로세스가
+# 고아로 남지 않고 PREVIEW_PID로 바로 죽일 수 있게 한다.
+node_modules/.bin/vite preview --port "${PORT}" --strictPort &
 PREVIEW_PID=$!
 
 cleanup() {
