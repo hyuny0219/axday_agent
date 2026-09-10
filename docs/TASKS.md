@@ -14,6 +14,7 @@
 | T03~T07 | 완료 | M1 엔진. T06만 수정 1라운드(reducer 순수성), 나머지 1라운드 PASS. 단위 테스트 83개 |
 | T08~T10 | 완료 | M2 화면 흐름. 모두 1라운드 PASS. T08에서 발견된 reducer 버그(브리핑 요약 기록)는 오케스트레이터가 수정. 단위 86·E2E 12 |
 | T11~T13 | 완료 | M3·M4 운영·AI·공개 payload. T12만 수정 1라운드(허용 경로 문서 보완). 단위 102·E2E 26. 남은 nit: assistantLog의 evidenceIds·mode 기록이 아직 세션에 연결되지 않음(P2 T24에서 처리) |
+| T25 | 대기 | 2026-09-10 검토 반영 결함 수정. M5 전에 실행 |
 | T14~T17 | 대기 | P0 |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
@@ -189,6 +190,21 @@
 - 하지 말 것: PR 생성(오케스트레이터가 사용자 지시로 수행).
 - 완료 확인: `bash scripts/offline-check.sh` 성공. PR 초안의 체크 항목이 모두 증빙을 가짐.
 - 크기: S.
+
+## T25 P0 결함 수정 1차 (검토 반영)
+
+- 목표: 2026-09-10 3관점 검토(지시서 대비·엔진·런타임)에서 확인된 결함을 M5 전에 고친다.
+- 읽을 것: `src/domain/conditions.ts`, `src/content/scenarios/aiAssistant.ts`의 conditions·phrases, `src/components/screens/ReactionsScreen.tsx`·`MotionScreen.tsx`, `src/components/parts/ConditionChips.tsx`·`AssistantPanel.tsx`, 구현 지시서 4장 마지막 문단(누적 조건·충돌), docs/SCENARIO_AI_ASSISTANT.md "추천 문구와 구조화 조건" 절.
+- 만들 것:
+  1. **조건 제안 정밀화.** `src/content/types.ts`의 Condition에 `keywords: string[]`를 추가하고 안건 ② 데이터에 조건별 고유 키워드를 넣는다(예: PILOT ['작은 범위','파일럿','시범','주간 보고 초안'], REVIEW ['담당자 검토','담당자가 검토','출처','기준일'], ACCESS ['권한','공유 범위','접근 권한'], MEASURE ['준비시간','수정량','효과를 확인'], OPEN_ALL ['권한 검토 없이','모든 부서','바로 연결','전부 연결']). `proposeFromText`는 라벨·문구 토큰 파생을 버리고 명시 키워드만 쓴다. 부정어 창은 키워드 뒤쪽 8자만 보되, 키워드 자체에 부정어가 포함된 경우(OPEN_ALL)는 자기 부정으로 처리하지 않는다. 테스트: P1~P5 문장은 정확히 자기 조건 하나만, P6 문장과 "확인 부탁드립니다."는 빈 배열, "권한 검토 없이 모든 부서 자료를 바로 연결합시다."는 OPEN_ALL만, "검토 없이 공유"는 REVIEW 없음.
+  2. **누적 조건 충돌 재검사.** REACTIONS 후속 입력 화면에서 이전 확정 조건과 새 제안을 한 목록으로 보여 주고 유지·해제할 수 있게 하며, 충돌쌍이 함께 선택된 상태에서는 전달 버튼을 비활성화하고 안내를 표시한다. 엔진 쪽에도 방어를 둔다: `session.ts`의 FREEZE_MOTION이 `findConflicts`로 병합 집합을 검사해 충돌이 있으면 무시하고 warnings에 기록한다. 테스트: DISCUSS에서 ACCESS 확정 후 후속에서 OPEN_ALL을 확정하려 할 때 UI가 막고, reducer가 충돌 집합의 고정을 거부한다.
+  3. **문구 원문 일치.** ACCESS/OPEN_ALL 충돌 안내는 시나리오 문서 그대로 "권한 확인 후 사용 / 권한 검토 없이 연결 중 어떤 의견을 전달할까요?"를 쓴다(다른 충돌쌍은 기존 템플릿 유지). '내 발언 정리' 실패 시에는 "정리하지 못했습니다. 원문으로 진행할 수 있습니다"를 표시하고 나머지 두 기능은 기존 문구를 유지한다. 해석 불가 안내 문구의 마침표를 문서와 맞춘다.
+  4. **CI 트리거.** `.github/workflows/ci.yml`의 push 브랜치에 `claude/**`를 추가해 작업 브랜치 푸시에서도 CI가 돈다.
+  5. `voting.ts`의 도달 불가 분기(참가자 confirmedAt null 검사)를 정리한다.
+- 허용 경로: `src/content/`, `src/domain/conditions.ts`, `src/domain/session.ts`, `src/domain/voting.ts`, `src/components/`, `tests/`, `e2e/`, `.github/workflows/ci.yml`.
+- 하지 말 것: 표결 규칙·대표 경로 변경, 디자인 변경, 새 기능.
+- 완료 확인: `npm run check && npx playwright test` 성공. 위 테스트 문장들이 tests/domain/conditions.test.ts에 있음. e2e/discuss.spec.ts 또는 신규 spec에 누적 충돌 차단 경로가 있음.
+- 크기: M.
 
 ---
 
