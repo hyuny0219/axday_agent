@@ -1,11 +1,27 @@
 .select-screen__title {
   margin: 0;
+  font-size: 44px;
+  line-height: 1.3;
 }
 
 .select-screen__cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-3);
+}
+
+@media (max-width: 1280px) {
+  .select-screen__title {
+    font-size: 32px;
+  }
+
+  .select-screen__cards {
+    gap: var(--space-2);
+  }
+
+  .scenario-card__subtitle {
+    font-size: 18px;
+  }
 }
 
 .scenario-card {

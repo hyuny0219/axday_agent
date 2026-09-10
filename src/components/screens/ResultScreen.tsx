@@ -11,6 +11,7 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
+import { Avatar } from '../parts/Avatar';
 import '../../styles/screens/result.css';
 
 export interface ResultScreenProps {
@@ -84,6 +85,7 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
               className={`result-seat result-seat--${vote.toLowerCase()}`}
               data-testid={`result-seat-${memberId}`}
             >
+              <Avatar memberId={memberId} />
               <h3 className="result-seat__member">{seatLabel(memberId)}</h3>
               <p className="result-seat__vote">{VOTE_TEXT[vote]}</p>
             </article>
@@ -134,6 +136,9 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           </p>
         )}
       </section>
+      {/* 결과 화면은 5석·기록 패널을 모두 담으면 한 뷰포트보다 길어질 수 있어,
+          CTA를 sticky 대신 내용 끝에 두고 스크롤로 닿게 한다(sticky는 스크롤
+          중간에 앞선 기록 위에 겹쳐 보이는 문제가 있어 여기서는 쓰지 않는다). */}
       <button type="button" className="cta" onClick={onReset} data-testid="end-session">
         체험 종료
       </button>

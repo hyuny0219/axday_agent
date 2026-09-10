@@ -1,0 +1,51 @@
+/* 비실사 이니셜 아바타(T14). 임원 4명 + 참가자(PARTICIPANT) 색 매핑을 고정해
+   토론·결과 화면에서 동일 인물이 같은 색으로 보이게 한다. 사진·아이콘 이미지는
+   쓰지 않는다. */
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  letter-spacing: 0.02em;
+  color: var(--bg);
+  border: 2px solid rgba(243, 247, 255, 0.35);
+}
+
+.avatar--md {
+  width: 56px;
+  height: 56px;
+  font-size: 14px;
+}
+
+.avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+}
+
+.avatar--ceo {
+  background-color: var(--accent);
+}
+
+.avatar--cfo_caio {
+  background-color: var(--accent-blue);
+}
+
+.avatar--cio {
+  background-color: #7ce0b3;
+}
+
+.avatar--ciso {
+  background-color: var(--vote-hold);
+}
+
+.avatar--participant {
+  background-color: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-width: 3px;
+}

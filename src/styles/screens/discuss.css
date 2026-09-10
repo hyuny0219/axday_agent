@@ -1,11 +1,55 @@
 .discuss-screen__title {
   margin: 0;
+  font-size: 44px;
+  line-height: 1.3;
 }
 
 .discuss-screen__section-label {
   margin: 0 0 var(--space-1);
   font-size: 20px;
   color: var(--text-muted);
+}
+
+.discuss-screen__section-label--mine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text);
+  font-size: 22px;
+}
+
+/* 상단 임원 4열(DESIGN_SPEC.md "의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우
+   textarea"). 각 카드는 이니셜 아바타 + 이름 + 첫 의견 한 줄이다. */
+.discuss-screen__execs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.discuss-exec-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+}
+
+.discuss-exec-card__body {
+  min-width: 0;
+}
+
+.discuss-exec-card__member {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.discuss-exec-card__text {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
 }
 
 .discuss-screen__body {
@@ -184,8 +228,84 @@
   font-size: 16px;
 }
 
+/* 1280×720: 임원 카드 4장을 각각 한 줄 요약(아바타+이름+문구 한 줄)으로 접고,
+   본문은 계속 좌 추천 문구(2열×3행)·우 입력 영역으로 나눠 세로 공간을 아낀다
+   (DESIGN_SPEC.md 6장 "1280×720에서 상단 임원 카드는 접힌 한 줄 요약으로 줄이고,
+   하단을 추천 문구 2열×3행 영역과 입력 영역으로 나눈다"). */
 @media (max-width: 1280px) {
-  .discuss-screen__body {
-    grid-template-columns: 1fr;
+  .discuss-screen__title {
+    font-size: 32px;
+  }
+
+  .discuss-screen__execs {
+    gap: var(--space-1);
+  }
+
+  .discuss-exec-card {
+    min-width: 0;
+    overflow: hidden;
+    padding: 6px var(--space-1);
+    min-height: 56px;
+    gap: 6px;
+  }
+
+  .discuss-exec-card__body {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .discuss-exec-card__member {
+    flex-shrink: 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .discuss-exec-card__text {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .discuss-screen__phrase-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-1);
+  }
+
+  .phrase-card {
+    min-height: 56px;
+    padding: var(--space-1);
+    font-size: 15px;
+  }
+
+  .discuss-screen__section-label {
+    font-size: 16px;
+  }
+
+  /* rows=8(JSX)로 정해진 기본 높이 대신 명시적 height로 줄이고, 남는 내용은
+     내부 스크롤로 본다(DESIGN_SPEC.md 6장 "텍스트 전체는 입력창 내부 스크롤
+     가능하다"). 글자 축소·항목 누락 대신 이 높이만 줄인다. */
+  .draft-editor__textarea {
+    height: 92px;
+    min-height: 0;
+    font-size: 16px;
+  }
+
+  .discuss-screen__editor {
+    gap: var(--space-1);
+  }
+
+  .condition-chips__label {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .condition-chip {
+    min-height: 32px;
+    font-size: 14px;
   }
 }

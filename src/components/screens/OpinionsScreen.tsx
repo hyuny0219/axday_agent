@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { MEMBER_LABELS } from '../memberLabels';
+import { Avatar } from '../parts/Avatar';
 import '../../styles/screens/opinions.css';
 
 export interface OpinionsScreenProps {
@@ -22,7 +23,10 @@ export function OpinionsScreen({ scenario, onNext }: OpinionsScreenProps) {
           const expanded = expandedId === opinion.memberId;
           return (
             <article key={opinion.memberId} className="opinion-card">
-              <h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+              <div className="opinion-card__head">
+                <Avatar memberId={opinion.memberId} size="sm" />
+                <h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+              </div>
               <p className="opinion-card__text">{opinion.text}</p>
               <button
                 type="button"

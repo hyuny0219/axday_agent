@@ -1,5 +1,7 @@
 .opinions-screen__title {
   margin: 0;
+  font-size: 44px;
+  line-height: 1.3;
 }
 
 .opinions-screen__cards {
@@ -18,6 +20,12 @@
   padding: var(--space-2);
 }
 
+.opinion-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .opinion-card__member {
   margin: 0;
   font-size: 20px;
@@ -25,18 +33,27 @@
 
 .opinion-card__text {
   margin: 0;
+  font-size: 24px;
+  line-height: 1.5;
   color: var(--text-muted);
 }
 
 .opinion-card__toggle {
   align-self: flex-start;
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--accent);
-  padding: 4px var(--space-1);
+  padding: 0 var(--space-2);
   cursor: pointer;
   font-family: inherit;
+  font-size: 16px;
+}
+
+.opinion-card__toggle:hover {
+  background-color: var(--panel-active);
 }
 
 .opinion-card__evidence {
@@ -46,8 +63,47 @@
   font-size: 16px;
 }
 
+/* 1280에서는 4열 카드를 세로 한 줄 요약 목록으로 접는다(DESIGN_SPEC.md
+   "만들 것 · 임원 4열 카드(1280에서 접힌 한 줄 요약)"). 이름·문구가 한 줄에
+   보이고, 근거 보기를 누르면 그 줄 아래로만 펼쳐진다. */
 @media (max-width: 1280px) {
+  .opinions-screen__title {
+    font-size: 32px;
+  }
+
   .opinions-screen__cards {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .opinion-card {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .opinion-card__head {
+    flex-shrink: 0;
+    min-width: 200px;
+  }
+
+  .opinion-card__member {
+    font-size: 16px;
+  }
+
+  .opinion-card__text {
+    flex: 1;
+    margin: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .opinion-card__evidence {
+    flex-basis: 100%;
+    white-space: normal;
   }
 }

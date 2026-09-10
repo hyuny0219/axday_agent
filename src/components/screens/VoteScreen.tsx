@@ -74,15 +74,17 @@ export function VoteScreen({ scenario, motion, pendingVote, onSelectVote, onConf
           </label>
         ))}
       </fieldset>
-      <button
-        type="button"
-        className="cta"
-        disabled={pendingVote === null || submitted}
-        onClick={handleConfirm}
-        data-testid="confirm-vote"
-      >
-        최종 투표 확정
-      </button>
+      <div className="screen__sticky-footer">
+        <button
+          type="button"
+          className="cta"
+          disabled={pendingVote === null || submitted}
+          onClick={handleConfirm}
+          data-testid="confirm-vote"
+        >
+          최종 투표 확정
+        </button>
+      </div>
     </section>
   );
 }

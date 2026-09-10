@@ -2,10 +2,12 @@
 // (DESIGN_SPEC.md 3장 "공통" 문단).
 
 import '../../styles/screens/shell.css';
+import { Avatar } from './Avatar';
 
 export function Nameplate() {
   return (
     <div className="nameplate">
+      <Avatar memberId="PARTICIPANT" size="sm" />
       <span className="nameplate__name">나</span>
       <span className="nameplate__separator" aria-hidden="true">
         ·

@@ -1,5 +1,7 @@
 .vote-screen__title {
   margin: 0;
+  font-size: 44px;
+  line-height: 1.3;
 }
 
 .vote-screen__motion-card {
@@ -15,7 +17,8 @@
 
 .vote-screen__original {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
+  line-height: 1.5;
   color: var(--text);
 }
 
@@ -30,8 +33,11 @@
   color: var(--text-muted);
 }
 
+/* 최종 투표 3열(DESIGN_SPEC.md "최종 투표 | 안건 카드 아래 찬성/보류/반대 3열 +
+   별도 확정 CTA"). 세 선택지는 항상 같은 너비다. */
 .vote-screen__choices {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
   border: none;
   padding: 0;
@@ -39,40 +45,92 @@
 }
 
 .vote-screen__section-label {
-  width: 100%;
+  grid-column: 1 / -1;
   color: var(--text-muted);
   font-size: 18px;
   margin-bottom: var(--space-1);
 }
 
+/* 라디오는 실제 input을 유지하되(키보드 접근성) 시각은 커스텀 원으로 그린다.
+   기본은 빈 원, 선택은 시안 채움 + 체크 표시(DESIGN_SPEC.md 4장 "최종 투표
+   radio: 기본 빈 원, 선택 체크 원+선택됨 라벨"). */
 .vote-choice {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  min-height: var(--touch-min);
-  min-width: 160px;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 64px;
   padding: 0 var(--space-2);
   background-color: var(--panel);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--text);
   cursor: pointer;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.vote-choice:hover {
+  background-color: var(--panel-active);
 }
 
 .vote-choice--selected {
   border-color: var(--accent);
-  color: var(--accent);
+  background-color: var(--accent);
+  color: var(--bg);
 }
 
 .vote-choice input {
-  width: 24px;
-  height: 24px;
-  accent-color: var(--accent);
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  background-color: transparent;
+  position: relative;
+  margin: 0;
+}
+
+.vote-choice input:checked {
+  background-color: currentColor;
+}
+
+.vote-choice input:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 14px;
+  border: solid var(--accent);
+  border-width: 0 3px 3px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
+.vote-choice input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .vote-screen__choices:disabled .vote-choice,
 .vote-screen__choices[disabled] .vote-choice {
   cursor: not-allowed;
   opacity: 0.8;
+}
+
+@media (max-width: 1280px) {
+  .vote-screen__title {
+    font-size: 32px;
+  }
+
+  .vote-screen__original {
+    font-size: 20px;
+  }
+
+  .vote-choice {
+    font-size: 16px;
+    min-height: 56px;
+    gap: var(--space-1);
+  }
 }

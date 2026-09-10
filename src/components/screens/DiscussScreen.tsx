@@ -20,6 +20,8 @@ import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
+import { Avatar } from '../parts/Avatar';
+import { MEMBER_LABELS } from '../memberLabels';
 import '../../styles/screens/discuss.css';
 
 export interface DiscussSubmitPayload {
@@ -143,6 +145,17 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
   return (
     <section className="screen discuss-screen">
       <h2 className="discuss-screen__title">이사님의 의견을 전달해 주세요</h2>
+      <div className="discuss-screen__execs" data-testid="discuss-exec-row">
+        {scenario.initialOpinions.map((opinion) => (
+          <article key={opinion.memberId} className="discuss-exec-card">
+            <Avatar memberId={opinion.memberId} size="sm" />
+            <div className="discuss-exec-card__body">
+              <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+              <p className="discuss-exec-card__text">{opinion.text}</p>
+            </div>
+          </article>
+        ))}
+      </div>
       <div className="discuss-screen__body">
         <div className="discuss-screen__phrases">
           <h3 className="discuss-screen__section-label">추천 문구 (여러 개 선택 가능)</h3>
@@ -158,7 +171,9 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
           </div>
         </div>
         <div className="discuss-screen__editor">
-          <h3 className="discuss-screen__section-label">내 발언</h3>
+          <h3 className="discuss-screen__section-label discuss-screen__section-label--mine">
+            <Avatar memberId="PARTICIPANT" size="sm" />내 발언
+          </h3>
           {pendingPhraseId !== null && (
             <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />
           )}
@@ -181,7 +196,7 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
         onApplyDraft={handleDraftTextChange}
         onAssistantAction={onAssistantAction}
       />
-      <div className="discuss-screen__submit-row">
+      <div className="discuss-screen__submit-row screen__sticky-footer">
         <button
           type="button"
           className="cta"

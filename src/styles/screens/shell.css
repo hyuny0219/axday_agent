@@ -138,7 +138,7 @@
 .app-main {
   flex: 1;
   display: flex;
-  padding: var(--space-4);
+  padding: var(--space-6);
 }
 
 .screen {
@@ -148,6 +148,16 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+@media (max-width: 1280px) {
+  .app-main {
+    padding: var(--space-3);
+  }
+
+  .screen {
+    gap: var(--space-1);
+  }
 }
 
 .cta {
@@ -173,7 +183,7 @@
 .nameplate {
   display: flex;
   gap: var(--space-1);
-  align-items: baseline;
+  align-items: center;
   padding: var(--space-1) var(--space-4);
   color: var(--text-muted);
 }
@@ -181,6 +191,31 @@
 .nameplate__name {
   color: var(--text);
   font-weight: 700;
+}
+
+/* 콘텐츠가 한 화면보다 길어 스크롤이 필요할 때도 전달·확정 CTA에 항상 닿을 수 있게
+   화면 바닥에 붙인다(DESIGN_SPEC.md "만들 것 · sticky footer CTA"). 배경을 불투명
+   단색으로 채워, 아래로 흘러가는 글자가 옅게 겹쳐 보이지 않고 CTA 바가 그 위에
+   놓인 것으로 분명히 보이게 한다. */
+.screen__sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1);
+  padding: var(--space-2) var(--space-6) var(--space-6);
+  background-color: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 1280px) {
+  .screen__sticky-footer {
+    margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
 }
 
 .placeholder-screen {

@@ -38,18 +38,20 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
           );
         })}
       </div>
-      <button
-        type="button"
-        className="cta"
-        disabled={selectedId === null}
-        onClick={() => {
-          if (selectedId !== null) {
-            onEnter(selectedId);
-          }
-        }}
-      >
-        이사회 입장
-      </button>
+      <div className="screen__sticky-footer">
+        <button
+          type="button"
+          className="cta"
+          disabled={selectedId === null}
+          onClick={() => {
+            if (selectedId !== null) {
+              onEnter(selectedId);
+            }
+          }}
+        >
+          이사회 입장
+        </button>
+      </div>
     </section>
   );
 }
