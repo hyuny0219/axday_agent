@@ -1,6 +1,8 @@
 # BOARDROOM 2026 — 개발 계획
 
-버전 1.0 · 2026-09-09 · 기준 문서: 기획서 v0.7, 구현 지시서 1.4, 시나리오 ① 1.1 / ② 1.1 / ③ 2.1, 디자인 명세, 진행 요원 가이드
+버전 1.1 · 2026-09-10 · 기준 문서: 기획서 v0.8, 구현 지시서 1.5, docs/AGENT_BOARDROOM_SPEC.md, 시나리오 ① 1.1 / ② 1.1 / ③ 2.1, 디자인 명세, 진행 요원 가이드
+
+> v0.8(2026-09-10)로 P0 목표가 바뀌었다. 임원 4명은 실제 AI 에이전트(live)로 판단·토론·표결하고, '내 발언 정리'도 실제 AI가 한다. 지금까지 만든 규칙 엔진은 명시적 scripted 모드로 유지한다. 변경 내용과 추가 작업은 11절에 있다.
 
 ## 1. 목표와 범위
 
@@ -169,3 +171,37 @@ P0 합계 참고 소요: 약 7.5일(1인). 현장 마우스·물리 키보드 �
 4. M5~M6: 디자인을 입히고 스크린샷·README·PR을 만든다.
 
 각 마일스톤이 끝날 때마다 커밋을 푸시하고, 실행 방법과 확인된 것·확인 안 된 것을 짧게 보고한다.
+
+## 11. v0.8 반영 — live 임원 에이전트 (2026-09-10)
+
+### 무엇이 바뀌는가
+
+| 항목 | v0.7까지 | v0.8 |
+| --- | --- | --- |
+| 임원 의견·반응·표 | 시나리오 규칙표로 결정 | 역할 프롬프트를 가진 에이전트 4개가 자료·참가자 발언·동료 발언을 읽고 판단. 규칙표는 scripted 모드 전용 |
+| 내 발언 정리 | 사전 구성 | 실제 AI. 원문/초안 비교, 적용은 입력창만 변경, 세션당 2회·동시 1개·5초 |
+| 의견 한눈에 보기 | 사전 구성 | live에서는 실제 회의 기록 요약. 실패 시 발언 카드 목록 |
+| 표결 대기 | 즉시 | 참가자 확정 후 임원표 수신 대기 min(8초, 남은 시간). 미응답은 UNCAST와 사유 |
+| 결과 | 표만 | 역할별 판단 근거(≤160자), 미표결 사유, "일부 임원 미표결로 판단이 제한되었습니다" |
+| 모드 | 없음 | 세션 시작 전 live/scripted 고정, 화면 표시. live 실패를 scripted로 몰래 대체하지 않음 |
+| 서버 | 없음 | 모델 호출·검증은 서버. 키는 서버 환경변수 |
+
+### 아키텍처
+
+- `server/` (Node + TypeScript): `GET /api/health`, `POST /api/board/round`(opinions·reactions·followup), `POST /api/board/vote`, `POST /api/assistant/refine`, `POST /api/assistant/summarize`. 제공자 인터페이스 `ModelProvider` 뒤에 `mock`(결정적 응답·장애 주입)과 `anthropic`(`@anthropic-ai/sdk`, 구조화 출력) 구현. 응답 검증(스키마·enum·길이·근거 ID·revision·motionHash·중복·종료 후)은 서버가 한다.
+- 모델 기본값은 `claude-opus-5`, `output_config.effort: 'low'`, 짧은 `max_tokens`, 재시도 0회, 호출별 timeout은 요청이 넘긴 남은 예산. 모델 ID는 환경변수로 바꿀 수 있고 지연 측정 후 확정한다.
+- 클라이언트: `services/boardAgents`(scripted·live 어댑터, 같은 인터페이스), `services/orchestrator`(라운드 실행, 병렬 호출, 시간 상한, 늦은 응답 폐기, VOTE 대기·FINALIZE), 도메인은 `Statement`·`Transcript`·확장 `Ballot`·`mode`·`motionHash`를 갖는다.
+- 프롬프트 주입 방어: 참가자 원문과 회의 기록은 데이터 블록으로 전달하고 역할·집계는 서버 코드가 고정한다. 알 수 없는 근거·조건 ID는 거절한다.
+- 테스트 두 층: scripted·정규화·집계·미표결·늦은 응답은 결정적 테스트, live는 mock 제공자로 흐름·장애·주입을 E2E로 검증하고 실제 모델 평가는 별도 하네스(T32)로 기록한다.
+
+### 작업 순서 (갱신)
+
+T26 도메인 확장 → T27 서버 골격·검증 → T28 역할 프롬프트·라운드 → T29 오케스트레이터·어댑터 → T30 화면 연결·모드 → T31 비서실장 live → T32 live 평가 하네스 → T15 모션·접근성 → T16 E2E 전체(mock 서버 포함) → T17 README·오프라인(scripted)·PR 초안. 디자인 마감(T33)은 P0 PR 뒤에 별도로 한다.
+
+### 착수 전 확인이 필요한 결정
+
+| 결정 | 기본값 | 비고 |
+| --- | --- | --- |
+| 모델 제공자·모델 | Anthropic SDK, `claude-opus-5`, effort low | 8초 라운드 상한을 실측해 `claude-sonnet-5`로 바꿀 수 있음 |
+| 키 확보 | 서버 환경변수 `ANTHROPIC_API_KEY` 또는 `ant auth login` 프로필 | 없으면 live 항목은 미검증으로 보고 |
+| E2E의 live 경로 | mock 제공자 서버를 Playwright webServer로 함께 기동 | 실제 키는 CI에 넣지 않음 |
