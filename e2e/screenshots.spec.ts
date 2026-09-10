@@ -1,4 +1,5 @@
 // T14 디자인 검수용 스크린샷. 선택·토론·투표·결과 4장을 두 해상도(desktop-1080,
+// desktop-720)로 캡처한다. UPDATE_SCREENSHOTS=1 일 때만 아래 경로에 저장하고 평소에는 test-results/에 둔다.
 // desktop-720) 프로젝트마다 docs/screenshots/<project>/<screen>.png로 남긴다.
 // DESIGN_SPEC.md 6장 "실제 토론은 시나리오의 P1~P6 체크 카드 6개와 300자 입력창을
 // 제공하고, 안건 ② 대표 경로의 최종 조건 4개를 모두 표시한다"에 맞춰 실제 콘텐츠
@@ -18,8 +19,14 @@ const DRAFT_TEXT =
   '다음 이사회에서 다시 판단하겠습니다. 권한이 확인되지 않은 부서 자료는 이번 파일럿 범위에서 제외하고, ' +
   '검토 담당자 지정과 접근 로그 확인을 먼저 마친 뒤 순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
 
+// 기본 실행에서는 커밋된 PNG를 덮어쓰지 않도록 임시 폴더에 저장한다.
+// 문서용 스크린샷을 갱신할 때만 UPDATE_SCREENSHOTS=1 로 실행한다.
+const OUTPUT_ROOT = process.env.UPDATE_SCREENSHOTS
+  ? path.join('docs', 'screenshots')
+  : path.join('test-results', 'screenshots');
+
 async function capture(page: Page, projectName: string, screenName: string) {
-  const dir = path.join('docs', 'screenshots', projectName);
+  const dir = path.join(OUTPUT_ROOT, projectName);
   mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, `${screenName}.png`) });
 }
