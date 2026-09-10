@@ -7,7 +7,7 @@
 // 역할만 status:'failed'로 되돌려주는 방식으로 만든다(허용 경로가 e2e/뿐이라 다른 파일은
 // 건드리지 않는다 — docs/TASKS.md T36 참고).
 
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Page, type Route } from './fixtures';
 
 const EXEC_ROLE_IDS = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'] as const;
 type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];

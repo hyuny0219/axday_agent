@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택할 수 없다', async ({ page }) => {
   await page.goto('/?mode=scripted');

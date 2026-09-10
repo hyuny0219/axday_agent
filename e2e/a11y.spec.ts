@@ -2,7 +2,7 @@
 // prefers-reduced-motion에서 화면 전환 애니메이션 제거, 200% 확대 상당(960×540)에서
 // CTA 도달. 세 검사 모두 mode=scripted로 강제해 live 서버 호출 여부와 무관하다.
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도달한다', async ({ page }) => {
   await page.goto('/?mode=scripted');

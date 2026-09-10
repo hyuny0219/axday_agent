@@ -8,7 +8,7 @@
 
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 // P1~P4 문구를 그대로 이어 붙인 뒤, 실제 이사회 발언처럼 이어지는 문장을 더해
 // 300자 제한에 가깝지만 넘지 않는 분량으로 만든다(축약 없이 실제 콘텐츠).
