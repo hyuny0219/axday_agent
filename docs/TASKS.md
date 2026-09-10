@@ -274,7 +274,7 @@
 - 목표: '내 발언 정리'와 '의견 한눈에 보기'를 실제 AI로 연결하고 기록을 남긴다.
 - 읽을 것: docs/AGENT_BOARDROOM_SPEC.md 4장, `server/handlers/` 형태, `src/components/parts/AssistantPanel.tsx`, `src/services/assistant/`, `src/domain/assistantLog.ts`.
 - 만들 것: `server/handlers/assistant.ts` — refine(입력 draftText·draftRevision·자료 본문·현재 발언·허용 조건 → 300자 이내 초안·evidenceIds·suggestedConditionIds; 새 사실·비율·확약 금지, 부정·유보·숫자·핵심 조건 유지 지시), summarize(live transcript 기반 요약). 클라이언트 `services/assistant/live.ts`: refine은 세션당 최대 2회·동시 1개·5초, draftRevision이 바뀌면 이전 초안 폐기; summarize 5초 실패 시 발언 카드 목록 그대로. AssistantPanel: 원문/초안 나란히, '내 발언에 적용' / '원문 유지', 적용은 편집창만 변경, 실패 문구 "정리하지 못했습니다. 원문으로 계속할 수 있습니다". `assistantLog`를 세션에 실제 연결해 `{type, mode:'live'|'scripted', evidenceIds, requestedAt, applied}`를 기록하고 RESULT 'AI가 도운 일'에 자동 정리·실제 호출·초안 적용·미사용을 구분해 표시(T12 nit 해소). scripted 모드에서는 "실제 AI 사용"으로 표시하지 않는다. 테스트: 요청 횟수 상한, 동시 요청 거절, revision 변경 시 폐기, 실패 시 원문 유지; e2e/assistant.spec.ts에 live(mock) 경로 추가.
-- 허용 경로: `server/handlers/assistant.ts`, `server/prompts/assistant.ts`, `src/services/assistant/`, `src/domain/assistantLog.ts`, `src/domain/session.ts`(assistant 기록 액션만), `src/components/`, `tests/`, `e2e/`.
+- 허용 경로: `server/handlers/assistant.ts`, `server/prompts/assistant.ts`, `server/index.ts`(두 엔드포인트 라우팅만), `src/services/assistant/`, `src/domain/assistantLog.ts`, `src/domain/session.ts`(assistant 기록 액션만), `src/app/App.tsx`(어댑터 선택·배선만), `src/components/`, `src/styles/`, `tests/`, `e2e/`.
 - 하지 말 것: 임원 표·최종안·참가자 표를 건드리는 경로.
 - 완료 확인: `npm run check && npx playwright test assistant` 성공.
 - 크기: M.
