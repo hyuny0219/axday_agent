@@ -183,6 +183,14 @@ export function AssistantPanel({
     });
   }
 
+  // '원문 유지' — 제안을 닫기만 한다. 편집창은 절대 건드리지 않는다.
+  function handleKeepOriginal() {
+    setRefineResult(null);
+    setRefineResultRevision(null);
+    setStatus('idle');
+    setActiveFeature(null);
+  }
+
   const resultBadge = (mode: SummarizeOpinionsResult['mode']) =>
     mode === 'live' ? '실시간 AI 응답' : '체험용 사전 구성';
 
@@ -298,16 +306,34 @@ export function AssistantPanel({
           {status === 'done' && activeFeature === 'refine' && refineResult && (
             <div data-testid="assistant-result-refine">
               <p className="assistant-panel__badge">{resultBadge(refineResult.mode)}</p>
-              <p className="assistant-panel__refine-draft" data-testid="assistant-refine-draft">
-                {refineResult.draftText}
-              </p>
-              <button
-                type="button"
-                onClick={handleApplyRefine}
-                data-testid="assistant-apply-refine"
-              >
-                내 발언에 적용
-              </button>
+              <div className="assistant-panel__refine-compare">
+                <div className="assistant-panel__refine-original">
+                  <h4>원문</h4>
+                  <p data-testid="assistant-refine-original">{draftText}</p>
+                </div>
+                <div className="assistant-panel__refine-draft-wrap">
+                  <h4>정리한 초안</h4>
+                  <p className="assistant-panel__refine-draft" data-testid="assistant-refine-draft">
+                    {refineResult.draftText}
+                  </p>
+                </div>
+              </div>
+              <div className="assistant-panel__refine-choices">
+                <button
+                  type="button"
+                  onClick={handleApplyRefine}
+                  data-testid="assistant-apply-refine"
+                >
+                  내 발언에 적용
+                </button>
+                <button
+                  type="button"
+                  onClick={handleKeepOriginal}
+                  data-testid="assistant-keep-original"
+                >
+                  원문 유지
+                </button>
+              </div>
             </div>
           )}
         </aside>
