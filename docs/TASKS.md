@@ -21,7 +21,7 @@
 | T31~T32 | 완료 | M-L2 비서실장 live·평가 하네스. T31 수정 1라운드(원문/초안 나란히·원문 유지 버튼), T32 1라운드 PASS. 단위 198·E2E 39. `npm run eval:live`는 mock으로만 실행됨. 실제 키로 `--runs 3` 실측은 미실행(절차: docs/LIVE_EVAL.md) |
 | T36 | 대기 | live 클라이언트 mock 장애 주입 배선(필요할 때만) |
 | T15~T16 | 완료 | 모션·접근성, E2E 전체·외부 요청 차단. 모두 1라운드 PASS. T16이 찾은 후속 조건 해제 버그(이전 확정 조건이 합집합으로 되살아남)는 오케스트레이터가 수정. 단위 203·E2E 54. Playwright가 dist를 서빙하므로 webServer에 build를 포함 |
-| T17 | 대기 | README·오프라인(scripted)·PR 초안 |
+| T17 | 완료 | 오프라인 검증(scripted)·README·PR 초안. 1라운드 PASS. `bash scripts/offline-check.sh` PASS(26 E2E). docs/PR_P0.md 13항목 중 11 체크·2 미체크(전체화면 거부, 현장 IME 리허설). 실제 Anthropic 키 실측은 여전히 미실행 |
 | T33 | 대기 | 디자인 마감(P0 PR 이후) |
 | T34 | 대기 | 임원 에이전트 고도화 1차(T32 실측 후, PR 전). 키 없으면 T35로 |
 | T35 | 대기 | 임원 에이전트 고도화 2차(검수 1차·리허설 1 이후, 콘텐츠 동결 전) |
