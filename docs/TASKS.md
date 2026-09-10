@@ -134,7 +134,7 @@
 - 목표: 어댑터 인터페이스, 사전 구성 구현, 사이드 패널, 결과의 'AI가 도운 일'을 만든다.
 - 읽을 것: 구현 지시서 5장 전체(`sed -n '/^## 5\. /,/^## 6\. /p'`), docs/SCENARIO_AI_ASSISTANT.md "AI 도움 예시" 문단과 "결과와 AI 효율 체험" 절, `src/app/requests.ts`.
 - 만들 것: `src/services/assistant/types.ts`(`AssistantAdapter { summarizeOpinions(req), compareConditions(req), refineDraft(req) }`, req에 sessionId·requestId·signal, 응답에 mode 'scripted'|'live'와 evidenceIds), `scripted.ts`(시나리오 데이터에서 즉시 생성, 200ms 지연, refineDraft는 원문의 부정·유보 표현을 유지한 300자 이내 정리), `src/domain/assistantLog.ts`(AssistantAction 기록: type, mode, evidenceIds, shownAt|requestedAt, applied), `parts/AssistantPanel`(DISCUSS·REACTIONS에서 열기, '닫기' 항상 표시, 세 기능 버튼, 결과에 근거 ID, '내 발언에 적용'은 클릭 시에만 draft 교체, 5초 timeout·오류 시 "기본 안내로 전환했습니다"), 패널 제목 'AI 비서실장(시연)', ResultScreen의 'AI가 도운 일'(항상 "자료 4장 자동 정리 데모 표시" + 사용 기록 또는 "추가 AI 도움은 사용하지 않았습니다"). `tests/services/scripted.test.ts`(리셋 후 도착한 응답 무시, timeout 폴백, refine이 "않" "없이" 같은 부정 표현을 삭제하지 않음). `e2e/assistant.spec.ts`(패널 열고 적용, 안 열고 완주해도 결과에 자동 정리 기록).
-- 허용 경로: `src/services/assistant/`, `src/domain/assistantLog.ts`, `src/components/`, `tests/services/`, `e2e/`.
+- 허용 경로: `src/services/assistant/`, `src/domain/assistantLog.ts`, `src/components/`, `tests/services/`, `e2e/`, `src/app/App.tsx`(DiscussScreen·ReactionsScreen에 sessionId prop과 RECORD_ASSISTANT_ACTION dispatch 연결만).
 - 하지 말 것: 실제 모델 호출(P2), 절감률 등 수치 생성.
 - 완료 확인: `npm run check && npx playwright test assistant` 성공.
 - 크기: M.
