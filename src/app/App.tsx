@@ -1,5 +1,5 @@
 // 앱 골격: SessionProvider(useReducer + systemClock + useTicker)와 stage별 화면 라우팅.
-// 토론·투표·결과 화면은 T09·T10에서 채운다.
+// ATTRACT~RESULT의 아홉 화면 모두 여기서 StageRouter로 연결한다(T09·T10).
 
 import { createContext, useContext, useMemo, useReducer } from 'react';
 import type { ReactNode } from 'react';
@@ -16,6 +16,10 @@ import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
 import { OpinionsScreen } from '../components/screens/OpinionsScreen';
 import { DiscussScreen } from '../components/screens/DiscussScreen';
+import { ReactionsScreen } from '../components/screens/ReactionsScreen';
+import { MotionScreen } from '../components/screens/MotionScreen';
+import { VoteScreen } from '../components/screens/VoteScreen';
+import { ResultScreen } from '../components/screens/ResultScreen';
 import '../styles/screens/shell.css';
 
 interface SessionContextValue {
@@ -67,7 +71,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
-/** stage별 화면 라우팅. DISCUSS 이후 화면은 T09·T10에서 채운다. */
+/** stage별 화면 라우팅. */
 function StageRouter() {
   const { session, dispatch } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
@@ -110,6 +114,59 @@ function StageRouter() {
         <DiscussScreen
           scenario={scenario}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
+        />
+      );
+
+    case 'REACTIONS':
+      if (!scenario) {
+        return null;
+      }
+      return (
+        <ReactionsScreen
+          scenario={scenario}
+          opinions={session.opinions}
+          onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
+          onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
+        />
+      );
+
+    case 'MOTION':
+      if (!scenario) {
+        return null;
+      }
+      return (
+        <MotionScreen
+          scenario={scenario}
+          opinions={session.opinions}
+          onFreeze={(confirmedConditionIds) =>
+            dispatch({ type: 'FREEZE_MOTION', scenario, confirmedConditionIds })
+          }
+        />
+      );
+
+    case 'VOTE':
+      if (!scenario || !session.finalMotion) {
+        return null;
+      }
+      return (
+        <VoteScreen
+          scenario={scenario}
+          motion={session.finalMotion}
+          pendingVote={session.pendingVote}
+          onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
+          onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
+        />
+      );
+
+    case 'RESULT':
+      if (!scenario) {
+        return null;
+      }
+      return (
+        <ResultScreen
+          scenario={scenario}
+          session={session}
+          onReset={() => dispatch({ type: 'IDLE_RESET' })}
         />
       );
 

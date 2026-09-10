@@ -26,7 +26,7 @@ test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다
   await expect(submit).toBeEnabled();
   await submit.click();
 
-  await expect(page.getByText('REACTIONS', { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
 });
 
 test('문구를 고르지 않고 직접 입력만으로도 의견을 전달할 수 있다', async ({ page }) => {
@@ -39,7 +39,7 @@ test('문구를 고르지 않고 직접 입력만으로도 의견을 전달할 �
   await expect(submit).toBeEnabled();
   await submit.click();
 
-  await expect(page.getByText('REACTIONS', { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
 });
 
 test('직접 수정 후 체크를 바꾸면 유지/재구성 확인 UI가 뜨고, 유지를 고르면 입력을 보존한다', async ({

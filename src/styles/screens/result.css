@@ -1,0 +1,118 @@
+.result-screen__title {
+  margin: 0;
+  font-size: 28px;
+}
+
+.result-screen__seats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+}
+
+.result-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 140px;
+  background-color: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  text-align: center;
+}
+
+.result-seat__member {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.result-seat__vote {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.result-seat--yes {
+  border-color: var(--accent);
+}
+
+.result-seat--yes .result-seat__vote {
+  color: var(--accent);
+}
+
+.result-seat--hold {
+  border-color: var(--vote-hold);
+}
+
+.result-seat--hold .result-seat__vote {
+  color: var(--vote-hold);
+}
+
+.result-seat--no {
+  border-color: var(--vote-no);
+}
+
+.result-seat--no .result-seat__vote {
+  color: var(--vote-no);
+}
+
+.result-seat--uncast {
+  border-color: var(--vote-uncast);
+}
+
+.result-seat--uncast .result-seat__vote {
+  color: var(--vote-uncast);
+}
+
+.result-screen__mine,
+.result-screen__tasks,
+.result-screen__ai-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+}
+
+.result-screen__section-label {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.result-screen__quote {
+  margin: 0;
+  color: var(--text);
+}
+
+.result-screen__conditions {
+  margin: 0;
+  padding-left: var(--space-2);
+  color: var(--text);
+}
+
+.result-screen__reflected-tag {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.result-screen__no-conditions {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.result-screen__ai-help-placeholder {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1280px) {
+  .result-screen__seats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
