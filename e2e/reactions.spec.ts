@@ -60,16 +60,16 @@ test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건�
   await expect(conditions).toContainText('출처·기준일 표시 후 담당자 검토');
 });
 
-test('후속 질문에서 새로 제안된 조건 칩을 해제하면 최종 안건에서 빠진다', async ({ page }) => {
+test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 안건에서 빠진다', async ({ page }) => {
   await reachReactionsWithAccessConfirmed(page);
 
-  // REVIEW는 이 후속 질문에서 새로 제안된 조건이라 해제하면 어떤 의견에도
-  // 확정된 적이 없어 최종 안건에 남지 않는다. (DISCUSS에서 이미 확정된 ACCESS를
-  // 여기서 해제하는 경우는 다르다 — findings 참고: 후속에서 칩을 풀어도 이전
-  // 의견의 확정 기록은 그대로 남아 MotionScreen의 누적 목록에서 계속 보인다.)
+  // DISCUSS에서 확정한 ACCESS가 후속 질문 칩으로 다시 보인다. 여기서 해제하면
+  // 최종 안건의 누적 목록에서도 빠져야 한다(후속 보완은 누적 조건을 유지·해제한다).
+  // 새로 제안된 REVIEW는 그대로 두어 최종 안건에 남는다.
   await page.getByTestId('followup-option-0').click();
-  await page.getByTestId('condition-chip-REVIEW').click();
-  await expect(page.getByTestId('condition-chip-REVIEW')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('condition-chip-ACCESS')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('condition-chip-ACCESS').click();
+  await expect(page.getByTestId('condition-chip-ACCESS')).toHaveAttribute('aria-pressed', 'false');
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -77,7 +77,6 @@ test('후속 질문에서 새로 제안된 조건 칩을 해제하면 최종 안
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  // ACCESS는 DISCUSS에서 이미 확정돼 그대로 남고, 해제한 REVIEW만 빠진다.
-  await expect(conditions).toContainText('권한·공유 범위 확인');
-  await expect(conditions).not.toContainText('출처·기준일 표시 후 담당자 검토');
+  await expect(conditions).not.toContainText('권한·공유 범위 확인');
+  await expect(conditions).toContainText('출처·기준일 표시 후 담당자 검토');
 });

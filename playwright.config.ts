@@ -17,7 +17,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'npm run preview -- --port 4173',
+      command: 'npm run build && npm run preview -- --port 4173',
       url: 'http://localhost:4173',
       reuseExistingServer: !process.env.CI,
     },
