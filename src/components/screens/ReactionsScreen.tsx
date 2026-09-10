@@ -4,7 +4,9 @@
 // 제공한다. 조건 제안·충돌·확정은 discuss와 동일하게 domain/conditions.ts에 위임한다.
 // T12에서 AssistantPanel을 붙였다. live 모드에서는 상단 임원 카드 행을 scenario.reactions
 // 대신 실제 REACTIONS 라운드 결과(roleStatus·statements)로 바꾼다(T30). 후속 보완 입력·
-// 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다.
+// 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다. T31에서
+// draftRevision·transcript·assistantAdapter를 AssistantPanel에 추가로 넘긴다(statements를
+// 그대로 transcript로 재사용한다 — 이미 live 라운드 결과를 담고 있다).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -12,6 +14,8 @@ import type { Opinion, RoleStatus, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import type { AssistantActionEvent } from '../../domain/assistantLog';
+import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
@@ -31,10 +35,14 @@ export interface ReactionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
+  transcriptRevision: number;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
   onKeepPrevious: () => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
-  onAssistantAction: (label: string) => void;
+  onAssistantAction: (event: AssistantActionEvent) => void;
+  /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
+  assistantAdapter?: AssistantAdapter;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -54,9 +62,11 @@ export function ReactionsScreen({
   mode,
   roleStatus,
   statements,
+  transcriptRevision,
   onSubmitFollowup,
   onKeepPrevious,
   onAssistantAction,
+  assistantAdapter,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
   const previousConfirmedIds = useMemo(
@@ -67,6 +77,12 @@ export function ReactionsScreen({
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
+  // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
+  const [draftRevision, setDraftRevision] = useState(0);
+  const transcript = useMemo(
+    () => ({ revision: transcriptRevision, statements }),
+    [transcriptRevision, statements],
+  );
 
   const selectedOption =
     selectedOptionIndex !== null ? scenario.followUp.options[selectedOptionIndex] : null;
@@ -135,11 +151,13 @@ export function ReactionsScreen({
     }
     setSelectedOptionIndex(index);
     setTextValue(option.text);
+    setDraftRevision((value) => value + 1);
   }
 
   function handleTextChange(text: string) {
     setSelectedOptionIndex(null);
     setTextValue(text);
+    setDraftRevision((value) => value + 1);
   }
 
   function handleToggleCondition(conditionId: string) {
@@ -238,8 +256,11 @@ export function ReactionsScreen({
           sessionId={sessionId}
           selectedConditionIds={confirmedConditionIds}
           draftText={textValue}
+          draftRevision={draftRevision}
+          transcript={transcript}
           onApplyDraft={handleTextChange}
           onAssistantAction={onAssistantAction}
+          adapter={assistantAdapter}
         />
         <button
           type="button"

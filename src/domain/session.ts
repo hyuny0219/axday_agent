@@ -4,6 +4,8 @@
 
 import type { ExecMemberId, Scenario } from '../content/types';
 import { findConflicts } from './conditions';
+import type { AssistantActionEvent } from './assistantLog';
+import { encodeAssistantLogEntry } from './assistantLog';
 import { EMPTY_DRAFT_STATE } from './draft';
 import { freezeMotion, freezeOriginal } from './motion';
 import type {
@@ -44,7 +46,7 @@ export type SessionAction =
   | { type: 'IDLE_RESET' }
   | { type: 'OPERATOR_RESET' }
   | { type: 'MARK_SUMMARY_SHOWN' }
-  | { type: 'RECORD_ASSISTANT_ACTION'; label: string }
+  | { type: 'RECORD_ASSISTANT_ACTION'; entry: AssistantActionEvent }
   | { type: 'SET_MODE'; mode: SessionMode }
   | {
       type: 'APPEND_STATEMENTS';
@@ -350,9 +352,11 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.stage !== 'DISCUSS' && session.stage !== 'REACTIONS') {
         return ignore(session, 'AI 비서실장 기록은 DISCUSS·REACTIONS 단계에서만 가능합니다.');
       }
+      // requestedAt은 여기(reduce)에 주입된 now에서만 나온다 — AssistantPanel이 자체
+      // 시계를 만들지 않는다(시간의 유일한 출처는 Clock).
       return withNoWarnings({
         ...session,
-        assistantActions: [...session.assistantActions, action.label],
+        assistantActions: [...session.assistantActions, encodeAssistantLogEntry(action.entry, now)],
         lastActivityAt: now,
       });
     }

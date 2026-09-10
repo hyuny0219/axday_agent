@@ -9,6 +9,7 @@ import {
 import { AssistantTimeoutError } from '../../src/services/assistant/types';
 
 const scenario = aiAssistantScenario;
+const emptyTranscript = { revision: 0, statements: [] };
 
 function makeRequestBase() {
   const controller = new AbortController();
@@ -31,7 +32,7 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { controller, base } = makeRequestBase();
 
-    const promise = adapter.summarizeOpinions({ ...base, scenario });
+    const promise = adapter.summarizeOpinions({ ...base, scenario, transcript: emptyTranscript });
     const assertion = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
 
     // 응답이 도착하기 전(200ms 전)에 세션이 리셋되어 요청이 취소된 상황을 흉내낸다.
@@ -46,7 +47,7 @@ describe('scripted assistant adapter', () => {
     const { controller, base } = makeRequestBase();
     controller.abort();
 
-    await expect(adapter.refineDraft({ ...base, draftText: '원문' })).rejects.toMatchObject({
+    await expect(adapter.refineDraft({ ...base, scenario, draftText: '원문', draftRevision: 0 })).rejects.toMatchObject({
       name: 'AbortError',
     });
   });
@@ -55,7 +56,7 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { base } = makeRequestBase();
 
-    const promise = adapter.summarizeOpinions({ ...base, scenario });
+    const promise = adapter.summarizeOpinions({ ...base, scenario, transcript: emptyTranscript });
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
@@ -79,7 +80,7 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { base } = makeRequestBase();
 
-    const promise = withTimeout(adapter.refineDraft({ ...base, draftText: '원문 그대로' }));
+    const promise = withTimeout(adapter.refineDraft({ ...base, scenario, draftText: '원문 그대로', draftRevision: 0 }));
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
@@ -92,7 +93,7 @@ describe('scripted assistant adapter', () => {
     const draftText =
       '아직 확인되지 않은 수치이며, 검증 없이 그대로 공유하지 않겠습니다. 담당자 확인이 필요합니다.';
 
-    const promise = adapter.refineDraft({ ...base, draftText });
+    const promise = adapter.refineDraft({ ...base, scenario, draftText, draftRevision: 0 });
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
@@ -107,7 +108,7 @@ describe('scripted assistant adapter', () => {
     const { base } = makeRequestBase();
     const longDraft = '검토가 필요합니다. '.repeat(40);
 
-    const promise = adapter.refineDraft({ ...base, draftText: longDraft });
+    const promise = adapter.refineDraft({ ...base, scenario, draftText: longDraft, draftRevision: 0 });
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 

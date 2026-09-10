@@ -108,11 +108,13 @@ function buildSummary(scenario: Scenario): SummarizeOpinionsResult {
     (isShared ? commonPoints : disagreements).push(point);
   }
   const evidenceIds = uniqueInOrder(scenario.initialOpinions.flatMap((o) => o.evidenceIds));
-  return { mode: 'scripted', evidenceIds, commonPoints, disagreements };
+  return { mode: 'scripted', evidenceIds, commonPoints, disagreements, summaryText: '' };
 }
 
-/** 원안에는 없던 조건(추가분)과 아직 확정하지 않은 조건(남은 확인 사항)을 나눈다. */
-function buildCompare(scenario: Scenario, selectedConditionIds: string[]): CompareConditionsResult {
+/** 원안에는 없던 조건(추가분)과 아직 확정하지 않은 조건(남은 확인 사항)을 나눈다. 실제 AI를
+ * 부르지 않는 순수 계산이라 live.ts도 이 함수를 그대로 재사용한다(정규화된 원안/제안 차이는
+ * "프로그램이 표시"하면 된다 — AGENT_BOARDROOM_SPEC.md 4장). */
+export function buildCompare(scenario: Scenario, selectedConditionIds: string[]): CompareConditionsResult {
   const baseIds = new Set(scenario.baseConditionIds);
   const selectedIds = new Set(selectedConditionIds);
   const addedConditionIds = scenario.conditions
@@ -146,7 +148,12 @@ export function createScriptedAdapter(): AssistantAdapter {
     },
     refineDraft(req: RefineDraftRequest): Promise<RefineDraftResult> {
       return afterScriptedDelay(
-        () => ({ mode: 'scripted' as const, evidenceIds: [], draftText: refine(req.draftText) }),
+        () => ({
+          mode: 'scripted' as const,
+          evidenceIds: [],
+          suggestedConditionIds: [],
+          draftText: refine(req.draftText),
+        }),
         req.signal,
       );
     },

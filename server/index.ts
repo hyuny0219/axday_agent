@@ -1,6 +1,6 @@
 // 서버 골격. GET /api/health와 4개 POST 엔드포인트의 라우팅·요청 검증·404/400 응답까지만
-// 담당한다. 라운드·표·비서 핸들러의 실제 로직(모델 호출·집계 반영)은 T28·T31에서 채운다.
-// AGENT_BOARDROOM_SPEC.md 5-6장, DEV_PLAN.md 11절.
+// 담당한다. 라운드·표·비서 핸들러의 실제 로직(모델 호출·집계 반영)은 T28(round·vote)·T31(비서)
+// 에서 채웠다. AGENT_BOARDROOM_SPEC.md 5-6장, DEV_PLAN.md 11절.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { z } from 'zod';
@@ -8,9 +8,15 @@ import { loadConfig } from './config';
 import { createMockProvider } from './providers/mock';
 import { createAnthropicProvider } from './providers/anthropic';
 import type { ModelProvider } from './providers/types';
-import { requestMetaSchema, RequestIdRegistry } from './validate';
+import { RequestIdRegistry } from './validate';
 import { roundRequestSchema, handleRound } from './handlers/round';
 import { voteRequestSchema, handleVote } from './handlers/vote';
+import {
+  refineRequestSchema,
+  summarizeRequestSchema,
+  handleAssistantRefine,
+  handleAssistantSummarize,
+} from './handlers/assistant';
 
 const config = loadConfig();
 
@@ -18,9 +24,6 @@ const provider: ModelProvider =
   config.provider === 'anthropic'
     ? createAnthropicProvider({ modelId: config.modelId })
     : createMockProvider(config.modelId);
-
-// T31 범위에서는 비서 핸들러가 아직 provider를 호출하지 않는다(요청 검증까지만).
-// board.round/board.vote는 T28에서 이미 연결했다.
 
 const requestIds = new RequestIdRegistry();
 
@@ -55,38 +58,7 @@ function handleHealth(_req: IncomingMessage, res: ServerResponse): void {
   });
 }
 
-/**
- * 라운드·표·비서 엔드포인트의 공통 골격: 요청 본문을 읽고 공통 메타(sessionId 등)를
- * 검증하고 requestId 중복을 거절한다. 여기까지 통과하면 아직 구현되지 않은 본문
- * 로직을 알리는 501을 돌려준다(T28·T31에서 실제 응답으로 교체).
- */
-async function handleStub(endpoint: string, req: IncomingMessage, res: ServerResponse): Promise<void> {
-  let body: unknown;
-  try {
-    body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'invalid_json' });
-    return;
-  }
-
-  const parsed = requestMetaSchema.safeParse(body);
-  if (!parsed.success) {
-    sendJson(res, 400, {
-      error: 'invalid_request',
-      issues: parsed.error.issues.map((issue) => issue.message),
-    });
-    return;
-  }
-
-  if (!requestIds.register(parsed.data.requestId)) {
-    sendJson(res, 400, { error: 'duplicate_request_id' });
-    return;
-  }
-
-  sendJson(res, 501, { error: 'not_implemented', endpoint });
-}
-
-/** 라운드·표결 엔드포인트 공통: 본문을 읽고 requestId 중복을 거절한 뒤 스키마별 파서와
+/** 라운드·표결·비서 엔드포인트 공통: 본문을 읽고 requestId 중복을 거절한 뒤 스키마별 파서와
  * 핸들러를 호출한다. 알 수 없는 scenarioId는 400으로, 그 외 예외는 상위 catch가 500으로
  * 돌린다. */
 async function handleBoardEndpoint<T extends { requestId: string }>(
@@ -138,8 +110,22 @@ const routes: Record<string, RouteHandler> = {
     handleBoardEndpoint('board.round', roundRequestSchema, (data) => handleRound(data, { provider }), req, res),
   'POST /api/board/vote': (req, res) =>
     handleBoardEndpoint('board.vote', voteRequestSchema, (data) => handleVote(data, { provider }), req, res),
-  'POST /api/assistant/refine': (req, res) => handleStub('assistant.refine', req, res),
-  'POST /api/assistant/summarize': (req, res) => handleStub('assistant.summarize', req, res),
+  'POST /api/assistant/refine': (req, res) =>
+    handleBoardEndpoint(
+      'assistant.refine',
+      refineRequestSchema,
+      (data) => handleAssistantRefine(data, { provider }),
+      req,
+      res,
+    ),
+  'POST /api/assistant/summarize': (req, res) =>
+    handleBoardEndpoint(
+      'assistant.summarize',
+      summarizeRequestSchema,
+      (data) => handleAssistantSummarize(data, { provider }),
+      req,
+      res,
+    ),
 };
 
 export function createBoardServer() {

@@ -274,8 +274,47 @@ describe('단계 밖 액션 무시', () => {
 
   it('BRIEFING 단계 밖에서는 RECORD_ASSISTANT_ACTION을 무시한다', () => {
     const session = createInitialSession(T0);
-    const result = reduce(session, { type: 'RECORD_ASSISTANT_ACTION', label: 'ai-help' }, T0);
+    const result = reduce(
+      session,
+      {
+        type: 'RECORD_ASSISTANT_ACTION',
+        entry: { type: 'OPINION_SUMMARY', mode: 'scripted', evidenceIds: [] },
+      },
+      T0,
+    );
     expect(result.assistantActions).toEqual([]);
     expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('RECORD_ASSISTANT_ACTION은 mode·evidenceIds·applied·requestedAt(now)을 그대로 기록한다', () => {
+    let session = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // BRIEFING -> OPINIONS
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // OPINIONS -> DISCUSS
+
+    const now = T0 + 1234;
+    const result = reduce(
+      session,
+      {
+        type: 'RECORD_ASSISTANT_ACTION',
+        entry: { type: 'DRAFT_REFINE', mode: 'live', evidenceIds: ['E1'], applied: true },
+      },
+      now,
+    );
+    expect(result.assistantActions).toHaveLength(1);
+    const entry = JSON.parse(result.assistantActions[0] as string) as {
+      type: string;
+      mode: string;
+      evidenceIds: string[];
+      applied: boolean;
+      requestedAt: number;
+    };
+    expect(entry).toEqual({
+      type: 'DRAFT_REFINE',
+      mode: 'live',
+      evidenceIds: ['E1'],
+      applied: true,
+      requestedAt: now,
+    });
   });
 });

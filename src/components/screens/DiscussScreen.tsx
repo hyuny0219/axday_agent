@@ -3,10 +3,13 @@
 // selectedPhraseIds와 draftText를 분리하고, 실제 제출값은 항상 화면에 보이는
 // draftText다. 편집 손실 방지 규칙(직접 수정 후 체크 변경 시 확인)과 조건 제안·충돌
 // 판정은 모두 src/domain의 순수 함수(draft.ts, conditions.ts)에 위임한다. T12에서
-// AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다.
+// AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
+// (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
+// AssistantPanel에 추가로 넘긴다.
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
+import type { Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
   editText,
@@ -15,6 +18,8 @@ import {
   togglePhrase,
 } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromPhrases, proposeFromText } from '../../domain/conditions';
+import type { AssistantActionEvent } from '../../domain/assistantLog';
+import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
 import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -33,9 +38,13 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
+  transcript: Transcript;
   onSubmit: (payload: DiscussSubmitPayload) => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
-  onAssistantAction: (label: string) => void;
+  onAssistantAction: (event: AssistantActionEvent) => void;
+  /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
+  assistantAdapter?: AssistantAdapter;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -48,10 +57,20 @@ function uniqueInOrder(ids: string[]): string[] {
   return result;
 }
 
-export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction }: DiscussScreenProps) {
+export function DiscussScreen({
+  scenario,
+  sessionId,
+  transcript,
+  onSubmit,
+  onAssistantAction,
+  assistantAdapter,
+}: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
+  // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
+  // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
+  const [draftRevision, setDraftRevision] = useState(0);
 
   const phraseConditionIds = useMemo(
     () => proposeFromPhrases(scenario, draft.selectedPhraseIds),
@@ -98,6 +117,7 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
     const result = togglePhrase(draft, scenario, phraseId);
     if (result.kind === 'applied') {
       setDraft(result.state);
+      setDraftRevision((value) => value + 1);
       return;
     }
     setPendingPhraseId(result.pendingPhraseId);
@@ -108,6 +128,7 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
       return;
     }
     setDraft(resolveConfirm(draft, scenario, pendingPhraseId, 'keep'));
+    setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
   }
 
@@ -116,11 +137,13 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
       return;
     }
     setDraft(resolveConfirm(draft, scenario, pendingPhraseId, 'rebuild'));
+    setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
   }
 
   function handleDraftTextChange(text: string) {
     setDraft(editText(draft, text).state);
+    setDraftRevision((value) => value + 1);
   }
 
   function handleToggleCondition(conditionId: string) {
@@ -193,8 +216,11 @@ export function DiscussScreen({ scenario, sessionId, onSubmit, onAssistantAction
         sessionId={sessionId}
         selectedConditionIds={confirmedConditionIds}
         draftText={draft.draftText}
+        draftRevision={draftRevision}
+        transcript={transcript}
         onApplyDraft={handleDraftTextChange}
         onAssistantAction={onAssistantAction}
+        adapter={assistantAdapter}
       />
       <div className="discuss-screen__submit-row screen__sticky-footer">
         <button

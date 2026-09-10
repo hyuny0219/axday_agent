@@ -25,6 +25,9 @@ import { createOrchestrator, type Orchestrator, type OrchestratorStore } from '.
 import { liveBoardAgentsAdapter } from '../services/boardAgents/live';
 import { scriptedBoardAgentsAdapter } from '../services/boardAgents/scripted';
 import type { BoardAgentsAdapter } from '../services/boardAgents/types';
+import { liveAssistantAdapter } from '../services/assistant/live';
+import { scriptedAssistantAdapter } from '../services/assistant/scripted';
+import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
 import { IdleNotice } from '../components/parts/IdleNotice';
 import { Nameplate } from '../components/parts/Nameplate';
@@ -270,6 +273,11 @@ function SessionProvider({ children }: { children: ReactNode }) {
 /** stage별 화면 라우팅. */
 function StageRouter() {
   const { session, dispatch } = useSession();
+  // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
+  // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
+  // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
+  const assistantAdapter: AssistantAdapter =
+    session.mode === 'live' ? liveAssistantAdapter : scriptedAssistantAdapter;
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
 
   switch (session.stage) {
@@ -318,8 +326,10 @@ function StageRouter() {
         <DiscussScreen
           scenario={scenario}
           sessionId={session.sessionId}
+          transcript={session.transcript}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
-          onAssistantAction={(label) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', label })}
+          onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
+          assistantAdapter={assistantAdapter}
         />
       );
 
@@ -335,9 +345,11 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          transcriptRevision={session.transcript.revision}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
-          onAssistantAction={(label) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', label })}
+          onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
+          assistantAdapter={assistantAdapter}
         />
       );
 
