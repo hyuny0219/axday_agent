@@ -11,6 +11,7 @@
 import type { ExecMemberId, Vote } from '../../content/types';
 import type { StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { accessHeaders } from '../transport/accessToken';
 import type {
   BallotOutcome,
   BoardAgentsAdapter,
@@ -59,7 +60,7 @@ async function postBoardRequest(path: string, body: unknown, ctx: BoardAgentsCon
   try {
     const res = await fetch(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...accessHeaders() },
       body: JSON.stringify(body),
       signal: controller.signal,
     });

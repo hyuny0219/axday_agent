@@ -49,6 +49,8 @@ bash scripts/offline-check.sh
 
 빌드 산출물(`vite preview`)만으로, 그리고 로컬 밖으로 나가는 요청이 0건인 상태로 scripted 경로가 완주되는지 확인하는 스크립트입니다. 순서: 1) `npm run build` 2) `vite preview`를 4173 포트로 기동해 응답을 기다림 3) `e2e/smoke.spec.ts`·`flow-full.spec.ts`·`discuss.spec.ts`·`operations.spec.ts`를 외부 요청 차단 fixture와 함께 실행. 이 subset은 대기→선택→토론→최종 투표→결과의 scripted 전 구간과 240초 만료·무입력 75초/90초·운영자 메뉴·중복 클릭 방지를 포함합니다. 통과하면 인터넷 연결 없는 현장 PC에서도 scripted 체험이 끝까지 동작한다는 근거가 됩니다. live(실제 모델 호출)는 이 스크립트의 범위가 아니며 서버 환경변수와 API 키가 있는 별도 네트워크가 필요합니다.
 
+테스트용 무료 웹호스팅(GitHub Pages·Render) 배포 절차는 [docs/DEPLOY.md](docs/DEPLOY.md)를 참고하세요(행사 당일 운영은 로컬 서버를 씁니다).
+
 ## 데모(scripted)와 실제 AI(live) 차이
 
 | 항목 | scripted (데모) | live (실제 AI) |

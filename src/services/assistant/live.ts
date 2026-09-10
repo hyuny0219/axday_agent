@@ -18,6 +18,7 @@
 // 프로그램이 표시하면 된다 — 4장). scripted.ts의 buildCompare를 그대로 재사용하고 mode도
 // 항상 'scripted'로 둔다("실제 AI 사용"이라고 과장하지 않기 위해서다).
 
+import { accessHeaders } from '../transport/accessToken';
 import { buildCompare } from './scripted';
 import { AssistantTimeoutError } from './types';
 import type {
@@ -95,7 +96,7 @@ async function postAssistantRequest(
   try {
     const res = await fetch(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...accessHeaders() },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
