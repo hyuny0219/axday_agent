@@ -20,6 +20,7 @@
 | T27~T30 | 완료 | M-L1 서버·프롬프트·오케스트레이터·화면 연결. T27~T29 1라운드 PASS, T30 수정 1라운드(허용 경로 밖 live.ts 편집 되돌림, 장애 주입은 e2e route로 대체·T36 분리). 단위 177·E2E 36. 실제 모델 호출은 미검증(키 없음) |
 | T31~T32 | 완료 | M-L2 비서실장 live·평가 하네스. T31 수정 1라운드(원문/초안 나란히·원문 유지 버튼), T32 1라운드 PASS. 단위 198·E2E 39. `npm run eval:live`는 mock으로만 실행됨. 실제 키로 `--runs 3` 실측은 미실행(절차: docs/LIVE_EVAL.md) |
 | T36 | 대기 | live 클라이언트 mock 장애 주입 배선(필요할 때만) |
+| T37 | 대기 | 무료 웹호스팅 배포 준비(정적 서빙·접속 토큰·세션 상한·Pages·Render). 배포 자체는 사용자 계정에서 |
 | T15~T16 | 완료 | 모션·접근성, E2E 전체·외부 요청 차단. 모두 1라운드 PASS. T16이 찾은 후속 조건 해제 버그(이전 확정 조건이 합집합으로 되살아남)는 오케스트레이터가 수정. 단위 203·E2E 54. Playwright가 dist를 서빙하므로 webServer에 build를 포함 |
 | T17 | 완료 | 오프라인 검증(scripted)·README·PR 초안. 1라운드 PASS. `bash scripts/offline-check.sh` PASS(26 E2E). docs/PR_P0.md 13항목 중 11 체크·2 미체크(전체화면 거부, 현장 IME 리허설). 실제 Anthropic 키 실측은 여전히 미실행 |
 | T33 | 대기 | 디자인 마감(P0 PR 이후) |
@@ -322,6 +323,26 @@
 - 크기: S.
 
 ---
+
+## T37 무료 웹호스팅 배포 준비 — 정적 서빙·접속 토큰·세션 상한·Pages·Render
+
+- 목표: 테스트용으로 (a) GitHub Pages에 scripted 전용 정적 배포, (b) Render 무료 웹서비스에 서버+클라이언트 한 URL로 live 배포가 가능하게 한다. 공개 URL에서 키가 남용되지 않도록 접속 토큰과 세션 상한을 넣는다.
+- 읽을 것: `server/index.ts`(라우터·`createBoardServer`), `server/config.ts`, `server/validate.ts`의 `RequestIdRegistry`(세션 상한을 같은 방식의 메모리 레지스트리로), `src/app/mode.ts`, `src/services/boardAgents/live.ts`·`src/services/assistant/live.ts`의 fetch 지점, `vite.config.ts`, `.github/workflows/ci.yml`(형식만).
+- 만들 것:
+  1. **정적 서빙** `server/static.ts`: `/api` 밖의 GET 요청은 `dist/`에서 파일을 서빙(경로 정규화로 `..` 차단, 확장자별 Content-Type, `assets/`는 `Cache-Control: public, max-age=31536000, immutable`, 나머지는 `no-cache`). 파일이 없으면 `dist/index.html`(SPA fallback). `dist/index.html`이 없으면 기존처럼 404 JSON. `createBoardServer({ staticDir? })` 옵션으로 주입해 테스트한다.
+  2. **접속 토큰** `server/auth.ts`: 환경변수 `ACCESS_TOKEN`이 비어 있으면 지금처럼 개방. 설정돼 있으면 `/api/board/*`·`/api/assistant/*`는 헤더 `x-access-token`이 일치해야 하고, 아니면 401 `{error:'unauthorized'}`. `/api/health`는 항상 200이되 토큰이 요구되는데 없거나 틀리면 `mode:'scripted', authRequired:true`로 응답한다(호스팅 헬스체크는 통과, 클라이언트는 자동으로 scripted). 비교는 `crypto.timingSafeEqual`.
+  3. **세션 상한** `server/sessionLimit.ts`: 환경변수 `MAX_SESSIONS_PER_HOUR`(기본 30). 새 `sessionId`가 최근 1시간 안에 상한을 넘으면 429 `{error:'session_limit'}`. 이미 본 sessionId는 통과. 메모리 슬라이딩 윈도우, `Clock` 주입으로 테스트.
+  4. **클라이언트 토큰** `src/services/transport/accessToken.ts`: 시작 시 URL `?key=...`를 읽어 `sessionStorage`에 저장하고 URL에서 제거(`history.replaceState`), 저장된 값이 있으면 `x-access-token` 헤더를 돌려주는 `accessHeaders()` 하나. `mode.ts`의 health 요청과 두 live 어댑터의 fetch에 붙인다. `mode.ts`는 health 응답의 `mode`를 그대로 따른다(이미 그렇다면 변경 없음).
+  5. **시작 스크립트** package.json: `"start": "tsx server/index.ts"`, `tsx`를 dependencies로 옮긴다(호스팅이 devDependencies를 설치하지 않을 수 있다). `engines.node >= 22`.
+  6. **Vite base** `vite.config.ts`: `base: process.env.VITE_BASE ?? '/'`. 로컬·Render는 `/`, Pages는 `/axday_agent/`.
+  7. **GitHub Pages 워크플로** `.github/workflows/pages.yml`: `workflow_dispatch`와 `push: branches: [main]`에서 `VITE_BASE=/axday_agent/ npm run build` 후 `actions/upload-pages-artifact`·`actions/deploy-pages`. permissions `pages: write, id-token: write`. 서버가 없으므로 결과는 scripted 전용이다.
+  8. **Render 블루프린트** `render.yaml`: `services[0]` type web, runtime node, plan free, `buildCommand: npm ci && npm run build`, `startCommand: npm start`, `healthCheckPath: /api/health`, envVars: `MODEL_PROVIDER=anthropic`, `MODEL_ID=claude-sonnet-5`, `ANTHROPIC_API_KEY`(`sync: false`), `ACCESS_TOKEN`(`generateValue: true`), `MAX_SESSIONS_PER_HOUR=30`, `NODE_VERSION=22`.
+  9. **문서** `docs/DEPLOY.md`: Pages 절차(저장소 Settings → Pages → Source: GitHub Actions, 워크플로 실행, URL 형식), Render 절차(Blueprint로 연결, 키 입력, ACCESS_TOKEN 값 복사, 접속 URL `https://<서비스>.onrender.com/?key=<토큰>`, 15분 무접속 시 잠들고 깨는 데 30~60초 걸리므로 테스트 전 health URL을 먼저 열 것), 행사 당일에는 무료 호스팅을 쓰지 않고 로컬 서버로 운영한다는 경고, 토큰 유출 시 Render에서 재생성. README "오프라인 실행 확인" 절 다음에 한 줄로 링크.
+  10. **테스트** `tests/server/static.test.ts`(index·asset·SPA fallback·`..` 차단·dist 없음), `tests/server/auth.test.ts`(개방/401/health의 authRequired), `tests/server/sessionLimit.test.ts`(상한·윈도 만료·기존 세션 통과), `tests/services/accessToken.test.ts`(쿼리 → sessionStorage → 헤더, 없으면 빈 객체). 기존 E2E는 mock 서버가 `ACCESS_TOKEN` 없이 뜨므로 그대로 통과해야 한다.
+- 허용 경로: `server/`, `src/services/transport/`, `src/app/mode.ts`, `src/services/boardAgents/live.ts`, `src/services/assistant/live.ts`(헤더 한 줄만), `vite.config.ts`, `package.json`, `package-lock.json`, `.github/workflows/pages.yml`, `render.yaml`, `docs/DEPLOY.md`, `README.md`(링크 한 줄), `tests/`, `e2e/`.
+- 하지 말 것: 도메인·화면·프롬프트 변경. `ci.yml` 변경. 키·토큰 값을 저장소에 넣지 않는다. 라우팅 라이브러리 추가 금지(node:http 유지).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `ACCESS_TOKEN=abc MODEL_PROVIDER=mock npm start &` 후 `curl -s localhost:8787/api/health`가 `mode:'scripted', authRequired:true`, `curl -s -H 'x-access-token: abc' localhost:8787/api/health`가 `mode:'live'`, `curl -s -o /dev/null -w '%{http_code}' localhost:8787/`가 200(dist가 있을 때), 토큰 없는 `POST /api/board/round`가 401.
+- 크기: M.
 
 ## T18 안건 ① 데이터·테스트 (P1)
 
