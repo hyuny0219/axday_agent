@@ -2,17 +2,72 @@
 // vite preview(4173, /api proxy)를 함께 띄운다. 이 파일의 테스트는 그 서버를 그대로 쓴다
 // (다른 e2e spec은 `?mode=scripted`로 이 서버를 무시하고 scripted 경로만 검증한다).
 //
-// AGENT_BOARDROOM_SPEC.md 6장 "임원 라운드별 최대 8초"를 mock의 timeout 장애 주입으로
-// 그대로 겪으므로, 해당 테스트는 라운드마다 최대 8초씩(OPINIONS·REACTIONS·최종표) 실제로
-// 기다린다. 기본 30초 테스트 제한을 넉넉히 늘려 잡는다.
+// "한 임원이 응답하지 않는" 경로는 서버/클라이언트 쪽 장애 주입 배선 없이, 이 spec 안에서
+// Playwright의 page.route로 /api/board/round·/api/board/vote 응답 자체를 가로채 특정
+// 역할만 status:'failed'로 되돌려주는 방식으로 만든다(허용 경로가 e2e/뿐이라 다른 파일은
+// 건드리지 않는다 — docs/TASKS.md T36 참고).
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
+
+const EXEC_ROLE_IDS = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'] as const;
+type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-assistant').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
+}
+
+/** roleId가 실패한 것처럼 보이게 /api/board/round·/api/board/vote 응답을 가로챈다.
+ * 나머지 역할은 정상 응답으로 채워 RESULT의 "일부 미표결" 경로만 결정적으로 재현한다. */
+async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string };
+    const json = EXEC_ROLE_IDS.map((roleId) =>
+      roleId === failingRoleId
+        ? { roleId, status: 'failed', failReason: 'timeout', latencyMs: 0, modelId: 'mock', promptVersion: 'mock' }
+        : {
+            roleId,
+            status: 'answered',
+            statement: {
+              roleId,
+              message: `[mock] ${roleId}의 ${body.stage} 발언입니다.`,
+              evidenceIds: ['E1'],
+              referencedStatementIds: [],
+              concerns: [],
+              suggestedConditionIds: [],
+            },
+            latencyMs: 10,
+            modelId: 'mock',
+            promptVersion: 'mock',
+          },
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+
+  await page.route('**/api/board/vote', async (route: Route) => {
+    const body = route.request().postDataJSON() as { motion: { id: string; hash: string } };
+    const json = EXEC_ROLE_IDS.map((roleId) =>
+      roleId === failingRoleId
+        ? { roleId, status: 'failed', failReason: 'timeout', modelId: 'mock', promptVersion: 'mock' }
+        : {
+            roleId,
+            status: 'answered',
+            ballot: {
+              motionId: body.motion.id,
+              motionHash: body.motion.hash,
+              vote: 'YES',
+              reason: `[mock] ${roleId}의 판단 근거입니다.`,
+              evidenceIds: ['E1'],
+              remainingConcerns: [],
+            },
+            modelId: 'mock',
+            promptVersion: 'mock',
+          },
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
 }
 
 test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 근거를 보여준다', async ({ page }) => {
@@ -51,18 +106,15 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
 });
 
 test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다', async ({ page }) => {
-  test.setTimeout(90_000);
+  await mockRoleFailure(page, 'CIO');
 
-  await page.goto('/?mock=timeout:cio');
+  await page.goto('/');
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await enterAiAssistant(page);
 
-  // OPINIONS: CIO는 8초 안에 실패로 남는다(서버 쪽 개별 타임아웃과 클라이언트 쪽 전체
-  // 요청 타임아웃이 거의 같은 8초라, 드물게 나머지 3명도 같은 요청 안에서 함께 실패로
-  // 남을 수 있다 — 이 테스트는 "CIO가 결국 실패로 표시된다"만 검증하고 나머지 인원의
-  // 성공 개수는 강제하지 않는다).
-  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 12_000 });
+  // OPINIONS: CIO만 failed, 나머지 3명은 정상 응답으로 남는다.
+  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();
@@ -71,7 +123,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await submitOpinion.click();
 
   await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
-  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByTestId('followup-option-2').click(); // 후속 라운드 없이 MOTION으로
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -81,7 +133,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
 
-  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 12_000 });
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('result-seat-CIO')).toContainText('미표결');
   await expect(page.getByTestId('result-seat-unavailable-CIO')).toBeVisible();
   await expect(page.getByTestId('result-limited-notice')).toBeVisible();

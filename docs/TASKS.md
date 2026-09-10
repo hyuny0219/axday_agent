@@ -261,6 +261,11 @@
 - 하지 말 것: 도메인 규칙 변경. 서버 변경(mock 시나리오 전달용 헤더 처리만 필요하면 `server/`의 해당 한 곳 허용).
 - 완료 확인: `npm run check && npx playwright test` 성공(기존 28 + live spec).
 - 크기: M.
+- 참고(라운드 2 수정): `?mock=timeout:cio` 같은 URL 쿼리를 요청 본문 mock 필드로 바꾸는 배선은
+  `src/services/boardAgents/live.ts`를 건드려야 하는데 이 파일은 T30 허용 경로 밖이라 되돌렸다.
+  같은 배선이 실제로 필요해지면 T36으로 분리해서 진행한다. `e2e/live.spec.ts`의 "한 임원이
+  응답하지 않으면" 테스트는 `page.route`로 `/api/board/round`·`/api/board/vote` 응답을 직접
+  가로채는 방식으로 바꿔 e2e/ 안에서만 해결했다.
 
 ## T31 비서실장 live — 내 발언 정리·회의 요약
 
@@ -302,6 +307,16 @@
 
 - 목표: 정보보호·IT·재무 검수 의견과 리허설 1의 실제 참가자 반응을 반영해 역할별 어조·판단 기준을 다듬고, P1의 안건 ①·③ 역할 프롬프트와 일관되게 맞춘다. 동결(D-10일) 이후에는 장애 대응 외 프롬프트를 바꾸지 않는다.
 - 크기: M. 상세 카드는 검수 의견 수령 후 작성.
+
+## T36 live 클라이언트 mock 장애 주입 배선 (T30에서 분리, 필요할 때만)
+
+- 목표: 운영 스크립트나 수동 점검에서 실제 브라우저로 특정 임원의 응답 실패를 재현하고 싶을 때, URL 쿼리(예: `?mock=timeout:cio`)를 읽어 `/api/board/round`·`/api/board/vote` 요청에 실어 보내는 배선을 추가한다. e2e 커버리지 자체는 T30에서 `page.route` 응답 가로채기로 이미 확보했으므로, 이 카드는 그 e2e 커버리지로 충분하지 않을 때(예: 실제 서버·수동 QA에서 재현 필요)만 진행한다.
+- 읽을 것: `src/services/boardAgents/live.ts`, `server/providers/mock.ts`, `server/handlers/round.ts`·`vote.ts`의 `mock` 필드 처리.
+- 만들 것: `live.ts`에 URL 쿼리 → 요청 본문 `mock` 필드 변환(쿼리 없으면 필드 자체를 만들지 않음). 필요하면 `server/`의 헤더 처리 지점 한 곳만 추가로 손댄다.
+- 허용 경로: `src/services/boardAgents/live.ts`, `server/`(mock 헤더 처리 한 곳), `e2e/`.
+- 하지 말 것: 도메인 규칙·검증 스키마 변경.
+- 완료 확인: `npm run check && npx playwright test` 성공.
+- 크기: S.
 
 ---
 
