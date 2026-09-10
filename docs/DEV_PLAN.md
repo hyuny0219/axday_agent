@@ -189,7 +189,7 @@ P0 합계 참고 소요: 약 7.5일(1인). 현장 마우스·물리 키보드 �
 ### 아키텍처
 
 - `server/` (Node + TypeScript): `GET /api/health`, `POST /api/board/round`(opinions·reactions·followup), `POST /api/board/vote`, `POST /api/assistant/refine`, `POST /api/assistant/summarize`. 제공자 인터페이스 `ModelProvider` 뒤에 `mock`(결정적 응답·장애 주입)과 `anthropic`(`@anthropic-ai/sdk`, 구조화 출력) 구현. 응답 검증(스키마·enum·길이·근거 ID·revision·motionHash·중복·종료 후)은 서버가 한다.
-- 모델 기본값은 `claude-opus-5`, `output_config.effort: 'low'`, 짧은 `max_tokens`, 재시도 0회, 호출별 timeout은 요청이 넘긴 남은 예산. 모델 ID는 환경변수로 바꿀 수 있고 지연 측정 후 확정한다.
+- 모델 기본값은 `claude-sonnet-5`(2026-09-10 사용자 결정), `output_config.effort: 'low'`, 짧은 `max_tokens`, 재시도 0회, 호출별 timeout은 요청이 넘긴 남은 예산. 모델 교체 지점은 두 곳뿐이다: 운영 중에는 서버 환경변수 `MODEL_ID`(코드 변경 없음), 코드 기본값은 `server/config.ts`의 `DEFAULT_MODEL_ID` 상수 한 줄. 프롬프트·검증·클라이언트는 모델명을 알지 못하며, 결과 기록과 `/api/health`에 실제 사용 모델이 표시된다.
 - 클라이언트: `services/boardAgents`(scripted·live 어댑터, 같은 인터페이스), `services/orchestrator`(라운드 실행, 병렬 호출, 시간 상한, 늦은 응답 폐기, VOTE 대기·FINALIZE), 도메인은 `Statement`·`Transcript`·확장 `Ballot`·`mode`·`motionHash`를 갖는다.
 - 프롬프트 주입 방어: 참가자 원문과 회의 기록은 데이터 블록으로 전달하고 역할·집계는 서버 코드가 고정한다. 알 수 없는 근거·조건 ID는 거절한다.
 - 테스트 두 층: scripted·정규화·집계·미표결·늦은 응답은 결정적 테스트, live는 mock 제공자로 흐름·장애·주입을 E2E로 검증하고 실제 모델 평가는 별도 하네스(T32)로 기록한다.
@@ -202,6 +202,6 @@ T26 도메인 확장 → T27 서버 골격·검증 → T28 역할 프롬프트·
 
 | 결정 | 기본값 | 비고 |
 | --- | --- | --- |
-| 모델 제공자·모델 | Anthropic SDK, `claude-opus-5`, effort low | 8초 라운드 상한을 실측해 `claude-sonnet-5`로 바꿀 수 있음 |
+| 모델 제공자·모델 | Anthropic SDK, `claude-sonnet-5`, effort low (확정) | opus로 올릴 때는 `MODEL_ID=claude-opus-5` 환경변수 또는 `server/config.ts`의 `DEFAULT_MODEL_ID` 한 줄. 8초 상한 실측(T32)으로 판단 |
 | 키 확보 | 서버 환경변수 `ANTHROPIC_API_KEY` 또는 `ant auth login` 프로필 | 없으면 live 항목은 미검증으로 보고 |
 | E2E의 live 경로 | mock 제공자 서버를 Playwright webServer로 함께 기동 | 실제 키는 CI에 넣지 않음 |
