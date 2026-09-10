@@ -13,7 +13,8 @@
 | T01~T02 | 완료 | M0 스캐폴드·기반. 각 1라운드 PASS, 커밋 e61e907·c7dfa90 |
 | T03~T07 | 완료 | M1 엔진. T06만 수정 1라운드(reducer 순수성), 나머지 1라운드 PASS. 단위 테스트 83개 |
 | T08~T10 | 완료 | M2 화면 흐름. 모두 1라운드 PASS. T08에서 발견된 reducer 버그(브리핑 요약 기록)는 오케스트레이터가 수정. 단위 86·E2E 12 |
-| T11~T17 | 대기 | P0 |
+| T11~T13 | 완료 | M3·M4 운영·AI·공개 payload. T12만 수정 1라운드(허용 경로 문서 보완). 단위 102·E2E 26. 남은 nit: assistantLog의 evidenceIds·mode 기록이 아직 세션에 연결되지 않음(P2 T24에서 처리) |
+| T14~T17 | 대기 | P0 |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
 
@@ -154,7 +155,7 @@
 - 목표: 두 해상도 레이아웃과 카드·아바타·CTA를 디자인 명세대로 입힌다.
 - 읽을 것: docs/design/DESIGN_SPEC.md 2장·3장·6장·8장(비실사 아바타 문단), 참조 이미지는 `docs/design/assets/opinion-compose.png`와 `final-vote.png` 두 장만.
 - 만들 것: `src/styles/`에 화면별 CSS, 임원 4열 카드(1280에서 접힌 한 줄 요약), 내 좌석 정체성, 이니셜·아이콘 아바타(CSS만), 안건 카드 3열, 최종 투표 3열 radio + 별도 확정 CTA, 결과 5석 동일 크기, sticky footer CTA, 타이포 크기(1920: 제목 40–48, 본문 24–28; 1280: 32/20), 간격 8px 배수, 최소 클릭 영역 56px. `e2e/screenshots.spec.ts`(두 프로젝트에서 선택·토론·투표·결과 4장을 `docs/screenshots/<project>/<screen>.png`로 저장, 추천 문구 6개·300자 입력·조건 4개를 실제 콘텐츠로 배치한 상태).
-- 허용 경로: `src/styles/`, `src/components/`(className·구조 변경만), `e2e/`, `docs/screenshots/`.
+- 허용 경로: `src/styles/`, `src/components/`(className·구조 변경만), `src/app/App.tsx`(레이아웃 래퍼·className만), `e2e/`, `docs/screenshots/`.
 - 하지 말 것: 동작 변경. 이미지 속 슬로건 문구 복제. 실사 아바타.
 - 완료 확인: `npx playwright test screenshots` 성공, 8장 생성. 1280×720에서 CTA·입력이 잘리지 않음(스크린샷으로 reviewer가 확인).
 - 크기: M.
@@ -164,7 +165,7 @@
 - 목표: 전환 모션, reduced-motion, 키보드 접근성, 200% 확대, 상태 색+텍스트를 마감한다.
 - 읽을 것: docs/design/DESIGN_SPEC.md 4장 전체.
 - 만들 것: 화면 전환 180–250ms opacity/translate, 선택 120ms, 임원 발언 glow 1회, `prefers-reduced-motion`에서 이동·빛 제거, `:focus-visible` 스타일, 모든 버튼 Tab·Enter 조작, radio 방향키, 타이머 앰버, 반대·보류·미표결은 색+텍스트+아이콘, 200% 확대(뷰포트 960×540 상당)에서 세로 재배치·스크롤 허용. `e2e/a11y.spec.ts`(키보드만으로 추천 문구 경로 완주, reduced-motion 에뮬레이션에서 transition 없음, 960×540 뷰포트에서 CTA 도달).
-- 허용 경로: `src/styles/`, `src/components/`, `e2e/`.
+- 허용 경로: `src/styles/`, `src/components/`, `src/app/App.tsx`(reduced-motion·포커스 관련 연결만), `e2e/`.
 - 하지 말 것: 레이아웃 재설계.
 - 완료 확인: `npx playwright test a11y` 성공.
 - 크기: S.
