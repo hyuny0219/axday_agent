@@ -2,12 +2,21 @@
 // 따르는 순수 reducer. 시계·무입력 판정(언제 EXPIRE/IDLE_RESET을 보낼지)은 이 파일의
 // 책임이 아니다(T07). 이 파일은 주어진 action을 받아 상태를 결정적으로 바꿀 뿐이다.
 
-import type { Scenario } from '../content/types';
+import type { ExecMemberId, Scenario } from '../content/types';
 import { findConflicts } from './conditions';
 import { EMPTY_DRAFT_STATE } from './draft';
 import { freezeMotion, freezeOriginal } from './motion';
-import type { Ballot, Opinion, PendingVote, Session } from './types';
-import { castParticipant, decideBoard, tally } from './voting';
+import type {
+  Ballot,
+  Opinion,
+  PendingVote,
+  RoleStatus,
+  Session,
+  SessionMode,
+  Statement,
+  StatementStage,
+} from './types';
+import { EXEC_MEMBER_ORDER, castParticipant, decideBoard, fillMissingBallots, tally } from './voting';
 
 export const SESSION_DURATION_MS = 240_000;
 
@@ -35,17 +44,43 @@ export type SessionAction =
   | { type: 'IDLE_RESET' }
   | { type: 'OPERATOR_RESET' }
   | { type: 'MARK_SUMMARY_SHOWN' }
-  | { type: 'RECORD_ASSISTANT_ACTION'; label: string };
+  | { type: 'RECORD_ASSISTANT_ACTION'; label: string }
+  | { type: 'SET_MODE'; mode: SessionMode }
+  | {
+      type: 'APPEND_STATEMENTS';
+      stage: StatementStage;
+      statements: Statement[];
+      baseRevision: number;
+    }
+  | { type: 'SET_ROLE_STATUS'; roleId: ExecMemberId; status: RoleStatus }
+  | { type: 'RECORD_EXEC_BALLOT'; ballot: Ballot }
+  | { type: 'MARK_EXEC_UNAVAILABLE'; roleId: ExecMemberId; reason: string }
+  | { type: 'FINALIZE_RESULT' };
+
+const IDLE_ROLE_STATUS: Record<ExecMemberId, RoleStatus> = {
+  CEO: 'idle',
+  CFO_CAIO: 'idle',
+  CIO: 'idle',
+  CISO: 'idle',
+};
+
+const PENDING_ROLE_STATUS: Record<ExecMemberId, RoleStatus> = {
+  CEO: 'pending',
+  CFO_CAIO: 'pending',
+  CIO: 'pending',
+  CISO: 'pending',
+};
 
 function createSessionId(): string {
   return crypto.randomUUID();
 }
 
-/** 새 세션(참가자 이전 값 없음)을 만든다. ATTRACT에서 시작한다. */
+/** 새 세션(참가자 이전 값 없음)을 만든다. ATTRACT에서 시작하고 기본 모드는 scripted다. */
 export function createInitialSession(now: number): Session {
   return {
     stage: 'ATTRACT',
     sessionId: createSessionId(),
+    mode: 'scripted',
     scenarioId: null,
     startedAt: null,
     deadline: null,
@@ -54,6 +89,9 @@ export function createInitialSession(now: number): Session {
     opinions: [],
     followUpUsed: false,
     assistantActions: [],
+    transcript: { revision: 0, statements: [] },
+    roleStatus: { ...IDLE_ROLE_STATUS },
+    execBallotsPending: false,
     finalMotion: null,
     ballots: [],
     outcome: null,
@@ -79,13 +117,8 @@ function withConfirmedAtNow(ballots: Ballot[], now: number): Ballot[] {
   return ballots.map((b) => (b.memberId === 'PARTICIPANT' ? { ...b, confirmedAt: now } : b));
 }
 
-/** 참가자 표가 아직 없으면 UNCAST로 채워 5석을 완성한다. */
-function ensureParticipantUncast(ballots: Ballot[], motionId: string, now: number): Ballot[] {
-  if (ballots.some((b) => b.memberId === 'PARTICIPANT')) {
-    return ballots;
-  }
-  return withConfirmedAtNow(castParticipant(ballots, motionId, 'UNCAST'), now);
-}
+const EXPIRE_REASON = '시간 만료로 응답을 받지 못했습니다.';
+const FINALIZE_TIMEOUT_REASON = '응답 시간 안에 표를 받지 못했습니다.';
 
 /**
  * 세션 상태 전이를 순수하게 계산한다. 잘못된 단계의 액션은 상태를 바꾸지 않고
@@ -188,12 +221,27 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         return ignore(session, '충돌하는 조건이 함께 있어 최종 안건을 고정할 수 없습니다.');
       }
       const finalMotion = freezeMotion(action.scenario, action.confirmedConditionIds, now);
+      // live 모드는 임원표를 비워 두고 roleStatus를 pending으로 둔다: 실제 모델 호출은
+      // 이 리듀서 밖(서비스 계층)에서 RECORD_EXEC_BALLOT/MARK_EXEC_UNAVAILABLE로 채운다.
+      // 실패한 역할을 몰래 scripted 표로 바꾸지 않는다(AGENT_BOARDROOM_SPEC.md 6장).
+      if (session.mode === 'live') {
+        return withNoWarnings({
+          ...session,
+          stage: 'VOTE',
+          finalMotion,
+          ballots: [],
+          roleStatus: { ...PENDING_ROLE_STATUS },
+          execBallotsPending: true,
+          lastActivityAt: now,
+        });
+      }
       const ballots = decideBoard(action.scenario, finalMotion);
       return withNoWarnings({
         ...session,
         stage: 'VOTE',
         finalMotion,
         ballots,
+        execBallotsPending: false,
         lastActivityAt: now,
       });
     }
@@ -218,16 +266,28 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.pendingVote === null) {
         return ignore(session, '선택한 표가 없어 확정할 수 없습니다.');
       }
-      const ballots = withConfirmedAtNow(
-        castParticipant(session.ballots, session.finalMotion.id, session.pendingVote),
+      const withParticipant = withConfirmedAtNow(
+        castParticipant(session.ballots, session.finalMotion, session.pendingVote, session.mode),
         now,
       );
+      const execBallotCount = withParticipant.filter((b) => b.memberId !== 'PARTICIPANT').length;
+      // live에서는 참가자표만 기록한다. 4표가 모두 이미 있으면 즉시 집계하고, 아니면
+      // VOTE에 머물며 FINALIZE_RESULT(늦어도 8초/deadline 안)를 기다린다.
+      if (execBallotCount < EXEC_MEMBER_ORDER.length) {
+        return withNoWarnings({
+          ...session,
+          ballots: withParticipant,
+          pendingVote: null,
+          lastActivityAt: now,
+        });
+      }
       return withNoWarnings({
         ...session,
         stage: 'RESULT',
-        ballots,
-        outcome: tally(ballots).outcome,
+        ballots: withParticipant,
+        outcome: tally(withParticipant).outcome,
         pendingVote: null,
+        execBallotsPending: false,
         lastActivityAt: now,
       });
     }
@@ -237,19 +297,22 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         return ignore(session, '만료는 진행 중인 세션에만 적용됩니다.');
       }
       if (session.finalMotion) {
-        const ballots = ensureParticipantUncast(session.ballots, session.finalMotion.id, now);
+        const ballots = fillMissingBallots(session.ballots, session.finalMotion, now, EXPIRE_REASON);
         return withNoWarnings({
           ...session,
           stage: 'RESULT',
           ballots,
           outcome: tally(ballots).outcome,
           pendingVote: null,
+          execBallotsPending: false,
           lastActivityAt: now,
         });
       }
       const finalMotion = freezeOriginal(action.scenario, now);
-      const boardBallots = decideBoard(action.scenario, finalMotion);
-      const ballots = ensureParticipantUncast(boardBallots, finalMotion.id, now);
+      // scripted는 규칙대로 임원표를 채우고, live는 호출이 없었으므로 그대로
+      // UNCAST로 채운다(실패한 역할을 몰래 scripted 표로 바꾸지 않는다).
+      const boardBallots = session.mode === 'live' ? [] : decideBoard(action.scenario, finalMotion);
+      const ballots = fillMissingBallots(boardBallots, finalMotion, now, EXPIRE_REASON);
       return withNoWarnings({
         ...session,
         stage: 'RESULT',
@@ -258,6 +321,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         outcome: tally(ballots).outcome,
         expiredWithoutMotion: true,
         pendingVote: null,
+        execBallotsPending: false,
         lastActivityAt: now,
       });
     }
@@ -289,6 +353,126 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       return withNoWarnings({
         ...session,
         assistantActions: [...session.assistantActions, action.label],
+        lastActivityAt: now,
+      });
+    }
+
+    case 'SET_MODE': {
+      // 세션 시작 전(ATTRACT/SELECT)에만 live/scripted를 고정한다(지시서 6장
+      // "세션 시작 전에 live/scripted 모드를 고정하고 화면에 표시한다").
+      if (session.stage !== 'ATTRACT' && session.stage !== 'SELECT') {
+        return ignore(session, '진행 방식 설정은 ATTRACT·SELECT 단계에서만 가능합니다.');
+      }
+      return withNoWarnings({ ...session, mode: action.mode, lastActivityAt: now });
+    }
+
+    case 'APPEND_STATEMENTS': {
+      // revision 불일치(동시에 다른 라운드가 먼저 반영됨 등)는 조용히 무시하고 경고만
+      // 남긴다. stage는 호출자가 붙이는 태그일 뿐, 여기서는 검증하지 않는다.
+      if (action.baseRevision !== session.transcript.revision) {
+        return ignore(session, '회의 기록 revision이 일치하지 않아 발언을 반영할 수 없습니다.');
+      }
+      return withNoWarnings({
+        ...session,
+        transcript: {
+          revision: session.transcript.revision + 1,
+          statements: [...session.transcript.statements, ...action.statements],
+        },
+        lastActivityAt: now,
+      });
+    }
+
+    case 'SET_ROLE_STATUS': {
+      return withNoWarnings({
+        ...session,
+        roleStatus: { ...session.roleStatus, [action.roleId]: action.status },
+      });
+    }
+
+    case 'RECORD_EXEC_BALLOT': {
+      if (!session.finalMotion) {
+        return ignore(session, '최종 안건이 없어 임원 표를 기록할 수 없습니다.');
+      }
+      if (session.stage === 'RESULT') {
+        return ignore(session, '이미 결과가 확정되어 임원 표를 반영할 수 없습니다.');
+      }
+      const { ballot } = action;
+      if (!EXEC_MEMBER_ORDER.includes(ballot.memberId as ExecMemberId)) {
+        return ignore(session, '임원이 아닌 역할의 표는 반영할 수 없습니다.');
+      }
+      if (ballot.motionHash !== session.finalMotion.hash) {
+        return ignore(session, '안건 해시가 일치하지 않는 임원 표는 반영할 수 없습니다.');
+      }
+      if (session.ballots.some((b) => b.memberId === ballot.memberId)) {
+        return ignore(session, '이미 기록된 역할의 표는 중복으로 반영할 수 없습니다.');
+      }
+      const ballots = [...session.ballots, ballot];
+      const execBallotCount = ballots.filter((b) => b.memberId !== 'PARTICIPANT').length;
+      return withNoWarnings({
+        ...session,
+        ballots,
+        roleStatus: { ...session.roleStatus, [ballot.memberId as ExecMemberId]: 'answered' },
+        execBallotsPending: execBallotCount < EXEC_MEMBER_ORDER.length,
+        lastActivityAt: now,
+      });
+    }
+
+    case 'MARK_EXEC_UNAVAILABLE': {
+      if (session.stage === 'RESULT') {
+        return ignore(session, '이미 결과가 확정되어 역할 상태를 바꿀 수 없습니다.');
+      }
+      if (session.stage === 'VOTE' && session.finalMotion) {
+        if (session.ballots.some((b) => b.memberId === action.roleId)) {
+          return ignore(session, '이미 기록된 역할의 표는 다시 바꿀 수 없습니다.');
+        }
+        const ballot: Ballot = {
+          memberId: action.roleId,
+          motionId: session.finalMotion.id,
+          motionHash: session.finalMotion.hash,
+          vote: 'UNCAST',
+          source: 'unavailable',
+          unavailableReason: action.reason,
+          confirmedAt: now,
+        };
+        const ballots = [...session.ballots, ballot];
+        const execBallotCount = ballots.filter((b) => b.memberId !== 'PARTICIPANT').length;
+        return withNoWarnings({
+          ...session,
+          ballots,
+          roleStatus: { ...session.roleStatus, [action.roleId]: 'failed' },
+          execBallotsPending: execBallotCount < EXEC_MEMBER_ORDER.length,
+          lastActivityAt: now,
+        });
+      }
+      return withNoWarnings({
+        ...session,
+        roleStatus: { ...session.roleStatus, [action.roleId]: 'failed' },
+        lastActivityAt: now,
+      });
+    }
+
+    case 'FINALIZE_RESULT': {
+      // 참가자 확정과 함께 기다리다 8초 또는 deadline을 넘기면 호출자가 이 액션을
+      // 보낸다. 미도착 임원은 UNCAST+사유로 채우고 그 자리에서 집계를 확정한다.
+      if (session.stage !== 'VOTE') {
+        return ignore(session, '결과 확정은 VOTE 단계에서만 가능합니다.');
+      }
+      if (!session.finalMotion) {
+        return ignore(session, '확정할 최종 안건이 없어 결과를 확정할 수 없습니다.');
+      }
+      const ballots = fillMissingBallots(
+        session.ballots,
+        session.finalMotion,
+        now,
+        FINALIZE_TIMEOUT_REASON,
+      );
+      return withNoWarnings({
+        ...session,
+        stage: 'RESULT',
+        ballots,
+        outcome: tally(ballots).outcome,
+        pendingVote: null,
+        execBallotsPending: false,
         lastActivityAt: now,
       });
     }

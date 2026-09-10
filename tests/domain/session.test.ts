@@ -210,7 +210,14 @@ describe('이중 확정', () => {
       ...atVote,
       ballots: [
         ...atVote.ballots,
-        { memberId: 'PARTICIPANT', motionId: atVote.finalMotion!.id, vote: 'NO', confirmedAt: T0 },
+        {
+          memberId: 'PARTICIPANT',
+          motionId: atVote.finalMotion!.id,
+          motionHash: atVote.finalMotion!.hash,
+          source: 'scripted',
+          vote: 'NO',
+          confirmedAt: T0,
+        },
       ],
     };
     const result = reduce(votedButNotAdvanced, { type: 'CONFIRM_VOTE' }, T0);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { computeMotionHash } from '../../src/domain/motion';
 import {
   EXEC_MEMBER_ORDER,
   castParticipant,
@@ -26,22 +27,29 @@ function powerset(ids: string[]): string[][] {
 const allowedCombos = powerset(allConditionIds).filter(isAllowedCombo);
 
 function buildMotion(conditionIds: string[]): Motion {
+  const id = 'motion-under-test';
+  const text = scenario.originalMotion.text;
+  const executionMode = 'DEFAULT';
   return {
-    id: 'motion-under-test',
+    id,
     scenarioId: scenario.id,
     kind: conditionIds.length === 0 ? 'original' : 'amended',
     conditionIds,
     baseConditionIds: [],
     effectiveConditionIds: conditionIds,
-    executionMode: 'DEFAULT',
+    executionMode,
     frozenAt: 0,
+    text,
+    hash: computeMotionHash({ id, text, effectiveConditionIds: conditionIds, executionMode }),
   };
 }
 
-function withParticipant(boardBallots: Ballot[], motionId: string, vote: Vote): Ballot[] {
+function withParticipant(boardBallots: Ballot[], motion: Motion, vote: Vote): Ballot[] {
   const participantBallot: Ballot = {
     memberId: 'PARTICIPANT',
-    motionId,
+    motionId: motion.id,
+    motionHash: motion.hash,
+    source: 'scripted',
     vote,
     confirmedAt: vote === 'UNCAST' ? null : 1,
   };
@@ -78,7 +86,7 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
       }
 
       for (const participantVote of PARTICIPANT_VOTES) {
-        const ballots = withParticipant(boardBallots, motion.id, participantVote);
+        const ballots = withParticipant(boardBallots, motion, participantVote);
         const result = tally(ballots);
         outcomesSeen.add(result.outcome);
         const totalSeats =
@@ -221,7 +229,7 @@ describe('문서 대표 경로표 — v0.6 (12행)', () => {
       );
       expect(actualExecVotes).toEqual(execVotes);
 
-      const ballots = withParticipant(boardBallots, motion.id, participantVote);
+      const ballots = withParticipant(boardBallots, motion, participantVote);
       const result = tally(ballots);
       expect(result.outcome).toBe(outcome);
       expect(result.counts).toEqual(counts);
@@ -239,20 +247,22 @@ describe('차단 규칙', () => {
   });
 
   it('최종 안건 ID가 없는 투표는 차단한다', () => {
-    expect(() => castParticipant(boardBallots, '', 'YES')).toThrow();
+    expect(() => castParticipant(boardBallots, { ...motion, id: '' }, 'YES', 'scripted')).toThrow();
   });
 
   it('잘못된 안건 ID에 대한 투표는 차단한다', () => {
-    expect(() => castParticipant(boardBallots, 'other-motion-id', 'YES')).toThrow();
+    expect(() =>
+      castParticipant(boardBallots, { ...motion, id: 'other-motion-id' }, 'YES', 'scripted'),
+    ).toThrow();
   });
 
   it('정상 투표는 5석을 완성한다', () => {
-    const ballots = castParticipant(boardBallots, motion.id, 'YES');
+    const ballots = castParticipant(boardBallots, motion, 'YES', 'scripted');
     expect(ballots).toHaveLength(5);
   });
 
   it('중복 의석·확정 후 재투표는 차단한다', () => {
-    const ballots = castParticipant(boardBallots, motion.id, 'YES');
-    expect(() => castParticipant(ballots, motion.id, 'NO')).toThrow();
+    const ballots = castParticipant(boardBallots, motion, 'YES', 'scripted');
+    expect(() => castParticipant(ballots, motion, 'NO', 'scripted')).toThrow();
   });
 });

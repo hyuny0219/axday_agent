@@ -5,11 +5,17 @@
 // 화면에서 감추는 것이 아니라 이 함수가 애초에 만들지 않는다.
 
 import { collectConfirmedConditionIds } from '../components/opinionConditions';
-import type { Scenario } from '../content/types';
+import type { ExecMemberId, Scenario } from '../content/types';
 import type { Session, SessionOutcome, SessionStage } from './types';
 import { tally, type TallyResult } from './voting';
 
 export type ParticipantStatus = 'discussing' | 'voting' | 'done';
+
+/** live 모드 발언 중 공개해도 되는 최소 정보. 원문(text)은 절대 담지 않는다. */
+export interface StatementRef {
+  id: string;
+  roleId: ExecMemberId;
+}
 
 export interface PublicPayload {
   sessionId: string;
@@ -19,6 +25,8 @@ export interface PublicPayload {
   memberOpinionIds: string[];
   reactionIds: string[];
   confirmedConditionLabels: string[];
+  /** live 모드 회의 기록에서 발언 id·roleId만 공개한다(원문은 내보내지 않는다). */
+  statementRefs: StatementRef[];
   tally: TallyResult | null;
   outcome: SessionOutcome;
   participantStatus: ParticipantStatus;
@@ -73,6 +81,14 @@ function selectConfirmedConditionLabels(session: Session, scenario: Scenario | n
     .filter((label): label is string => Boolean(label));
 }
 
+/** statement의 text·evidenceIds 등 원문·근거는 담지 않고 id·roleId만 골라낸다. */
+function selectStatementRefs(session: Session): StatementRef[] {
+  return session.transcript.statements.map((statement) => ({
+    id: statement.id,
+    roleId: statement.roleId,
+  }));
+}
+
 function selectParticipantStatus(stage: SessionStage): ParticipantStatus {
   if (stage === 'RESULT') {
     return 'done';
@@ -98,6 +114,7 @@ export function selectPublic(session: Session, scenario: Scenario | null, revisi
     memberOpinionIds: selectMemberOpinionIds(session, matchedScenario),
     reactionIds: selectReactionIds(session, matchedScenario),
     confirmedConditionLabels: selectConfirmedConditionLabels(session, matchedScenario),
+    statementRefs: selectStatementRefs(session),
     tally: isResult ? tally(session.ballots) : null,
     outcome: isResult ? session.outcome : null,
     participantStatus: selectParticipantStatus(session.stage),
