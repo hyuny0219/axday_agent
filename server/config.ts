@@ -2,11 +2,13 @@
 // 모델 교체 지점은 두 곳뿐이다: 운영 중에는 환경변수 MODEL_ID, 코드 기본값은 이 파일의
 // DEFAULT_MODEL_ID 상수 한 줄. 다른 코드는 이 파일이 만든 config.modelId만 참조한다.
 
+import { PROMPT_VERSION } from './prompts/version';
+
 /** 코드 기본 모델. 교체 시 이 상수 한 줄만 바꾼다(2026-09-10 결정: claude-sonnet-5). */
 export const DEFAULT_MODEL_ID = 'claude-sonnet-5';
 
-/** 응답 계약(발언/표/비서 스키마) 버전. 프롬프트·스키마가 바뀌면 올린다. */
-export const PROMPT_VERSION = 'v1';
+/** 응답 계약(발언/표/비서 스키마) 버전. 단일 출처는 server/prompts/version.ts. */
+export { PROMPT_VERSION };
 
 export const DEFAULT_PORT = 8787;
 
