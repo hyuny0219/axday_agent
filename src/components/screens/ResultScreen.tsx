@@ -62,6 +62,11 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
       <h2 className="result-screen__title" data-testid="result-conclusion">
         {conclusion}
       </h2>
+      {session.expiredWithoutMotion && (
+        <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
+          시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
+        </p>
+      )}
       <div className="result-screen__seats">
         {SEAT_ORDER.map((memberId) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);

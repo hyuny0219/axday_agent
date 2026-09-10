@@ -1,15 +1,19 @@
-// 앱 골격: SessionProvider(useReducer + systemClock + useTicker)와 stage별 화면 라우팅.
-// ATTRACT~RESULT의 아홉 화면 모두 여기서 StageRouter로 연결한다(T09·T10).
+// 앱 골격: SessionProvider(useReducer + appClock + useTicker)와 stage별 화면 라우팅.
+// ATTRACT~RESULT의 아홉 화면 모두 여기서 StageRouter로 연결한다(T09·T10). T11에서
+// 타이머 표시, 무입력 안내·복귀, 운영 메뉴, 활동 감지, 요청 레지스트리를 붙였다.
 
-import { createContext, useContext, useMemo, useReducer } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import { systemClock } from '../domain/clock';
+import { touch } from '../domain/clock';
 import { createInitialSession, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
 import type { Session } from '../domain/types';
 import { scenarios } from '../content/scenarios';
 import { useTicker } from './useTicker';
+import { appClock } from './testClock';
+import { createRequestRegistry } from './requests';
 import { Header } from '../components/parts/Header';
+import { IdleNotice } from '../components/parts/IdleNotice';
 import { Nameplate } from '../components/parts/Nameplate';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
@@ -22,9 +26,18 @@ import { VoteScreen } from '../components/screens/VoteScreen';
 import { ResultScreen } from '../components/screens/ResultScreen';
 import '../styles/screens/shell.css';
 
+/** 리셋 시 진행 중인 비동기 요청(AI 비서실장 등, T12)을 모두 abort하기 위한
+ * 앱 전체 공유 레지스트리. 이 카드에서는 아직 실제 요청 발신자가 없다. */
+const requestRegistry = createRequestRegistry();
+
+/** 세션 상태 전이용 액션에 순수 UI 활동(TOUCH)을 더한 내부 전용 액션. TOUCH는
+ * lastActivityAt만 갱신하며 session.ts의 reduce로 넘기지 않는다(deadline 불변). */
+type InternalAction = SessionAction | { type: 'TOUCH' };
+
 interface SessionContextValue {
   session: Session;
   dispatch: (action: SessionAction) => void;
+  touchActivity: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -39,20 +52,33 @@ function useSession(): SessionContextValue {
 }
 
 /**
- * useReducer + systemClock + useTicker로 세션을 관리하고 하위 트리에 제공한다.
+ * useReducer + appClock + useTicker로 세션을 관리하고 하위 트리에 제공한다.
  * 만료·무입력 판정 자체는 domain/clock.ts의 tick이 결정하며, 여기서는 그 결과 action을
  * session.ts가 이해하는 SessionAction으로 옮기기만 한다(EXPIRE에 scenario 채우기).
+ * 리셋 액션(IDLE_RESET·OPERATOR_RESET)에서는 requestRegistry.abortAll()도 함께 호출한다.
  */
 function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, dispatch] = useReducer(
-    (state: Session, action: SessionAction) => reduce(state, action, systemClock.now()),
+  const [session, rawDispatch] = useReducer(
+    (state: Session, action: InternalAction): Session => {
+      const now = appClock.now();
+      if (action.type === 'TOUCH') {
+        return touch(state, now);
+      }
+      if (action.type === 'IDLE_RESET' || action.type === 'OPERATOR_RESET') {
+        requestRegistry.abortAll();
+      }
+      return reduce(state, action, now);
+    },
     undefined,
-    () => createInitialSession(systemClock.now()),
+    () => createInitialSession(appClock.now()),
   );
+
+  const dispatch = useCallback((action: SessionAction) => rawDispatch(action), []);
+  const touchActivity = useCallback(() => rawDispatch({ type: 'TOUCH' }), []);
 
   useTicker({
     session,
-    clock: systemClock,
+    clock: appClock,
     dispatch: (clockAction) => {
       if (clockAction === 'IDLE_RESET') {
         dispatch({ type: 'IDLE_RESET' });
@@ -66,7 +92,28 @@ function SessionProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const value = useMemo<SessionContextValue>(() => ({ session, dispatch }), [session]);
+  // 클릭·키 입력·실제 스크롤(wheel/scroll)만 활동으로 센다. 커서 이동(mousemove)은
+  // 제외한다(CLAUDE_IMPLEMENTATION.md 3장 "현장 운영").
+  useEffect(() => {
+    function handleActivity() {
+      touchActivity();
+    }
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('wheel', handleActivity, { passive: true });
+    window.addEventListener('scroll', handleActivity, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('wheel', handleActivity);
+      window.removeEventListener('scroll', handleActivity, true);
+    };
+  }, [touchActivity]);
+
+  const value = useMemo<SessionContextValue>(
+    () => ({ session, dispatch, touchActivity }),
+    [session, dispatch, touchActivity],
+  );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
@@ -180,14 +227,19 @@ function StageRouter() {
 }
 
 function AppShell() {
-  const { session } = useSession();
+  const { session, dispatch, touchActivity } = useSession();
   return (
     <div className="app-shell">
-      <Header stage={session.stage} />
+      <Header
+        session={session}
+        clock={appClock}
+        onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET' })}
+      />
       {session.stage !== 'ATTRACT' && <Nameplate />}
       <main className="app-main">
         <StageRouter />
       </main>
+      <IdleNotice session={session} clock={appClock} onContinue={touchActivity} />
     </div>
   );
 }

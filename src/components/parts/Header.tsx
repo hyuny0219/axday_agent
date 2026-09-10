@@ -1,8 +1,11 @@
-// 상단 공통 바: BOARDROOM 2026 · 단계명 · 남은 시간 자리(DESIGN_SPEC.md 3장 "공통" 문단).
-// 실제 카운트다운 표시는 T11(운영 규칙 연결)에서 domain/clock.ts의 remaining()으로 채운다.
+// 상단 공통 바: BOARDROOM 2026 · 단계명 · 남은 시간 · 운영 메뉴
+// (DESIGN_SPEC.md 3장 "공통" 문단, CLAUDE_IMPLEMENTATION.md 3장 "현장 운영").
 
-import type { SessionStage } from '../../domain/types';
+import type { Clock } from '../../domain/clock';
+import type { Session, SessionStage } from '../../domain/types';
 import '../../styles/screens/shell.css';
+import { OperatorMenu } from './OperatorMenu';
+import { Timer } from './Timer';
 
 const STAGE_LABELS: Record<SessionStage, string> = {
   ATTRACT: '대기',
@@ -17,17 +20,20 @@ const STAGE_LABELS: Record<SessionStage, string> = {
 };
 
 export interface HeaderProps {
-  stage: SessionStage;
+  session: Session;
+  clock: Clock;
+  onOperatorReset: () => void;
 }
 
-export function Header({ stage }: HeaderProps) {
+export function Header({ session, clock, onOperatorReset }: HeaderProps) {
   return (
     <header className="app-header">
       <span className="app-header__brand">BOARDROOM 2026</span>
-      <span className="app-header__stage">{STAGE_LABELS[stage]}</span>
-      <span className="app-header__timer" data-testid="timer-slot" aria-hidden="true">
-        --:--
-      </span>
+      <span className="app-header__stage">{STAGE_LABELS[session.stage]}</span>
+      <div className="app-header__right">
+        <Timer session={session} clock={clock} />
+        <OperatorMenu onNewSession={onOperatorReset} />
+      </div>
     </header>
   );
 }

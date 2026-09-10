@@ -3,6 +3,15 @@
   font-size: 28px;
 }
 
+.result-screen__expired-notice {
+  margin: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--vote-hold);
+  background-color: var(--panel);
+  color: var(--vote-hold);
+}
+
 .result-screen__seats {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
