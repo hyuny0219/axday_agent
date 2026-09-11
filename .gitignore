@@ -10,3 +10,5 @@ test-results
 playwright-report
 .env
 .env.*
+docs/eval/*-mock.jsonl
+docs/eval/*-mock.md

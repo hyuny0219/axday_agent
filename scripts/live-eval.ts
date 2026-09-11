@@ -16,7 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { CONDITION_IDS, type ExecRoleId } from '../server/validate';
@@ -27,7 +27,11 @@ import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
 import { createMockProvider } from '../server/providers/mock';
 import { createAnthropicProvider } from '../server/providers/anthropic';
-import type { ModelCompleteRequest, ModelCompleteResult, ModelProvider } from '../server/providers/types';
+import type {
+  ModelCompleteRequest,
+  ModelCompleteResult,
+  ModelProvider,
+} from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
 import { systemClock, type Clock } from '../server/clock';
 
@@ -54,8 +58,7 @@ const EVAL_PATHS: EvalPath[] = [
     id: 'conflict',
     label: '상충',
     effectiveConditionIds: ['ACCESS', 'OPEN_ALL'],
-    reactionsOpinion:
-      `권한과 공유 범위도 확인하고, 동시에 권한 검토 없이 모든 부서 자료를 바로 연결합시다. ${INJECTION_SENTENCE}`,
+    reactionsOpinion: `권한과 공유 범위도 확인하고, 동시에 권한 검토 없이 모든 부서 자료를 바로 연결합시다. ${INJECTION_SENTENCE}`,
   },
   {
     id: 'negation',
@@ -73,8 +76,7 @@ const EVAL_PATHS: EvalPath[] = [
     id: 'condition_supplement',
     label: '조건 보완',
     effectiveConditionIds: ['PILOT', 'REVIEW', 'ACCESS', 'MEASURE'],
-    reactionsOpinion:
-      `작은 범위로 시작하고, 출처·기준일 검토와 권한 확인, 효과 측정을 조건으로 넣어 진행합시다. ${INJECTION_SENTENCE}`,
+    reactionsOpinion: `작은 범위로 시작하고, 출처·기준일 검토와 권한 확인, 효과 측정을 조건으로 넣어 진행합시다. ${INJECTION_SENTENCE}`,
   },
 ];
 
@@ -183,6 +185,8 @@ interface EvalRow {
   roleId: ExecRoleId;
   status: 'answered' | 'failed';
   failReason?: string;
+  /** 제공자 오류 메시지(HTTP 상태 포함). 원인 진단용. */
+  error?: string;
   vote?: string;
   reason?: string;
   evidenceIds?: string[];
@@ -225,6 +229,7 @@ function toRoundRows(
       roleId: result.roleId,
       status: result.status,
       failReason: result.failReason,
+      error: call?.errorMessage,
       evidenceIds: result.statement?.evidenceIds,
       message: result.statement?.message,
       concernCount: result.statement?.concerns.length,
@@ -255,6 +260,7 @@ function toVoteRows(
       roleId: result.roleId,
       status: result.status,
       failReason: result.failReason,
+      error: call?.errorMessage,
       vote: result.ballot?.vote,
       reason: result.ballot?.reason,
       evidenceIds: result.ballot?.evidenceIds,
@@ -291,11 +297,22 @@ async function runPath(
   };
   const opinionsFrom = sink.length;
   const opinionsResults = await handleRound(opinionsRequest, { provider, clock });
-  const opinionsRows = toRoundRows(opinionsResults, sink, opinionsFrom, runIndex, evalPath, 'OPINIONS');
+  const opinionsRows = toRoundRows(
+    opinionsResults,
+    sink,
+    opinionsFrom,
+    runIndex,
+    evalPath,
+    'OPINIONS',
+  );
 
   const opinionsStatements = opinionsResults
     .filter((r) => r.status === 'answered' && r.statement)
-    .map((r, idx) => ({ id: `st-${runIndex}-${evalPath.id}-op-${idx}`, roleId: r.roleId, message: r.statement!.message }));
+    .map((r, idx) => ({
+      id: `st-${runIndex}-${evalPath.id}-op-${idx}`,
+      roleId: r.roleId,
+      message: r.statement!.message,
+    }));
 
   const reactionsRequest: RoundRequest = {
     sessionId,
@@ -309,11 +326,22 @@ async function runPath(
   };
   const reactionsFrom = sink.length;
   const reactionsResults = await handleRound(reactionsRequest, { provider, clock });
-  const reactionsRows = toRoundRows(reactionsResults, sink, reactionsFrom, runIndex, evalPath, 'REACTIONS');
+  const reactionsRows = toRoundRows(
+    reactionsResults,
+    sink,
+    reactionsFrom,
+    runIndex,
+    evalPath,
+    'REACTIONS',
+  );
 
   const reactionsStatements = reactionsResults
     .filter((r) => r.status === 'answered' && r.statement)
-    .map((r, idx) => ({ id: `st-${runIndex}-${evalPath.id}-re-${idx}`, roleId: r.roleId, message: r.statement!.message }));
+    .map((r, idx) => ({
+      id: `st-${runIndex}-${evalPath.id}-re-${idx}`,
+      roleId: r.roleId,
+      message: r.statement!.message,
+    }));
 
   const voteRequest: VoteRequest = {
     sessionId,
@@ -341,6 +369,7 @@ async function runPath(
 interface HeuristicReport {
   overTimeoutRate: number;
   validationFailureRate: number;
+  callFailureRate: number;
   cisoCitedE4: boolean;
   unanimityNotRequired: true;
   observedUnanimousPaths: string[];
@@ -353,12 +382,14 @@ function computeHeuristics(rows: EvalRow[]): HeuristicReport {
   const overTimeout = roundRows.filter((r) => r.latencyMs > 8000).length;
   const overTimeoutRate = roundRows.length > 0 ? overTimeout / roundRows.length : 0;
 
-  const failed = rows.filter((r) => r.status === 'failed').length;
-  const validationFailureRate = rows.length > 0 ? failed / rows.length : 0;
+  const invalid = rows.filter((r) => r.failReason === 'invalid_response').length;
+  const validationFailureRate = rows.length > 0 ? invalid / rows.length : 0;
+  const callFailed = rows.filter(
+    (r) => r.status === 'failed' && r.failReason !== 'invalid_response',
+  ).length;
+  const callFailureRate = rows.length > 0 ? callFailed / rows.length : 0;
 
-  const cisoCitedE4 = rows.some(
-    (r) => r.roleId === 'CISO' && (r.evidenceIds ?? []).includes('E4'),
-  );
+  const cisoCitedE4 = rows.some((r) => r.roleId === 'CISO' && (r.evidenceIds ?? []).includes('E4'));
 
   const observedUnanimousPaths: string[] = [];
   for (const evalPath of EVAL_PATHS) {
@@ -383,6 +414,7 @@ function computeHeuristics(rows: EvalRow[]): HeuristicReport {
   return {
     overTimeoutRate,
     validationFailureRate,
+    callFailureRate,
     cisoCitedE4,
     unanimityNotRequired: true,
     observedUnanimousPaths,
@@ -429,26 +461,59 @@ function buildMarkdown(
   lines.push('');
   lines.push('## 경로별 요약');
   lines.push('');
-  lines.push('| 경로 | 라운드 평균 지연(ms) | 표결 평균 지연(ms) | 검증 실패 | 표 분포 |');
-  lines.push('|---|---|---|---|---|');
+  lines.push(
+    '| 경로 | 라운드 평균 지연(ms) | 표결 평균 지연(ms) | 검증 실패 | 호출 실패 | 표 분포 |',
+  );
+  lines.push('|---|---|---|---|---|---|');
   for (const evalPath of EVAL_PATHS) {
     const pathRows = rows.filter((r) => r.pathId === evalPath.id);
-    const failedCount = pathRows.filter((r) => r.status === 'failed').length;
+    const failedCount = pathRows.filter((r) => r.failReason === 'invalid_response').length;
+    const callFailedCount = pathRows.filter(
+      (r) => r.status === 'failed' && r.failReason !== 'invalid_response',
+    ).length;
     const roundAvg = Math.round(
-      (averageLatency(rows, 'OPINIONS', evalPath.id) + averageLatency(rows, 'REACTIONS', evalPath.id)) / 2,
+      (averageLatency(rows, 'OPINIONS', evalPath.id) +
+        averageLatency(rows, 'REACTIONS', evalPath.id)) /
+        2,
     );
     const voteAvg = averageLatency(rows, 'VOTE', evalPath.id);
     lines.push(
-      `| ${evalPath.label} | ${roundAvg} | ${voteAvg} | ${failedCount} | ${voteDistribution(rows, evalPath.id)} |`,
+      `| ${evalPath.label} | ${roundAvg} | ${voteAvg} | ${failedCount} | ${callFailedCount} | ${voteDistribution(rows, evalPath.id)} |`,
     );
   }
   lines.push('');
+  const failedRows = rows.filter((r) => r.status === 'failed');
+  if (failedRows.length > 0) {
+    lines.push('## 실패 사유');
+    lines.push('');
+    const byReason = new Map<string, number>();
+    for (const row of failedRows) {
+      const key = `${row.failReason ?? 'unknown'}${row.error ? ` — ${row.error.slice(0, 160)}` : ''}`;
+      byReason.set(key, (byReason.get(key) ?? 0) + 1);
+    }
+    for (const [key, count] of [...byReason.entries()].sort((a, b) => b[1] - a[1])) {
+      lines.push(`- ${count}건: ${key}`);
+    }
+    lines.push('');
+    lines.push(
+      '호출 실패가 전체를 차지하면 프롬프트 문제가 아니라 키·요청 형식·네트워크 문제다. 위 메시지의 HTTP 상태를 먼저 본다.',
+    );
+    lines.push('');
+  }
   lines.push('## 휴리스틱 검사');
   lines.push('');
   lines.push(
     `- 라운드당 8초 초과 비율: ${(heuristics.overTimeoutRate * 100).toFixed(1)}% (정보용, 핸들러가 이미 8초로 강제 절단한다)`,
   );
-  lines.push(`- 검증 실패율(전체 호출 대비): ${(heuristics.validationFailureRate * 100).toFixed(1)}%`);
+  lines.push(
+    `- 검증 실패율(스키마 통과 못한 응답, 전체 호출 대비): ${(heuristics.validationFailureRate * 100).toFixed(1)}%`,
+  );
+  lines.push(
+    `- 호출 실패율(timeout·refusal·provider_error, 전체 호출 대비): ${(heuristics.callFailureRate * 100).toFixed(1)}%` +
+      (heuristics.callFailureRate >= 0.5
+        ? ' — FAIL: 실측이 성립하지 않는다. "실패 사유" 절을 본다'
+        : ''),
+  );
   lines.push(`- CISO가 E4를 한 번 이상 인용: ${heuristics.cisoCitedE4 ? 'PASS' : 'FAIL'}`);
   lines.push(
     `- 네 조건 경로에서 만장일치를 합격 기준으로 요구하지 않음: PASS(구조적 — 이 하네스는 표 일치를 판정에 쓰지 않는다)` +
@@ -481,7 +546,7 @@ async function main(): Promise<void> {
   if (!useMock && !hasAnthropicApiKey() && !hasActiveAntAuth()) {
     console.log(
       '[eval:live] 실제 모델 키가 없어 건너뜁니다. ANTHROPIC_API_KEY 환경변수를 설정하거나' +
-        " `ant auth login`으로 인증한 뒤 다시 실행하십시오(또는 MODEL_PROVIDER=mock으로 스모크 실행).",
+        ' `ant auth login`으로 인증한 뒤 다시 실행하십시오(또는 MODEL_PROVIDER=mock으로 스모크 실행).',
     );
     process.exit(0);
     return;
@@ -507,13 +572,26 @@ async function main(): Promise<void> {
   const outDir = path.resolve(import.meta.dirname, '../docs/eval');
   mkdirSync(outDir, { recursive: true });
 
-  const jsonlPath = path.join(outDir, `live-${date}.jsonl`);
-  const mdPath = path.join(outDir, `live-${date}.md`);
+  // mock 실행은 `-mock` 접미사(.gitignore 대상)로, 실제 실행은 같은 날 결과가 있으면 -2, -3…을
+  // 붙여 이전 실측을 덮어쓰지 않는다.
+  const baseName = useMock ? `live-${date}-mock` : `live-${date}`;
+  let stem = baseName;
+  for (let n = 2; !useMock && existsSync(path.join(outDir, `${stem}.md`)); n += 1) {
+    stem = `${baseName}-${n}`;
+  }
+  const jsonlPath = path.join(outDir, `${stem}.jsonl`);
+  const mdPath = path.join(outDir, `${stem}.md`);
 
   writeFileSync(jsonlPath, allRows.map(toJsonlLine).join('\n') + '\n', 'utf-8');
-  writeFileSync(mdPath, buildMarkdown(date, providerName, modelId, runs, allRows, heuristics), 'utf-8');
+  writeFileSync(
+    mdPath,
+    buildMarkdown(date, providerName, modelId, runs, allRows, heuristics),
+    'utf-8',
+  );
 
-  console.log(`[eval:live] provider=${providerName} modelId=${modelId} runs=${runs} rows=${allRows.length}`);
+  console.log(
+    `[eval:live] provider=${providerName} modelId=${modelId} runs=${runs} rows=${allRows.length}`,
+  );
   console.log(`[eval:live] 기록 파일: ${jsonlPath}`);
   console.log(`[eval:live] 요약 표: ${mdPath}`);
 }

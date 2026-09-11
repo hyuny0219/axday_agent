@@ -77,13 +77,21 @@ function voteJsonSchema(): Record<string, unknown> {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['roleId', 'motionId', 'motionHash', 'vote', 'reason', 'evidenceIds', 'remainingConcerns'],
+    required: [
+      'roleId',
+      'motionId',
+      'motionHash',
+      'vote',
+      'reason',
+      'evidenceIds',
+      'remainingConcerns',
+    ],
     properties: {
       roleId: { type: 'string', enum: [...EXEC_ROLE_IDS] },
       motionId: { type: 'string' },
       motionHash: { type: 'string' },
       vote: { type: 'string', enum: [...VOTE_VALUES] },
-      reason: { type: 'string', minLength: 1, maxLength: 160 },
+      reason: { type: 'string' }, // 길이 제약(1~160자)은 validate.ts에서 검증한다
       evidenceIds: { type: 'array', items: { type: 'string', enum: [...EVIDENCE_IDS] } },
       remainingConcerns: { type: 'array', items: { type: 'string' } },
     },
@@ -158,9 +166,10 @@ async function callRoleVote(
       signal: controller.signal,
     });
     const result = await withTimeout(raw, timeoutMs);
-    const parsed = voteResponseSchema({ motionId: input.motion.id, motionHash: input.motion.hash }).safeParse(
-      result.json,
-    );
+    const parsed = voteResponseSchema({
+      motionId: input.motion.id,
+      motionHash: input.motion.hash,
+    }).safeParse(result.json);
     if (!parsed.success || parsed.data.roleId !== roleId) {
       return {
         roleId,
@@ -199,7 +208,10 @@ async function callRoleVote(
 
 /** 임원 4명에게 최종 표를 병렬로 한 번씩 요청한다(재시도 0회). 참가자 표·다른 임원 표는
  * 입력에도 프롬프트에도 포함하지 않는다. */
-export async function handleVote(input: VoteRequest, deps: VoteHandlerDeps): Promise<VoteRoleResult[]> {
+export async function handleVote(
+  input: VoteRequest,
+  deps: VoteHandlerDeps,
+): Promise<VoteRoleResult[]> {
   const materials = getScenarioMaterials(input.scenarioId);
   if (!materials) {
     throw new Error(`unknown_scenario:${input.scenarioId}`);

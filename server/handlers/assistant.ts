@@ -73,7 +73,7 @@ function assistantJsonSchema(): Record<string, unknown> {
     required: ['draftRevision', 'draftText', 'evidenceIds', 'suggestedConditionIds'],
     properties: {
       draftRevision: { type: 'number' },
-      draftText: { type: 'string', minLength: 1, maxLength: 300 },
+      draftText: { type: 'string' }, // 길이 제약(1~300자)은 validate.ts에서 검증한다
       evidenceIds: { type: 'array', items: { type: 'string', enum: [...EVIDENCE_IDS] } },
       suggestedConditionIds: { type: 'array', items: { type: 'string', enum: [...CONDITION_IDS] } },
     },
@@ -155,7 +155,14 @@ export async function handleAssistantRefine(
     participantOpinion: input.draftText,
   });
   const system = buildRefineSystemPrompt(meetingRecord);
-  return callAssistant('assistant_refine', system, input.draftRevision, timeoutMs, deps.provider, input.mock);
+  return callAssistant(
+    'assistant_refine',
+    system,
+    input.draftRevision,
+    timeoutMs,
+    deps.provider,
+    input.mock,
+  );
 }
 
 /** '의견 한눈에 보기'(live). 실제 회의 기록(transcript)만 근거로 삼고, 사전에 쓰인 임원

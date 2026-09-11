@@ -63,10 +63,17 @@ export interface RoundHandlerDeps {
 const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
-  required: ['roleId', 'message', 'evidenceIds', 'referencedStatementIds', 'concerns', 'suggestedConditionIds'],
+  required: [
+    'roleId',
+    'message',
+    'evidenceIds',
+    'referencedStatementIds',
+    'concerns',
+    'suggestedConditionIds',
+  ],
   properties: {
     roleId: { type: 'string', enum: [...EXEC_ROLE_IDS] },
-    message: { type: 'string', minLength: 1, maxLength: 120 },
+    message: { type: 'string' }, // 길이 제약(1~120자)은 구조화 출력이 지원하지 않아 validate.ts에서 검증한다
     evidenceIds: { type: 'array', items: { type: 'string', enum: [...EVIDENCE_IDS] } },
     referencedStatementIds: { type: 'array', items: { type: 'string' } },
     concerns: { type: 'array', items: { type: 'string' } },
@@ -79,15 +86,23 @@ function stageInstruction(stage: RoundRequest['stage']): string {
     case 'OPINIONS':
       return '지금은 초기 의견 단계입니다. 자료와 원안을 근거로 짧은 논거와 확인 질문을 내십시오.';
     case 'REACTIONS':
-      return '지금은 반응 단계입니다. 참가자 발언과 동료 임원의 기존 발언(ID)을 참고해 동의·반론·입장' +
-        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.';
+      return (
+        '지금은 반응 단계입니다. 참가자 발언과 동료 임원의 기존 발언(ID)을 참고해 동의·반론·입장' +
+        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.'
+      );
     case 'FOLLOWUP':
-      return '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
-        ' 보완하십시오.';
+      return (
+        '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
+        ' 보완하십시오.'
+      );
   }
 }
 
-function buildRoundSystemPrompt(roleId: ExecRoleId, materials: ReturnType<typeof getScenarioMaterials>, input: RoundRequest): string {
+function buildRoundSystemPrompt(
+  roleId: ExecRoleId,
+  materials: ReturnType<typeof getScenarioMaterials>,
+  input: RoundRequest,
+): string {
   if (!materials) {
     throw new Error(`unknown_scenario:${input.scenarioId}`);
   }
@@ -177,7 +192,10 @@ async function callRole(
 
 /** 임원 4명을 병렬 호출한다(재시도 0회). 알 수 없는 scenarioId는 예외를 던진다(호출자가 400
  * 등으로 변환). 개별 임원 실패는 failed 결과로만 남고 다른 임원 호출에 영향을 주지 않는다. */
-export async function handleRound(input: RoundRequest, deps: RoundHandlerDeps): Promise<RoundRoleResult[]> {
+export async function handleRound(
+  input: RoundRequest,
+  deps: RoundHandlerDeps,
+): Promise<RoundRoleResult[]> {
   const materials = getScenarioMaterials(input.scenarioId);
   if (!materials) {
     throw new Error(`unknown_scenario:${input.scenarioId}`);
@@ -186,7 +204,9 @@ export async function handleRound(input: RoundRequest, deps: RoundHandlerDeps): 
   const timeoutMs = Math.min(8000, input.budgetMs);
 
   const settled = await Promise.allSettled(
-    EXEC_ROLE_IDS.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock)),
+    EXEC_ROLE_IDS.map((roleId) =>
+      callRole(roleId, input, materials, timeoutMs, deps.provider, clock),
+    ),
   );
 
   return settled.map((result, index) => {
