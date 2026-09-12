@@ -347,3 +347,32 @@ describe('모델 응답 도착은 무입력 시계를 연장하지 않는다', (
     expect(unavailable.lastActivityAt).toBe(voteBefore);
   });
 });
+
+describe('끝난 세션에는 발언을 붙이지 않는다', () => {
+  it('RESULT 단계에서 온 APPEND_STATEMENTS는 무시하고 경고만 남긴다', () => {
+    let session = sessionAtLiveVote(T0);
+    session = reduce(session, { type: 'EXPIRE', scenario }, T0 + 240_000);
+    expect(session.stage).toBe('RESULT');
+    const revision = session.transcript.revision;
+    const late: Statement = {
+      id: 'st-after-result',
+      roleId: 'CEO',
+      stage: 'FOLLOWUP',
+      text: '너무 늦은 발언',
+      evidenceIds: [],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      source: 'live',
+      createdAt: T0 + 241_000,
+    };
+    const next = reduce(
+      session,
+      { type: 'APPEND_STATEMENTS', stage: 'FOLLOWUP', statements: [late], baseRevision: revision },
+      T0 + 241_000,
+    );
+    expect(next.transcript.statements).toHaveLength(session.transcript.statements.length);
+    expect(next.transcript.revision).toBe(revision);
+    expect(next.warnings.length).toBeGreaterThan(0);
+  });
+});

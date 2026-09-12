@@ -75,6 +75,16 @@ function failedBallotOutcomes(reason: string): BallotOutcome[] {
   }));
 }
 
+/**
+ * 라운드·표를 시작하거나 그 결과를 반영해도 되는 세션인가. ATTRACT·SELECT(아직 안건이 없음)와
+ * RESULT(만료·확정으로 끝남)에서는 새 모델 호출을 시작하지 않고, 늦게 온 응답도 버린다.
+ * 240초 EXPIRE는 sessionId와 revision을 그대로 둔 채 RESULT로 넘어가므로 그 두 값만으로는
+ * 만료를 알 수 없다.
+ */
+function isSessionOpen(session: Session): boolean {
+  return session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && session.stage !== 'RESULT';
+}
+
 /** scripted/live 어댑터를 같은 방식으로 호출해 세션에 반영하는 실행기를 만든다. */
 export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
   // startFinalVotes()가 시작한 호출의 완료 여부를 awaitResult()가 기다릴 수 있게 보관한다.
@@ -98,7 +108,8 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     const sessionId = session.sessionId;
     const baseRevision = session.transcript.revision;
     const scenario = session.scenarioId ? deps.getScenario(session.scenarioId) : undefined;
-    if (!scenario) {
+    // 대기 중이던 라운드가 차례를 받았을 때 세션이 이미 만료·리셋됐으면 모델을 부르지 않는다.
+    if (!scenario || !isSessionOpen(session)) {
       return;
     }
 
@@ -125,10 +136,14 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       deps.requests.finish(handle);
     }
 
-    // 늦은 응답 폐기: 그 사이 세션이 리셋됐거나 다른 라운드가 먼저 revision을 올렸으면 아무
-    // 것도 dispatch하지 않는다.
+    // 늦은 응답 폐기: 그 사이 세션이 리셋됐거나, 다른 라운드가 먼저 revision을 올렸거나,
+    // 240초 만료로 RESULT에 들어갔으면 아무것도 dispatch하지 않는다.
     const current = deps.store.getSession();
-    if (current.sessionId !== sessionId || current.transcript.revision !== baseRevision) {
+    if (
+      current.sessionId !== sessionId ||
+      current.transcript.revision !== baseRevision ||
+      !isSessionOpen(current)
+    ) {
       return;
     }
 
@@ -152,11 +167,23 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     }
   }
 
-  async function startFinalVotes(): Promise<void> {
+  // 최종표도 라운드 사슬 뒤에 시작한다. 참가자가 임원 반응을 기다리지 않고 안건을 고정하면
+  // REACTIONS·FOLLOWUP이 아직 대기 중일 수 있는데, 그 전에 스냅샷을 잡으면 표 요청의
+  // 회의 기록에 참가자 의견에 대한 반응이 빠진다. finalVotesSettled는 동기적으로 잡아
+  // awaitResult()가 호출 순서와 무관하게 같은 약속을 기다리게 한다.
+  function startFinalVotes(): Promise<void> {
+    const run = roundChain.then(() => startFinalVotesNow());
+    roundChain = run.catch(() => undefined);
+    finalVotesSettled = run;
+    return run;
+  }
+
+  async function startFinalVotesNow(): Promise<void> {
     const session = deps.store.getSession();
     const sessionId = session.sessionId;
     const motion = session.finalMotion;
-    if (!motion) {
+    // 라운드를 기다리는 사이 만료·리셋됐으면(RESULT/ATTRACT) 표를 요청하지 않는다.
+    if (!motion || session.stage !== 'VOTE') {
       return;
     }
     const scenario = session.scenarioId ? deps.getScenario(session.scenarioId) : undefined;
@@ -208,7 +235,6 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       }
     })();
 
-    finalVotesSettled = run;
     await run;
   }
 

@@ -387,7 +387,11 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
 
     case 'APPEND_STATEMENTS': {
       // revision 불일치(동시에 다른 라운드가 먼저 반영됨 등)는 조용히 무시하고 경고만
-      // 남긴다. stage는 호출자가 붙이는 태그일 뿐, 여기서는 검증하지 않는다.
+      // 남긴다. action.stage는 호출자가 붙이는 태그일 뿐 검증하지 않지만, 이미 끝난 세션
+      // (RESULT)이나 시작 전 세션에는 늦게 온 발언을 붙이지 않는다.
+      if (session.stage === 'RESULT' || session.stage === 'ATTRACT' || session.stage === 'SELECT') {
+        return ignore(session, '진행 중이 아닌 세션에는 발언을 반영하지 않습니다.');
+      }
       if (action.baseRevision !== session.transcript.revision) {
         return ignore(session, '회의 기록 revision이 일치하지 않아 발언을 반영할 수 없습니다.');
       }

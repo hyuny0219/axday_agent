@@ -269,6 +269,48 @@ describe('runner.runRound', () => {
     );
   });
 
+  it('라운드 진행 중 240초 만료로 RESULT가 되면 늦은 응답을 버리고 대기 중인 라운드는 시작하지 않는다', async () => {
+    const clock = fakeClock(0);
+    const store = createStore(toOpinionsStage(clock), clock);
+    const opinionsPending = deferred<StatementOutcome[]>();
+    let reactionsCalls = 0;
+    const adapter = fakeAdapter({
+      initialOpinions: () => opinionsPending.promise,
+      reactions: async () => {
+        reactionsCalls += 1;
+        return [];
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    const opinionsRound = orchestrator.runRound('OPINIONS');
+    const reactionsRound = orchestrator.runRound('REACTIONS');
+    // 응답이 오기 전에 체험 시간이 끝난다(sessionId·revision은 그대로인 채 RESULT로 간다).
+    store.dispatch({ type: 'EXPIRE', scenario: aiAssistantScenario });
+    expect(store.getSession().stage).toBe('RESULT');
+
+    opinionsPending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: answeredStatement(roleId),
+      })),
+    );
+    await opinionsRound;
+    await reactionsRound;
+
+    const session = store.getSession();
+    expect(session.stage).toBe('RESULT');
+    expect(session.transcript.statements).toHaveLength(0);
+    expect(reactionsCalls).toBe(0);
+  });
+
   it('scripted 어댑터는 지연 없이 즉시 발언을 반영한다', async () => {
     const clock = fakeClock(0);
     const store = createStore(toOpinionsStage(clock), clock);
@@ -338,6 +380,84 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots).toHaveLength(4);
     expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
     expect(finalSession.outcome).toBe('PASS');
+  });
+
+  it('대기 중인 REACTIONS 라운드가 있으면 그 발언이 반영된 뒤에 최종표를 요청한다', async () => {
+    const clock = fakeClock(0);
+    let session = toOpinionsStage(clock);
+    session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // OPINIONS -> DISCUSS
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '검토했습니다. 작은 범위로 시작하는 데 동의합니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: [],
+      },
+      clock.now(),
+    ); // DISCUSS -> REACTIONS
+    const store = createStore(session, clock);
+
+    const reactionsPending = deferred<StatementOutcome[]>();
+    const voteContexts: number[] = [];
+    let motionRef: { id: string; hash: string } | null = null;
+    const adapter = fakeAdapter({
+      reactions: () => reactionsPending.promise,
+      finalVotes: async (ctx) => {
+        voteContexts.push(ctx.session.transcript.statements.length);
+        return EXEC_MEMBER_ORDER.map((roleId): BallotOutcome => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            memberId: roleId,
+            motionId: motionRef!.id,
+            motionHash: motionRef!.hash,
+            vote: 'YES',
+            confirmedAt: 0,
+            source: 'live',
+            reason: '반응까지 읽고 동의합니다.',
+            remainingConcerns: [],
+          },
+        }));
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    const reactionsRound = orchestrator.runRound('REACTIONS');
+    // 참가자는 임원 반응을 기다리지 않고 안건을 고정한다.
+    store.dispatch({ type: 'KEEP_PREVIOUS' });
+    store.dispatch({
+      type: 'FREEZE_MOTION',
+      scenario: aiAssistantScenario,
+      confirmedConditionIds: [],
+    });
+    const frozen = store.getSession().finalMotion;
+    if (!frozen) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    motionRef = { id: frozen.id, hash: frozen.hash };
+
+    const votes = orchestrator.startFinalVotes();
+    await Promise.resolve();
+    expect(voteContexts).toHaveLength(0); // 반응이 반영되기 전에는 표를 요청하지 않는다.
+
+    reactionsPending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: { ...answeredStatement(roleId), id: `re-${roleId}`, stage: 'REACTIONS' },
+      })),
+    );
+    await reactionsRound;
+    await votes;
+
+    expect(voteContexts).toEqual([EXEC_MEMBER_ORDER.length]); // 표 요청의 회의 기록에 반응 4건이 들어 있다.
+    const execBallots = store.getSession().ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
   });
 
   it('임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다', async () => {
