@@ -20,6 +20,7 @@ import type {
 import { scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
+import '../../styles/screens/assistant.css';
 
 type FeatureKey = 'summary' | 'compare' | 'refine';
 type Status = 'idle' | 'loading' | 'done' | 'error';
@@ -81,9 +82,11 @@ export function AssistantPanel({
 
   // 리셋·재요청 뒤 도착한 응답을 무시하기 위해 "지금 유효한 요청"만 기록한다.
   // sessionId가 바뀌면(리셋으로 새 세션이 되면) 이전 요청은 더 이상 유효하지 않다.
-  const currentRequestRef = useRef<{ sessionId: string; requestId: string; controller: AbortController } | null>(
-    null,
-  );
+  const currentRequestRef = useRef<{
+    sessionId: string;
+    requestId: string;
+    controller: AbortController;
+  } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -136,11 +139,17 @@ export function AssistantPanel({
     const base = { sessionId, requestId, signal: controller.signal };
     try {
       if (feature === 'summary') {
-        const result = await withTimeout(adapter.summarizeOpinions({ ...base, scenario, transcript }));
+        const result = await withTimeout(
+          adapter.summarizeOpinions({ ...base, scenario, transcript }),
+        );
         if (!isStillCurrent(requestId)) return;
         setSummaryResult(result);
         setStatus('done');
-        onAssistantAction({ type: 'OPINION_SUMMARY', mode: result.mode, evidenceIds: result.evidenceIds });
+        onAssistantAction({
+          type: 'OPINION_SUMMARY',
+          mode: result.mode,
+          evidenceIds: result.evidenceIds,
+        });
       } else if (feature === 'compare') {
         const result = await withTimeout(
           adapter.compareConditions({ ...base, scenario, selectedConditionIds }),
@@ -148,10 +157,19 @@ export function AssistantPanel({
         if (!isStillCurrent(requestId)) return;
         setCompareResult(result);
         setStatus('done');
-        onAssistantAction({ type: 'CONDITION_COMPARE', mode: result.mode, evidenceIds: result.evidenceIds });
+        onAssistantAction({
+          type: 'CONDITION_COMPARE',
+          mode: result.mode,
+          evidenceIds: result.evidenceIds,
+        });
       } else {
         const result = await withTimeout(
-          adapter.refineDraft({ ...base, scenario, draftText, draftRevision: requestDraftRevision }),
+          adapter.refineDraft({
+            ...base,
+            scenario,
+            draftText,
+            draftRevision: requestDraftRevision,
+          }),
         );
         if (!isStillCurrent(requestId)) return;
         if (requestDraftRevision !== draftRevision) {
@@ -229,9 +247,7 @@ export function AssistantPanel({
               </button>
             ))}
           </div>
-          {status === 'loading' && (
-            <p data-testid="assistant-loading">정리하는 중입니다…</p>
-          )}
+          {status === 'loading' && <p data-testid="assistant-loading">정리하는 중입니다…</p>}
           {status === 'error' && (
             <div role="alert" data-testid="assistant-error">
               <p>{activeFeature === 'refine' ? REFINE_FALLBACK_MESSAGE : FALLBACK_MESSAGE}</p>
@@ -275,7 +291,9 @@ export function AssistantPanel({
                   </ul>
                 </>
               )}
-              <p className="assistant-panel__evidence">근거: {summaryResult.evidenceIds.join(', ')}</p>
+              <p className="assistant-panel__evidence">
+                근거: {summaryResult.evidenceIds.join(', ')}
+              </p>
             </div>
           )}
           {status === 'done' && activeFeature === 'compare' && compareResult && (

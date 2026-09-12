@@ -74,7 +74,9 @@ export function VoteScreen({
         {VOTE_ORDER.map((vote) => (
           <label
             key={vote}
-            className={`vote-choice${pendingVote === vote ? ' vote-choice--selected' : ''}`}
+            className={`vote-choice vote-choice--${vote.toLowerCase()}${
+              pendingVote === vote ? ' vote-choice--selected' : ''
+            }`}
           >
             <input
               type="radio"

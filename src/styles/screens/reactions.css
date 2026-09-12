@@ -2,14 +2,18 @@
   margin: 0;
 }
 
+/* 내 발언 인용 카드를 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 · 반응 ·
+   내 발언 인용 카드(시안 경계)를 맨 위"). */
 .reactions-screen__quote {
   margin: 0;
   padding: var(--space-2);
   background-color: var(--panel);
-  border-left: 4px solid var(--accent);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
   border-radius: var(--radius-control);
   color: var(--text);
-  font-size: 20px;
+  font-size: var(--fs-card);
+  box-shadow: var(--shadow-card);
 }
 
 .reactions-screen__cards {
@@ -26,6 +30,13 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
+  box-shadow: var(--shadow-card);
+}
+
+.reaction-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .reaction-card__member {
@@ -44,11 +55,17 @@
   color: var(--text-muted);
 }
 
+/* "기존 의견 유지" pill(DESIGN_SPEC.md "만들 것 · 반응 · '기존 의견 유지' 라벨을
+   pill로"). */
 .reaction-card__maintained-label {
   display: block;
+  width: fit-content;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--text-muted);
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: 13px;
+  margin-bottom: var(--space-1);
 }
 
 .reactions-screen__followup {
@@ -72,17 +89,24 @@
   gap: var(--space-1);
 }
 
+/* secondary 버튼: 투명 패널 + 테두리(DESIGN_SPEC.md 4장 "secondary는 투명
+   패널+테두리"). */
 .reactions-screen__option {
   min-height: var(--touch-min);
   padding: 0 var(--space-2);
-  background-color: var(--panel-active);
+  background-color: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: border-color var(--transition-fast) ease, color var(--transition-fast) ease;
+  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
+    color var(--transition-fast) ease;
+}
+
+.reactions-screen__option:hover {
+  background-color: var(--panel-active);
 }
 
 .reactions-screen__option--selected {

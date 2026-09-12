@@ -28,7 +28,9 @@ const OUTPUT_ROOT = process.env.UPDATE_SCREENSHOTS
 async function capture(page: Page, projectName: string, screenName: string) {
   const dir = path.join(OUTPUT_ROOT, projectName);
   mkdirSync(dir, { recursive: true });
-  await page.screenshot({ path: path.join(dir, `${screenName}.png`) });
+  // 화면 전환(220ms opacity/translate)이 끝난 상태로 캡처한다. 진행 중에 찍으면 반투명한
+  // 캡처가 남는다(T38 결과 확인에서 발견).
+  await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
 test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {

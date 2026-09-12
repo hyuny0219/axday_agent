@@ -24,4 +24,32 @@
   --cta-height: 64px;
   --transition-fast: 120ms;
   --transition-screen: 220ms;
+
+  /* 타이포 스케일(DESIGN_SPEC.md 2장). 1280px 이하에서는 아래 미디어쿼리로 축소한다. */
+  --fs-hero: 64px;
+  --fs-title: 44px;
+  --fs-h2: 32px;
+  --fs-body: 24px;
+  --fs-card: 20px;
+  --fs-meta: 16px;
+
+  /* 짙은 네이비 배경 위 좌상단 --accent-blue 12% + 우하단 --accent 8% 방사형 조명
+     (DESIGN_SPEC.md 2장 "미래적 회의실" 분위기). .app-shell::before에서 사용한다. */
+  --bg-gradient: radial-gradient(1200px circle at 8% 0%, rgba(76, 141, 255, 0.12), transparent 55%),
+    radial-gradient(1200px circle at 92% 100%, rgba(40, 217, 240, 0.08), transparent 55%),
+    linear-gradient(var(--bg), var(--bg));
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --glow-accent: 0 0 0 1px var(--accent), 0 0 24px rgba(40, 217, 240, 0.35);
+  --panel-glass: rgba(11, 34, 56, 0.85);
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --fs-hero: 48px;
+    --fs-title: 32px;
+    --fs-h2: 26px;
+    --fs-body: 20px;
+    --fs-card: 18px;
+    --fs-meta: 14px;
+  }
 }

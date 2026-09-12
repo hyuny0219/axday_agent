@@ -20,6 +20,7 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
+import { Avatar } from '../parts/Avatar';
 import '../../styles/screens/reactions.css';
 
 export interface ReactionsFollowupPayload {
@@ -198,7 +199,10 @@ export function ReactionsScreen({
                 className="reaction-card"
                 data-testid={`reaction-card-${memberId}`}
               >
-                <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
+                <div className="reaction-card__head">
+                  <Avatar memberId={memberId} size="sm" />
+                  <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
+                </div>
                 {reactions.length > 0 ? (
                   <ul className="reaction-card__texts">
                     {reactions.map((reaction, index) => (

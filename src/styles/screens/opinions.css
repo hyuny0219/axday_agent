@@ -1,6 +1,6 @@
 .opinions-screen__title {
   margin: 0;
-  font-size: 44px;
+  font-size: var(--fs-title);
   line-height: 1.3;
 }
 
@@ -18,6 +18,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
+  box-shadow: var(--shadow-card);
 }
 
 .opinion-card__head {
@@ -33,7 +34,7 @@
 
 .opinion-card__text {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--fs-card);
   line-height: 1.5;
   color: var(--text-muted);
 }
@@ -67,10 +68,6 @@
    "만들 것 · 임원 4열 카드(1280에서 접힌 한 줄 요약)"). 이름·문구가 한 줄에
    보이고, 근거 보기를 누르면 그 줄 아래로만 펼쳐진다. */
 @media (max-width: 1280px) {
-  .opinions-screen__title {
-    font-size: 32px;
-  }
-
   .opinions-screen__cards {
     display: flex;
     flex-direction: column;
