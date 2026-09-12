@@ -1,0 +1,262 @@
+/* 앱 골격: 헤더, 명패, 공통 화면/CTA 스타일. 디자인 마감은 T14에서 다룬다. */
+
+.app-shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header__brand {
+  font-weight: 700;
+}
+
+.app-header__stage {
+  color: var(--text-muted);
+}
+
+.app-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.app-timer {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30). 세션 시작 전 고정된 값을 그대로
+   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). */
+.mode-badge {
+  padding: 2px var(--space-1);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mode-badge--live {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mode-badge--scripted {
+  color: var(--text-muted);
+}
+
+.app-header__timer {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-header__timer--amber {
+  color: var(--vote-hold);
+  font-weight: 700;
+}
+
+.app-timer__notice {
+  color: var(--vote-hold);
+  font-size: 14px;
+}
+
+.operator-menu {
+  position: relative;
+}
+
+.operator-menu__trigger {
+  min-height: 40px;
+  min-width: 56px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  background-color: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.operator-menu__trigger:hover {
+  background-color: var(--panel-active);
+}
+
+.operator-menu__panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 220px;
+  padding: var(--space-2);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.operator-menu__item {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-control);
+  border: none;
+  background-color: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.operator-menu__item:hover {
+  background-color: var(--panel-active);
+}
+
+.operator-menu__actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.idle-notice {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-4);
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.idle-notice__message {
+  margin: 0;
+  color: var(--text);
+}
+
+.idle-notice__continue {
+  align-self: center;
+  min-height: var(--touch-min);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  padding: var(--space-6);
+}
+
+/* 화면 전환: opacity + 소폭 translate, 180–250ms(DESIGN_SPEC.md 4장). StageRouter가
+   단계마다 다른 컴포넌트를 새로 마운트하므로, 마운트 시 한 번 재생되는 CSS 애니메이션만으로
+   충분하다(JS 타이머 없이 유지). prefers-reduced-motion에서는 base.css의 전역 규칙이
+   지속 시간을 0에 가깝게 줄여 사실상 제거한다. */
+.screen {
+  width: 100%;
+  max-width: 1760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  animation: screen-enter var(--transition-screen) ease-out both;
+}
+
+@keyframes screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .app-main {
+    padding: var(--space-3);
+  }
+
+  .screen {
+    gap: var(--space-1);
+  }
+}
+
+.cta {
+  align-self: flex-start;
+  min-height: var(--cta-height);
+  min-width: var(--touch-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-control);
+  border: none;
+  background-color: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.cta:disabled {
+  background-color: var(--panel-active);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.nameplate {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-1) var(--space-4);
+  color: var(--text-muted);
+}
+
+.nameplate__name {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* 콘텐츠가 한 화면보다 길어 스크롤이 필요할 때도 전달·확정 CTA에 항상 닿을 수 있게
+   화면 바닥에 붙인다(DESIGN_SPEC.md "만들 것 · sticky footer CTA"). 배경을 불투명
+   단색으로 채워, 아래로 흘러가는 글자가 옅게 겹쳐 보이지 않고 CTA 바가 그 위에
+   놓인 것으로 분명히 보이게 한다. */
+.screen__sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1);
+  padding: var(--space-2) var(--space-6) var(--space-6);
+  background-color: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 1280px) {
+  .screen__sticky-footer {
+    margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+}
+
+.placeholder-screen {
+  color: var(--text-muted);
+}

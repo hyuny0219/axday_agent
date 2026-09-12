@@ -1,0 +1,26 @@
+# Render 무료 웹서비스 블루프린트(T37). 서버(server/index.ts)가 dist/를 같은 오리진에서
+# 함께 서빙하므로 클라이언트·API가 한 URL로 live 배포된다(server/static.ts).
+# 사용법: Render 대시보드 → New → Blueprint → 이 저장소 연결 → ANTHROPIC_API_KEY 입력.
+# 자세한 절차는 docs/DEPLOY.md 참고.
+
+services:
+  - type: web
+    name: boardroom-2026
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MODEL_PROVIDER
+        value: anthropic
+      - key: MODEL_ID
+        value: claude-sonnet-5
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ACCESS_TOKEN
+        generateValue: true
+      - key: MAX_SESSIONS_PER_HOUR
+        value: 30
+      - key: NODE_VERSION
+        value: 22

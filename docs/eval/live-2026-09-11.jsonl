@@ -1,0 +1,144 @@
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":499,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":482,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":489,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":481,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":502,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":502,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":502,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":502,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":334,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":319,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":323,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":328,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":310,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":653,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":307,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":734,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":306,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":309,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":349,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":314,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":323,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":498,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":498,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":498,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":498,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":330,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":310,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":308,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":303,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":327,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":284,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":325,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":312,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":325,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":352,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":301,"modelId":"","promptVersion":"v1"}
+{"runIndex":1,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":304,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":332,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":309,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":309,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":288,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":292,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":357,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":356,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":304,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":314,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":321,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":509,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":508,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":508,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":508,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":579,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":579,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":579,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":579,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":380,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":380,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":379,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":380,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":321,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":319,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":318,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":312,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":306,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":325,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":324,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":326,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":963,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":644,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":644,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":644,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":644,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":265,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":300,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":300,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":325,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":312,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":320,"modelId":"","promptVersion":"v1"}
+{"runIndex":2,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":325,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":324,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":319,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":334,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":316,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":336,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":340,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":340,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":292,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":315,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"conflict","pathLabel":"상충","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":322,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":334,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":314,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":304,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":327,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":326,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":362,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":429,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":323,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":361,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":361,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":361,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"negation","pathLabel":"부정","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":361,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":412,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":413,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":412,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":411,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":314,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":316,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":314,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":337,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":297,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":297,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"no_condition","pathLabel":"조건 없음","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":315,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":302,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":316,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":310,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"OPINIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":302,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":339,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":315,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"REACTIONS","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":305,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CEO","status":"failed","failReason":"provider_error","latencyMs":311,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CFO_CAIO","status":"failed","failReason":"provider_error","latencyMs":286,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CIO","status":"failed","failReason":"provider_error","latencyMs":307,"modelId":"","promptVersion":"v1"}
+{"runIndex":3,"pathId":"condition_supplement","pathLabel":"조건 보완","stage":"VOTE","roleId":"CISO","status":"failed","failReason":"provider_error","latencyMs":307,"modelId":"","promptVersion":"v1"}
