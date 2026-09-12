@@ -97,7 +97,9 @@
   padding: var(--space-2);
   cursor: pointer;
   /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
-  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease;
+  transition:
+    border-color var(--transition-fast) ease,
+    background-color var(--transition-fast) ease;
 }
 
 .phrase-card:hover {
@@ -218,7 +220,9 @@
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
-  transition: border-color var(--transition-fast) ease, color var(--transition-fast) ease;
+  transition:
+    border-color var(--transition-fast) ease,
+    color var(--transition-fast) ease;
 }
 
 .condition-chip--accepted {
@@ -306,8 +310,13 @@
   /* rows=8(JSX)로 정해진 기본 높이 대신 명시적 height로 줄이고, 남는 내용은
      내부 스크롤로 본다(DESIGN_SPEC.md 6장 "텍스트 전체는 입력창 내부 스크롤
      가능하다"). 글자 축소·항목 누락 대신 이 높이만 줄인다. */
+  .discuss-screen__title {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
   .draft-editor__textarea {
-    height: 72px;
+    height: 64px;
     min-height: 0;
     font-size: 16px;
   }

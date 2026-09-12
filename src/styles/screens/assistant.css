@@ -110,10 +110,9 @@
     grid-template-columns: 1fr;
   }
 
-  /* 1280×720에서는 고정 하단 CTA 위 여유가 적어 토글을 콤팩트하게 둔다(Codex 검토, PR #2).
-     56px 최소 클릭 영역은 1920×1080 기준이며, 720 높이에서는 가려지지 않는 것이 우선이다. */
+  /* 최소 클릭 높이 56px는 1280×720에서도 유지한다(DESIGN_SPEC.md 2·6장). 720 높이에
+     들어가게 하는 여유는 토글이 아니라 헤더·제목·입력창 높이에서 확보한다(Codex 검토, PR #2). */
   .assistant-panel__toggle {
-    min-height: 40px;
     padding: 0 var(--space-2);
     font-size: 14px;
   }
