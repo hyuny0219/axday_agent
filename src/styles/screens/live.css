@@ -15,16 +15,19 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
+  box-shadow: var(--shadow-card);
 }
 
 .live-statement--failed {
-  border-color: var(--vote-no);
+  border-color: var(--vote-uncast);
 }
 
 /* 임원 발언 강조: 얇은 glow 1회(DESIGN_SPEC.md 4장 "임원 발언 강조는 얇은 glow 1회").
    status가 'answered'로 바뀔 때만 클래스가 붙으므로 애니메이션이 한 번만 재생되고,
-   이후 리렌더로는 class 값이 그대로라 다시 재생되지 않는다. */
+   이후 리렌더로는 class 값이 그대로라 다시 재생되지 않는다. 발언 상태의 시안 테두리는
+   글로우가 끝난 뒤에도 유지된다. */
 .live-statement--answered {
+  border-color: var(--accent);
   animation: exec-statement-glow 900ms ease-out;
 }
 
@@ -49,18 +52,61 @@
   font-size: 18px;
 }
 
+/* 상태 칩: markup 변경 없이 head의 마지막 flex 항목으로 배지를 붙인다(DESIGN_SPEC.md
+   "v0.8 화면 추가 요구 · 임원별 판단 중/발언/응답 실패 상태를 표시"). 실제 접근 가능한
+   문구는 아래 live-statement__status-text(및 통과된 발언 카드 본문)가 이미 전담하므로,
+   이 배지는 장식이다. */
+.live-statement__head::after {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.live-statement--pending .live-statement__head::after {
+  content: '● 판단 중' / '';
+}
+
+.live-statement--answered .live-statement__head::after {
+  content: '발언' / '';
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.live-statement--failed .live-statement__head::after {
+  content: '응답 없음' / '';
+  border-color: var(--vote-uncast);
+  color: var(--vote-uncast);
+}
+
 .live-statement__text {
   margin: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: var(--fs-card);
   line-height: 1.5;
 }
 
 .live-statement__evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 0;
-  padding-left: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.live-statement__evidence li {
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .live-statement__references {
@@ -76,7 +122,7 @@
 }
 
 .live-statement--failed .live-statement__status-text {
-  color: var(--vote-no);
+  color: var(--vote-uncast);
   font-style: normal;
 }
 
@@ -102,7 +148,7 @@
 .result-seat__concerns,
 .result-seat__unavailable {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 

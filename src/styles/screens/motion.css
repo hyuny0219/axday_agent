@@ -1,7 +1,10 @@
 .motion-screen__title {
   margin: 0;
+  font-size: var(--fs-title);
 }
 
+/* 최종 안건 카드: 중앙 정렬 + max-width960px(DESIGN_SPEC.md "만들 것 · 최종 안건·투표
+   · 안건 카드 중앙 max-width960px·--shadow-card"). */
 .motion-screen__card {
   display: flex;
   flex-direction: column;
@@ -10,12 +13,15 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-3);
-  max-width: 900px;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: var(--shadow-card);
 }
 
 .motion-screen__original {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--fs-card);
   color: var(--text);
 }
 
@@ -25,11 +31,25 @@
   color: var(--text-muted);
 }
 
+/* 실행 방식·조건 목록을 pill로 보여준다(DESIGN_SPEC.md "만들 것 · 실행 방식/조건
+   목록 pill"). */
 .motion-screen__conditions,
 .motion-screen__tasks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
   margin: 0;
-  padding-left: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.motion-screen__conditions li,
+.motion-screen__tasks li {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
   color: var(--text);
+  font-size: var(--fs-meta);
 }
 
 .motion-screen__no-conditions {
