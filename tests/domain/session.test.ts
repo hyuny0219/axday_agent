@@ -233,7 +233,7 @@ describe('리셋 후 이전 값 없음', () => {
     session = reduce(session, { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: [] }, T0);
     const beforeReset = session;
 
-    const reset = reduce(session, { type: 'OPERATOR_RESET' }, T0 + 1);
+    const reset = reduce(session, { type: 'OPERATOR_RESET', nextSessionId: 'reset-1' }, T0 + 1);
     expect(reset.sessionId).not.toBe(beforeReset.sessionId);
     expect(reset.stage).toBe('ATTRACT');
     expect(reset.scenarioId).toBeNull();
@@ -243,10 +243,17 @@ describe('리셋 후 이전 값 없음', () => {
     expect(reset.outcome).toBeNull();
     expect(reset.followUpUsed).toBe(false);
     expect(reset.warnings).toEqual([]);
+    expect(reset.sessionId).toBe('reset-1');
+  });
+
+  it('리셋은 순수하다: 같은 (session, action, now)를 두 번 reduce하면 같은 결과가 나온다', () => {
+    const session = sessionAtReactions();
+    const action = { type: 'IDLE_RESET', nextSessionId: 'reset-same' } as const;
+    expect(reduce(session, action, T0 + 1)).toEqual(reduce(session, action, T0 + 1));
   });
 
   it('IDLE_RESET도 동일하게 초기화한다', () => {
-    const reset = reduce(sessionAtReactions(), { type: 'IDLE_RESET' }, T0 + 1);
+    const reset = reduce(sessionAtReactions(), { type: 'IDLE_RESET', nextSessionId: 'reset-2' }, T0 + 1);
     expect(reset.stage).toBe('ATTRACT');
     expect(reset.opinions).toEqual([]);
   });

@@ -33,11 +33,7 @@ function sessionAtLiveVote(now = T0, confirmedConditionIds: string[] = []): Sess
     now,
   ); // DISCUSS -> REACTIONS
   session = reduce(session, { type: 'KEEP_PREVIOUS' }, now); // REACTIONS -> MOTION
-  session = reduce(
-    session,
-    { type: 'FREEZE_MOTION', scenario, confirmedConditionIds },
-    now,
-  ); // MOTION -> VOTE (live: ballots 비어 있음)
+  session = reduce(session, { type: 'FREEZE_MOTION', scenario, confirmedConditionIds }, now); // MOTION -> VOTE (live: ballots 비어 있음)
   return session;
 }
 
@@ -291,5 +287,63 @@ describe('scripted 모드 결과가 기존과 동일', () => {
     // 대표 경로표: 없음(원안) / YES,HOLD,NO,NO / 참가자 YES → HOLD. (session.test.ts와 동일)
     expect(session.outcome).toBe('HOLD');
     expect(tally(session.ballots).limitedByUnavailable).toBe(false);
+  });
+});
+
+describe('모델 응답 도착은 무입력 시계를 연장하지 않는다', () => {
+  it('APPEND_STATEMENTS·RECORD_EXEC_BALLOT·MARK_EXEC_UNAVAILABLE는 lastActivityAt을 바꾸지 않는다', () => {
+    let session = createInitialSession(T0);
+    session = reduce(session, { type: 'SET_MODE', mode: 'live' }, T0);
+    session = reduce(session, { type: 'START' }, T0);
+    session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // BRIEFING -> OPINIONS
+    const before = session.lastActivityAt;
+
+    const statement: Statement = {
+      id: 'st-late',
+      roleId: 'CEO',
+      stage: 'OPINIONS',
+      text: '늦게 도착한 발언',
+      evidenceIds: [],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      source: 'live',
+      createdAt: T0 + 8_000,
+    };
+    session = reduce(
+      session,
+      {
+        type: 'APPEND_STATEMENTS',
+        stage: 'OPINIONS',
+        statements: [statement],
+        baseRevision: session.transcript.revision,
+      },
+      T0 + 8_000,
+    );
+    expect(session.transcript.statements).toHaveLength(1);
+    expect(session.lastActivityAt).toBe(before);
+
+    const atVote = sessionAtLiveVote(T0);
+    const voteBefore = atVote.lastActivityAt;
+    const ballot: Ballot = {
+      memberId: 'CEO',
+      motionId: atVote.finalMotion!.id,
+      motionHash: atVote.finalMotion!.hash,
+      vote: 'YES',
+      source: 'live',
+      confirmedAt: T0 + 7_000,
+    };
+    const withBallot = reduce(atVote, { type: 'RECORD_EXEC_BALLOT', ballot }, T0 + 7_000);
+    expect(withBallot.ballots).toHaveLength(1);
+    expect(withBallot.lastActivityAt).toBe(voteBefore);
+
+    const unavailable = reduce(
+      withBallot,
+      { type: 'MARK_EXEC_UNAVAILABLE', roleId: 'CIO', reason: 'timeout' },
+      T0 + 8_000,
+    );
+    expect(unavailable.roleStatus.CIO).toBe('failed');
+    expect(unavailable.lastActivityAt).toBe(voteBefore);
   });
 });

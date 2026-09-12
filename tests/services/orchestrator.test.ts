@@ -25,7 +25,11 @@ function selectScenario(clock: FakeClock, mode: SessionMode): Session {
   let session = createInitialSession(clock.now());
   session = reduce(session, { type: 'START' }, clock.now());
   session = reduce(session, { type: 'SET_MODE', mode }, clock.now());
-  session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: aiAssistantScenario.id }, clock.now());
+  session = reduce(
+    session,
+    { type: 'SELECT_SCENARIO', scenarioId: aiAssistantScenario.id },
+    clock.now(),
+  );
   return session;
 }
 
@@ -56,7 +60,10 @@ function toVoteStage(clock: FakeClock): Session {
   return session;
 }
 
-function createStore(initial: Session, clock: FakeClock): OrchestratorStore & { dispatched: SessionAction[] } {
+function createStore(
+  initial: Session,
+  clock: FakeClock,
+): OrchestratorStore & { dispatched: SessionAction[] } {
   let current = initial;
   const dispatched: SessionAction[] = [];
   return {
@@ -122,13 +129,11 @@ describe('runner.runRound', () => {
     const store = createStore(toOpinionsStage(clock), clock);
     const adapter = fakeAdapter({
       initialOpinions: async () =>
-        EXEC_MEMBER_ORDER.map(
-          (roleId): StatementOutcome => ({
-            roleId,
-            status: 'answered',
-            statement: answeredStatement(roleId),
-          }),
-        ),
+        EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+          roleId,
+          status: 'answered',
+          statement: answeredStatement(roleId),
+        })),
     });
     const orchestrator = createOrchestrator({
       adapter,
@@ -193,7 +198,7 @@ describe('runner.runRound', () => {
 
     const roundPromise = orchestrator.runRound('OPINIONS');
     // 어댑터가 아직 응답하기 전에 참가자 무입력으로 세션이 초기화된다.
-    store.dispatch({ type: 'IDLE_RESET' });
+    store.dispatch({ type: 'IDLE_RESET', nextSessionId: 'reset-in-test' });
     pending.resolve(
       EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
         roleId,
@@ -206,6 +211,62 @@ describe('runner.runRound', () => {
     const session = store.getSession();
     expect(session.stage).toBe('ATTRACT');
     expect(session.transcript.statements).toHaveLength(0);
+  });
+
+  it('앞 라운드가 응답 전이면 다음 라운드는 그 뒤에 시작해 두 라운드 발언이 모두 남는다', async () => {
+    const clock = fakeClock(0);
+    const store = createStore(toOpinionsStage(clock), clock);
+    const opinionsPending = deferred<StatementOutcome[]>();
+    let reactionsCalls = 0;
+    const adapter = fakeAdapter({
+      initialOpinions: () => opinionsPending.promise,
+      reactions: async () => {
+        reactionsCalls += 1;
+        return EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+          roleId,
+          status: 'answered',
+          statement: { ...answeredStatement(roleId), id: `re-${roleId}`, stage: 'REACTIONS' },
+        }));
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    const opinionsRound = orchestrator.runRound('OPINIONS');
+    // 참가자가 OPINIONS 응답을 기다리지 않고 DISCUSS로 넘어가 의견을 낸다.
+    store.dispatch({ type: 'NEXT_STAGE' });
+    store.dispatch({
+      type: 'SUBMIT_OPINION',
+      originalText: '작은 범위로 먼저 시작합시다.',
+      selectedPhraseIds: [],
+      confirmedConditionIds: [],
+    });
+    const reactionsRound = orchestrator.runRound('REACTIONS');
+    await Promise.resolve();
+    // 앞 라운드가 끝나기 전에는 REACTIONS 어댑터를 부르지 않는다.
+    expect(reactionsCalls).toBe(0);
+
+    opinionsPending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: answeredStatement(roleId),
+      })),
+    );
+    await opinionsRound;
+    await reactionsRound;
+
+    const session = store.getSession();
+    expect(reactionsCalls).toBe(1);
+    expect(session.transcript.statements).toHaveLength(EXEC_MEMBER_ORDER.length * 2);
+    expect(session.transcript.statements.filter((st) => st.stage === 'REACTIONS')).toHaveLength(
+      EXEC_MEMBER_ORDER.length,
+    );
   });
 
   it('scripted 어댑터는 지연 없이 즉시 발언을 반영한다', async () => {
@@ -245,22 +306,20 @@ describe('runner.startFinalVotes / awaitResult', () => {
     const store = createStore(session, clock);
     const adapter = fakeAdapter({
       finalVotes: async () =>
-        EXEC_MEMBER_ORDER.map(
-          (roleId): BallotOutcome => ({
-            roleId,
-            status: 'answered',
-            ballot: {
-              memberId: roleId,
-              motionId: motion.id,
-              motionHash: motion.hash,
-              vote: 'YES',
-              confirmedAt: 0,
-              source: 'live',
-              reason: '자료를 검토했고 동의합니다.',
-              remainingConcerns: [],
-            },
-          }),
-        ),
+        EXEC_MEMBER_ORDER.map((roleId): BallotOutcome => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            memberId: roleId,
+            motionId: motion.id,
+            motionHash: motion.hash,
+            vote: 'YES',
+            confirmedAt: 0,
+            source: 'live',
+            reason: '자료를 검토했고 동의합니다.',
+            remainingConcerns: [],
+          },
+        })),
     });
     const orchestrator = createOrchestrator({
       adapter,

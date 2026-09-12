@@ -18,7 +18,13 @@ import type {
   Statement,
   StatementStage,
 } from './types';
-import { EXEC_MEMBER_ORDER, castParticipant, decideBoard, fillMissingBallots, tally } from './voting';
+import {
+  EXEC_MEMBER_ORDER,
+  castParticipant,
+  decideBoard,
+  fillMissingBallots,
+  tally,
+} from './voting';
 
 export const SESSION_DURATION_MS = 240_000;
 
@@ -43,8 +49,8 @@ export type SessionAction =
   | { type: 'SELECT_VOTE'; vote: PendingVote }
   | { type: 'CONFIRM_VOTE' }
   | { type: 'EXPIRE'; scenario: Scenario }
-  | { type: 'IDLE_RESET' }
-  | { type: 'OPERATOR_RESET' }
+  | { type: 'IDLE_RESET'; nextSessionId: string }
+  | { type: 'OPERATOR_RESET'; nextSessionId: string }
   | { type: 'MARK_SUMMARY_SHOWN' }
   | { type: 'RECORD_ASSISTANT_ACTION'; entry: AssistantActionEvent }
   | { type: 'SET_MODE'; mode: SessionMode }
@@ -73,15 +79,17 @@ const PENDING_ROLE_STATUS: Record<ExecMemberId, RoleStatus> = {
   CISO: 'pending',
 };
 
-function createSessionId(): string {
+/** 새 sessionId. reducer 밖(dispatch하는 쪽)에서만 부른다 — reducer는 난수를 만들지 않는다. */
+export function newSessionId(): string {
   return crypto.randomUUID();
 }
 
-/** 새 세션(참가자 이전 값 없음)을 만든다. ATTRACT에서 시작하고 기본 모드는 scripted다. */
-export function createInitialSession(now: number): Session {
+/** 새 세션(참가자 이전 값 없음)을 만든다. ATTRACT에서 시작하고 기본 모드는 scripted다.
+ * sessionId를 넘기지 않으면 새로 만든다(앱 초기화용). reducer는 항상 액션에 실린 ID를 넘긴다. */
+export function createInitialSession(now: number, sessionId: string = newSessionId()): Session {
   return {
     stage: 'ATTRACT',
-    sessionId: createSessionId(),
+    sessionId,
     mode: 'scripted',
     scenarioId: null,
     startedAt: null,
@@ -299,7 +307,12 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         return ignore(session, '만료는 진행 중인 세션에만 적용됩니다.');
       }
       if (session.finalMotion) {
-        const ballots = fillMissingBallots(session.ballots, session.finalMotion, now, EXPIRE_REASON);
+        const ballots = fillMissingBallots(
+          session.ballots,
+          session.finalMotion,
+          now,
+          EXPIRE_REASON,
+        );
         return withNoWarnings({
           ...session,
           stage: 'RESULT',
@@ -330,7 +343,9 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
 
     case 'IDLE_RESET':
     case 'OPERATOR_RESET': {
-      return createInitialSession(now);
+      // 새 sessionId는 액션에 실려 온다. 같은 (session, action, now)를 두 번 reduce해도 같은
+      // 결과가 나오도록 reducer 안에서 난수를 만들지 않는다.
+      return createInitialSession(now, action.nextSessionId);
     }
 
     case 'MARK_SUMMARY_SHOWN': {
@@ -382,7 +397,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           revision: session.transcript.revision + 1,
           statements: [...session.transcript.statements, ...action.statements],
         },
-        lastActivityAt: now,
+        // 모델 응답 도착은 참가자 활동이 아니므로 lastActivityAt(무입력 시계)을 건드리지 않는다.
       });
     }
 
@@ -417,7 +432,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ballots,
         roleStatus: { ...session.roleStatus, [ballot.memberId as ExecMemberId]: 'answered' },
         execBallotsPending: execBallotCount < EXEC_MEMBER_ORDER.length,
-        lastActivityAt: now,
+        // 임원 표 도착은 참가자 활동이 아니므로 lastActivityAt을 갱신하지 않는다.
       });
     }
 
@@ -445,13 +460,11 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           ballots,
           roleStatus: { ...session.roleStatus, [action.roleId]: 'failed' },
           execBallotsPending: execBallotCount < EXEC_MEMBER_ORDER.length,
-          lastActivityAt: now,
         });
       }
       return withNoWarnings({
         ...session,
         roleStatus: { ...session.roleStatus, [action.roleId]: 'failed' },
-        lastActivityAt: now,
       });
     }
 

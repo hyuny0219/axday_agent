@@ -18,8 +18,13 @@ import {
   handleAssistantRefine,
   handleAssistantSummarize,
 } from './handlers/assistant';
-import { isAuthorized, isProtectedApiPath, loadAccessTokenConfig, requiresAccessToken } from './auth';
-import { loadSessionLimitConfig, SessionLimitRegistry } from './sessionLimit';
+import {
+  isAuthorized,
+  isProtectedApiPath,
+  loadAccessTokenConfig,
+  requiresAccessToken,
+} from './auth';
+import { loadSessionLimitConfig, SessionLimitRegistry, type CallKind } from './sessionLimit';
 import { systemClock } from './clock';
 import { tryServeStatic } from './static';
 
@@ -33,7 +38,15 @@ const provider: ModelProvider =
 const requestIds = new RequestIdRegistry();
 const accessTokenConfig = loadAccessTokenConfig();
 const sessionLimitConfig = loadSessionLimitConfig();
-const sessionLimitRegistry = new SessionLimitRegistry(systemClock, sessionLimitConfig.maxPerHour);
+const sessionLimitRegistry = new SessionLimitRegistry(systemClock, sessionLimitConfig);
+
+/** 엔드포인트 → 세션당 호출 상한을 셀 때 쓰는 종류. */
+const CALL_KIND_BY_ENDPOINT: Record<string, CallKind> = {
+  'board.round': 'round',
+  'board.vote': 'vote',
+  'assistant.refine': 'refine',
+  'assistant.summarize': 'summarize',
+};
 const DEFAULT_STATIC_DIR = resolve(process.cwd(), 'dist');
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -42,9 +55,30 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(payload);
 }
 
+/** 요청 본문 상한. 정상 요청(회의 기록 12발언·초안 300자·메타)은 몇 KB이므로 64KiB면
+ * 충분하고, 그 이상은 메모리 고갈 시도나 잘못된 클라이언트로 본다. */
+export const MAX_BODY_BYTES = 64 * 1024;
+
+class PayloadTooLargeError extends Error {
+  constructor() {
+    super('payload_too_large');
+    this.name = 'PayloadTooLargeError';
+  }
+}
+
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const declared = Number(req.headers['content-length']);
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    throw new PayloadTooLargeError();
+  }
   const chunks: Buffer[] = [];
+  let received = 0;
   for await (const chunk of req) {
+    received += (chunk as Buffer).length;
+    if (received > MAX_BODY_BYTES) {
+      // 스트리밍 중 상한을 넘기면 더 읽지 않고 바로 끊는다(chunked 본문도 여기서 잡힌다).
+      throw new PayloadTooLargeError();
+    }
     chunks.push(chunk as Buffer);
   }
   if (chunks.length === 0) {
@@ -86,7 +120,13 @@ async function handleBoardEndpoint<T extends { requestId: string; sessionId: str
   let body: unknown;
   try {
     body = await readJsonBody(req);
-  } catch {
+  } catch (err) {
+    if (err instanceof PayloadTooLargeError) {
+      // 남은 본문을 더 읽지 않도록 이 연결은 응답 후 닫는다.
+      res.setHeader('Connection', 'close');
+      sendJson(res, 413, { error: 'payload_too_large', maxBytes: MAX_BODY_BYTES });
+      return;
+    }
     sendJson(res, 400, { error: 'invalid_json' });
     return;
   }
@@ -100,8 +140,9 @@ async function handleBoardEndpoint<T extends { requestId: string; sessionId: str
     return;
   }
 
-  if (!sessionLimitRegistry.allow(parsed.data.sessionId)) {
-    sendJson(res, 429, { error: 'session_limit' });
+  const limit = sessionLimitRegistry.allow(parsed.data.sessionId, CALL_KIND_BY_ENDPOINT[endpoint] ?? 'round');
+  if (limit !== 'ok') {
+    sendJson(res, 429, { error: limit });
     return;
   }
 
@@ -127,9 +168,21 @@ type RouteHandler = (req: IncomingMessage, res: ServerResponse) => void | Promis
 const routes: Record<string, RouteHandler> = {
   'GET /api/health': handleHealth,
   'POST /api/board/round': (req, res) =>
-    handleBoardEndpoint('board.round', roundRequestSchema, (data) => handleRound(data, { provider }), req, res),
+    handleBoardEndpoint(
+      'board.round',
+      roundRequestSchema,
+      (data) => handleRound(data, { provider }),
+      req,
+      res,
+    ),
   'POST /api/board/vote': (req, res) =>
-    handleBoardEndpoint('board.vote', voteRequestSchema, (data) => handleVote(data, { provider }), req, res),
+    handleBoardEndpoint(
+      'board.vote',
+      voteRequestSchema,
+      (data) => handleVote(data, { provider }),
+      req,
+      res,
+    ),
   'POST /api/assistant/refine': (req, res) =>
     handleBoardEndpoint(
       'assistant.refine',
@@ -160,7 +213,10 @@ export function createBoardServer(opts: CreateBoardServerOptions = {}) {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const method = req.method ?? 'GET';
 
-    if (isProtectedApiPath(url.pathname) && !isAuthorized(accessTokenConfig, req.headers['x-access-token'])) {
+    if (
+      isProtectedApiPath(url.pathname) &&
+      !isAuthorized(accessTokenConfig, req.headers['x-access-token'])
+    ) {
       sendJson(res, 401, { error: 'unauthorized' });
       return;
     }
@@ -176,7 +232,11 @@ export function createBoardServer(opts: CreateBoardServerOptions = {}) {
 
     // /api 밖의 GET은 정적 파일(dist/)로 서빙한다. dist가 없으면(로컬 API 전용 서버)
     // tryServeStatic이 false를 돌려줘 기존 404 JSON으로 대체된다.
-    if (method === 'GET' && !url.pathname.startsWith('/api') && tryServeStatic(staticDir, url.pathname, res)) {
+    if (
+      method === 'GET' &&
+      !url.pathname.startsWith('/api') &&
+      tryServeStatic(staticDir, url.pathname, res)
+    ) {
       return;
     }
 
@@ -185,7 +245,8 @@ export function createBoardServer(opts: CreateBoardServerOptions = {}) {
 }
 
 /* c8 ignore start -- 진입점 실행은 통합 확인(curl)으로 검증하고 단위 테스트 대상이 아니다. */
-const isMainModule = process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`;
+const isMainModule =
+  process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`;
 if (isMainModule) {
   const server = createBoardServer();
   server.listen(config.port, () => {

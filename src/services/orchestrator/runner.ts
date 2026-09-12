@@ -60,11 +60,19 @@ function roundMethod(
 }
 
 function failedStatementOutcomes(reason: string): StatementOutcome[] {
-  return EXEC_MEMBER_ORDER.map((roleId) => ({ roleId, status: 'failed' as const, failReason: reason }));
+  return EXEC_MEMBER_ORDER.map((roleId) => ({
+    roleId,
+    status: 'failed' as const,
+    failReason: reason,
+  }));
 }
 
 function failedBallotOutcomes(reason: string): BallotOutcome[] {
-  return EXEC_MEMBER_ORDER.map((roleId) => ({ roleId, status: 'failed' as const, failReason: reason }));
+  return EXEC_MEMBER_ORDER.map((roleId) => ({
+    roleId,
+    status: 'failed' as const,
+    failReason: reason,
+  }));
 }
 
 /** scripted/live 어댑터를 같은 방식으로 호출해 세션에 반영하는 실행기를 만든다. */
@@ -72,8 +80,20 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
   // startFinalVotes()가 시작한 호출의 완료 여부를 awaitResult()가 기다릴 수 있게 보관한다.
   // 아직 한 번도 시작하지 않았으면 즉시 settle되는 값으로 둔다.
   let finalVotesSettled: Promise<void> = Promise.resolve();
+  // 라운드는 직렬로 돈다. 앞 라운드(예: BRIEFING에서 미리 부른 OPINIONS)가 아직 응답 전인데
+  // 참가자가 먼저 다음 단계로 넘어가 REACTIONS를 시작하면, 두 라운드가 같은 baseRevision을
+  // 잡아 늦게 온 쪽이 stale로 폐기된다. 앞 라운드가 끝나 반영된 뒤에 다음 라운드가
+  // baseRevision을 읽게 해서 발언이 사라지지 않게 한다. 리셋은 abortAll로 앞 라운드를 즉시
+  // 끝내므로 대기가 길어지지 않는다.
+  let roundChain: Promise<void> = Promise.resolve();
 
-  async function runRound(stage: StatementStage): Promise<void> {
+  function runRound(stage: StatementStage): Promise<void> {
+    const run = roundChain.then(() => runRoundNow(stage));
+    roundChain = run.catch(() => undefined);
+    return run;
+  }
+
+  async function runRoundNow(stage: StatementStage): Promise<void> {
     const session = deps.store.getSession();
     const sessionId = session.sessionId;
     const baseRevision = session.transcript.revision;
@@ -114,8 +134,9 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
 
     const now = deps.clock.now();
     const statements: Statement[] = outcomes
-      .filter((outcome): outcome is StatementOutcome & { statement: Statement } =>
-        outcome.status === 'answered' && outcome.statement !== undefined,
+      .filter(
+        (outcome): outcome is StatementOutcome & { statement: Statement } =>
+          outcome.status === 'answered' && outcome.statement !== undefined,
       )
       .map((outcome) => ({ ...outcome.statement, createdAt: now }));
 

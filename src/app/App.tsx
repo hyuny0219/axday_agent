@@ -9,10 +9,18 @@
 // 읽는 값이 dispatch 이전의 stale 값이 되지 않게 하기 위해서다(예: FREEZE_MOTION 직후
 // startFinalVotes는 finalMotion이 실제로 채워진 뒤에만 불러야 한다).
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from 'react';
 import type { ReactNode } from 'react';
 import { touch } from '../domain/clock';
-import { createInitialSession, reduce } from '../domain/session';
+import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
 import type { Session } from '../domain/types';
 import { scenarios } from '../content/scenarios';
@@ -21,7 +29,11 @@ import { useTicker } from './useTicker';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
-import { createOrchestrator, type Orchestrator, type OrchestratorStore } from '../services/orchestrator/runner';
+import {
+  createOrchestrator,
+  type Orchestrator,
+  type OrchestratorStore,
+} from '../services/orchestrator/runner';
 import { liveBoardAgentsAdapter } from '../services/boardAgents/live';
 import { scriptedBoardAgentsAdapter } from '../services/boardAgents/scripted';
 import type { BoardAgentsAdapter } from '../services/boardAgents/types';
@@ -118,7 +130,9 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 실제 호출 시점의 sessionRef.current.mode로 어느 어댑터를 쓸지 매번 고른다.
   const dynamicAdapter = useMemo<BoardAgentsAdapter>(() => {
     function currentAdapter(): BoardAgentsAdapter {
-      return sessionRef.current.mode === 'live' ? liveBoardAgentsAdapter : scriptedBoardAgentsAdapter;
+      return sessionRef.current.mode === 'live'
+        ? liveBoardAgentsAdapter
+        : scriptedBoardAgentsAdapter;
     }
     return {
       initialOpinions: (ctx) => currentAdapter().initialOpinions(ctx),
@@ -233,7 +247,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
     clock: appClock,
     dispatch: (clockAction) => {
       if (clockAction === 'IDLE_RESET') {
-        dispatch({ type: 'IDLE_RESET' });
+        dispatch({ type: 'IDLE_RESET', nextSessionId: newSessionId() });
         return;
       }
       const scenario = scenarios.find((item) => item.id === session.scenarioId);
@@ -391,7 +405,7 @@ function StageRouter() {
         <ResultScreen
           scenario={scenario}
           session={session}
-          onReset={() => dispatch({ type: 'IDLE_RESET' })}
+          onReset={() => dispatch({ type: 'IDLE_RESET', nextSessionId: newSessionId() })}
         />
       );
 
@@ -411,7 +425,7 @@ function AppShell() {
       <Header
         session={session}
         clock={appClock}
-        onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET' })}
+        onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
       />
       {session.stage !== 'ATTRACT' && <Nameplate />}
       <main className="app-main">
