@@ -39,8 +39,11 @@
   font-family: inherit;
   counter-increment: agenda-index;
   /* 선택 120ms, hover translateY(DESIGN_SPEC.md 4장 "선택120ms"). */
-  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
-    transform var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+  transition:
+    border-color var(--transition-fast) ease,
+    background-color var(--transition-fast) ease,
+    transform var(--transition-fast) ease,
+    box-shadow var(--transition-fast) ease;
 }
 
 .scenario-card::before {
@@ -64,7 +67,7 @@
 }
 
 .scenario-card--selected::after {
-  content: '✓';
+  content: '✓' / '';
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);

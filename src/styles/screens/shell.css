@@ -209,8 +209,14 @@
 }
 
 @media (max-width: 1280px) {
+  /* 720 높이에서 고정 하단 CTA 위에 콘텐츠가 들어가도록 헤더와 상단 여백을 줄인다
+     (Codex 검토, PR #2: 비서실장 토글이 푸터에 가려짐). */
+  .app-header {
+    padding: 6px var(--space-3);
+  }
+
   .app-main {
-    padding: var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-3);
   }
 
   .screen {

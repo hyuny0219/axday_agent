@@ -89,7 +89,9 @@
   font-size: 20px;
   font-weight: 700;
   /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
-  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
+  transition:
+    border-color var(--transition-fast) ease,
+    background-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
 }
 
@@ -120,15 +122,15 @@
 }
 
 .vote-choice--yes::before {
-  content: '✓';
+  content: '✓' / '';
 }
 
 .vote-choice--hold::before {
-  content: '⏸';
+  content: '⏸' / '';
 }
 
 .vote-choice--no::before {
-  content: '✕';
+  content: '✕' / '';
 }
 
 .vote-choice input {
