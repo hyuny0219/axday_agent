@@ -24,7 +24,7 @@
 | Codex 검토 1차 | 완료 | PR #1 리뷰 6건(P1 4·P2 2) 반영: 본문 64KiB 상한, meeting_record 꺾쇠 무력화, 세션 수명·호출 상한, 라운드 직렬화, 모델 응답이 무입력 시계를 연장하지 않음, 리셋 sessionId를 액션에 실어 reducer 순수성 유지. 2차 2건(최종표를 라운드 사슬 뒤에 연결, 만료 후 늦은 응답 폐기)도 반영. 단위 242·E2E 54 |
 | T15~T16 | 완료 | 모션·접근성, E2E 전체·외부 요청 차단. 모두 1라운드 PASS. T16이 찾은 후속 조건 해제 버그(이전 확정 조건이 합집합으로 되살아남)는 오케스트레이터가 수정. 단위 203·E2E 54. Playwright가 dist를 서빙하므로 webServer에 build를 포함 |
 | T17 | 완료 | 오프라인 검증(scripted)·README·PR 초안. 1라운드 PASS. `bash scripts/offline-check.sh` PASS(26 E2E). docs/PR_P0.md 13항목 중 11 체크·2 미체크(전체화면 거부, 현장 IME 리허설). 실제 Anthropic 키 실측은 여전히 미실행 |
-| T33 | 대기 | 디자인 마감(P0 PR 이후) |
+| T33·T38 | 대기 | 디자인 마감 1(분위기·골격·대기·선택·브리핑)·2(토론·반응·투표·결과·live 상태). P0 머지 후 진행 |
 | T34 | 대기 | 임원 에이전트 고도화 1차(T32 실측 후, PR 전). 키 없으면 T35로 |
 | T35 | 대기 | 임원 에이전트 고도화 2차(검수 1차·리허설 1 이후, 콘텐츠 동결 전) |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
@@ -292,10 +292,37 @@
 - 완료 확인: `MODEL_PROVIDER=mock npm run eval:live -- --runs 1`이 기록 파일을 생성. 실제 키가 있으면 `--runs 3` 결과를 요약 표로 남기고, 없으면 스킵 메시지.
 - 크기: S.
 
-## T33 디자인 마감 (P0 PR 이후)
+## T33 디자인 마감 1 — 분위기·골격·대기·선택·브리핑
 
-- 목표: 목업의 미래적 회의실 분위기에 맞춰 시각 완성도를 올린다. hero형 대기·선택 화면, 배경 그라디언트·조명감, 명세 타이포 크기, 카드 위계, 임원 카드 강조, live 상태 표시의 시각화.
-- 크기: M. 상세 카드는 사용자 피드백 후 작성.
+- 목표: 목업의 "미래적 회의실" 분위기를 CSS만으로 재현한다. 배경 그라디언트·조명감, 타이포 스케일 토큰, 헤더·명패, hero형 대기 화면, 안건 선택 카드 위계, 브리핑 카드 위계. 레이아웃·문구·동작은 바꾸지 않는다.
+- 읽을 것: docs/design/DESIGN_SPEC.md 2·3·4장, `docs/design/assets/preview/{booth,agenda-select,briefing}.jpg`(축소본, 원본 PNG는 열지 않는다), `src/styles/tokens.css`·`base.css`·`screens/shell.css`·`attract.css`·`select.css`·`briefing.css`, `docs/screenshots/desktop-1080/select.png`(현재 상태).
+- 만들 것:
+  1. **토큰** `src/styles/tokens.css`: 타이포 스케일 `--fs-hero: 64px`, `--fs-title: 44px`, `--fs-h2: 32px`, `--fs-body: 24px`, `--fs-card: 20px`, `--fs-meta: 16px`(1280px 이하 미디어쿼리에서 48/32/26/20/18/14), 배경 `--bg-gradient`(짙은 네이비 위에 좌상단 `--accent-blue` 12% 방사형 + 우하단 `--accent` 8% 방사형), `--shadow-card: 0 12px 32px rgba(0,0,0,.35)`, `--glow-accent: 0 0 0 1px var(--accent), 0 0 24px rgba(40,217,240,.35)`, `--panel-glass: rgba(11,34,56,.85)`.
+  2. **배경·골격** `base.css`·`shell.css`: body 배경을 `--bg-gradient`(고정, `background-attachment: fixed` 대신 `.app-shell::before`로 절대 배치해 스크롤에 영향 없이), 헤더는 `--panel-glass` + 하단 1px 경계 + 미세한 시안 하이라이트, 브랜드는 letter-spacing 0.06em, 단계 표시는 pill, 명패는 시안 테두리 pill. 화면 공통 최대폭 1760px·좌우 여백 64px(1280px 이하 32px).
+  3. **대기(hero)** `attract.css`: 세로 중앙, 제목 `--fs-hero`, 배지 위, 부제 아래, 제목 뒤에 시안 방사형 조명(`::before`, opacity .25), CTA 64px 높이·시안 바탕·`--glow-accent` hover. 텍스트는 그대로.
+  4. **안건 선택** `select.css`·`SelectScreen.tsx`(클래스만): 카드 padding 32, 상단 "안건 ①/②/③" 메타 라벨(문구는 시나리오의 기존 번호 그대로), 제목 `--fs-body` 굵게, 부제 `--fs-card` muted, hover translateY(-2px)+`--shadow-card`, selected `--glow-accent`+우상단 체크(CSS ::after "✓"), disabled는 muted+준비 중 배지. 하단 CTA는 hero와 같은 스타일.
+  5. **브리핑** `briefing.css`·`BriefingScreen.tsx`(클래스만): 근거 카드 2×2는 `--panel`, AI 정리 카드는 시안 왼쪽 4px 경계 + "체험용 사전 구성" 태그를 pill로, 카드 제목 `--fs-card` 굵게, 본문 `--fs-card` line-height 1.55, E1~E4 ID는 mono-like pill.
+  6. **스크린샷 갱신**: `UPDATE_SCREENSHOTS=1 npx playwright test screenshots`로 `docs/screenshots/**` 8장 갱신 후 커밋.
+- 허용 경로: `src/styles/`, `src/components/screens/AttractScreen.tsx`·`SelectScreen.tsx`·`BriefingScreen.tsx`(className 추가·래퍼 div만), `src/components/parts/Header.tsx`·`Nameplate.tsx`(className만), `docs/screenshots/`.
+- 하지 말 것: 문구·순서·동작·data-testid 변경. 이미지 자산 추가(CSS만). 본문 대비 4.5:1 미만. 애니메이션 추가(T15의 reduced-motion 규칙 유지). 1280×720에서 CTA·입력이 잘리게 하지 않는다.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(a11y·screenshots 포함). 갱신된 `docs/screenshots/desktop-720/select.png`에서 카드 3장과 CTA가 모두 보임.
+- 크기: M.
+
+## T38 디자인 마감 2 — 토론·반응·투표·결과·live 상태
+
+- 목표: 임원 카드·내 좌석·추천 문구·투표·결과 화면을 목업 위계로 올리고, live 상태(판단 중·발언·응답 실패)를 시각화한다. T33의 토큰을 그대로 쓴다.
+- 읽을 것: docs/design/DESIGN_SPEC.md 3·4장·"v0.8 화면 추가 요구", `docs/design/assets/preview/{opinion-compose,final-vote,result}.jpg`, `src/styles/screens/{opinions,discuss,reactions,motion,vote,result,live}.css`, `src/styles/avatar.css`, `docs/screenshots/desktop-1080/{discuss,vote,result}.png`.
+- 만들 것:
+  1. **임원 카드**(OPINIONS·DISCUSS·REACTIONS 공통) `opinions.css`·`live.css`: 4열 동일 크기, 상단 아바타(기존 avatar.css) + 역할명 + 상태 칩. 상태 칩: 판단 중(muted 테두리 + 점 하나, 애니메이션 없음), 발언(시안 테두리), 응답 실패(`--vote-uncast` 테두리 + "응답 없음" 텍스트). 발언 본문 `--fs-card`, 근거 ID pill.
+  2. **내 좌석** `discuss.css`·`Nameplate`: 내 발언 영역은 시안 왼쪽 4px 경계 + "나 · 특별 이사" 명패 상단 고정, 추천 문구 카드는 selected 시 `--glow-accent` + 체크, hover 밝은 panel, textarea focus 2px 시안 outline, 글자 수 카운터 meta.
+  3. **반응** `reactions.css`: 내 발언 인용 카드(시안 경계)를 맨 위, 임원 반응은 "기존 의견 유지" 라벨을 pill로, 후속 선택지 버튼은 secondary(투명+테두리).
+  4. **최종 안건·투표** `motion.css`·`vote.css`: 안건 카드 중앙 max-width 960px·`--shadow-card`, 실행 방식/조건 목록 pill, 찬성/보류/반대 3열 카드형 radio(아이콘 ✓/⏸/✕ + 색 + 텍스트, 선택 시 해당 색 테두리+체크 원), 확정 CTA는 선택 전 disabled 스타일 유지.
+  5. **결과** `result.css`: 결론 배너(가결/보류/부결 세 가지 모두 같은 크기·같은 위계, 색만 다름), 5석 카드 동일 크기·상단 색 띠(YES 시안/HOLD 앰버/NO 로즈/UNCAST 회색)+아이콘+텍스트, 역할별 판단 근거 `--fs-meta`, 기록 패널(AI 사용 이력)은 `--panel-glass`, 종료 CTA.
+  6. **스크린샷 갱신**: `UPDATE_SCREENSHOTS=1 npx playwright test screenshots` 후 커밋.
+- 허용 경로: `src/styles/`, `src/components/screens/{Opinions,Discuss,Reactions,Motion,Vote,Result}Screen.tsx`(className·래퍼만), `src/components/parts/{PhraseCard,ConditionChips,LiveStatementCards,Nameplate,Timer}.tsx`(className만), `docs/screenshots/`.
+- 하지 말 것: T33과 같음. 표결 결과·표 분포를 암시하는 장식(성공 확률·정답 표시) 금지. 세 결론의 시각 위계를 다르게 하지 않는다.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 갱신된 `docs/screenshots/desktop-720/vote.png`에서 3열 선택지와 확정 CTA가 잘리지 않음.
+- 크기: M.
 
 ## T34 임원 에이전트 고도화 1차 (T32 이후, PR 전)
 
