@@ -21,7 +21,7 @@
 | T31~T32 | 완료 | M-L2 비서실장 live·평가 하네스. T31 수정 1라운드(원문/초안 나란히·원문 유지 버튼), T32 1라운드 PASS. 단위 198·E2E 39. `npm run eval:live`는 mock으로만 실행됨. 실제 키로 `--runs 3` 실측은 미실행(절차: docs/LIVE_EVAL.md) |
 | T36 | 대기 | live 클라이언트 mock 장애 주입 배선(필요할 때만) |
 | T37 | 완료 | 무료 웹호스팅 배포 준비. 1라운드 PASS. 단위 229·E2E 54. 배포 자체는 사용자 계정에서(docs/DEPLOY.md) |
-| Codex 검토 1차 | 완료 | PR #1 리뷰 6건(P1 4·P2 2) 반영: 본문 64KiB 상한, meeting_record 꺾쇠 무력화, 세션 수명·호출 상한, 라운드 직렬화, 모델 응답이 무입력 시계를 연장하지 않음, 리셋 sessionId를 액션에 실어 reducer 순수성 유지. 단위 239·E2E 54 |
+| Codex 검토 1차 | 완료 | PR #1 리뷰 6건(P1 4·P2 2) 반영: 본문 64KiB 상한, meeting_record 꺾쇠 무력화, 세션 수명·호출 상한, 라운드 직렬화, 모델 응답이 무입력 시계를 연장하지 않음, 리셋 sessionId를 액션에 실어 reducer 순수성 유지. 2차 2건(최종표를 라운드 사슬 뒤에 연결, 만료 후 늦은 응답 폐기)도 반영. 단위 242·E2E 54 |
 | T15~T16 | 완료 | 모션·접근성, E2E 전체·외부 요청 차단. 모두 1라운드 PASS. T16이 찾은 후속 조건 해제 버그(이전 확정 조건이 합집합으로 되살아남)는 오케스트레이터가 수정. 단위 203·E2E 54. Playwright가 dist를 서빙하므로 webServer에 build를 포함 |
 | T17 | 완료 | 오프라인 검증(scripted)·README·PR 초안. 1라운드 PASS. `bash scripts/offline-check.sh` PASS(26 E2E). docs/PR_P0.md 13항목 중 11 체크·2 미체크(전체화면 거부, 현장 IME 리허설). 실제 Anthropic 키 실측은 여전히 미실행 |
 | T33 | 대기 | 디자인 마감(P0 PR 이후) |
