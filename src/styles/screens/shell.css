@@ -1,9 +1,21 @@
 /* 앱 골격: 헤더, 명패, 공통 화면/CTA 스타일. 디자인 마감은 T14에서 다룬다. */
 
 .app-shell {
+  position: relative;
   min-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
+   background-attachment:fixed 없이도 스크롤과 무관하게 유지한다. */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--bg-gradient);
+  pointer-events: none;
 }
 
 .app-header {
@@ -13,15 +25,22 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
   padding: var(--space-2) var(--space-4);
+  background-color: var(--panel-glass);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 rgba(40, 217, 240, 0.15);
 }
 
 .app-header__brand {
   font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .app-header__stage {
+  padding: 4px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
   color: var(--text-muted);
+  font-size: var(--fs-meta);
 }
 
 .app-header__right {
@@ -160,7 +179,7 @@
 .app-main {
   flex: 1;
   display: flex;
-  padding: var(--space-6);
+  padding: var(--space-8);
 }
 
 /* 화면 전환: opacity + 소폭 translate, 180–250ms(DESIGN_SPEC.md 4장). StageRouter가
@@ -191,7 +210,7 @@
 
 @media (max-width: 1280px) {
   .app-main {
-    padding: var(--space-3);
+    padding: var(--space-4);
   }
 
   .screen {
@@ -211,6 +230,11 @@
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
+  transition: box-shadow var(--transition-fast) ease;
+}
+
+.cta:hover:not(:disabled) {
+  box-shadow: var(--glow-accent);
 }
 
 .cta:disabled {
@@ -223,8 +247,12 @@
   display: flex;
   gap: var(--space-1);
   align-items: center;
-  padding: var(--space-1) var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  margin: var(--space-1) var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
   color: var(--text-muted);
+  width: fit-content;
 }
 
 .nameplate__name {
@@ -244,16 +272,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1);
-  padding: var(--space-2) var(--space-6) var(--space-6);
+  margin: 0 calc(var(--space-8) * -1) calc(var(--space-8) * -1);
+  padding: var(--space-2) var(--space-8) var(--space-8);
   background-color: var(--bg);
   border-top: 1px solid var(--border);
 }
 
 @media (max-width: 1280px) {
   .screen__sticky-footer {
-    margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
-    padding: var(--space-2) var(--space-3) var(--space-3);
+    margin: 0 calc(var(--space-4) * -1) calc(var(--space-4) * -1);
+    padding: var(--space-2) var(--space-4) var(--space-4);
   }
 }
 
