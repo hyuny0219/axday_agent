@@ -293,9 +293,15 @@
      내부 스크롤로 본다(DESIGN_SPEC.md 6장 "텍스트 전체는 입력창 내부 스크롤
      가능하다"). 글자 축소·항목 누락 대신 이 높이만 줄인다. */
   .draft-editor__textarea {
-    height: 92px;
+    height: 72px;
     min-height: 0;
     font-size: 16px;
+  }
+
+  /* 라벨 자체 margin-bottom(base 규칙)과 .discuss-screen__editor의 flex gap이
+     겹쳐 세로 간격이 두 배로 들지 않게, 1280px 이하에서는 gap 하나로 통일한다. */
+  .discuss-screen__section-label {
+    margin-bottom: 0;
   }
 
   .discuss-screen__editor {
