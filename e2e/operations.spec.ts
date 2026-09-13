@@ -38,7 +38,7 @@ test('240초 만료 시 결과 화면에 원안 자동 고정 안내가 보인�
   await page.goto('/?testClock=1&mode=scripted');
   await enterScenario(page);
 
-  await expect(page.getByTestId('ai-summary-card')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
 
   await advanceClockWithoutIdling(page, 240_000);
 
@@ -77,7 +77,7 @@ test('무입력 90초가 지나면 대기 화면으로 복귀한다', async ({ p
 test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await enterScenario(page);
-  await expect(page.getByTestId('ai-summary-card')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
 
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-new-session').click();
@@ -88,7 +88,7 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
   // 취소하면 세션이 그대로 유지된다.
   await page.getByTestId('operator-confirm-new-session-cancel').click();
   await expect(confirmDialog).toBeHidden();
-  await expect(page.getByTestId('ai-summary-card')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
 
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-new-session').click();
@@ -125,12 +125,12 @@ test('표만 선택하고 확정하지 않은 채 240초가 지나면 내 표가
 test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await enterScenario(page);
-  await expect(page.getByTestId('ai-summary-card')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
 
   await page.reload();
 
   await expect(page.getByRole('button', { name: '체험 시작' })).toBeVisible();
-  await expect(page.getByTestId('ai-summary-card')).toHaveCount(0);
+  await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
 });
 
 test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {

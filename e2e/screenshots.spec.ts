@@ -46,6 +46,13 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'select');
 
   await page.getByRole('button', { name: '이사회 입장' }).click();
+
+  // BRIEFING: 의장 브리핑·자료 4장·핵심 쟁점·조건 미리보기 4칩·CTA(v0.9, T39).
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('condition-preview')).toBeVisible();
+  await capture(page, testInfo.project.name, 'briefing');
+
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 

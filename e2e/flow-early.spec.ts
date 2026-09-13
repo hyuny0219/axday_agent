@@ -14,7 +14,7 @@ test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택
 
   const briefingNext = page.getByRole('button', { name: '의견 듣기' });
   await expect(briefingNext).toBeVisible();
-  await expect(page.getByTestId('ai-summary-card')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
   await briefingNext.click();
 
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();

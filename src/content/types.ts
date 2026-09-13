@@ -16,6 +16,10 @@ export interface EvidenceCard {
   id: string;
   title: string;
   content: string;
+  /** "이 자료가 말하는 것" 한 줄(v0.9). 새 수치·확정 사실을 만들지 않는다. */
+  insight: string;
+  /** 이 자료와 관련된 임원(브리핑 카드에 아바타로 표시). */
+  relatedMemberIds: ExecMemberId[];
 }
 
 export interface Motion {
@@ -24,6 +28,20 @@ export interface Motion {
 }
 
 export interface BriefingSummary {
+  text: string;
+  evidenceIds: string[];
+}
+
+/** 의장 브리핑 3문장(v0.9): 상황 → 결정 질문 → 참가자 역할. */
+export interface ChairBriefing {
+  situation: string;
+  question: string;
+  role: string;
+}
+
+/** 핵심 쟁점 카드(v0.9). 기존 briefingSummary 문장을 쟁점 단위로 나눈 것이며
+ * briefingSummary는 자동 정리 기록(SUMMARY_SHOWN)을 위해 그대로 유지한다. */
+export interface BriefingIssue {
   text: string;
   evidenceIds: string[];
 }
@@ -89,7 +107,12 @@ export interface Scenario {
   originalMotion: Motion;
   evidence: EvidenceCard[];
   briefingSummary: BriefingSummary;
-  chairLine: string;
+  chairBriefing: ChairBriefing;
+  briefingIssues: BriefingIssue[];
+  /** 브리핑 시점에 읽기 전용으로 미리 보여줄 조건 ID(v0.9). `conditions`에는 위험
+   * 대안(OPEN_ALL)까지 포함되지만 이 목록에는 두지 않는다 — 화면은 이 필드만 읽고
+   * 조건 목록을 하드코딩하지 않는다. */
+  previewConditionIds: string[];
   initialOpinions: InitialOpinion[];
   phrases: Phrase[];
   conditions: Condition[];

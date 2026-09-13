@@ -43,6 +43,7 @@ import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
 import { IdleNotice } from '../components/parts/IdleNotice';
 import { Nameplate } from '../components/parts/Nameplate';
+import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -427,6 +428,9 @@ function AppShell() {
         clock={appClock}
         onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
       />
+      {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
+        <ProgressStrip stage={session.stage} />
+      )}
       {session.stage !== 'ATTRACT' && <Nameplate />}
       <main className="app-main">
         <StageRouter />
