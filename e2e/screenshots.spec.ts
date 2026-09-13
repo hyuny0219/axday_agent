@@ -78,7 +78,7 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await submitOpinion.click();
 
   // REACTIONS: 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await page.getByTestId('followup-option-2').click();
 
   // MOTION: 확정 조건 4개가 반영된 최종 안건으로 표결을 건다.

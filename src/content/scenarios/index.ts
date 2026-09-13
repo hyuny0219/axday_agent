@@ -24,7 +24,7 @@ function preparingPlaceholder(id: string, title: string): Scenario {
     conditions: [],
     conflicts: [],
     reactions: [],
-    followUp: { question: '준비 중인 안건입니다.', options: [] },
+    followUp: { question: '준비 중인 안건입니다.', askedBy: 'CIO', options: [] },
     voteRules: {
       CEO: [{ when: { always: true }, vote: 'HOLD' }],
       CFO_CAIO: [{ when: { always: true }, vote: 'HOLD' }],

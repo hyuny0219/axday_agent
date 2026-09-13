@@ -161,6 +161,7 @@ export const aiAssistantScenario: Scenario = {
   ],
   followUp: {
     question: '메일과 실적표의 숫자가 다르면 어떻게 처리할까요?',
+    askedBy: 'CIO',
     options: [
       {
         text: '출처·기준일 차이를 표시하고 담당자가 확인한 뒤 공유합시다.',

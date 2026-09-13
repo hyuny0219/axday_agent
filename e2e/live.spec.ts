@@ -87,7 +87,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await submitOpinion.click();
 
   // REACTIONS: 참가자 의견 전달 뒤 새 라운드가 자동으로 돈다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByTestId('followup-option-2').click(); // 이 의견으로 마무리(KEEP_PREVIOUS)
@@ -122,7 +122,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByTestId('followup-option-2').click(); // 후속 라운드 없이 MOTION으로

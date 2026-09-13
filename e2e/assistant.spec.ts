@@ -14,7 +14,7 @@ async function finishToResult(page: Page) {
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -122,7 +122,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지
 

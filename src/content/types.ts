@@ -83,6 +83,8 @@ export interface FollowUpOption {
 
 export interface FollowUp {
   question: string;
+  /** 후속 질문을 던지는 임원(v0.9: CIO, docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"). */
+  askedBy: ExecMemberId;
   options: FollowUpOption[];
 }
 
