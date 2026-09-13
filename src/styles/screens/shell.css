@@ -249,6 +249,41 @@
   cursor: not-allowed;
 }
 
+/* 진행 스트립(v0.9): ① 상황 파악 → ⑤ 표결 5단계를 헤더 아래에 상시 표시한다. */
+.progress-strip {
+  padding: var(--space-1) var(--space-4);
+}
+
+.progress-strip__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.progress-strip__step {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}
+
+.progress-strip__step[aria-current='step'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 1280px) {
+  .progress-strip {
+    padding: 0 var(--space-3);
+  }
+}
+
 .nameplate {
   display: flex;
   gap: var(--space-1);

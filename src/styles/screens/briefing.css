@@ -3,9 +3,31 @@
   font-size: var(--fs-h2);
 }
 
-.briefing-screen__chair-line {
+/* 의장 브리핑 3문장(v0.9): 상황 → 결정 질문 → 참가자 역할. */
+.chair-briefing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+}
+
+.chair-briefing__situation {
   margin: 0;
   color: var(--text-muted);
+}
+
+.chair-briefing__question {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.chair-briefing__role {
+  margin: 0;
+  color: var(--accent);
 }
 
 .briefing-screen__body {
@@ -40,9 +62,29 @@
   line-height: 1.55;
 }
 
-/* AI 정리 카드: 시안 왼쪽 4px 경계 + 상시 표시(DESIGN_SPEC.md 3장 "AI 정리는 상시
+.evidence-card__insight-label {
+  margin: var(--space-1) 0 0;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+}
+
+.evidence-card__insight {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-card);
+  line-height: 1.5;
+}
+
+.evidence-card__avatars {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* 핵심 쟁점 카드: 시안 왼쪽 4px 경계 + 상시 표시(DESIGN_SPEC.md 3장 "AI 정리는 상시
    표시·체험용 사전 구성 표기·E1~E4 연결"). */
-.ai-summary-card {
+.briefing-issues {
   background-color: var(--panel-glass);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
@@ -50,7 +92,7 @@
   padding: var(--space-2);
 }
 
-.ai-summary-card__badge {
+.briefing-issues__badge {
   display: inline-block;
   margin: 0 0 var(--space-2);
   padding: 4px var(--space-2);
@@ -61,23 +103,37 @@
   font-size: var(--fs-meta);
 }
 
-.ai-summary-card__text {
+.briefing-issues__heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-card);
+}
+
+.briefing-issues__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.briefing-issues__text {
   margin: 0;
   color: var(--text);
   font-size: var(--fs-card);
   line-height: 1.55;
 }
 
-.ai-summary-card__evidence-ids {
+.briefing-issues__evidence-ids {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
   list-style: none;
   padding: 0;
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
 }
 
-.ai-summary-card__evidence-ids li {
+.briefing-issues__evidence-ids li {
   padding: 2px var(--space-1);
   border-radius: var(--radius-control);
   border: 1px solid var(--border);
@@ -86,6 +142,37 @@
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   font-size: var(--fs-meta);
   letter-spacing: 0.02em;
+}
+
+/* 조건 미리보기 4칩(v0.9): 읽기 전용이며 클릭할 수 없다(핸들러 없음, pointer-events도
+   차단). 실제 조건 확인은 DISCUSS에서만 이뤄진다. */
+.condition-preview__heading {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-card);
+}
+
+.condition-preview__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.condition-preview__chip {
+  padding: 4px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background-color: var(--panel);
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  pointer-events: none;
+  cursor: default;
+}
+
+.briefing-screen__time-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
 }
 
 @media (max-width: 1280px) {

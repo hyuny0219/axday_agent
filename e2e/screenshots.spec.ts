@@ -1,4 +1,4 @@
-// T14 디자인 검수용 스크린샷. 선택·토론·투표·결과 4장을 두 해상도(desktop-1080,
+// T14 디자인 검수용 스크린샷. 선택·브리핑·토론·반응·투표·결과 6장을 두 해상도(desktop-1080,
 // desktop-720)로 캡처한다. UPDATE_SCREENSHOTS=1 일 때만 아래 경로에 저장하고 평소에는 test-results/에 둔다.
 // desktop-720) 프로젝트마다 docs/screenshots/<project>/<screen>.png로 남긴다.
 // DESIGN_SPEC.md 6장 "실제 토론은 시나리오의 P1~P6 체크 카드 6개와 300자 입력창을
@@ -30,6 +30,12 @@ async function capture(page: Page, projectName: string, screenName: string) {
   mkdirSync(dir, { recursive: true });
   // 화면 전환(220ms opacity/translate)이 끝난 상태로 캡처한다. 진행 중에 찍으면 반투명한
   // 캡처가 남는다(T38 결과 확인에서 발견).
+  // 마운트 직후 캡처하면 screen-enter가 아직 시작되지 않아 반투명하게 남을 수 있어
+  // (T40 반응 화면에서 발견) 진행 중인 애니메이션이 끝나기를 먼저 기다린다.
+  await page
+    .locator('.screen')
+    .first()
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
@@ -46,6 +52,13 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'select');
 
   await page.getByRole('button', { name: '이사회 입장' }).click();
+
+  // BRIEFING: 의장 브리핑·자료 4장·핵심 쟁점·조건 미리보기 4칩·CTA(v0.9, T39).
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
+  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('condition-preview')).toBeVisible();
+  await capture(page, testInfo.project.name, 'briefing');
+
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -70,8 +83,13 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'discuss');
   await submitOpinion.click();
 
-  // REACTIONS: 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
+  // 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
+  await expect(page.getByTestId('followup-open-editor')).toBeVisible();
+  // 앞 화면의 제출 버튼을 누를 때 내려간 스크롤이 남아 헤더가 잘리므로 맨 위로 되돌린다.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await capture(page, testInfo.project.name, 'reactions');
   await page.getByTestId('followup-option-2').click();
 
   // MOTION: 확정 조건 4개가 반영된 최종 안건으로 표결을 건다.

@@ -38,7 +38,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.keyboard.press('Enter');
 
   // REACTIONS: '앞선 의견 유지' 선택지로 후속 입력 없이 마무리한다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await page.getByTestId('followup-option-2').focus();
   await page.keyboard.press('Enter');
 
