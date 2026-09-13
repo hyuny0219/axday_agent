@@ -27,6 +27,8 @@
 | T33·T38 | 완료 | 디자인 마감 1·2. T33 수정 1라운드(1280×720 고정 CTA 겹침), T38 1라운드 PASS(nit: 장식 칩 CSS 텍스트를 보조기기에서 숨김 처리). 스크린샷 8장 갱신. PR #2 Codex 검토 3건(720 높이 토글 가림, 장식 아이콘 보조기기 노출 2건) 반영. 단위 242·E2E 54 |
 | T34 | 대기 | 임원 에이전트 고도화 1차(T32 실측 후, PR 전). 키 없으면 T35로 |
 | T35 | 대기 | 임원 에이전트 고도화 2차(검수 1차·리허설 1 이후, 콘텐츠 동결 전) |
+| T39·T40 | 대기 | P0.5 브리핑 이해도·후속 단순화(v0.9 A안, 판정표 채택) |
+| T41 | 대기 | P1 착수 전 회의록 타임라인(v0.9 B안) |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
 
@@ -405,3 +407,46 @@
 
 - 목표: refineDraft만 live, 실패 시 원문 유지, live/scripted 기록, 네트워크 없으면 전부 scripted.
 - 크기: S.
+
+## T39 브리핑 이해도 패치 (v0.9 A-1)
+
+- 목표: BRIEFING에서 "무엇을 정하는지·내가 할 수 있는 일"이 설명 없이 읽히게 한다. 문구는 모두 시나리오 데이터에서 온다. 새 사실(확정 수치·비율·절감률)을 만들지 않는다.
+- 읽을 것: docs/REVISION_DECISIONS_v0.9.md(1-1~1-6), docs/SCENARIO_AI_ASSISTANT.md 브리핑 절(v0.9), CLAUDE_IMPLEMENTATION.md 화면 표 BRIEFING 행·7장 P0.5, docs/design/DESIGN_SPEC.md 3장 브리핑 행, `src/content/types.ts`, `src/content/scenarios/aiAssistant.ts`(브리핑 부분), `src/components/screens/BriefingScreen.tsx`, `src/components/parts/Header.tsx`, `src/styles/screens/briefing.css`·`shell.css`.
+- 만들 것:
+  1. `src/content/types.ts`: `chairLine: string`을 `chairBriefing: { situation: string; question: string; role: string }`로 교체(다른 시나리오 파일도 함께 갱신), `evidence[].insight: string`·`evidence[].relatedMemberIds: ExecMemberId[]`, `briefingIssues: { text: string; evidenceIds: string[] }[]`(3개), `previewConditionIds: string[]`(브리핑에 미리 보여 줄 조건 ID, 안건 ②는 PILOT·REVIEW·ACCESS·MEASURE 4개. `conditions`에는 OPEN_ALL까지 5개가 있으므로 화면은 이 필드만 읽고 조건 목록을 하드코딩하지 않는다) 추가. `briefingSummary`는 유지하되 화면은 `briefingIssues`를 쓴다(자동 정리 기록 `SUMMARY_SHOWN`은 그대로 남긴다).
+  2. `aiAssistant.ts`: 시나리오 문서 v0.9의 문장을 그대로 데이터로 옮긴다(E1 "검토 완료 수치", "확정" 금지). 다른 시나리오(P1 자리표시자)는 최소 값으로 채운다.
+  3. `BriefingScreen.tsx`: 의장 브리핑 블록(세 문장, 데이터 testid `chair-briefing`), 자료 카드에 해석 한 줄 + 관련 임원 아바타(기존 Avatar 재사용), 핵심 쟁점 3개 카드(`briefing-issues`, 체험용 사전 구성 배지 유지), 하단 조건 미리보기 4칩(`condition-preview`, 읽기 전용, 클릭 불가, aria-disabled). "남은 시간은 충분합니다" 한 줄(초 단위 없음).
+  4. 진행 스트립 `src/components/parts/ProgressStrip.tsx`: "① 상황 파악 → ② 임원 의견 → ③ 내 의견 → ④ 반응에 답하기 → ⑤ 표결", 현재 단계 강조(`aria-current="step"`). ATTRACT·SELECT 제외 모든 화면의 헤더 아래에 표시(App.tsx 배선).
+  5. 테스트: `tests/content/aiAssistant.test.ts`에 chairBriefing 3문장·insight 4개·issues 3개·`previewConditionIds`가 4개이며 모두 `conditions`에 존재하고 OPEN_ALL은 포함하지 않음. E2E `e2e/briefing.spec.ts`: 의장 브리핑·쟁점 3개·조건 칩 4개가 보이고 칩을 눌러도 아무 일도 없음, 진행 스트립이 BRIEFING에서 ①을 가리키고 DISCUSS에서 ③을 가리킴. 기존 E2E·스크린샷 갱신.
+- 허용 경로: `src/content/`, `src/components/screens/BriefingScreen.tsx`, `src/components/parts/ProgressStrip.tsx`(신규)·`Header.tsx`, `src/app/App.tsx`(ProgressStrip 배선만), `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`, `docs/FACILITATOR_GUIDE.md`(v0.9 이해도 검수 절의 기록 양식만 보완 가능).
+- 하지 말 것: 도메인·reducer·표결 규칙 변경. 타이머 규칙 변경. 화면 코드에 한국어 문구 하드코딩(라벨 "이 자료가 말하는 것"·스트립 단계명 같은 UI 라벨은 예외).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1280×720 briefing 캡처에서 의장 브리핑·자료 4장·쟁점·조건 칩·CTA가 한 화면 또는 스크롤로 모두 도달.
+- 크기: M.
+
+## T40 후속 단순화 (v0.9 A-2)
+
+- 목표: REACTIONS의 두 번째 입력이 "질문에 답하기"로 읽히게 하고, 빠른 답만으로 마무리할 수 있게 한다. 직접 입력만으로 완주하는 경로는 유지한다.
+- 읽을 것: docs/REVISION_DECISIONS_v0.9.md(2-1~2-4), docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"(v0.9), CLAUDE_IMPLEMENTATION.md 화면 표 REACTIONS 행·7장 P0.5, DESIGN_SPEC 3장 반응 행, `src/components/screens/ReactionsScreen.tsx`, `src/styles/screens/reactions.css`, `e2e/flow-full.spec.ts`·`reactions.spec.ts`.
+- 만들 것:
+  1. `src/content/types.ts`/`aiAssistant.ts`: `followUp.askedBy: ExecMemberId`(CIO) 추가. 질문 문장은 그대로.
+  2. `ReactionsScreen.tsx`: 제목 "이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다". 내 발언 인용 카드 아래 임원 반응을 답글형(들여쓰기·연결선 CSS)으로, 변한 임원만 강조하고 나머지는 "기존 의견 유지"로 흐리게. 질문 블록에 "CIO가 묻습니다"(아바타 포함). 빠른 답 3개 버튼(어느 것도 미리 선택하지 않음). 직접 입력은 `details`/토글 "직접 답하기"(testid `followup-open-editor`)로 접어 두고, 열면 기존 textarea·글자 수·조건 칩이 나타나며 포커스가 textarea로 이동. 답을 고르거나 텍스트를 입력하면 조건 칩이 보인다. 제출 버튼 문구는 "답변 전달"/"앞선 의견 유지" 유지.
+  3. E2E: `flow-full.spec.ts` 직접 입력 경로를 "직접 답하기를 키보드(Tab → Enter)로 열고 textarea에 입력 → 제출"로 갱신. `reactions.spec.ts`의 기존 케이스(충돌 차단·이전 조건 해제) 유지. 새 케이스: 빠른 답만으로 MOTION 도달, 직접 답하기 열기 전에는 textarea가 DOM에 없거나 hidden.
+- 허용 경로: `src/content/`, `src/components/screens/ReactionsScreen.tsx`, `src/components/parts/`(답글형 카드 컴포넌트 신규 가능), `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: 조건 확인·충돌 규칙, KEEP_PREVIOUS/SUBMIT_FOLLOWUP 액션, 후속 1회 제한 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 추천 문구만 완주·직접 입력만 완주 두 E2E 모두 통과.
+- 크기: S.
+
+## T41 회의록 타임라인 (v0.9 B안, P1 착수 전)
+
+- 목표: BRIEFING~REACTIONS를 하나의 스크롤 타임라인 화면으로 통합한다. 단계 상태기계·조건·표결 규칙·MOTION 이후 화면은 그대로다.
+- 읽을 것: docs/REVISION_PROPOSAL_v0.9_UX.md 4절(Codex 3라운드 반영본), docs/REVISION_DECISIONS_v0.9.md(3-B·4), CLAUDE_IMPLEMENTATION.md P1 "회의록 타임라인", DESIGN_SPEC "v0.9 회의록 타임라인", `src/app/App.tsx`(단계 라우팅·runRound 배선·scroll 활동 리스너), `src/services/orchestrator/runner.ts`, `src/domain/session.ts`의 `SET_ROLE_STATUS`.
+- 만들 것(요약, 상세는 수정안 4절):
+  1. `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage` 추가(reducer는 읽지 않음), `runRoundNow(stage)`가 채워 dispatch. App 상태 `roundLog`에 stage가 있는 SET_ROLE_STATUS만 기록, 리셋 시 비움.
+  2. `TimelineScreen.tsx`: 블록 순서대로 렌더. 내 차례 블록만 입력 가능. 자료·쟁점은 1280×720에서 접힘. live에서 후속 제출 뒤 "임원 후속 판단 중…" 블록을 두고 `runRound('FOLLOWUP')` promise가 settle된 뒤에만 의장 블록과 [안건 고정으로] CTA 활성(벽시계 타이머 금지). App은 이 promise를 상태로 들고 있어야 한다.
+  3. 자동 스크롤: `scrollIntoView` 전후 억제 플래그로 그 사이 scroll 이벤트를 활동에서 제외. 단위 테스트: 자동 스크롤 뒤 `lastActivityAt` 불변.
+  4. 접근성: 새 블록 `aria-live="polite"`, 내 차례 블록으로 포커스 이동, 키보드만으로 완주 E2E 유지.
+  5. E2E: 기존 flow-full·reactions·live·a11y 스펙을 타임라인 testid로 갱신. 스크린샷 갱신.
+- 허용 경로: `src/app/`, `src/components/`, `src/services/orchestrator/runner.ts`(stage 태그만), `src/domain/session.ts`(액션 타입의 선택 필드만), `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: reducer 분기 로직·조건·표결 규칙 변경. 서버 변경. 단계 순서 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. live E2E(mock 서버)에서 후속 제출 직후 안건 고정 CTA가 비활성이고 후속 라운드 도착 후 활성.
+- 크기: L(둘로 나눌 수 있음: T41a 타임라인 렌더·roundLog, T41b live 대기·자동 스크롤·접근성).

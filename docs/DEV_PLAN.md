@@ -210,3 +210,15 @@ T26 도메인 확장 → T27 서버 골격·검증 → T28 역할 프롬프트·
 | 모델 제공자·모델 | Anthropic SDK, `claude-sonnet-5`, effort low (확정) | opus로 올릴 때는 `MODEL_ID=claude-opus-5` 환경변수 또는 `server/config.ts`의 `DEFAULT_MODEL_ID` 한 줄. 8초 상한 실측(T32)으로 판단 |
 | 키 확보 | 서버 환경변수 `ANTHROPIC_API_KEY` 또는 `ant auth login` 프로필 | 없으면 live 항목은 미검증으로 보고 |
 | E2E의 live 경로 | mock 제공자 서버를 Playwright webServer로 함께 기동 | 실제 키는 CI에 넣지 않음 |
+
+## 12. v0.9 반영 — 브리핑 이해도·후속 단순화·회의록 타임라인 (2026-09-13)
+
+배포본 체험 피드백을 [v0.9 UX 수정안](REVISION_PROPOSAL_v0.9_UX.md)으로 진단하고 [판정표](REVISION_DECISIONS_v0.9.md)에서 A(최소 수정)·B(타임라인)를 채택, C(채팅형)를 기각했다.
+
+| 마일스톤 | 카드 | 내용 | 공수 |
+| --- | --- | --- | --- |
+| P0.5 | T39 | 브리핑 이해도: 의장 브리핑·자료 해석·핵심 쟁점·조건 미리보기·진행 스트립 | 1~2일 |
+| P0.5 | T40 | 후속 단순화: CIO 질문 + 빠른 답, 접힌 직접 입력, 답글형 반응 | 1일 |
+| P1 착수 전 | T41 | 회의록 타임라인(FOLLOWUP promise 대기·roundLog·자동 스크롤 제외·live region) | 4~5일 |
+
+순서: T39 → T40 → (실측·T34) → T41 → P1 안건 ①·③. 표결 규칙·조건 ID·reducer는 바꾸지 않으며, 단위·E2E 회귀(직접 입력만으로 완주 포함)를 유지한다.
