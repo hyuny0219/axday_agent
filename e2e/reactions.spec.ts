@@ -43,6 +43,13 @@ test('DISCUSS에서 ACCESS 확정 후 REACTIONS에서 OPEN_ALL을 함께 확정�
   await page.getByTestId('condition-chip-OPEN_ALL').click();
   await expect(conflicts).toBeHidden();
   await expect(page.getByTestId('submit-followup')).toBeEnabled();
+
+  // 직접 답하기를 다시 닫아도 입력이 남아 있으면 조건 칩은 계속 보인다(PR #4 Codex
+  // 2차 검토: 제출이 가능한 동안 조건 확인 UI가 사라지면 안 된다).
+  await page.getByTestId('followup-open-editor').click();
+  await expect(textarea).toBeHidden();
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeVisible();
+  await expect(page.getByTestId('submit-followup')).toBeEnabled();
 });
 
 test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건에도 함께 남는다', async ({ page }) => {

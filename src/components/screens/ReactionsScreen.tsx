@@ -133,9 +133,12 @@ export function ReactionsScreen({
   );
 
   const showNoMatchHint = textValue.trim() !== '' && proposedConditionIds.length === 0;
-  // 조건 확인은 답을 시작한 뒤(빠른 답 선택 또는 직접 답하기 열기)에만 보여준다. 이전
-  // 의견의 조건은 그 전까지 그대로 유지된다.
-  const hasStartedAnswer = selectedOptionIndex !== null || isEditorOpen;
+  // 조건 확인은 답을 시작한 뒤(빠른 답 선택, 직접 답하기 열기, 또는 답변 텍스트가 남아
+  // 있음)에만 보여준다. 이전 의견의 조건은 그 전까지 그대로 유지된다. 텍스트 조건이
+  // 없으면 직접 답하기를 열어 쓴 뒤 닫거나, 비서실장 정리본을 적용해 빠른 답 선택이
+  // 풀린 뒤에도 제출은 가능한데 조건은 볼 수 없게 된다(PR #4 Codex 2차 검토).
+  const hasStartedAnswer =
+    selectedOptionIndex !== null || isEditorOpen || textValue.trim() !== '';
   // 이전에 확정한 조건과 새 제안을 병합한 acceptedConditionIds 안에 충돌쌍이 함께
   // 선택돼 있으면(예: DISCUSS에서 ACCESS 확정 후 여기서 OPEN_ALL도 선택) 전달을
   // 막는다. ConditionChips가 같은 목록으로 안내 문구를 보여준다.
