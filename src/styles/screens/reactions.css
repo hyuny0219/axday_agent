@@ -16,48 +16,76 @@
   box-shadow: var(--shadow-card);
 }
 
-.reactions-screen__cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* 임원 반응을 내 발언 인용 카드 아래 답글형으로 늘어놓는다(T40, DESIGN_SPEC.md 3장
+   "반응" 행: "들여쓰기·연결선"). 각 항목은 인용 카드에서 이어지는 세로 연결선을
+   왼쪽에 두고, 변한 임원만 강조하며 나머지는 흐리게 보여준다. */
+.reactions-screen__replies {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.reaction-card {
+.reaction-reply {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  margin-left: var(--space-3);
+  padding: var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-2);
   box-shadow: var(--shadow-card);
 }
 
-.reaction-card__head {
+/* 인용 카드에서 내려오는 연결선(들여쓰기 왼쪽 바깥에 그린다). */
+.reaction-reply::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--space-3));
+  width: var(--space-3);
+  height: 1px;
+  background-color: var(--border);
+}
+
+.reaction-reply--changed {
+  border-color: var(--accent);
+  border-left-width: 4px;
+}
+
+.reaction-reply--muted {
+  opacity: 0.7;
+}
+
+.reaction-reply__head {
   display: flex;
   align-items: center;
   gap: var(--space-1);
 }
 
-.reaction-card__member {
+.reaction-reply__member {
   margin: 0;
   font-size: 20px;
 }
 
-.reaction-card__texts {
+.reaction-reply__texts {
   margin: 0;
   padding-left: var(--space-2);
   color: var(--text);
 }
 
-.reaction-card__maintained {
+.reaction-reply__maintained {
   margin: 0;
   color: var(--text-muted);
 }
 
 /* "기존 의견 유지" pill(DESIGN_SPEC.md "만들 것 · 반응 · '기존 의견 유지' 라벨을
    pill로"). */
-.reaction-card__maintained-label {
+.reaction-reply__maintained-label {
   display: block;
   width: fit-content;
   padding: 2px 10px;
@@ -81,6 +109,26 @@
 .reactions-screen__section-label {
   margin: 0;
   font-size: 20px;
+}
+
+/* CIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
+   2-2, "CIO가 묻습니다"). */
+.reactions-screen__question {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.reactions-screen__question-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reactions-screen__asked-by {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .reactions-screen__options {
@@ -114,8 +162,40 @@
   color: var(--accent);
 }
 
+/* 직접 답하기는 기본 접힘이며, 열어야 textarea·글자 수·조건 칩이 나타난다(T40
+   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). */
+.reactions-screen__editor {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+}
+
+.reactions-screen__editor-toggle {
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  list-style: none;
+}
+
+.reactions-screen__editor-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.reactions-screen__editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
 .reactions-screen__direct-label {
   color: var(--text-muted);
+}
+
+.reactions-screen__count {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .reactions-screen__textarea {
@@ -138,7 +218,12 @@
 }
 
 @media (max-width: 1280px) {
-  .reactions-screen__cards {
-    grid-template-columns: repeat(2, 1fr);
+  .reaction-reply {
+    margin-left: var(--space-2);
+  }
+
+  .reaction-reply::before {
+    left: calc(-1 * var(--space-2));
+    width: var(--space-2);
   }
 }

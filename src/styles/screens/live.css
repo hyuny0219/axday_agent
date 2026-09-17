@@ -126,9 +126,51 @@
   font-style: normal;
 }
 
+/* REACTIONS 답글형(T40, DESIGN_SPEC.md 3장 "반응" 행: 들여쓰기·연결선). scripted의
+   .reaction-reply와 같은 들여쓰기·연결선을 live 카드에 적용한다. 발언이 온 임원은
+   시안 왼쪽 굵은 테두리로 강조하고, 판단 중인 임원은 흐리게 둔다. 실패 카드는
+   확인이 필요하므로 흐리지 않는다(PR #4 Codex 검토). */
+.live-round__cards--reply {
+  display: flex;
+  flex-direction: column;
+}
+
+.live-round__cards--reply .live-statement {
+  position: relative;
+  margin-left: var(--space-3);
+}
+
+.live-round__cards--reply .live-statement::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--space-3));
+  width: var(--space-3);
+  height: 1px;
+  background-color: var(--border);
+}
+
+.live-round__cards--reply .live-statement--answered {
+  border-left-width: 4px;
+}
+
+.live-round__cards--reply .live-statement--idle,
+.live-round__cards--reply .live-statement--pending {
+  opacity: 0.7;
+}
+
 @media (max-width: 1280px) {
   .live-round__cards {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .live-round__cards--reply .live-statement {
+    margin-left: var(--space-2);
+  }
+
+  .live-round__cards--reply .live-statement::before {
+    left: calc(-1 * var(--space-2));
+    width: var(--space-2);
   }
 }
 

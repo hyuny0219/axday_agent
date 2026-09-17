@@ -15,7 +15,9 @@ async function reachReactionsWithAccessConfirmed(page: Page) {
   // P3 = ACCESS(권한·공유 범위 확인)를 확정한 채 첫 의견을 전달한다.
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('submit-opinion').click();
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
 }
 
 test('DISCUSS에서 ACCESS 확정 후 REACTIONS에서 OPEN_ALL을 함께 확정하려 하면 전달이 막힌다', async ({
@@ -23,6 +25,7 @@ test('DISCUSS에서 ACCESS 확정 후 REACTIONS에서 OPEN_ALL을 함께 확정�
 }) => {
   await reachReactionsWithAccessConfirmed(page);
 
+  await page.getByTestId('followup-open-editor').click();
   const textarea = page.getByTestId('followup-textarea');
   // P5 문장 그대로: OPEN_ALL을 새로 제안한다. ACCESS는 이전 의견에서 이미 확정돼
   // 목록에 남아 있으므로 두 조건이 함께 accepted 상태가 된다.
@@ -39,6 +42,13 @@ test('DISCUSS에서 ACCESS 확정 후 REACTIONS에서 OPEN_ALL을 함께 확정�
   // OPEN_ALL 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
   await page.getByTestId('condition-chip-OPEN_ALL').click();
   await expect(conflicts).toBeHidden();
+  await expect(page.getByTestId('submit-followup')).toBeEnabled();
+
+  // 직접 답하기를 다시 닫아도 입력이 남아 있으면 조건 칩은 계속 보인다(PR #4 Codex
+  // 2차 검토: 제출이 가능한 동안 조건 확인 UI가 사라지면 안 된다).
+  await page.getByTestId('followup-open-editor').click();
+  await expect(textarea).toBeHidden();
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeVisible();
   await expect(page.getByTestId('submit-followup')).toBeEnabled();
 });
 
@@ -79,4 +89,23 @@ test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 
   const conditions = page.getByTestId('motion-conditions');
   await expect(conditions).not.toContainText('권한·공유 범위 확인');
   await expect(conditions).toContainText('출처·기준일 표시 후 담당자 검토');
+});
+
+test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 답만으로 MOTION까지 도달한다', async ({
+  page,
+}) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  // T40 만들 것 2: 직접 입력은 접어 두고, 빠른 답 3개만으로도 완주할 수 있다.
+  await expect(page.getByTestId('followup-textarea')).toBeHidden();
+  // 답을 시작하기 전에는 이전 의견의 조건(ACCESS)을 바꿀 수 없다(PR #4 Codex 검토).
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeHidden();
+
+  await page.getByTestId('followup-option-0').click();
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeVisible();
+  const submitFollowup = page.getByTestId('submit-followup');
+  await expect(submitFollowup).toBeEnabled();
+  await submitFollowup.click();
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
 });

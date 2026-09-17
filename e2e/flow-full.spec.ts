@@ -21,7 +21,9 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await submitOpinion.click();
 
   // REACTIONS: 추천 선택지 중 '앞선 의견 유지'로 후속 없이 바로 마무리한다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
   await page.getByTestId('followup-option-2').click();
 
   // MOTION: 확정된 조건으로 표결을 건다.
@@ -64,9 +66,16 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  // REACTIONS: 선택지 버튼 대신 직접 입력으로 보완 의견을 전달한다.
-  await expect(page.getByRole('heading', { name: '임원들의 반응' })).toBeVisible();
+  // REACTIONS: 선택지 버튼 대신 직접 답하기를 키보드로 열고 입력한다.
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+  const openEditor = page.getByTestId('followup-open-editor');
   const followupTextarea = page.getByTestId('followup-textarea');
+  await expect(followupTextarea).toBeHidden();
+  await openEditor.focus();
+  await page.keyboard.press('Enter');
+  await expect(followupTextarea).toBeFocused();
   await followupTextarea.fill('제 의견을 유지하되 진행 상황만 계속 공유해 주세요.');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();

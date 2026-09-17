@@ -7,8 +7,16 @@
 // 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다. T31에서
 // draftRevision·transcript·assistantAdapter를 AssistantPanel에 추가로 넘긴다(statements를
 // 그대로 transcript로 재사용한다 — 이미 live 라운드 결과를 담고 있다).
+// T40에서 두 번째 입력을 "질문에 답하기"로 재구성했다: 후속 질문에 발화자(CIO,
+// scenario.followUp.askedBy)를 붙이고, 직접 입력은 <details>로 접어 빠른 답 3개만으로도
+// 완주할 수 있게 한다. 직접 입력만으로 완주하는 경로(토글 열기 → 입력 → 제출)도 그대로
+// 유지한다. 조건 확인·충돌 규칙·SUBMIT_FOLLOWUP/KEEP_PREVIOUS 액션은 바꾸지 않았다.
+// PR #4 Codex 검토: live 반응도 같은 답글형(LiveStatementCards variant='reply')으로 그리고,
+// 조건 칩은 빠른 답을 고르거나 직접 답하기를 연 뒤에만 보인다(답하기 전에 이전 조건을
+// 바꾸지 않게 한다).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { SyntheticEvent } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
@@ -77,6 +85,8 @@ export function ReactionsScreen({
 
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -123,6 +133,12 @@ export function ReactionsScreen({
   );
 
   const showNoMatchHint = textValue.trim() !== '' && proposedConditionIds.length === 0;
+  // 조건 확인은 답을 시작한 뒤(빠른 답 선택, 직접 답하기 열기, 또는 답변 텍스트가 남아
+  // 있음)에만 보여준다. 이전 의견의 조건은 그 전까지 그대로 유지된다. 텍스트 조건이
+  // 없으면 직접 답하기를 열어 쓴 뒤 닫거나, 비서실장 정리본을 적용해 빠른 답 선택이
+  // 풀린 뒤에도 제출은 가능한데 조건은 볼 수 없게 된다(PR #4 Codex 2차 검토).
+  const hasStartedAnswer =
+    selectedOptionIndex !== null || isEditorOpen || textValue.trim() !== '';
   // 이전에 확정한 조건과 새 제안을 병합한 acceptedConditionIds 안에 충돌쌍이 함께
   // 선택돼 있으면(예: DISCUSS에서 ACCESS 확정 후 여기서 OPEN_ALL도 선택) 전달을
   // 막는다. ConditionChips가 같은 목록으로 안내 문구를 보여준다.
@@ -161,6 +177,16 @@ export function ReactionsScreen({
     setDraftRevision((value) => value + 1);
   }
 
+  // 직접 답하기(<details>)는 기본 접힘이며, 열릴 때만 textarea로 포커스를 옮긴다
+  // (T40 만들 것 2: 빠른 답만으로도 완주할 수 있게 직접 입력을 접어 둔다).
+  function handleToggleEditor(event: SyntheticEvent<HTMLDetailsElement>) {
+    const open = event.currentTarget.open;
+    setIsEditorOpen(open);
+    if (open) {
+      textareaRef.current?.focus();
+    }
+  }
+
   function handleToggleCondition(conditionId: string) {
     setAcceptedConditionIds((previous) =>
       previous.includes(conditionId)
@@ -182,46 +208,61 @@ export function ReactionsScreen({
 
   return (
     <section className="screen reactions-screen">
-      <h2 className="reactions-screen__title">임원들의 반응</h2>
+      <h2 className="reactions-screen__title">
+        이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
+      </h2>
       <blockquote className="reactions-screen__quote" data-testid="reactions-quote">
         {lastOpinion?.originalText}
       </blockquote>
       {mode === 'live' ? (
-        <LiveStatementCards scenario={scenario} stage="REACTIONS" roleStatus={roleStatus} statements={statements} />
+        <LiveStatementCards
+          scenario={scenario}
+          stage="REACTIONS"
+          roleStatus={roleStatus}
+          statements={statements}
+          variant="reply"
+        />
       ) : (
-        <div className="reactions-screen__cards">
+        <ul className="reactions-screen__replies">
           {EXEC_MEMBER_ORDER.map((memberId) => {
             const reactions = reactionsFor(memberId);
             const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
+            const changed = reactions.length > 0;
             return (
-              <article
+              <li
                 key={memberId}
-                className="reaction-card"
+                className={`reaction-reply${changed ? ' reaction-reply--changed' : ' reaction-reply--muted'}`}
                 data-testid={`reaction-card-${memberId}`}
               >
-                <div className="reaction-card__head">
+                <div className="reaction-reply__head">
                   <Avatar memberId={memberId} size="sm" />
-                  <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
+                  <h3 className="reaction-reply__member">{MEMBER_LABELS[memberId]}</h3>
                 </div>
-                {reactions.length > 0 ? (
-                  <ul className="reaction-card__texts">
+                {changed ? (
+                  <ul className="reaction-reply__texts">
                     {reactions.map((reaction, index) => (
                       <li key={index}>{reaction.text}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="reaction-card__maintained">
-                    <span className="reaction-card__maintained-label">기존 의견 유지</span>
+                  <p className="reaction-reply__maintained">
+                    <span className="reaction-reply__maintained-label">기존 의견 유지</span>
                     {initial?.text}
                   </p>
                 )}
-              </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
       <div className="reactions-screen__followup">
-        <h3 className="reactions-screen__section-label">{scenario.followUp.question}</h3>
+        <div className="reactions-screen__question" data-testid="followup-question">
+          <Avatar memberId={scenario.followUp.askedBy} size="sm" />
+          <div className="reactions-screen__question-body">
+            <p className="reactions-screen__asked-by">{scenario.followUp.askedBy}가 묻습니다</p>
+            <h3 className="reactions-screen__section-label">{scenario.followUp.question}</h3>
+          </div>
+        </div>
         <div className="reactions-screen__options">
           {scenario.followUp.options.map((option, index) => (
             <button
@@ -237,24 +278,41 @@ export function ReactionsScreen({
             </button>
           ))}
         </div>
-        <label className="reactions-screen__direct-label" htmlFor="followup-textarea">
-          직접 입력
-        </label>
-        <textarea
-          id="followup-textarea"
-          className="reactions-screen__textarea"
-          value={textValue}
-          onChange={(event) => handleTextChange(event.target.value)}
-          data-testid="followup-textarea"
-        />
-        <ConditionChips
-          scenario={scenario}
-          proposedIds={proposedConditionIds}
-          acceptedIds={acceptedConditionIds}
-          conflictPairs={conflictPairs}
-          showNoMatchHint={showNoMatchHint}
-          onToggle={handleToggleCondition}
-        />
+        <details
+          className="reactions-screen__editor"
+          open={isEditorOpen}
+          onToggle={handleToggleEditor}
+        >
+          <summary className="reactions-screen__editor-toggle" data-testid="followup-open-editor">
+            직접 답하기
+          </summary>
+          <div className="reactions-screen__editor-body">
+            <label className="reactions-screen__direct-label" htmlFor="followup-textarea">
+              직접 입력
+            </label>
+            <textarea
+              id="followup-textarea"
+              ref={textareaRef}
+              className="reactions-screen__textarea"
+              value={textValue}
+              onChange={(event) => handleTextChange(event.target.value)}
+              data-testid="followup-textarea"
+            />
+            <p className="reactions-screen__count" data-testid="followup-char-count">
+              {textValue.length} / {DRAFT_MAX_LENGTH}자
+            </p>
+          </div>
+        </details>
+        {hasStartedAnswer && (
+          <ConditionChips
+            scenario={scenario}
+            proposedIds={proposedConditionIds}
+            acceptedIds={acceptedConditionIds}
+            conflictPairs={conflictPairs}
+            showNoMatchHint={showNoMatchHint}
+            onToggle={handleToggleCondition}
+          />
+        )}
         <AssistantPanel
           scenario={scenario}
           sessionId={sessionId}
@@ -273,7 +331,7 @@ export function ReactionsScreen({
           onClick={handleSubmit}
           data-testid="submit-followup"
         >
-          보완 의견 전달
+          답변 전달
         </button>
       </div>
     </section>

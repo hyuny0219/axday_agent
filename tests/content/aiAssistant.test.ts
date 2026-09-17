@@ -30,6 +30,37 @@ describe('aiAssistantScenario', () => {
     }
   });
 
+  it('chairBriefing이 상황·결정 질문·역할 3문장을 모두 갖는다', () => {
+    expect(scenario.chairBriefing.situation.length).toBeGreaterThan(0);
+    expect(scenario.chairBriefing.question.length).toBeGreaterThan(0);
+    expect(scenario.chairBriefing.role.length).toBeGreaterThan(0);
+  });
+
+  it('자료 카드마다 insight 한 줄과 관련 임원이 있다 (4개)', () => {
+    expect(scenario.evidence).toHaveLength(4);
+    for (const card of scenario.evidence) {
+      expect(card.insight.length).toBeGreaterThan(0);
+      expect(card.relatedMemberIds.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('핵심 쟁점이 3개이고 참조 자료 ID가 모두 존재한다', () => {
+    expect(scenario.briefingIssues).toHaveLength(3);
+    for (const issue of scenario.briefingIssues) {
+      for (const id of issue.evidenceIds) {
+        expect(evidenceIds.has(id)).toBe(true);
+      }
+    }
+  });
+
+  it('previewConditionIds는 4개이며 모두 conditions에 존재하고 OPEN_ALL은 포함하지 않는다', () => {
+    expect(scenario.previewConditionIds).toHaveLength(4);
+    for (const id of scenario.previewConditionIds) {
+      expect(conditionIds.has(id)).toBe(true);
+    }
+    expect(scenario.previewConditionIds).not.toContain('OPEN_ALL');
+  });
+
   it('initialOpinions가 참조하는 자료 ID가 모두 존재한다', () => {
     for (const opinion of scenario.initialOpinions) {
       for (const id of opinion.evidenceIds) {
