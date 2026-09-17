@@ -91,8 +91,11 @@ test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 
 
   // T40 만들 것 2: 직접 입력은 접어 두고, 빠른 답 3개만으로도 완주할 수 있다.
   await expect(page.getByTestId('followup-textarea')).toBeHidden();
+  // 답을 시작하기 전에는 이전 의견의 조건(ACCESS)을 바꿀 수 없다(PR #4 Codex 검토).
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeHidden();
 
   await page.getByTestId('followup-option-0').click();
+  await expect(page.getByTestId('condition-chip-ACCESS')).toBeVisible();
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
   await submitFollowup.click();

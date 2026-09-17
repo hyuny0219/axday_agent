@@ -11,6 +11,9 @@
 // scenario.followUp.askedBy)를 붙이고, 직접 입력은 <details>로 접어 빠른 답 3개만으로도
 // 완주할 수 있게 한다. 직접 입력만으로 완주하는 경로(토글 열기 → 입력 → 제출)도 그대로
 // 유지한다. 조건 확인·충돌 규칙·SUBMIT_FOLLOWUP/KEEP_PREVIOUS 액션은 바꾸지 않았다.
+// PR #4 Codex 검토: live 반응도 같은 답글형(LiveStatementCards variant='reply')으로 그리고,
+// 조건 칩은 빠른 답을 고르거나 직접 답하기를 연 뒤에만 보인다(답하기 전에 이전 조건을
+// 바꾸지 않게 한다).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SyntheticEvent } from 'react';
@@ -130,6 +133,9 @@ export function ReactionsScreen({
   );
 
   const showNoMatchHint = textValue.trim() !== '' && proposedConditionIds.length === 0;
+  // 조건 확인은 답을 시작한 뒤(빠른 답 선택 또는 직접 답하기 열기)에만 보여준다. 이전
+  // 의견의 조건은 그 전까지 그대로 유지된다.
+  const hasStartedAnswer = selectedOptionIndex !== null || isEditorOpen;
   // 이전에 확정한 조건과 새 제안을 병합한 acceptedConditionIds 안에 충돌쌍이 함께
   // 선택돼 있으면(예: DISCUSS에서 ACCESS 확정 후 여기서 OPEN_ALL도 선택) 전달을
   // 막는다. ConditionChips가 같은 목록으로 안내 문구를 보여준다.
@@ -206,7 +212,13 @@ export function ReactionsScreen({
         {lastOpinion?.originalText}
       </blockquote>
       {mode === 'live' ? (
-        <LiveStatementCards scenario={scenario} stage="REACTIONS" roleStatus={roleStatus} statements={statements} />
+        <LiveStatementCards
+          scenario={scenario}
+          stage="REACTIONS"
+          roleStatus={roleStatus}
+          statements={statements}
+          variant="reply"
+        />
       ) : (
         <ul className="reactions-screen__replies">
           {EXEC_MEMBER_ORDER.map((memberId) => {
@@ -288,14 +300,16 @@ export function ReactionsScreen({
             </p>
           </div>
         </details>
-        <ConditionChips
-          scenario={scenario}
-          proposedIds={proposedConditionIds}
-          acceptedIds={acceptedConditionIds}
-          conflictPairs={conflictPairs}
-          showNoMatchHint={showNoMatchHint}
-          onToggle={handleToggleCondition}
-        />
+        {hasStartedAnswer && (
+          <ConditionChips
+            scenario={scenario}
+            proposedIds={proposedConditionIds}
+            acceptedIds={acceptedConditionIds}
+            conflictPairs={conflictPairs}
+            showNoMatchHint={showNoMatchHint}
+            onToggle={handleToggleCondition}
+          />
+        )}
         <AssistantPanel
           scenario={scenario}
           sessionId={sessionId}
