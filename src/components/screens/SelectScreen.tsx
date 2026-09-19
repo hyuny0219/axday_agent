@@ -38,7 +38,7 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
           );
         })}
       </div>
-      <div className="screen__sticky-footer">
+      <div className="screen__submit-row">
         <button
           type="button"
           className="cta"

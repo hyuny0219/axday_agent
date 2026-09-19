@@ -1,9 +1,9 @@
-// 무대 열(StageBand) e2e. docs/design/DESIGN_SPEC.md v1.0 5절(좌우 분할 개정, T44)을
-// 기준으로 1920×1080에서 무대가 왼쪽 열에 원본 16:9로 보이는지, REACTIONS에서 내
-// 말풍선 텍스트가 실제 내 발언 첫 문장과 일치하는지, REACTIONS·VOTE·RESULT가 두
-// 해상도 모두에서 스크롤 없이/CTA가 가려지지 않고 보이는지를 확인한다. T43의 56px
-// 좌석 띠·"무대 펼치기" 토글은 T44에서 없앴다 — 1280×720에서도 무대는 항상 전체로
-// 보이고 폭만 줄어든다.
+// 무대 열(StageBand) e2e. docs/design/DESIGN_SPEC.md v1.0 6절(조종석 배치와 무스크롤
+// 규칙, T45)을 기준으로 1920×1080·1280×720 모두에서 무대가 왼쪽 열에 원본 16:9로
+// 보이는지, REACTIONS에서 내 말풍선 텍스트가 실제 내 발언 첫 문장과 일치하는지,
+// BRIEFING·REACTIONS·VOTE·RESULT가 두 해상도 모두에서 스크롤 없이/CTA가 가려지지
+// 않고 보이는지를 확인한다. T43의 56px 좌석 띠·"무대 펼치기" 토글은 T44에서, 본문
+// 열의 스크롤 자체는 T45에서 없앴다 — 1280×720에서도 페이지 전체가 한 화면에 담긴다.
 
 import { test, expect, type Page } from './fixtures';
 
@@ -37,6 +37,12 @@ async function enterVote(page: Page) {
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
 }
 
+function expectNoPageScroll(page: Page) {
+  return expect(
+    page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1),
+  ).resolves.toBe(true);
+}
+
 test.describe('1920×1080에서 무대 열', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 
@@ -68,6 +74,8 @@ test.describe('1920×1080에서 무대 열', () => {
     // 브리핑에서는 의장(CEO) 말풍선만 있고, 무대는 읽어야 할 정보를 스스로 담지
     // 않는다(장식, aria-hidden).
     await expect(page.getByTestId('stage-bubble-CEO')).toBeVisible();
+    // 명패는 무대 안 좌상단 pill로 옮겨졌다(v1.0 6절).
+    await expect(page.getByTestId('nameplate')).toBeInViewport();
   });
 
   test('REACTIONS에서 내 말풍선 텍스트가 내 발언 첫 문장과 일치한다', async ({ page }) => {
@@ -79,34 +87,37 @@ test.describe('1920×1080에서 무대 열', () => {
     await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText(MY_OPINION_TEXT);
   });
 
-  test('REACTIONS·VOTE·RESULT는 스크롤 없이 한 화면에 보인다', async ({ page }) => {
-    await enterReactions(page);
+  test('BRIEFING·REACTIONS·VOTE·RESULT는 스크롤 없이 한 화면에 보인다', async ({ page }) => {
+    await enterBriefing(page);
+    await expectNoPageScroll(page);
+
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
+    const submitOpinion = page.getByTestId('submit-opinion');
+    await expect(submitOpinion).toBeInViewport();
+    await submitOpinion.click();
+
     await expect(page.getByTestId('assistant-toggle')).toBeInViewport();
     await expect(page.getByTestId('submit-followup')).toBeInViewport();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1),
-    ).toBe(true);
+    await expectNoPageScroll(page);
 
     await enterVote(page);
     await expect(page.getByTestId('confirm-vote')).toBeInViewport();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1),
-    ).toBe(true);
+    await expectNoPageScroll(page);
 
     await page.getByTestId('vote-radio-YES').check();
     await page.getByTestId('confirm-vote').click();
     await expect(page.getByTestId('result-conclusion')).toBeVisible();
     await expect(page.getByTestId('end-session')).toBeInViewport();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1),
-    ).toBe(true);
+    await expectNoPageScroll(page);
   });
 });
 
 test.describe('1280×720에서 무대 열', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test('무대가 왼쪽 열(약 40% 폭)에 그대로 보이고 CTA가 가려지지 않는다', async ({ page }) => {
+  test('무대가 왼쪽 열(약 36vw 폭)에 그대로 보이고 CTA가 가려지지 않는다', async ({ page }) => {
     await enterBriefing(page);
 
     const stageBand = page.getByTestId('stage-band');
@@ -116,47 +127,34 @@ test.describe('1280×720에서 무대 열', () => {
     await expect(stage).toBeVisible();
     const stageBox = await stage.boundingBox();
     expect(stageBox).not.toBeNull();
-    // 무대 열 폭은 뷰포트의 약 40%다(clamp(420px,42vw,860px), DESIGN_SPEC.md v1.0 5절).
+    // 무대 열 폭은 뷰포트의 약 36%다(clamp(320px,36vw,860px), DESIGN_SPEC.md v1.0 6절).
     const widthRatio = stageBox!.width / 1280;
-    expect(widthRatio).toBeGreaterThan(0.3);
-    expect(widthRatio).toBeLessThan(0.5);
+    expect(widthRatio).toBeGreaterThan(0.25);
+    expect(widthRatio).toBeLessThan(0.45);
 
-    // BRIEFING만 스크롤을 허용한다(자료 4장 + 쟁점) — CTA는 스크롤로 닿을 수 있고
-    // 가려지지 않는다.
+    // 720에서도 페이지 스크롤이 없어 CTA는 스크롤 없이 바로 보인다(v1.0 6절 무스크롤).
     const cta = page.getByRole('button', { name: '의견 듣기' });
-    await expect(cta).toBeVisible();
-    await cta.scrollIntoViewIfNeeded();
     await expect(cta).toBeInViewport();
-    // 스크롤한 뒤에도 무대는 sticky라 계속 보인다.
     await expect(stage).toBeInViewport();
+    await expectNoPageScroll(page);
   });
 
-  // 40% 무대 열 때문에 본문 폭이 704px 남짓으로 줄어(v1.0 5절), REACTIONS의 답글형
-  // 4장 임원 반응까지 담으면 720px 높이 안에 한 화면으로는 담기지 않는다(무대 상단
-  // 300px 띠를 없애 확보한 여유가 720에서는 애초에 크지 않다 — 완료 확인 "1280×720에서
-  // 무대 폭 40%·CTA 가시"는 "스크롤 없이"를 요구하지 않는다, 1920만 그렇다). BRIEFING과
-  // 같은 규칙으로 스크롤해 닿을 수 있고 가려지지 않는지만 확인한다.
-  test('REACTIONS·VOTE·RESULT의 하단 CTA와 비서실장 토글이 스크롤로 가려지지 않게 보인다', async ({
-    page,
-  }) => {
+  test('REACTIONS·VOTE·RESULT의 CTA와 비서실장 토글이 스크롤 없이 보인다', async ({ page }) => {
     await enterReactions(page);
-    const assistantToggle = page.getByTestId('assistant-toggle');
-    await assistantToggle.scrollIntoViewIfNeeded();
-    await expect(assistantToggle).toBeInViewport();
-    const submitFollowup = page.getByTestId('submit-followup');
-    await submitFollowup.scrollIntoViewIfNeeded();
-    await expect(submitFollowup).toBeInViewport();
+    await expect(page.getByTestId('assistant-toggle')).toBeInViewport();
+    await expect(page.getByTestId('submit-followup')).toBeInViewport();
+    await expectNoPageScroll(page);
 
     await enterVote(page);
     const confirmVote = page.getByTestId('confirm-vote');
-    await confirmVote.scrollIntoViewIfNeeded();
     await expect(confirmVote).toBeInViewport();
+    await expectNoPageScroll(page);
 
     await page.getByTestId('vote-radio-YES').check();
     await confirmVote.click();
     await expect(page.getByTestId('result-conclusion')).toBeVisible();
     const endSession = page.getByTestId('end-session');
-    await endSession.scrollIntoViewIfNeeded();
     await expect(endSession).toBeInViewport();
+    await expectNoPageScroll(page);
   });
 });

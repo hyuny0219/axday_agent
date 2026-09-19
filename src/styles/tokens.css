@@ -30,13 +30,23 @@
   --transition-fast: 120ms;
   --transition-screen: 220ms;
 
-  /* 타이포 스케일(DESIGN_SPEC.md 2장). 1280px 이하에서는 아래 미디어쿼리로 축소한다. */
-  --fs-hero: 64px;
-  --fs-title: 44px;
-  --fs-h2: 32px;
-  --fs-body: 24px;
-  --fs-card: 20px;
-  --fs-meta: 16px;
+  /* 타이포 스케일(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙", T45가 2장 값을
+     덮어쓴다). 1080: 제목32/본문20/카드18/메타14. 1280px 이하(720p)에서는 아래
+     미디어쿼리로 제목26/본문17/카드15/메타12로 줄인다. */
+  --fs-hero: 56px;
+  --fs-title: 32px;
+  --fs-h2: 28px;
+  --fs-body: 20px;
+  --fs-card: 18px;
+  --fs-meta: 14px;
+
+  /* 왼쪽 무대 열 폭(v1.0 6절): 1080에서 clamp(400px,42vw,860px). .app-body의
+     grid-template-columns와 AssistantPanel 드로어(오른쪽 열 위 겹침)가 같은 값을
+     공유해, 무대 열 폭이 바뀌어도 드로어가 오른쪽 열을 정확히 덮게 한다. */
+  --stage-col-width: clamp(400px, 42vw, 860px);
+  /* .app-body의 두 열 사이 column-gap과 같은 값(AssistantPanel 드로어가 오른쪽 열
+     왼쪽 경계를 계산할 때도 같이 쓴다, assistant.css). */
+  --stage-col-gap: var(--space-3);
 
   /* 짙은 네이비 배경 위 좌상단 --accent-blue 12% + 우하단 --accent 8% 방사형 조명 +
      우상단 노을(앰버) 6% 조명(DESIGN_SPEC.md v1.0 2절 "우상단 노을(앰버 6%)").
@@ -55,11 +65,14 @@
 
 @media (max-width: 1280px) {
   :root {
-    --fs-hero: 48px;
-    --fs-title: 32px;
-    --fs-h2: 26px;
-    --fs-body: 20px;
-    --fs-card: 18px;
-    --fs-meta: 14px;
+    --fs-hero: 40px;
+    --fs-title: 26px;
+    --fs-h2: 22px;
+    --fs-body: 17px;
+    --fs-card: 15px;
+    --fs-meta: 12px;
+    /* 720: 무대 열 폭 36vw(약 260px 높이, v1.0 6절). */
+    --stage-col-width: clamp(320px, 36vw, 860px);
+    --stage-col-gap: var(--space-2);
   }
 }

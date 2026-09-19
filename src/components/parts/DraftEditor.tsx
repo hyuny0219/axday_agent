@@ -22,7 +22,7 @@ export function DraftEditor({ value, onChange }: DraftEditorProps) {
         className="draft-editor__textarea"
         value={value}
         placeholder="이사님의 의견을 직접 입력하거나 선택한 문구를 수정해 주세요."
-        rows={8}
+        rows={3}
         data-testid="draft-editor-textarea"
         onChange={(event) => onChange(event.target.value)}
         onCompositionStart={() => setIsComposing(true)}

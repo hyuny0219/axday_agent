@@ -1,12 +1,15 @@
 .reactions-screen__title {
   margin: 0;
+  font-size: var(--fs-title);
+  line-height: 1.3;
 }
 
-/* 내 발언 인용 카드를 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 · 반응 ·
-   내 발언 인용 카드(시안 경계)를 맨 위"). */
+/* 내 발언 인용 카드를 왼쪽 열 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 ·
+   반응 · 내 발언 인용 카드(시안 경계)를 맨 위"). 2줄로 클램프한다(v1.0 6절 표
+   "내 발언 인용(2줄 클램프)"). */
 .reactions-screen__quote {
   margin: 0;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--accent);
   border-left-width: 4px;
@@ -14,6 +17,10 @@
   color: var(--text);
   font-size: var(--fs-card);
   box-shadow: var(--shadow-card);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 임원 반응을 내 발언 인용 카드 아래 답글형으로 늘어놓는다(T40, DESIGN_SPEC.md 3장
@@ -89,16 +96,36 @@
 .reactions-screen__followup {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: var(--space-1);
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-3);
+  padding: var(--space-2);
+}
+
+/* 빠른 답·직접 답하기·조건 칩 묶음(화면당 유일한 내부 스크롤 후보, v1.0 6절).
+   1080에서는 내용이 예산 안에 다 들어가 사실상 스크롤이 없고, 720에서 빠른 답 +
+   직접 답하기 + 조건 칩을 모두 펼치면 이 영역만 스크롤한다 — [비서실장][답변
+   전달] 행은 형제로 밖에 있어 항상 보인다. */
+.reactions-screen__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.reactions-screen__submit-row {
+  margin-top: 4px;
+  align-items: center;
 }
 
 .reactions-screen__section-label {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-card);
 }
 
 /* CAIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
@@ -139,6 +166,7 @@
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
+  font-size: var(--fs-meta);
   text-align: left;
   transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
@@ -216,20 +244,43 @@
 
 .reactions-screen__textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 64px;
+  max-height: 110px;
   resize: vertical;
   background-color: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 18px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
 }
 
 .reactions-screen__textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* 720: 왼쪽 열 세로 예산이 더 빠듯하다(v1.0 6절 "720: 아래 입력 영역 약 330px"). */
+@media (max-width: 1280px) {
+  .reactions-screen__followup {
+    gap: 4px;
+    padding: var(--space-1);
+  }
+
+  .reaction-reply {
+    padding: var(--space-1);
+    gap: 4px;
+  }
+
+  .reaction-reply__member {
+    font-size: var(--fs-card);
+  }
+
+  .reactions-screen__textarea {
+    min-height: 48px;
+    max-height: 72px;
+  }
 }
 

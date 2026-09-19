@@ -444,10 +444,11 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
 ]);
 
 /**
- * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대 열 + 오른쪽 본문 열의 2열
- * 그리드다(DESIGN_SPEC.md v1.0 5절 "좌우 분할 개정"). ATTRACT·SELECT는 무대가 없어
- * 여전히 1열이다. 도장(result-stamp)은 무대 열 우하단에 겹쳐 찍으므로 StageBand에
- * resultStamp로 넘긴다(components/resultStamp.ts, ResultScreen과 공유하는 순수 함수).
+ * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
+ * 열로 이뤄진 조종석 배치다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙",
+ * T45). ATTRACT·SELECT는 무대가 없어 여전히 1열이다. 도장(result-stamp)은 무대 열
+ * 우하단에 겹쳐 찍으므로 StageBand에 resultStamp로 넘긴다(components/resultStamp.ts,
+ * ResultScreen과 공유하는 순수 함수).
  */
 function AppShell() {
   const { session, dispatch, touchActivity } = useSession();
@@ -468,27 +469,33 @@ function AppShell() {
         <ProgressStrip stage={session.stage} />
       )}
       {hasStageBand && scenario ? (
-        <div className="app-body">
-          <div className="app-body__stage">
-            <StageBand
-              stage={session.stage}
-              mode={session.mode}
-              roleStatus={session.roleStatus}
-              statements={session.transcript.statements}
-              opinions={session.opinions}
-              scenario={scenario}
-              ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-              chairLine={chairLineFor(session.stage, scenario)}
-              deadline={session.deadline}
-              clock={appClock}
-              resultStamp={resultStamp}
-            />
+        // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
+        // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
+        // 컴포넌트는 각각 .app-body__actions·.app-body__content 두 wrapper div를
+        // Fragment로 돌려주고(renderSplit 규칙), React Fragment는 DOM에 별도
+        // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
+        // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
+        <main className="app-main app-main--stage">
+          <div className="app-body">
+            <div className="app-body__stage">
+              <StageBand
+                stage={session.stage}
+                mode={session.mode}
+                roleStatus={session.roleStatus}
+                statements={session.transcript.statements}
+                opinions={session.opinions}
+                scenario={scenario}
+                ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+                chairLine={chairLineFor(session.stage, scenario)}
+                deadline={session.deadline}
+                clock={appClock}
+                resultStamp={resultStamp}
+              />
+              <Nameplate className="nameplate--stage" />
+            </div>
+            {content}
           </div>
-          <div className="app-body__content">
-            <Nameplate />
-            <main className="app-main">{content}</main>
-          </div>
-        </div>
+        </main>
       ) : (
         <>
           {session.stage !== 'ATTRACT' && <Nameplate />}

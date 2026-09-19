@@ -1,0 +1,76 @@
+/* 근거 카드 2×2(EvidenceGrid, v1.0 6절 표). BRIEFING·DISCUSS 오른쪽 열이 공유한다.
+   details 기본 마커(삼각형)를 지우고 카드 상단 블록(요약)만 항상 보이게 하며, 클릭하면
+   같은 자리에서 원문·관련 임원 아바타가 펼쳐진다. */
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.evidence-card {
+  display: block;
+  background-color: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-card);
+}
+
+.evidence-card__summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.evidence-card__summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidence-card__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-card);
+  font-weight: 700;
+}
+
+.evidence-card__content {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--fs-card);
+  line-height: 1.55;
+}
+
+.evidence-card__insight-label {
+  margin: var(--space-1) 0 0;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+}
+
+.evidence-card__insight {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-card);
+  line-height: 1.5;
+}
+
+.evidence-card__avatars {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* 720에서는 제목을 숨기고 해석 한 줄만 남긴다(DESIGN_SPEC.md v1.0 6절 표
+   "근거 2×2(제목+해석 한 줄, 720은 해석만)"). 카드 폭이 더 좁아 원문까지
+   한 화면에 담으려면 요약을 더 줄여야 한다. */
+@media (max-width: 1280px) {
+  .evidence-card {
+    padding: var(--space-1);
+  }
+
+  .evidence-card__title {
+    display: none;
+  }
+
+  .evidence-card__insight-label {
+    margin-top: 0;
+  }
+}

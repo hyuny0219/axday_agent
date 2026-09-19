@@ -4,6 +4,8 @@
 // 임원 표가 아직 도착하지 않았으면(execBallotsPending) "임원 판단을 기다리는 중"을
 // 보여준다(T30, AGENT_BOARDROOM_SPEC.md 6장 "8초 또는 deadline을 넘지 않는다"). 임원
 // 표 자체는 이 화면에서 절대 보여주지 않는다 — RESULT 전 비공개다.
+// T45(조종석 배치): 왼쪽 열은 찬성/보류/반대 3열 + 확정 CTA, 오른쪽 열은 안건 카드·
+// 조건을 담는다(DESIGN_SPEC.md v1.0 6절 표).
 
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -55,57 +57,61 @@ export function VoteScreen({
   }
 
   return (
-    <section className="screen vote-screen">
-      <h2 className="vote-screen__title">최종 투표</h2>
-      <article className="vote-screen__motion-card" data-testid="vote-motion-card">
-        <p className="vote-screen__original">{scenario.originalMotion.text}</p>
-        {motion.effectiveConditionIds.length > 0 ? (
-          <ul className="vote-screen__conditions">
-            {motion.effectiveConditionIds.map((id) => (
-              <li key={id}>{conditionLabel(id)}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="vote-screen__no-conditions">원안 그대로 표결합니다.</p>
+    <>
+      <div className="app-body__actions screen vote-screen">
+        <fieldset className="vote-screen__choices" disabled={submitted}>
+          <legend className="vote-screen__section-label">이사님의 최종 표를 선택해 주세요</legend>
+          {VOTE_ORDER.map((vote) => (
+            <label
+              key={vote}
+              className={`vote-choice vote-choice--${vote.toLowerCase()}${
+                pendingVote === vote ? ' vote-choice--selected' : ''
+              }`}
+            >
+              <input
+                type="radio"
+                name="final-vote"
+                value={vote}
+                checked={pendingVote === vote}
+                onChange={() => onSelectVote(vote)}
+                data-testid={`vote-radio-${vote}`}
+              />
+              {VOTE_LABELS[vote]}
+            </label>
+          ))}
+        </fieldset>
+        {mode === 'live' && submitted && execBallotsPending && (
+          <p className="vote-screen__waiting" data-testid="vote-waiting-execs">
+            임원 판단을 기다리는 중…
+          </p>
         )}
-      </article>
-      <fieldset className="vote-screen__choices" disabled={submitted}>
-        <legend className="vote-screen__section-label">이사님의 최종 표를 선택해 주세요</legend>
-        {VOTE_ORDER.map((vote) => (
-          <label
-            key={vote}
-            className={`vote-choice vote-choice--${vote.toLowerCase()}${
-              pendingVote === vote ? ' vote-choice--selected' : ''
-            }`}
+        <div className="screen__submit-row">
+          <button
+            type="button"
+            className="cta"
+            disabled={pendingVote === null || submitted}
+            onClick={handleConfirm}
+            data-testid="confirm-vote"
           >
-            <input
-              type="radio"
-              name="final-vote"
-              value={vote}
-              checked={pendingVote === vote}
-              onChange={() => onSelectVote(vote)}
-              data-testid={`vote-radio-${vote}`}
-            />
-            {VOTE_LABELS[vote]}
-          </label>
-        ))}
-      </fieldset>
-      {mode === 'live' && submitted && execBallotsPending && (
-        <p className="vote-screen__waiting" data-testid="vote-waiting-execs">
-          임원 판단을 기다리는 중…
-        </p>
-      )}
-      <div className="screen__sticky-footer">
-        <button
-          type="button"
-          className="cta"
-          disabled={pendingVote === null || submitted}
-          onClick={handleConfirm}
-          data-testid="confirm-vote"
-        >
-          최종 투표 확정
-        </button>
+            최종 투표 확정
+          </button>
+        </div>
       </div>
-    </section>
+      <div className="app-body__content screen vote-screen__info">
+        <h2 className="vote-screen__title">최종 투표</h2>
+        <article className="vote-screen__motion-card" data-testid="vote-motion-card">
+          <p className="vote-screen__original">{scenario.originalMotion.text}</p>
+          {motion.effectiveConditionIds.length > 0 ? (
+            <ul className="vote-screen__conditions">
+              {motion.effectiveConditionIds.map((id) => (
+                <li key={id}>{conditionLabel(id)}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="vote-screen__no-conditions">원안 그대로 표결합니다.</p>
+          )}
+        </article>
+      </div>
+    </>
   );
 }
