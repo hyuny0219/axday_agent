@@ -10,10 +10,10 @@
 // UNCAST 좌석은 사유를 함께 보여준다. 응답 장애로 판단이 제한됐으면(tally().limitedBy
 // Unavailable) 공통 안내를 띄운다. scripted 표에는 reason이 없으므로 그대로 조용하다.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Ballot, MemberId, Session } from '../../domain/types';
-import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
+import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
@@ -58,6 +58,28 @@ const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
   scripted: '사전 구성 시뮬레이션 결과입니다.',
 };
 
+/** 결론 도장 문구(DESIGN_SPEC.md v1.0 3절): PASS이고 반영 조건이 있으면 "조건부
+ * 가결", PASS는 "가결", HOLD는 "보류", REJECT는 "부결". */
+function stampText(outcome: Session['outcome'], hasReflectedConditions: boolean): string {
+  if (outcome === 'PASS') {
+    return hasReflectedConditions ? '조건부 가결' : '가결';
+  }
+  if (outcome === 'HOLD') {
+    return '보류';
+  }
+  if (outcome === 'REJECT') {
+    return '부결';
+  }
+  return '';
+}
+
+/** 표결 배지·도장 순차 공개 타이밍(초). CEO→CFO→CAIO→CISO→나 5석을 0.2초 간격으로
+ * 튀어나오게 하고(마지막 0.8초), 도장은 그 직후 등장해 1초 안에 끝난다(카드 완료 확인
+ * "RESULT 도장이 1초 안에 찍히고"). setTimeout이 아니라 이 값들을 CSS animation-delay로
+ * 그대로 꽂아 Clock 규칙과 무관하게 만든다. */
+const SEAT_REVEAL_STEP_SECONDS = 0.2;
+const STAMP_DELAY_SECONDS = 0.8;
+
 export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
 
@@ -74,6 +96,33 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
     [allConfirmedIds, finalMotion],
   );
 
+  // scripted에서만 계산한다(조건 없는 안건의 임원 표와 실제 표를 비교). live 표는 임원
+  // 에이전트가 실제로 판단한 결과라 "조건 없는 안건" 가정 자체가 성립하지 않는다.
+  const votesChangedByConditions = useMemo(() => {
+    if (session.mode !== 'scripted' || !finalMotion) {
+      return null;
+    }
+    return countVotesChangedByConditions(scenario, finalMotion);
+  }, [session.mode, scenario, finalMotion]);
+
+  // 클릭·키 입력으로 배지·도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
+  // 뒤에는 리스너를 더 둘 이유가 없어 정리한다.
+  const [skip, setSkip] = useState(false);
+  useEffect(() => {
+    if (skip) {
+      return;
+    }
+    function handleSkip() {
+      setSkip(true);
+    }
+    window.addEventListener('click', handleSkip);
+    window.addEventListener('keydown', handleSkip);
+    return () => {
+      window.removeEventListener('click', handleSkip);
+      window.removeEventListener('keydown', handleSkip);
+    };
+  }, [skip]);
+
   if (!finalMotion) {
     return null;
   }
@@ -89,8 +138,10 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         ? scenario.resultCopy.reject
         : scenario.resultCopy.hold;
 
+  const stamp = stampText(session.outcome, includedIds.length > 0);
+
   return (
-    <section className="screen result-screen">
+    <section className="screen result-screen" data-skip={skip}>
       <h2 className="result-screen__title" data-testid="result-conclusion">
         {conclusion}
       </h2>
@@ -107,8 +158,21 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           일부 임원 미표결로 판단이 제한되었습니다.
         </p>
       )}
+      {/* 표결 배지 순차 공개 + 결론 도장(DESIGN_SPEC.md v1.0 3절). 5석 카드 텍스트는
+          바로 아래 result-screen__seats에 처음부터 그대로 있고, 여기서는 CSS
+          animation-delay로 시각 효과만 늦춘다(setTimeout 없음). 클릭·키 입력이 오면
+          data-skip='true'가 붙어 모든 지연·재생 시간을 0에 가깝게 만든다. */}
+      {stamp && (
+        <div
+          className={`result-stamp result-stamp--${(session.outcome ?? 'hold').toLowerCase()}`}
+          data-testid="result-stamp"
+          style={{ animationDelay: `${STAMP_DELAY_SECONDS}s` }}
+        >
+          {stamp}
+        </div>
+      )}
       <div className="result-screen__seats">
-        {SEAT_ORDER.map((memberId) => {
+        {SEAT_ORDER.map((memberId, index) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);
           const vote = ballot?.vote ?? 'UNCAST';
           return (
@@ -119,7 +183,10 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             >
               <Avatar memberId={memberId} />
               <h3 className="result-seat__member">{seatLabel(memberId)}</h3>
-              <p className="result-seat__vote">
+              <p
+                className="result-seat__vote result-seat__vote--reveal"
+                style={{ animationDelay: `${index * SEAT_REVEAL_STEP_SECONDS}s` }}
+              >
                 {VOTE_ICON[vote] && (
                   <span className="result-seat__vote-icon" aria-hidden="true">
                     {VOTE_ICON[vote]}
@@ -146,6 +213,11 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           );
         })}
       </div>
+      {votesChangedByConditions !== null && (
+        <p className="result-screen__gauge" data-testid="result-gauge">
+          내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
+        </p>
+      )}
       <section className="result-screen__mine" data-testid="result-mine">
         <h3 className="result-screen__section-label">내 의견</h3>
         {session.opinions.map((opinion) => (

@@ -107,9 +107,14 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await confirmVote.click();
 
   // RESULT: 5석·내 의견·기록까지 합치면 한 화면보다 길어질 수 있어, 체험 종료
-  // CTA를 스크롤로 보이게 한 뒤 캡처해 CTA가 잘리지 않는 상태를 확인한다.
+  // CTA를 스크롤로 보이게 한 뒤 캡처해 CTA가 잘리지 않는 상태를 확인한다. 표결
+  // 배지·결론 도장(T43)이 다 나온 뒤에 캡처한다(DESIGN_SPEC.md v1.0 4절 검수).
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
+  await expect(page.getByTestId('result-stamp')).toBeVisible();
+  await page
+    .getByTestId('result-stamp')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await page.getByTestId('end-session').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');

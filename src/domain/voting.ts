@@ -57,6 +57,29 @@ export function decideBoard(scenario: Scenario, motion: Motion): Ballot[] {
   }));
 }
 
+/**
+ * "내 조건이 바꾼 표" 게이지(T43, DESIGN_SPEC.md v1.0 3절)가 쓰는 순수 함수. 조건이
+ * 하나도 없는 안건(effectiveConditionIds: [])의 decideBoard 결과와 실제 안건의
+ * decideBoard 결과를 임원 4명 순서로 비교해, 표가 달라진 임원 수를 센다. executionMode는
+ * 실제 안건 그대로 두고 조건만 비운다 — "조건이 표를 얼마나 바꿨는지"만 측정하기
+ * 위해서다. 이 함수는 scripted 표시용이며 live 표와는 무관하다(호출부가 scripted에서만
+ * 부른다).
+ */
+export function countVotesChangedByConditions(scenario: Scenario, motion: Motion): number {
+  const baseline: Motion = { ...motion, effectiveConditionIds: [] };
+  const baselineBallots = decideBoard(scenario, baseline);
+  const actualBallots = decideBoard(scenario, motion);
+  let changed = 0;
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    const baselineVote = baselineBallots.find((b) => b.memberId === memberId)?.vote;
+    const actualVote = actualBallots.find((b) => b.memberId === memberId)?.vote;
+    if (baselineVote !== actualVote) {
+      changed += 1;
+    }
+  }
+  return changed;
+}
+
 export interface TallyResult {
   outcome: 'PASS' | 'HOLD' | 'REJECT';
   counts: { YES: number; NO: number; HOLD: number; UNCAST: number };

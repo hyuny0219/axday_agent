@@ -44,6 +44,7 @@ import { Header } from '../components/parts/Header';
 import { IdleNotice } from '../components/parts/IdleNotice';
 import { Nameplate } from '../components/parts/Nameplate';
 import { ProgressStrip } from '../components/parts/ProgressStrip';
+import { StageBand } from '../components/parts/StageBand';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -419,8 +420,31 @@ function StageRouter() {
   }
 }
 
+/** BRIEFING·MOTION 단계에서 무대 띠 의장(CEO) 말풍선에 쓸 원문(v1.0 1절). 다른
+ * 단계에서는 undefined를 돌려주고 StageBand가 그 단계 규칙대로 다른 문구를 고른다. */
+function chairLineFor(stage: Session['stage'], scenario: Scenario | null): string | undefined {
+  if (stage === 'BRIEFING') {
+    return scenario?.chairBriefing.situation;
+  }
+  if (stage === 'MOTION') {
+    return '이 조건으로 안건을 고정합니다';
+  }
+  return undefined;
+}
+
+const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
+  'BRIEFING',
+  'OPINIONS',
+  'DISCUSS',
+  'REACTIONS',
+  'MOTION',
+  'VOTE',
+  'RESULT',
+]);
+
 function AppShell() {
   const { session, dispatch, touchActivity } = useSession();
+  const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   return (
     <div className="app-shell">
       <Header
@@ -430,6 +454,18 @@ function AppShell() {
       />
       {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
         <ProgressStrip stage={session.stage} />
+      )}
+      {STAGE_BAND_STAGES.has(session.stage) && scenario && (
+        <StageBand
+          stage={session.stage}
+          mode={session.mode}
+          roleStatus={session.roleStatus}
+          statements={session.transcript.statements}
+          opinions={session.opinions}
+          scenario={scenario}
+          ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+          chairLine={chairLineFor(session.stage, scenario)}
+        />
       )}
       {session.stage !== 'ATTRACT' && <Nameplate />}
       <main className="app-main">

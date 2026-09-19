@@ -1,0 +1,334 @@
+/* 무대 띠(StageBand, T43). 렌더 배경 위에 HTML 오버레이(명패·글로우·판단 중 점·
+   말풍선·표결 배지)만 그린다(DESIGN_SPEC.md v1.0 1절). 장식 레이어라 컨테이너는
+   App.tsx에서 aria-hidden="true"로 렌더된다.
+   글로우·비네트는 정적 레이어이고, 움직이는 것은 말풍선 등장·판단 중 점·표결 배지
+   등장뿐이다(성능 규칙, v1.0 1절). */
+
+.stage-band {
+  position: relative;
+  margin: var(--space-1) var(--space-4);
+}
+
+.stage-band__stage {
+  position: relative;
+  height: 300px;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.stage-band__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+/* 위·아래 네이비 비네트: 오버레이 텍스트 대비 확보용 정적 레이어(v1.0 1절). */
+.stage-band__vignette {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  pointer-events: none;
+}
+
+.stage-band__vignette--top {
+  top: 0;
+  background-image: linear-gradient(to bottom, rgba(6, 20, 36, 0.75), transparent);
+}
+
+.stage-band__vignette--bottom {
+  bottom: 0;
+  background-image: linear-gradient(to top, rgba(6, 20, 36, 0.85), transparent);
+}
+
+.stage-band__seat {
+  position: absolute;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 200px;
+}
+
+.stage-band__seat--participant {
+  left: 50%;
+  bottom: 4px;
+}
+
+.stage-band__nameplate {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: rgba(6, 20, 36, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stage-band__nameplate--ceo {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.stage-band__nameplate--cfo {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.stage-band__nameplate--caio {
+  color: #7ce0b3;
+  border-color: #7ce0b3;
+}
+
+.stage-band__nameplate--ciso {
+  color: var(--vote-hold);
+  border-color: var(--vote-hold);
+}
+
+.stage-band__nameplate--participant {
+  color: var(--sky);
+  border-color: var(--sky);
+}
+
+/* 발언 시 바닥 시안 글로우(v1.0 1절). silhouette는 좌석 바닥의 색 얼룩으로 표현하고,
+   --glow가 붙을 때만 밝아진다(정적 레이어, 애니메이션 없음 — 성능 규칙). */
+.stage-band__silhouette {
+  width: 64px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgba(40, 217, 240, 0.12);
+  filter: blur(2px);
+}
+
+.stage-band__silhouette--glow {
+  background-color: rgba(40, 217, 240, 0.55);
+  box-shadow: 0 0 24px rgba(40, 217, 240, 0.6);
+}
+
+.stage-band__silhouette--dimmed {
+  opacity: 0.35;
+}
+
+/* 말풍선: 캐릭터 머리 위 여백에만 띄운다(밝은 상판 위에는 두지 않는다, v1.0 1절). */
+.stage-band__bubble {
+  position: relative;
+  max-width: 220px;
+  padding: 6px 10px;
+  border-radius: var(--radius-control);
+  background-color: rgba(15, 42, 72, 0.92);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  animation: stage-bubble-in 200ms ease-out both;
+}
+
+@keyframes stage-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage-band__bubble--waiting {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.stage-band__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.stage-band__dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  animation: stage-dot-bounce 900ms ease-in-out infinite;
+}
+
+.stage-band__dots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.stage-band__dots span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes stage-dot-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* 표결 배지: CEO→CFO→CAIO→CISO→나 순으로 0.2초 간격 등장(총 1초 이내, RESULT 전용).
+   VoteBadge가 inline animation-delay를 매겨 CSS animation-delay만으로 순차 공개한다
+   (setTimeout 없음, Clock 규칙과 무관). */
+.stage-band__vote-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  animation: stage-badge-pop 220ms ease-out both;
+}
+
+@keyframes stage-badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage-band__vote-badge--yes {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--hold {
+  background-color: var(--vote-hold);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--no {
+  background-color: var(--vote-no);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--uncast {
+  background-color: var(--vote-uncast);
+  color: var(--bg);
+}
+
+/* 1280px 이하: 56px 좌석 띠로 접힌다(v1.0 1절). 기본은 좌석 띠만 보이고, "무대
+   펼치기"를 누르면 전체 무대가 띠 바로 아래에 겹쳐 나타난다 — 문서 흐름을 밀어내지
+   않는 절대 위치라서 펼친 상태에서도 하단 CTA가 가려지지 않는다. */
+.stage-band__strip {
+  display: none;
+}
+
+@media (max-width: 1280px) {
+  .stage-band {
+    margin: 0 var(--space-3);
+  }
+
+  .stage-band__stage {
+    display: none;
+  }
+
+  .stage-band[data-expanded='true'] .stage-band__stage {
+    display: block;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 15;
+    height: 220px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .stage-band__strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 56px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    background-color: var(--panel);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .stage-band__strip-seat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .stage-band__strip-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--bg);
+    background-color: var(--accent);
+  }
+
+  .stage-band__strip-avatar--cfo {
+    background-color: var(--accent-blue);
+  }
+
+  .stage-band__strip-avatar--caio {
+    background-color: #7ce0b3;
+  }
+
+  .stage-band__strip-avatar--ciso {
+    background-color: var(--vote-hold);
+  }
+
+  .stage-band__strip-avatar--participant {
+    background-color: var(--bg);
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+
+  .stage-band__strip-status {
+    color: var(--text-muted);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .stage-band__expand {
+    margin-left: auto;
+    flex-shrink: 0;
+    min-height: var(--touch-min);
+    min-width: var(--touch-min);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border);
+    background-color: transparent;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .stage-band__expand:hover {
+    background-color: var(--panel-active);
+  }
+}
