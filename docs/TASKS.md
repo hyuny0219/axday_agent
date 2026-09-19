@@ -30,8 +30,8 @@
 | T39 | 완료 | P0.5 브리핑 이해도 패치(v0.9 A-1) — 의장 브리핑·자료 해석·핵심 쟁점·조건 미리보기·진행 스트립 |
 | T40 | 완료 | P0.5 후속 단순화(v0.9 A-2) — CAIO 질문 귀속·답글형 반응·직접 입력 접기·빠른 답만으로 완료. PR #4 Codex 검토 3건 반영(live 답글형·답변 전 조건 칩 숨김·입력 유지 시 칩 유지) |
 | T41 | 대기 | P1 착수 전 회의록 타임라인(v0.9 B안) |
-| T42a | 진행중 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면) |
-| T42b | 대기 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지) |
+| T42 | 진행중 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면) |
+| T43 | 대기 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지) |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
 
@@ -454,7 +454,7 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. live E2E(mock 서버)에서 후속 제출 직후 안건 고정 CTA가 비활성이고 후속 라운드 도착 후 활성.
 - 크기: L(둘로 나눌 수 있음: T41a 타임라인 렌더·roundLog, T41b live 대기·자동 스크롤·접근성).
 
-## T42a v1.0 애니메이션 프레임 스킨
+## T42 v1.0 애니메이션 프레임 스킨
 
 - 목표: 전체 UI 톤을 디즈니·픽사 애니메이션 프레임으로 바꾼다. 레이아웃·단계·testid·규칙은 그대로 두고 토큰·타이포·컴포넌트 스킨만 바꾼다.
 - 읽을 것: docs/design/DESIGN_SPEC.md "v1.0 애니메이션 프레임" 2절(스킨)·4절, 2장 토큰 표, 4장 컴포넌트 상태. `src/styles/tokens.css`, `src/styles/base.css`, `src/styles/screens/shell.css`, `src/styles/screens/attract.css`, `src/styles/screens/select.css`, `src/styles/screens/discuss.css`, `src/styles/screens/vote.css`, `src/styles/screens/result.css`, `src/main.tsx`(폰트 import), `src/components/parts/ProgressStrip.tsx`, `src/components/screens/AttractScreen.tsx`.
@@ -469,11 +469,11 @@
   8. `docs/design/assets/README.md`에 `stage-render-01.jpg` 항목(AI 생성 3D 카툰, 비실사, 가상 역할 캐릭터) 추가.
   9. 스크린샷 갱신(`UPDATE_SCREENSHOTS=1 npx playwright test e2e/screenshots.spec.ts`).
 - 허용 경로: `src/styles/`, `src/main.tsx`, `src/assets/`, `src/components/parts/ProgressStrip.tsx`, `src/components/screens/AttractScreen.tsx`(마크업 최소 변경), `package.json`·`package-lock.json`(폰트 패키지만), `docs/design/assets/README.md`, `docs/screenshots/`, `e2e/`(단언이 깨질 때 testid 유지 범위에서만).
-- 하지 말 것: testid·문구·단계·규칙 변경. 무대 띠·결과 연출(T42b). 서버 변경. 새 애니메이션 라이브러리. 외부 CDN.
+- 하지 말 것: testid·문구·단계·규칙 변경. 무대 띠·결과 연출(T43). 서버 변경. 새 애니메이션 라이브러리. 외부 CDN.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1280×720에서 하단 CTA와 비서실장 토글이 가려지지 않음(기존 e2e 유지). reduced-motion에서 새 애니메이션이 제거됨(base.css 전역 규칙으로 충분).
 - 크기: M.
 
-## T42b v1.0 무대 띠(StageBand)와 결과 연출
+## T43 v1.0 무대 띠(StageBand)와 결과 연출
 
 - 목표: SELECT 이후 모든 화면 상단에 렌더 배경의 무대 띠를 두고 세션 상태로 오버레이(말풍선·판단 중·글로우·표결 배지)를 그린다. RESULT에 순차 배지·결론 도장·"내 조건이 바꾼 표" 게이지를 더한다.
 - 읽을 것: docs/design/DESIGN_SPEC.md "v1.0 애니메이션 프레임" 1절(무대 띠)·3절(결과 연출)·4절. `src/app/App.tsx`(AppShell·StageRouter), `src/domain/types.ts`(Session·RoleStatus·Statement·Ballot), `src/domain/voting.ts`(`decideBoard`·`tally`), `src/components/parts/LiveStatementCards.tsx`(상태 표현 참고), `src/components/screens/ResultScreen.tsx`, `src/components/screens/ReactionsScreen.tsx`(반응 임원 판정 로직 `reactionsFor`), `src/styles/screens/result.css`, `e2e/screenshots.spec.ts`.
