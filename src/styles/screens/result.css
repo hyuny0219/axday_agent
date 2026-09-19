@@ -1,3 +1,10 @@
+/* 다른 화면보다 섹션이 많아(5석 두 줄+기록 패널 3개) 기본 .screen gap(24px)만으로도
+   합이 커진다 — 1920에서 스크롤 없이 한 화면에 담기 위해 이 화면만 살짝 줄인다
+   (v1.0 5절 검수). */
+.result-screen {
+  gap: var(--space-2);
+}
+
 .result-screen__title {
   margin: 0;
   font-size: var(--fs-title);
@@ -13,10 +20,12 @@
   color: var(--vote-hold);
 }
 
+/* 무대 열이 본문 폭을 줄여(T44) 5칸을 한 줄에 담기 어려워, 3+2로 감싼다(1280은
+   2+2+1, DESIGN_SPEC.md v1.0 5절 "결과 5석 카드는 3+2(1280에서는 2+2+1)로 감싼다"). */
 .result-screen__seats {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
 }
 
@@ -39,50 +48,12 @@
 }
 
 /* 클릭·키 입력으로 즉시 건너뛴다: 지연·재생 시간을 0에 가깝게 만들어 결과가 곧바로
-   보이게 한다(prefers-reduced-motion과 같은 기법, base.css 참고). */
-.result-screen[data-skip='true'] .result-seat__vote--reveal,
-.result-screen[data-skip='true'] .result-stamp {
+   보이게 한다(prefers-reduced-motion과 같은 기법, base.css 참고). 결론 도장은 T44에서
+   무대 열(stage.css .stage-band__stamp)로 옮겨 이 선택자 대상이 아니다 — StageBand가
+   useResultStampSkip으로 같은 건너뛰기를 자체 처리한다. */
+.result-screen[data-skip='true'] .result-seat__vote--reveal {
   animation-duration: 0.01ms !important;
   animation-delay: 0.01ms !important;
-}
-
-/* 결론 도장(T43, DESIGN_SPEC.md v1.0 3절): 디스플레이 서체, 회전 -9°, 결과색. 배지가
-   모두 나온 직후(STAMP_DELAY_SECONDS) 등장해 총 1초 안에 끝난다. */
-.result-stamp {
-  align-self: center;
-  padding: var(--space-1) var(--space-3);
-  border: 4px solid currentColor;
-  border-radius: var(--radius-control);
-  font-family: var(--font-display);
-  font-size: 32px;
-  letter-spacing: 0.04em;
-  transform: rotate(-9deg) scale(0.6);
-  opacity: 0;
-  animation: result-stamp-in 220ms ease-out both;
-}
-
-@keyframes result-stamp-in {
-  from {
-    opacity: 0;
-    transform: rotate(-9deg) scale(0.5);
-  }
-
-  to {
-    opacity: 1;
-    transform: rotate(-9deg) scale(1);
-  }
-}
-
-.result-stamp--pass {
-  color: var(--accent);
-}
-
-.result-stamp--hold {
-  color: var(--vote-hold);
-}
-
-.result-stamp--reject {
-  color: var(--vote-no);
 }
 
 .result-screen__gauge {
@@ -100,11 +71,13 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  min-height: 140px;
+  /* 3+2로 두 줄이 되며(T44) 세로 합이 늘어, 5칸이 한 줄이던 때보다 카드 자체
+     높이를 줄여 총합을 맞춘다(1920에서 스크롤 없이 한 화면, v1.0 5절 검수). */
+  min-height: 110px;
   background-color: var(--panel);
   border: 2px solid var(--border);
   border-radius: var(--radius-card);
-  padding: calc(var(--space-2) + 6px) var(--space-2) var(--space-2);
+  padding: calc(var(--space-1) + 6px) var(--space-2) var(--space-1);
   text-align: center;
   overflow: hidden;
   box-shadow: var(--shadow-card);
@@ -168,6 +141,14 @@
   color: var(--vote-uncast);
 }
 
+/* 세 기록 패널을 나란히 둔다(1920, T44) — result-screen__records를 보라. */
+.result-screen__records {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
 .result-screen__mine,
 .result-screen__tasks,
 .result-screen__ai-help {
@@ -177,7 +158,7 @@
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-3);
+  padding: var(--space-2);
 }
 
 /* 기록 패널(AI 사용 이력)만 유리질 패널로 구분한다(DESIGN_SPEC.md "만들 것 · 기록
@@ -218,11 +199,22 @@
   color: var(--text-muted);
 }
 
-/* 5석은 두 해상도 모두 같은 크기로 나란히 둔다(DESIGN_SPEC.md "결과 5석 동일
-   크기"). 1280에서도 5칸 폭이 충분해 줄바꿈으로 크기가 달라지지 않게 한다. */
+/* 5석은 두 해상도 모두 같은 크기로 둔다(DESIGN_SPEC.md "결과 5석 동일 크기"). 감싸는
+   줄 수만 1280에서 2+2+1로 한 번 더 좁힌다(무대 열이 40%를 차지해 본문 폭이 더
+   줄어든다, v1.0 5절). */
 @media (max-width: 1280px) {
+  .result-screen__seats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 1280에서는 무대 열이 40%를 차지해 세 기록 패널을 나란히 둘 폭이 없다 — 다시
+     세로로 쌓는다(BRIEFING처럼 이 화면도 1280에서는 스크롤을 허용한다). */
+  .result-screen__records {
+    grid-template-columns: 1fr;
+  }
+
   .result-seat {
-    min-height: 120px;
+    min-height: 96px;
     padding: calc(var(--space-1) + 6px) var(--space-1) var(--space-1);
   }
 

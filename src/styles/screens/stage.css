@@ -1,17 +1,21 @@
-/* 무대 띠(StageBand, T43). 렌더 배경 위에 HTML 오버레이(명패·글로우·판단 중 점·
-   말풍선·표결 배지)만 그린다(DESIGN_SPEC.md v1.0 1절). 장식 레이어라 컨테이너는
-   App.tsx에서 aria-hidden="true"로 렌더된다.
-   글로우·비네트는 정적 레이어이고, 움직이는 것은 말풍선 등장·판단 중 점·표결 배지
-   등장뿐이다(성능 규칙, v1.0 1절). */
+/* 무대 열(StageBand, T44 좌우 분할). 렌더 배경 위에 HTML 오버레이(명패·글로우·판단
+   중 점·말풍선·표결 배지·결론 도장)만 그린다(DESIGN_SPEC.md v1.0 1·5절). 장식
+   레이어라 컨테이너는 App.tsx에서 aria-hidden="true"로 렌더된다.
+   1280px 이하의 56px 좌석 띠·"무대 펼치기" 토글은 T44에서 없앴다 — 왼쪽 무대 열은
+   App.tsx의 .app-body 그리드가 clamp(420px,42vw,860px)로 폭만 줄일 뿐, 두 해상도
+   모두 항상 전체 무대(원본 16:9)로 보인다.
+   글로우·비네트는 정적 레이어이고, 움직이는 것은 말풍선 등장·판단 중 점·표결 배지·
+   도장 등장뿐이다(성능 규칙, v1.0 1절). */
 
 .stage-band {
   position: relative;
-  margin: var(--space-1) var(--space-4);
+  width: 100%;
 }
 
 .stage-band__stage {
   position: relative;
-  height: 300px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
@@ -24,7 +28,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center 20%;
 }
 
 /* 위·아래 네이비 비네트: 오버레이 텍스트 대비 확보용 정적 레이어(v1.0 1절). */
@@ -46,19 +50,50 @@
   background-image: linear-gradient(to top, rgba(6, 20, 36, 0.85), transparent);
 }
 
+/* 4분 벽시계 pill: 무대 우상단(v1.0 2·5절 "4분 시계는 무대 우상단 벽시계 pill로
+   복제 표시"). 헤더 Timer와 같은 clock을 읽지만 경고색·문구는 없다(순수 장식). */
+.stage-band__clock {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 2;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: rgba(6, 20, 36, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 좌석 열: 세로로 무대 전체 높이를 차지해, 말풍선(상단)과 명패·배지·실루엣(하단)을
+   각각 독립된 퍼센트 위치에 둘 수 있게 한다(v1.0 5절 "머리 위 하늘 여백"). */
 .stage-band__seat {
   position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 200px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.stage-band__seat--participant {
+  left: 50%;
+}
+
+.stage-band__seat-foot {
+  position: absolute;
   bottom: 12px;
+  left: 50%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  width: 200px;
 }
 
-.stage-band__seat--participant {
-  left: 50%;
+.stage-band__seat--participant .stage-band__seat-foot {
   bottom: 4px;
 }
 
@@ -117,9 +152,13 @@
   opacity: 0.35;
 }
 
-/* 말풍선: 캐릭터 머리 위 여백에만 띄운다(밝은 상판 위에는 두지 않는다, v1.0 1절). */
+/* 말풍선: 캐릭터 머리 위 하늘 여백(상단 0~28%)에만 띄운다(v1.0 5절). '나' 말풍선만
+   테이블 위 중앙(상단58%~) 한 곳을 허용한다. */
 .stage-band__bubble {
-  position: relative;
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
   max-width: 220px;
   padding: 6px 10px;
   border-radius: var(--radius-control);
@@ -132,15 +171,19 @@
   animation: stage-bubble-in 200ms ease-out both;
 }
 
+.stage-band__bubble--participant {
+  top: 60%;
+}
+
 @keyframes stage-bubble-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.92);
+    transform: translateX(-50%) translateY(6px) scale(0.92);
   }
 
   to {
     opacity: 1;
-    transform: none;
+    transform: translateX(-50%);
   }
 }
 
@@ -231,104 +274,72 @@
   color: var(--bg);
 }
 
-/* 1280px 이하: 56px 좌석 띠로 접힌다(v1.0 1절). 기본은 좌석 띠만 보이고, "무대
-   펼치기"를 누르면 전체 무대가 띠 바로 아래에 겹쳐 나타난다 — 문서 흐름을 밀어내지
-   않는 절대 위치라서 펼친 상태에서도 하단 CTA가 가려지지 않는다. */
-.stage-band__strip {
-  display: none;
+/* 결론 도장(T44, DESIGN_SPEC.md v1.0 3·5절): 무대 열 우하단에 겹쳐 찍는다. 디스플레이
+   서체, 회전 -9°, 결과색. 렌더 배경 위에 얹히므로 반투명 배경을 더해 대비를 확보한다.
+   배지가 모두 나온 직후(STAMP_DELAY_SECONDS) 등장해 총 1초 안에 끝난다. 클릭·키
+   입력으로 건너뛰면(useResultStampSkip) StageBand가 animation-delay/-duration을
+   0.01ms로 직접 낮춘다(CSS data-skip 선택자 대신 inline style, 도장이 result-screen
+   바깥에 있어서다). */
+.stage-band__stamp {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 3;
+}
+
+.result-stamp {
+  padding: var(--space-1) var(--space-3);
+  border: 4px solid currentColor;
+  border-radius: var(--radius-control);
+  background-color: rgba(6, 20, 36, 0.6);
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  transform: rotate(-9deg) scale(0.6);
+  opacity: 0;
+  animation: result-stamp-in 220ms ease-out both;
+}
+
+@keyframes result-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(-9deg) scale(1);
+  }
+}
+
+.result-stamp--pass {
+  color: var(--accent);
+}
+
+.result-stamp--hold {
+  color: var(--vote-hold);
+}
+
+.result-stamp--reject {
+  color: var(--vote-no);
 }
 
 @media (max-width: 1280px) {
-  .stage-band {
-    margin: 0 var(--space-3);
+  .stage-band__seat {
+    width: 150px;
   }
 
-  .stage-band__stage {
-    display: none;
+  .stage-band__bubble {
+    max-width: 160px;
+    font-size: 12px;
   }
 
-  .stage-band[data-expanded='true'] .stage-band__stage {
-    display: block;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    z-index: 15;
-    height: 220px;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
-  }
-
-  .stage-band__strip {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    height: 56px;
-    padding: 0 var(--space-2);
-    border-radius: var(--radius-control);
-    background-color: var(--panel);
-    border: 1px solid var(--border);
-    overflow-x: auto;
-  }
-
-  .stage-band__strip-seat {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-
-  .stage-band__strip-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--bg);
-    background-color: var(--accent);
-  }
-
-  .stage-band__strip-avatar--cfo {
-    background-color: var(--accent-blue);
-  }
-
-  .stage-band__strip-avatar--caio {
-    background-color: #7ce0b3;
-  }
-
-  .stage-band__strip-avatar--ciso {
-    background-color: var(--vote-hold);
-  }
-
-  .stage-band__strip-avatar--participant {
-    background-color: var(--bg);
-    color: var(--accent);
-    border: 2px solid var(--accent);
-  }
-
-  .stage-band__strip-status {
-    color: var(--text-muted);
+  .stage-band__nameplate {
     font-size: 11px;
-    white-space: nowrap;
   }
 
-  .stage-band__expand {
-    margin-left: auto;
-    flex-shrink: 0;
-    min-height: var(--touch-min);
-    min-width: var(--touch-min);
-    padding: 0 var(--space-2);
-    border-radius: var(--radius-control);
-    border: 1px solid var(--border);
-    background-color: transparent;
-    color: var(--text);
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  .stage-band__expand:hover {
-    background-color: var(--panel-active);
+  .result-stamp {
+    padding: 6px var(--space-2);
+    font-size: 20px;
   }
 }

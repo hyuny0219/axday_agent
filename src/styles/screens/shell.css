@@ -215,6 +215,57 @@
   padding: var(--space-8);
 }
 
+/* SELECT 이후(BRIEFING~RESULT) 왼쪽 무대 열 + 오른쪽 본문 열 2열 그리드(DESIGN_SPEC.md
+   v1.0 5절 "좌우 분할 개정"). 무대 열은 원본 16:9(clamp(420px,42vw,860px))로 고정
+   폭이고 sticky, 본문 열은 스크롤된다. 1280×720에서는 42vw ≈ 512px로 "왼쪽 40%" 요구를
+   그대로 만족한다. */
+.app-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: clamp(420px, 42vw, 860px) 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  min-width: 0;
+}
+
+.app-body__stage {
+  position: sticky;
+  /* 헤더+진행 스트립 높이만큼 띄운다(v1.0 5절). 둘 다 sticky는 아니지만, 화면이
+     한 번에 다 보이는 REACTIONS·VOTE·RESULT에서는 스크롤 자체가 거의 없어 무대가
+     항상 헤더 바로 아래에 붙어 보인다 — 스크롤이 있는 BRIEFING에서만 이 offset이
+     실제로 쓰인다. */
+  top: 96px;
+  align-self: start;
+}
+
+.app-body__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.app-body__content .app-main {
+  padding: 0;
+}
+
+/* .app-body가 이미 좌우 여백(space-4)을 두므로, 본문 열 안에서는 명패의 자체
+   가로 margin을 없애 이중 들여쓰기를 막는다(세로 margin은 그대로 둔다). */
+.app-body__content .nameplate {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* 하단 고정 CTA(DISCUSS·VOTE)는 본문 열 안에서 그대로 동작한다 — 무대 열을 침범하지
+   않고 본문 폭만 채운다(DESIGN_SPEC.md v1.0 5절). app-main 자체 padding이 이미 0이라
+   상쇄할 여백이 없고, 폭만 채우면 된다(두 해상도 공통 — .screen__sticky-footer의
+   일반/1280 규칙보다 이 규칙이 더 구체적이라 항상 우선한다). */
+.app-body__content .screen__sticky-footer {
+  margin: 0;
+  padding: var(--space-2) 0;
+}
+
 /* 화면 전환: opacity + 소폭 translate, 180–250ms(DESIGN_SPEC.md 4장). StageRouter가
    단계마다 다른 컴포넌트를 새로 마운트하므로, 마운트 시 한 번 재생되는 CSS 애니메이션만으로
    충분하다(JS 타이머 없이 유지). prefers-reduced-motion에서는 base.css의 전역 규칙이
@@ -250,6 +301,16 @@
 
   .app-main {
     padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+
+  .app-body {
+    grid-template-columns: clamp(420px, 40vw, 860px) 1fr;
+    padding: var(--space-1) var(--space-3) var(--space-2);
+    gap: var(--space-2);
+  }
+
+  .app-body__stage {
+    top: 56px;
   }
 
   .screen {

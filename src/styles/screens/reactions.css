@@ -17,11 +17,13 @@
 }
 
 /* 임원 반응을 내 발언 인용 카드 아래 답글형으로 늘어놓는다(T40, DESIGN_SPEC.md 3장
-   "반응" 행: "들여쓰기·연결선"). 각 항목은 인용 카드에서 이어지는 세로 연결선을
-   왼쪽에 두고, 변한 임원만 강조하며 나머지는 흐리게 보여준다. */
+   "반응" 행: "들여쓰기·연결선"). T44에서 무대 열이 본문 폭을 줄이며(v1.0 5절) 세로
+   목록 하나로는 1920에서도 한 화면에 담기 어려워, 다른 임원 4열 카드와 같은 원칙으로
+   2열로 감싼다 — 변한 임원만 강조·나머지는 흐리게 보여주는 규칙은 그대로다. 2열에서는
+   개별 들여쓰기·연결선 대신 강조 테두리만으로 "인용에 대한 답"임을 나타낸다.*/
 .reactions-screen__replies {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -33,23 +35,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-left: var(--space-3);
   padding: var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-}
-
-/* 인용 카드에서 내려오는 연결선(들여쓰기 왼쪽 바깥에 그린다). */
-.reaction-reply::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: calc(-1 * var(--space-3));
-  width: var(--space-3);
-  height: 1px;
-  background-color: var(--border);
 }
 
 .reaction-reply--changed {
@@ -243,13 +233,3 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 1280px) {
-  .reaction-reply {
-    margin-left: var(--space-2);
-  }
-
-  .reaction-reply::before {
-    left: calc(-1 * var(--space-2));
-    width: var(--space-2);
-  }
-}

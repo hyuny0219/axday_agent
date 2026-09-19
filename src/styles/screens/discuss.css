@@ -31,9 +31,11 @@
 
 /* 상단 임원 4열(DESIGN_SPEC.md "의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우
    textarea"). 각 카드는 이니셜 아바타 + 이름 + 첫 의견 한 줄이다. */
+/* 무대 열이 본문 폭을 줄여(T44) 4열은 좁아지므로 2열로 감싼다(DESIGN_SPEC.md v1.0
+   5절 "임원 4열 카드(OPINIONS·DISCUSS 상단)는 2열"). */
 .discuss-screen__execs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
 }
 
@@ -70,9 +72,11 @@
   gap: var(--space-3);
 }
 
+/* 추천 문구 6개는 2열로 감싼다(DESIGN_SPEC.md v1.0 5절 "추천 문구 6개는 2열"). 무대
+   열이 본문 폭을 줄여 두 해상도 모두 세로 한 줄보다 2열이 낫다. */
 .discuss-screen__phrase-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
 }
 
@@ -297,10 +301,9 @@
   font-size: 16px;
 }
 
-/* 1280×720: 임원 카드 4장을 각각 한 줄 요약(아바타+이름+문구 한 줄)으로 접고,
-   본문은 계속 좌 추천 문구(2열×3행)·우 입력 영역으로 나눠 세로 공간을 아낀다
-   (DESIGN_SPEC.md 6장 "1280×720에서 상단 임원 카드는 접힌 한 줄 요약으로 줄이고,
-   하단을 추천 문구 2열×3행 영역과 입력 영역으로 나눈다"). */
+/* 1280×720(무대 열 40%)에서는 임원 카드 2열이 더 좁아지므로 각 카드를 한 줄
+   요약(아바타+이름+문구 한 줄)으로 접는다(DESIGN_SPEC.md v1.0 5절). 추천 문구 2열·
+   본문 좌우 분할(좌 추천 문구·우 입력 영역)은 모든 폭에서 그대로다. */
 @media (max-width: 1280px) {
   .discuss-screen__execs {
     gap: var(--space-1);
@@ -333,12 +336,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .discuss-screen__phrase-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-1);
   }
 
   .phrase-card {

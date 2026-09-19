@@ -1,22 +1,26 @@
-// 무대 띠(StageBand, T43): SELECT 이후 모든 화면(BRIEFING~RESULT) 상단에 렌더 배경의
-// 무대를 두고, 세션 상태를 오버레이(명패·글로우·판단 중 점·말풍선·표결 배지)로만
-// 그리는 순수 표시 컴포넌트다(docs/design/DESIGN_SPEC.md v1.0 1·3절). 장식이므로
-// 컨테이너에 aria-hidden="true"를 둔다 — 읽어야 할 정보(발언 전문·표결 결과 등)는
-// 이미 각 화면 본문에 그대로 있고 여기서는 중복해 새 정보를 만들지 않는다.
+// 무대 열(StageBand, T44 좌우 분할): App.tsx의 왼쪽 고정 무대 열 안에서 렌더 배경의
+// 무대를 16:9 원본 비율 그대로 보여주고, 세션 상태를 오버레이(명패·글로우·판단 중
+// 점·말풍선·표결 배지·결론 도장)로만 그리는 순수 표시 컴포넌트다
+// (docs/design/DESIGN_SPEC.md v1.0 1·5절). 장식이므로 컨테이너에 aria-hidden="true"를
+// 둔다 — 읽어야 할 정보(발언 전문·표결 결과 등)는 이미 각 화면 본문에 그대로 있고
+// 여기서는 중복해 새 정보를 만들지 않는다.
 // 화면별 말풍선 문구는 scripted면 시나리오 데이터(initialOpinions·reactions)에서,
 // live면 session.transcript.statements에서 가져온다. 말풍선 텍스트 자르기는
 // stageText.ts(순수 함수)에 위임한다.
-// 1280px 이하에서는 56px 좌석 띠로 접히고 "무대 펼치기" 버튼으로 잠시 펼쳐 볼 수
-// 있다(순수 로컬 useState, dispatch 없음 — 펼침 자체는 세션 액션이 아니다. 버튼
-// 클릭은 App.tsx의 기존 window click 활동 감지에는 자연히 걸리지만, 이 컴포넌트가
-// 별도로 활동을 기록하거나 stopPropagation으로 그 감지를 막지는 않는다).
+// T44에서 1280px 이하의 56px 좌석 띠·"무대 펼치기" 토글을 없앴다 — 왼쪽 무대 열은
+// 폭만 줄어들 뿐(clamp(420px,42vw,860px)) 두 해상도 모두 항상 전체 무대로 보인다.
 
-import { useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Ballot, MemberId, Opinion, RoleStatus, SessionMode, SessionStage, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import type { Clock } from '../../domain/clock';
+import { EXPERIENCE_MS } from '../../domain/clock';
+import { useClockNow } from '../../app/useClockNow';
 import { MEMBER_LABELS } from '../memberLabels';
 import { firstSentenceClipped } from '../stageText';
+import type { ResultStamp } from '../resultStamp';
+import { STAMP_DELAY_SECONDS } from '../resultStamp';
+import { useResultStampSkip } from '../useResultStampSkip';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
 
@@ -31,6 +35,11 @@ export interface StageBandProps {
   ballots?: Ballot[];
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
   chairLine?: string;
+  /** 무대 우상단 벽시계 pill에 쓸 남은 시간 계산용(장식, v1.0 2·5절). */
+  deadline: number | null;
+  clock: Clock;
+  /** RESULT 단계에서만 넘긴다. 있으면 무대 우하단에 결론 도장을 겹쳐 찍는다(v1.0 5절). */
+  resultStamp?: ResultStamp | null;
 }
 
 /** 배경 이미지 기준 좌석 가로 위치(DESIGN_SPEC.md v1.0 1절). */
@@ -161,12 +170,22 @@ function VoteBadge({ memberId, ballots }: { memberId: MemberId; ballots: Ballot[
   );
 }
 
-const STATUS_STRIP_TEXT: Record<BubbleKind, string> = {
-  speech: '발언',
-  pending: '판단 중',
-  waiting: '대기',
-  none: '',
-};
+/** mm:ss로 남은 시간을 보여주는 벽시계 pill(Header의 Timer와 같은 clock, v1.0 2·5절
+ * "4분 시계는 무대 띠 우상단 벽시계 pill로 복제 표시"). Timer.tsx의 형식과 같은 자리수
+ * 규칙을 그대로 쓰되, 경고 문구·색 강조 없이 순수 장식으로만 둔다(부모가 이미
+ * aria-hidden). */
+function StageClock({ deadline, clock }: { deadline: number | null; clock: Clock }) {
+  const now = useClockNow(clock);
+  const remainingMs = deadline === null ? EXPERIENCE_MS : Math.max(0, deadline - now);
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return (
+    <span className="stage-band__clock" data-testid="stage-clock">
+      {minutes}:{String(seconds).padStart(2, '0')}
+    </span>
+  );
+}
 
 export function StageBand({
   stage,
@@ -177,21 +196,20 @@ export function StageBand({
   scenario,
   ballots,
   chairLine,
+  deadline,
+  clock,
+  resultStamp,
 }: StageBandProps) {
-  const [expanded, setExpanded] = useState(false);
   const participant = participantSeatOverlay(stage, opinions);
+  const stampSkip = useResultStampSkip(stage === 'RESULT' && Boolean(resultStamp));
 
   return (
-    <div
-      className="stage-band"
-      aria-hidden="true"
-      data-testid="stage-band"
-      data-expanded={expanded}
-    >
+    <div className="stage-band" aria-hidden="true" data-testid="stage-band">
       <div className="stage-band__stage" data-testid="stage-band-full">
         <img src={stageRender} alt="" className="stage-band__bg" />
         <div className="stage-band__vignette stage-band__vignette--top" />
         <div className="stage-band__vignette stage-band__vignette--bottom" />
+        <StageClock deadline={deadline} clock={clock} />
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,
@@ -210,9 +228,6 @@ export function StageBand({
               style={{ left: `${SEAT_LEFT_PERCENT[memberId]}%` }}
               data-testid={`stage-seat-${memberId}`}
             >
-              <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
-                {MEMBER_LABELS[memberId]}
-              </span>
               {overlay.bubbleKind !== 'none' && (
                 <span
                   className={`stage-band__bubble stage-band__bubble--${overlay.bubbleKind}`}
@@ -231,65 +246,54 @@ export function StageBand({
                   )}
                 </span>
               )}
-              {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
-              <span
-                className={`stage-band__silhouette stage-band__silhouette--${memberId.toLowerCase()}${
-                  overlay.dimmed ? ' stage-band__silhouette--dimmed' : ''
-                }${overlay.bubbleKind === 'speech' ? ' stage-band__silhouette--glow' : ''}`}
-              />
+              <div className="stage-band__seat-foot">
+                <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
+                  {MEMBER_LABELS[memberId]}
+                </span>
+                {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
+                <span
+                  className={`stage-band__silhouette stage-band__silhouette--${memberId.toLowerCase()}${
+                    overlay.dimmed ? ' stage-band__silhouette--dimmed' : ''
+                  }${overlay.bubbleKind === 'speech' ? ' stage-band__silhouette--glow' : ''}`}
+                />
+              </div>
             </div>
           );
         })}
-        <div className="stage-band__seat stage-band__seat--participant" data-testid="stage-seat-PARTICIPANT">
-          <span className="stage-band__nameplate stage-band__nameplate--participant">나 · 특별 이사</span>
+        <div
+          className="stage-band__seat stage-band__seat--participant"
+          data-testid="stage-seat-PARTICIPANT"
+        >
           {participant.bubbleText && (
-            <span className="stage-band__bubble stage-band__bubble--speech" data-testid="stage-bubble-PARTICIPANT">
+            <span
+              className="stage-band__bubble stage-band__bubble--speech stage-band__bubble--participant"
+              data-testid="stage-bubble-PARTICIPANT"
+            >
               {participant.bubbleText}
             </span>
           )}
-          {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
-          <span
-            className={`stage-band__silhouette stage-band__silhouette--participant${
-              participant.glow ? ' stage-band__silhouette--glow' : ''
-            }`}
-          />
+          <div className="stage-band__seat-foot">
+            <span className="stage-band__nameplate stage-band__nameplate--participant">나 · 특별 이사</span>
+            {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
+            <span
+              className={`stage-band__silhouette stage-band__silhouette--participant${
+                participant.glow ? ' stage-band__silhouette--glow' : ''
+              }`}
+            />
+          </div>
         </div>
-      </div>
-
-      <div className="stage-band__strip" data-testid="stage-band-strip">
-        {EXEC_MEMBER_ORDER.map((memberId) => {
-          const overlay = execSeatOverlay(
-            memberId,
-            stage,
-            mode,
-            roleStatus,
-            statements,
-            opinions,
-            scenario,
-            chairLine,
-          );
-          return (
-            <span key={memberId} className="stage-band__strip-seat">
-              <span className={`stage-band__strip-avatar stage-band__strip-avatar--${memberId.toLowerCase()}`}>
-                {memberId}
-              </span>
-              <span className="stage-band__strip-status">{STATUS_STRIP_TEXT[overlay.bubbleKind]}</span>
-            </span>
-          );
-        })}
-        <span className="stage-band__strip-seat">
-          <span className="stage-band__strip-avatar stage-band__strip-avatar--participant">나</span>
-          <span className="stage-band__strip-status">{participant.bubbleText ? '발언' : ''}</span>
-        </span>
-        <button
-          type="button"
-          className="stage-band__expand"
-          data-testid="stage-expand"
-          aria-pressed={expanded}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          {expanded ? '무대 접기' : '무대 펼치기'}
-        </button>
+        {resultStamp && (
+          <div
+            className={`stage-band__stamp result-stamp result-stamp--${(resultStamp.outcome ?? 'hold').toLowerCase()}`}
+            data-testid="result-stamp"
+            style={{
+              animationDelay: stampSkip ? '0.01ms' : `${STAMP_DELAY_SECONDS}s`,
+              animationDuration: stampSkip ? '0.01ms' : undefined,
+            }}
+          >
+            {resultStamp.text}
+          </div>
+        )}
       </div>
     </div>
   );

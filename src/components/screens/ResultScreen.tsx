@@ -17,7 +17,11 @@ import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, tally } from '../../d
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
+import { SEAT_REVEAL_STEP_SECONDS } from '../resultStamp';
 import { Avatar } from '../parts/Avatar';
+// 결론 도장(result-stamp)은 T44에서 무대 열 우하단으로 옮겨 AppShell이 StageBand에
+// 넘긴다(components/resultStamp.ts computeResultStamp). 이 화면은 더는 도장을
+// 직접 그리지 않는다 — 5석·게이지·기록만 담당한다.
 import '../../styles/screens/result.css';
 import '../../styles/screens/live.css';
 
@@ -57,28 +61,6 @@ const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
   live: '실시간(LIVE) 임원 에이전트 판단입니다.',
   scripted: '사전 구성 시뮬레이션 결과입니다.',
 };
-
-/** 결론 도장 문구(DESIGN_SPEC.md v1.0 3절): PASS이고 반영 조건이 있으면 "조건부
- * 가결", PASS는 "가결", HOLD는 "보류", REJECT는 "부결". */
-function stampText(outcome: Session['outcome'], hasReflectedConditions: boolean): string {
-  if (outcome === 'PASS') {
-    return hasReflectedConditions ? '조건부 가결' : '가결';
-  }
-  if (outcome === 'HOLD') {
-    return '보류';
-  }
-  if (outcome === 'REJECT') {
-    return '부결';
-  }
-  return '';
-}
-
-/** 표결 배지·도장 순차 공개 타이밍(초). CEO→CFO→CAIO→CISO→나 5석을 0.2초 간격으로
- * 튀어나오게 하고(마지막 0.8초), 도장은 그 직후 등장해 1초 안에 끝난다(카드 완료 확인
- * "RESULT 도장이 1초 안에 찍히고"). setTimeout이 아니라 이 값들을 CSS animation-delay로
- * 그대로 꽂아 Clock 규칙과 무관하게 만든다. */
-const SEAT_REVEAL_STEP_SECONDS = 0.2;
-const STAMP_DELAY_SECONDS = 0.8;
 
 export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
@@ -138,8 +120,6 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         ? scenario.resultCopy.reject
         : scenario.resultCopy.hold;
 
-  const stamp = stampText(session.outcome, includedIds.length > 0);
-
   return (
     <section className="screen result-screen" data-skip={skip}>
       <h2 className="result-screen__title" data-testid="result-conclusion">
@@ -158,19 +138,11 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           일부 임원 미표결로 판단이 제한되었습니다.
         </p>
       )}
-      {/* 표결 배지 순차 공개 + 결론 도장(DESIGN_SPEC.md v1.0 3절). 5석 카드 텍스트는
-          바로 아래 result-screen__seats에 처음부터 그대로 있고, 여기서는 CSS
-          animation-delay로 시각 효과만 늦춘다(setTimeout 없음). 클릭·키 입력이 오면
-          data-skip='true'가 붙어 모든 지연·재생 시간을 0에 가깝게 만든다. */}
-      {stamp && (
-        <div
-          className={`result-stamp result-stamp--${(session.outcome ?? 'hold').toLowerCase()}`}
-          data-testid="result-stamp"
-          style={{ animationDelay: `${STAMP_DELAY_SECONDS}s` }}
-        >
-          {stamp}
-        </div>
-      )}
+      {/* 표결 배지 순차 공개(DESIGN_SPEC.md v1.0 3절). 결론 도장은 T44에서 무대 열
+          우하단으로 옮겨 AppShell이 StageBand 안에 렌더한다(같은 STAMP_DELAY_SECONDS를
+          쓴다). 5석 카드 텍스트는 처음부터 그대로 있고, 여기서는 CSS animation-delay로
+          시각 효과만 늦춘다(setTimeout 없음). 클릭·키 입력이 오면 data-skip='true'가
+          붙어 모든 지연·재생 시간을 0에 가깝게 만든다. */}
       <div className="result-screen__seats">
         {SEAT_ORDER.map((memberId, index) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);
@@ -218,50 +190,56 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
         </p>
       )}
-      <section className="result-screen__mine" data-testid="result-mine">
-        <h3 className="result-screen__section-label">내 의견</h3>
-        {session.opinions.map((opinion) => (
-          <p key={opinion.id} className="result-screen__quote">
-            {opinion.originalText}
-          </p>
-        ))}
-        {allConfirmedIds.length > 0 ? (
-          <ul className="result-screen__conditions">
-            {allConfirmedIds.map((id) => (
-              <li key={id}>
-                {conditionLabel(id)}
-                {includedIds.includes(id) && (
-                  <span className="result-screen__reflected-tag"> 반영</span>
-                )}
-              </li>
+      {/* T44: 무대 열이 본문 폭을 줄이는 대신 세로 공간이 넉넉해져, 세 기록 패널을
+          세로로 쌓지 않고 나란히 둔다(1920에서 스크롤 없이 한 화면, DESIGN_SPEC.md
+          v1.0 5절 검수 "반응·표결·결과는 스크롤 없이 한 화면"). 1280에서는 다시
+          세로로 쌓는다(무대 열이 40%를 차지해 폭이 부족하다). */}
+      <div className="result-screen__records">
+        <section className="result-screen__mine" data-testid="result-mine">
+          <h3 className="result-screen__section-label">내 의견</h3>
+          {session.opinions.map((opinion) => (
+            <p key={opinion.id} className="result-screen__quote">
+              {opinion.originalText}
+            </p>
+          ))}
+          {allConfirmedIds.length > 0 ? (
+            <ul className="result-screen__conditions">
+              {allConfirmedIds.map((id) => (
+                <li key={id}>
+                  {conditionLabel(id)}
+                  {includedIds.includes(id) && (
+                    <span className="result-screen__reflected-tag"> 반영</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="result-screen__no-conditions">확정한 수정 조건이 없습니다.</p>
+          )}
+        </section>
+        <section className="result-screen__tasks">
+          <h3 className="result-screen__section-label">남은 과제</h3>
+          <ul>
+            {scenario.remainingTasks.map((task) => (
+              <li key={task}>{task}</li>
             ))}
           </ul>
-        ) : (
-          <p className="result-screen__no-conditions">확정한 수정 조건이 없습니다.</p>
-        )}
-      </section>
-      <section className="result-screen__tasks">
-        <h3 className="result-screen__section-label">남은 과제</h3>
-        <ul>
-          {scenario.remainingTasks.map((task) => (
-            <li key={task}>{task}</li>
-          ))}
-        </ul>
-      </section>
-      <section className="result-screen__ai-help" data-testid="result-ai-help">
-        <h3 className="result-screen__section-label">AI가 도운 일</h3>
-        <ul className="result-screen__ai-help-list">
-          <li>자료 4장 자동 정리 데모 표시</li>
-          {additionalHelp.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-        {additionalHelp.length === 0 && (
-          <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
-            추가 AI 도움은 사용하지 않았습니다.
-          </p>
-        )}
-      </section>
+        </section>
+        <section className="result-screen__ai-help" data-testid="result-ai-help">
+          <h3 className="result-screen__section-label">AI가 도운 일</h3>
+          <ul className="result-screen__ai-help-list">
+            <li>자료 4장 자동 정리 데모 표시</li>
+            {additionalHelp.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          {additionalHelp.length === 0 && (
+            <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
+              추가 AI 도움은 사용하지 않았습니다.
+            </p>
+          )}
+        </section>
+      </div>
       {/* 결과 화면은 5석·기록 패널을 모두 담으면 한 뷰포트보다 길어질 수 있어,
           CTA를 sticky 대신 내용 끝에 두고 스크롤로 닿게 한다(sticky는 스크롤
           중간에 앞선 기록 위에 겹쳐 보이는 문제가 있어 여기서는 쓰지 않는다). */}

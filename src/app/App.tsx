@@ -45,6 +45,7 @@ import { IdleNotice } from '../components/parts/IdleNotice';
 import { Nameplate } from '../components/parts/Nameplate';
 import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
+import { computeResultStamp } from '../components/resultStamp';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -442,9 +443,20 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'RESULT',
 ]);
 
+/**
+ * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대 열 + 오른쪽 본문 열의 2열
+ * 그리드다(DESIGN_SPEC.md v1.0 5절 "좌우 분할 개정"). ATTRACT·SELECT는 무대가 없어
+ * 여전히 1열이다. 도장(result-stamp)은 무대 열 우하단에 겹쳐 찍으므로 StageBand에
+ * resultStamp로 넘긴다(components/resultStamp.ts, ResultScreen과 공유하는 순수 함수).
+ */
 function AppShell() {
   const { session, dispatch, touchActivity } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
+  const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
+  const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
+
+  const content = <StageRouter />;
+
   return (
     <div className="app-shell">
       <Header
@@ -455,22 +467,34 @@ function AppShell() {
       {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
         <ProgressStrip stage={session.stage} />
       )}
-      {STAGE_BAND_STAGES.has(session.stage) && scenario && (
-        <StageBand
-          stage={session.stage}
-          mode={session.mode}
-          roleStatus={session.roleStatus}
-          statements={session.transcript.statements}
-          opinions={session.opinions}
-          scenario={scenario}
-          ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-          chairLine={chairLineFor(session.stage, scenario)}
-        />
+      {hasStageBand && scenario ? (
+        <div className="app-body">
+          <div className="app-body__stage">
+            <StageBand
+              stage={session.stage}
+              mode={session.mode}
+              roleStatus={session.roleStatus}
+              statements={session.transcript.statements}
+              opinions={session.opinions}
+              scenario={scenario}
+              ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+              chairLine={chairLineFor(session.stage, scenario)}
+              deadline={session.deadline}
+              clock={appClock}
+              resultStamp={resultStamp}
+            />
+          </div>
+          <div className="app-body__content">
+            <Nameplate />
+            <main className="app-main">{content}</main>
+          </div>
+        </div>
+      ) : (
+        <>
+          {session.stage !== 'ATTRACT' && <Nameplate />}
+          <main className="app-main">{content}</main>
+        </>
       )}
-      {session.stage !== 'ATTRACT' && <Nameplate />}
-      <main className="app-main">
-        <StageRouter />
-      </main>
       <IdleNotice session={session} clock={appClock} onContinue={touchActivity} />
     </div>
   );
