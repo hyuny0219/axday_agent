@@ -6,6 +6,7 @@
 import type { Clock } from '../../domain/clock';
 import type { Session, SessionStage } from '../../domain/types';
 import '../../styles/screens/shell.css';
+import { Nameplate } from './Nameplate';
 import { OperatorMenu } from './OperatorMenu';
 import { Timer } from './Timer';
 
@@ -35,7 +36,12 @@ export interface HeaderProps {
 export function Header({ session, clock, onOperatorReset }: HeaderProps) {
   return (
     <header className="app-header">
-      <span className="app-header__brand">BOARDROOM 2026</span>
+      <div className="app-header__left">
+        <span className="app-header__brand">BOARDROOM 2026</span>
+        {/* 참가자 명패는 헤더 좌측에 상시 둔다(v1.0 6절 개정: 무대 좌상단 pill은
+            의장 말풍선과 겹쳐 헤더로 옮겼다). ATTRACT에서는 아직 좌석이 없으므로 숨긴다. */}
+        {session.stage !== 'ATTRACT' && <Nameplate className="nameplate--header" />}
+      </div>
       <span className="app-header__stage">{STAGE_LABELS[session.stage]}</span>
       <div className="app-header__right">
         <span

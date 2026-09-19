@@ -42,7 +42,6 @@ import { scriptedAssistantAdapter } from '../services/assistant/scripted';
 import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
 import { IdleNotice } from '../components/parts/IdleNotice';
-import { Nameplate } from '../components/parts/Nameplate';
 import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
 import { computeResultStamp } from '../components/resultStamp';
@@ -491,14 +490,12 @@ function AppShell() {
                 clock={appClock}
                 resultStamp={resultStamp}
               />
-              <Nameplate className="nameplate--stage" />
             </div>
             {content}
           </div>
         </main>
       ) : (
         <>
-          {session.stage !== 'ATTRACT' && <Nameplate />}
           <main className="app-main">{content}</main>
         </>
       )}
