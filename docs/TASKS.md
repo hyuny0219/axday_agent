@@ -32,6 +32,7 @@
 | T41 | 대기 | P1 착수 전 회의록 타임라인(v0.9 B안) |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
+| T45 | 진행중 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤 |
 | T44 | 완료 | v1.0 무대 좌우 분할(인물 안 잘림, 접힘 제거, 본문 2열 대응). 1라운드 PASS. E2E 68. 1280×720 반응 화면은 스크롤 허용 |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
@@ -504,3 +505,18 @@
 - 하지 말 것: reducer·조건·표결 규칙·단계 변경. 서버 변경. 무대에 읽어야 할 정보를 단독으로 두는 것. setTimeout 연출. testid·문구 삭제.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1920×1080에서 반응·표결·결과가 스크롤 없이 한 화면. 1280×720에서 무대 폭 40%·CTA 가시.
 - 크기: M.
+
+## T45 v1.0 조종석 배치와 무스크롤
+
+- 목표: 왼쪽 열을 "나"(무대 + 입력·선택·CTA), 오른쪽 열을 "회의 정보"로 고정하고, 1920×1080·1280×720에서 모든 화면이 페이지 스크롤 없이 한 화면에 들어가게 한다.
+- 읽을 것: docs/design/DESIGN_SPEC.md "v1.0 애니메이션 프레임" 6절(표 포함)·5절. `src/app/App.tsx`(AppShell 2열), `src/styles/screens/shell.css`, `src/styles/tokens.css`(타이포 스케일), `src/components/screens/*.tsx`와 대응 CSS, `src/components/parts/AssistantPanel.tsx`, `src/components/parts/Nameplate.tsx`, `e2e/stage.spec.ts`, `e2e/screenshots.spec.ts`, `e2e/a11y.spec.ts`.
+- 만들 것:
+  1. 앱 셸: `height: 100dvh; overflow: hidden`, 헤더·진행 스트립·본문 grid rows, 본문 2열(왼쪽 `clamp(400px, 42vw, 860px)`, 720에서는 36vw). 두 열 `min-height: 0`. `.screen__sticky-footer`와 하단 고정 CTA 제거.
+  2. 각 화면을 왼쪽/오른쪽 슬롯으로 나눈다. 구현 방식: 각 Screen 컴포넌트가 `{ left, right }` 두 노드를 돌려주거나(`renderSplit`), App이 슬롯 prop으로 받는다 — 한 방식으로 통일. 6절 표대로 배치. 명패는 무대 안 좌상단 pill(testid `nameplate` 유지).
+  3. 타이포 토큰을 6절 값으로 갱신. 추천 문구 카드 720에서 48px 허용.
+  4. 넘치는 내용 처리: 근거 카드는 제목+해석(720은 해석만, 원문은 카드 클릭 시 같은 자리에서 토글), 내 발언 인용 2줄 클램프, 결과 기록 패널 하나만 내부 스크롤(페이드 표시). 비서실장 패널은 오른쪽 열 위에 겹치는 드로어(`position: absolute`, 열 안), 열면 오른쪽 정보를 덮고 닫으면 복귀. `assistant-toggle`·`assistant-panel` testid 유지.
+  5. E2E: `e2e/noscroll.spec.ts` 신규 — 두 프로젝트(1080·720)에서 ATTRACT→RESULT 전 단계를 진행하며 각 단계에서 `scrollHeight <= clientHeight + 1` 단언(비서실장 드로어 열린 상태 포함). 기존 e2e의 스크롤·푸터 단언 갱신. 스크린샷 갱신.
+- 허용 경로: `src/app/`, `src/components/`, `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: reducer·조건·표결·타이머 규칙 변경. 서버 변경. testid·문구 삭제(이동은 허용). 56px 클릭 목표 위반(추천 문구 720 예외만). 내부 스크롤 패널을 화면당 2개 이상.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(noscroll 스펙 포함). 두 해상도 스크린샷 각 단계가 한 화면에 전부 보임.
+- 크기: L.
