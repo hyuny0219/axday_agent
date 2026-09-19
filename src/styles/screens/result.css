@@ -30,7 +30,7 @@
   gap: var(--space-1);
   min-height: 140px;
   background-color: var(--panel);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
   padding: calc(var(--space-2) + 6px) var(--space-2) var(--space-2);
   text-align: center;

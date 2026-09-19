@@ -16,6 +16,14 @@
 | [result.png](result.png) | 13 | 1672×941 | 1,359,747 | `26510e44870f569b899741086dcd4d4ffa01fd91c8788e032a7c01bb89b8bfdf` |
 | [prevention-motion.png](prevention-motion.png) | 15 | 1672×941 | 1,429,443 | `47ec50305ed94a8a2367f6f482005102713924d69016ba345f3fccb8cccae8b4` |
 
+## v1.0 애니메이션 프레임 추가 자산 — 2026-09-19
+
+| 파일 | 용도 | 크기 | 바이트 | SHA-256 |
+| --- | --- | --- | --- | --- |
+| [stage-render-01.jpg](stage-render-01.jpg) | ATTRACT 전체 배경(무대 띠 T43 포함) | 1672×941 | 224,797 | `b662aa9994362f24ebe98471274e00974f092b581afda8ebd60ffa90ad368989` |
+
+`stage-render-01.jpg`는 **AI로 생성한 3D 카툰 렌더이며 비실사(非實寫)다.** 등장 인물은 모두 가상의 역할 캐릭터(CEO·CFO·CAIO·CISO·참가자석)로, 실존 인물이나 실제 프로그램 화면을 촬영·캡처한 것이 아니다. `src/assets/stage-render-01.jpg`로 복사해 로컬 번들 자산으로만 쓰며 CDN을 참조하지 않는다.
+
 ## 반영 내용
 
 - 의견 작성: 추천 문구6개 복수 선택·300자 입력·의견 전달. 투표 집계 없음.

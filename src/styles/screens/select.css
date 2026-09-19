@@ -32,6 +32,7 @@
   background-color: var(--panel);
   border: 2px solid var(--border);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   padding: var(--space-4);
   color: var(--text);
   cursor: pointer;

@@ -1,5 +1,29 @@
 /* 앱 골격: 헤더, 명패, 공통 화면/CTA 스타일. 디자인 마감은 T14에서 다룬다. */
 
+/* 선택 체크 배지 공용 키프레임(DESIGN_SPEC.md v1.0 2절 "추천 문구·빠른 답·조건 칩:
+   선택 시 체크 배지가 튀어나오는120ms 스케일 애니메이션"). App.tsx가 이 파일을 항상
+   불러오므로 다른 화면 CSS(discuss.css·reactions.css)에서도 이 키프레임을 그대로 쓴다.
+   -center 변형은 세로 중앙 정렬(translateY(-50%))이 필요한 칩·리스트용이다. */
+@keyframes check-badge-pop {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes check-badge-pop-center {
+  from {
+    transform: translateY(-50%) scale(0);
+  }
+
+  to {
+    transform: translateY(-50%) scale(1);
+  }
+}
+
 .app-shell {
   position: relative;
   min-height: 100%;
@@ -18,7 +42,14 @@
   pointer-events: none;
 }
 
+/* 헤더 유리 패널: backdrop-filter는 앱 전체에서 이 한 곳에만 쓴다(DESIGN_SPEC.md v1.0
+   2절 "헤더: 유리 패널(backdrop-filter: blur(8px))"). backdrop-filter는 새 쌓임 맥락을
+   만들기 때문에, 명시적 position+z-index 없이 두면 뒤 화면(app-main)의 기본 쌓임 순서가
+   문서 순서상 헤더를 덮어버려 운영자 메뉴·확인 대화상자가 클릭을 가로채지 못한다.
+   position:relative + z-index로 헤더(와 그 안의 드롭다운)가 항상 본문 위에 오게 한다. */
 .app-header {
+  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,6 +57,8 @@
   gap: var(--space-1) var(--space-2);
   padding: var(--space-2) var(--space-4);
   background-color: var(--panel-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 0 rgba(40, 217, 240, 0.15);
 }
@@ -224,26 +257,36 @@
   }
 }
 
+/* 주 CTA: 알약 + 시안→하늘 그라데이션, hover2px 떠오름, active 눌림(DESIGN_SPEC.md
+   v1.0 2절). 64px 높이·56px 최소 클릭 영역은 그대로 유지한다. */
 .cta {
   align-self: flex-start;
   min-height: var(--cta-height);
   min-width: var(--touch-min);
   padding: 0 var(--space-4);
-  border-radius: var(--radius-control);
+  border-radius: 999px;
   border: none;
-  background-color: var(--accent);
+  background-image: linear-gradient(135deg, var(--accent), var(--sky));
   color: var(--bg);
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast) ease;
+  transition:
+    box-shadow var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
 }
 
 .cta:hover:not(:disabled) {
+  transform: translateY(-2px);
   box-shadow: var(--glow-accent);
 }
 
+.cta:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .cta:disabled {
+  background-image: none;
   background-color: var(--panel-active);
   color: var(--text-muted);
   cursor: not-allowed;
@@ -254,7 +297,11 @@
   padding: var(--space-1) var(--space-4);
 }
 
+/* 칩을 잇는 선(DESIGN_SPEC.md v1.0 2절 "진행 스트립: 알약 칩을 잇는 선을 그리고 현재
+   단계는 시안 채움, 지난 단계는 체크"). 목록 뒤에 가로선을 깔고, 칩 각각은 불투명
+   배경으로 그 위를 덮어 선이 칩 사이 여백에서만 보이게 한다. */
 .progress-strip__list {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
@@ -263,19 +310,47 @@
   padding: 0;
 }
 
+.progress-strip__list::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--border);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
 .progress-strip__step {
+  position: relative;
+  z-index: 1;
   padding: 2px var(--space-2);
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
+  background-color: var(--bg);
   color: var(--text-muted);
   font-size: var(--fs-meta);
   white-space: nowrap;
 }
 
+/* 현재 단계: 시안 채움(칩 배경을 시안으로 채우고 짙은 네이비 글자). */
 .progress-strip__step[aria-current='step'] {
   border-color: var(--accent);
-  color: var(--accent);
+  background-color: var(--accent);
+  color: var(--bg);
   font-weight: 700;
+}
+
+/* 지난 단계: 체크 표시(data-done="true", App.tsx가 렌더 여부를 결정하는 aria-current와
+   별개로 ProgressStrip이 현재 단계보다 앞선 단계에 붙인다). */
+.progress-strip__step[data-done='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.progress-strip__step[data-done='true']::before {
+  content: '✓ ';
 }
 
 @media (max-width: 1280px) {
