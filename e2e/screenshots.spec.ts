@@ -83,7 +83,7 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'discuss');
   await submitOpinion.click();
 
-  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
+  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
   // 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.getByTestId('followup-open-editor')).toBeVisible();

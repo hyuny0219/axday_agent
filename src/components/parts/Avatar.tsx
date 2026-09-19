@@ -8,8 +8,8 @@ import '../../styles/avatar.css';
 
 const AVATAR_INITIALS: Record<MemberId, string> = {
   CEO: 'CEO',
-  CFO_CAIO: 'CFO',
-  CIO: 'CIO',
+  CFO: 'CFO',
+  CAIO: 'CAIO',
   CISO: 'CISO',
   PARTICIPANT: '나',
 };

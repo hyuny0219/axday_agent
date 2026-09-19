@@ -119,10 +119,10 @@ describe('aiAssistantScenario', () => {
     }
   });
 
-  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 2, CFO 3, CIO 3, CISO 4)', () => {
+  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 2, CFO 3, CAIO 3, CISO 4)', () => {
     expect(scenario.voteRules.CEO).toHaveLength(2);
-    expect(scenario.voteRules.CFO_CAIO).toHaveLength(3);
-    expect(scenario.voteRules.CIO).toHaveLength(3);
+    expect(scenario.voteRules.CFO).toHaveLength(3);
+    expect(scenario.voteRules.CAIO).toHaveLength(3);
     expect(scenario.voteRules.CISO).toHaveLength(4);
   });
 });

@@ -19,7 +19,7 @@ export const aiAssistantScenario: Scenario = {
       title: '실적표',
       content: '기준일 2026-08-31, 처리 건수 120건. 담당자 검토 완료.',
       insight: '검토 완료 수치 120건(8/31 기준).',
-      relatedMemberIds: ['CIO'],
+      relatedMemberIds: ['CAIO'],
     },
     {
       id: 'E2',
@@ -27,14 +27,14 @@ export const aiAssistantScenario: Scenario = {
       content: '기준일 2026-09-01, 처리 건수 126건. 잠정 집계, 검토 전.',
       insight:
         '잠정 수치 126건(9/1 기준, 검토 전). E1과 다르며 어느 쪽이 최종인지는 이 자료만으로 알 수 없다.',
-      relatedMemberIds: ['CIO'],
+      relatedMemberIds: ['CAIO'],
     },
     {
       id: 'E3',
       title: '회의록',
       content: '주간 보고마다 자료 취합을 반복한다. 다음 회의 전 보고 초안 검토 담당자를 지정해야 한다.',
       insight: '취합이 매주 반복된다. 자동화 효과의 근거이자, 검토 담당자가 아직 없다는 뜻이다.',
-      relatedMemberIds: ['CEO', 'CFO_CAIO'],
+      relatedMemberIds: ['CEO', 'CFO'],
     },
     {
       id: 'E4',
@@ -63,12 +63,12 @@ export const aiAssistantScenario: Scenario = {
   initialOpinions: [
     { memberId: 'CEO', text: '보고 준비를 줄이고 판단과 실행에 시간을 씁시다.', evidenceIds: ['E3'] },
     {
-      memberId: 'CFO_CAIO',
+      memberId: 'CFO',
       text: '작은 범위에서 준비시간과 수정량을 먼저 확인합시다.',
       evidenceIds: ['E3'],
     },
     {
-      memberId: 'CIO',
+      memberId: 'CAIO',
       text: '출처·기준일을 표시하고 담당자가 확인해야 합니다.',
       evidenceIds: ['E1', 'E2'],
     },
@@ -130,12 +130,12 @@ export const aiAssistantScenario: Scenario = {
   reactions: [
     {
       conditionId: 'PILOT',
-      memberId: 'CFO_CAIO',
+      memberId: 'CFO',
       text: '작게 시작하면 효과를 확인할 수 있겠습니다. 무엇을 측정할까요?',
     },
     {
       conditionId: 'REVIEW',
-      memberId: 'CIO',
+      memberId: 'CAIO',
       text: '출처·기준일 표시와 공유 전 담당자 확인 절차를 수정안에 넣겠습니다.',
     },
     {
@@ -145,7 +145,7 @@ export const aiAssistantScenario: Scenario = {
     },
     {
       conditionId: 'MEASURE',
-      memberId: 'CFO_CAIO',
+      memberId: 'CFO',
       text: '준비시간과 수정량을 확대 판단의 기준으로 삼겠습니다.',
     },
     {
@@ -161,7 +161,7 @@ export const aiAssistantScenario: Scenario = {
   ],
   followUp: {
     question: '메일과 실적표의 숫자가 다르면 어떻게 처리할까요?',
-    askedBy: 'CIO',
+    askedBy: 'CAIO',
     options: [
       {
         text: '출처·기준일 차이를 표시하고 담당자가 확인한 뒤 공유합시다.',
@@ -183,12 +183,12 @@ export const aiAssistantScenario: Scenario = {
       { when: { has: 'OPEN_ALL' }, vote: 'HOLD' },
       { when: { always: true }, vote: 'YES' },
     ],
-    CFO_CAIO: [
+    CFO: [
       { when: { has: 'OPEN_ALL' }, vote: 'NO' },
       { when: { all: [{ has: 'PILOT' }, { has: 'MEASURE' }] }, vote: 'YES' },
       { when: { always: true }, vote: 'HOLD' },
     ],
-    CIO: [
+    CAIO: [
       { when: { has: 'OPEN_ALL' }, vote: 'NO' },
       { when: { has: 'REVIEW' }, vote: 'YES' },
       { when: { always: true }, vote: 'NO' },

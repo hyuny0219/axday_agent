@@ -71,8 +71,8 @@ describe('live 모드 FREEZE_MOTION', () => {
     expect(session.execBallotsPending).toBe(true);
     expect(session.roleStatus).toEqual({
       CEO: 'pending',
-      CFO_CAIO: 'pending',
-      CIO: 'pending',
+      CFO: 'pending',
+      CAIO: 'pending',
       CISO: 'pending',
     });
   });
@@ -83,8 +83,8 @@ describe('live 모드 정상 4표 집계', () => {
     let session = sessionAtLiveVote();
     session = recordExecBallots(session, {
       CEO: 'YES',
-      CFO_CAIO: 'YES',
-      CIO: 'YES',
+      CFO: 'YES',
+      CAIO: 'YES',
       CISO: 'HOLD',
     });
     expect(session.execBallotsPending).toBe(false);
@@ -103,7 +103,7 @@ describe('live 모드 정상 4표 집계', () => {
 
   it('참가자가 먼저 확정해도 4표가 이미 있으면 즉시 집계한다', () => {
     let session = sessionAtLiveVote();
-    session = recordExecBallots(session, { CEO: 'YES', CFO_CAIO: 'YES', CIO: 'YES', CISO: 'YES' });
+    session = recordExecBallots(session, { CEO: 'YES', CFO: 'YES', CAIO: 'YES', CISO: 'YES' });
     session = reduce(session, { type: 'SELECT_VOTE', vote: 'NO' }, T0);
     session = reduce(session, { type: 'CONFIRM_VOTE' }, T0);
     expect(session.stage).toBe('RESULT');
@@ -340,10 +340,10 @@ describe('모델 응답 도착은 무입력 시계를 연장하지 않는다', (
 
     const unavailable = reduce(
       withBallot,
-      { type: 'MARK_EXEC_UNAVAILABLE', roleId: 'CIO', reason: 'timeout' },
+      { type: 'MARK_EXEC_UNAVAILABLE', roleId: 'CAIO', reason: 'timeout' },
       T0 + 8_000,
     );
-    expect(unavailable.roleStatus.CIO).toBe('failed');
+    expect(unavailable.roleStatus.CAIO).toBe('failed');
     expect(unavailable.lastActivityAt).toBe(voteBefore);
   });
 });

@@ -7,7 +7,7 @@
 // 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다. T31에서
 // draftRevision·transcript·assistantAdapter를 AssistantPanel에 추가로 넘긴다(statements를
 // 그대로 transcript로 재사용한다 — 이미 live 라운드 결과를 담고 있다).
-// T40에서 두 번째 입력을 "질문에 답하기"로 재구성했다: 후속 질문에 발화자(CIO,
+// T40에서 두 번째 입력을 "질문에 답하기"로 재구성했다: 후속 질문에 발화자(CAIO,
 // scenario.followUp.askedBy)를 붙이고, 직접 입력은 <details>로 접어 빠른 답 3개만으로도
 // 완주할 수 있게 한다. 직접 입력만으로 완주하는 경로(토글 열기 → 입력 → 제출)도 그대로
 // 유지한다. 조건 확인·충돌 규칙·SUBMIT_FOLLOWUP/KEEP_PREVIOUS 액션은 바꾸지 않았다.

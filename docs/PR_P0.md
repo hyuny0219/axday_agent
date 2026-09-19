@@ -15,7 +15,7 @@
 - [x] 최종 투표 이전에는 찬성/보류/반대 선택 버튼 없음. 토론에서 전달해도 ballot은 생성되지 않음.
   - 증빙: `e2e/flow-full.spec.ts`(DISCUSS 화면에서 `getByRole('button', { name: '찬성'|'보류'|'반대' })`가 0개임을 단언하는 구간); `tests/domain/session.test.ts` — SUBMIT_OPINION은 ballots를 만들지 않음(정상 완주 스펙)
 
-- [x] 5명 각 1표, CFO·CAIO 1표, 고정된 동일 안건 ID. 표 선택 후 미확정 상태에서 만료 시 UNCAST.
+- [x] 5명 각 1표, CFO 1표, 고정된 동일 안건 ID. 표 선택 후 미확정 상태에서 만료 시 UNCAST.
   - 증빙: `tests/domain/voting.test.ts` — "허용 조건 조합 전수 (24개 × 참가자 4표)", "문서 대표 경로표 — v0.6 (12행)"; `e2e/operations.spec.ts` — "표만 선택하고 확정하지 않은 채 240초가 지나면 내 표가 UNCAST로 집계된다"
 
 - [x] scripted의 가결·보류·부결·내 표 영향은 고정 테스트로 검증. live는 근거·역할·논거 반영·안건 동일성·응답 실패를 검수하며 고정 득표수를 요구하지 않음.

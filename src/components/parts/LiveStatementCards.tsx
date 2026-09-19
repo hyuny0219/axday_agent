@@ -41,7 +41,7 @@ const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
   failed: '응답 지연·확인 필요',
 };
 
-/** 임원 4명을 고정 순서(CEO/CFO·CAIO/CIO/CISO)로 그린다. roleStatus가 'idle'이면
+/** 임원 4명을 고정 순서(CEO/CFO/CAIO/CISO)로 그린다. roleStatus가 'idle'이면
  * 아직 이 라운드를 시작하지 않은 것이므로 판단 중과 같은 모양으로 보여준다(호출
  * 시작 직전 잠깐의 idle 상태를 참가자에게 별도로 구분해 보여줄 필요는 없다). */
 export function LiveStatementCards({

@@ -38,22 +38,22 @@ export interface MockRequestEnvelope {
 
 const ROLE_EVIDENCE: Record<string, string> = {
   CEO: 'E1',
-  CFO_CAIO: 'E2',
-  CIO: 'E3',
+  CFO: 'E2',
+  CAIO: 'E3',
   CISO: 'E4',
 };
 
 const ROLE_CONDITION: Record<string, string> = {
   CEO: 'PILOT',
-  CFO_CAIO: 'MEASURE',
-  CIO: 'REVIEW',
+  CFO: 'MEASURE',
+  CAIO: 'REVIEW',
   CISO: 'ACCESS',
 };
 
 const ROLE_VOTE: Record<string, 'YES' | 'HOLD' | 'NO'> = {
   CEO: 'YES',
-  CFO_CAIO: 'HOLD',
-  CIO: 'YES',
+  CFO: 'HOLD',
+  CAIO: 'YES',
   CISO: 'NO',
 };
 

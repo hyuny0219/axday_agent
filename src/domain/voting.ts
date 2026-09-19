@@ -4,7 +4,7 @@
 import type { ExecMemberId, Predicate, Scenario, Vote, VoteRule } from '../content/types';
 import type { Ballot, BallotSource, MemberId, Motion } from './types';
 
-export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'];
+export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO', 'CAIO', 'CISO'];
 
 export interface VoteContext {
   conditionIds: string[];
@@ -41,7 +41,7 @@ export function decideMember(rules: VoteRule[], ctx: VoteContext): Vote {
   throw new Error('일치하는 표결 규칙이 없습니다. 규칙 목록의 총괄성을 확인하십시오.');
 }
 
-/** 임원 4명의 표를 고정된 순서(CEO/CFO·CAIO/CIO/CISO)로 확정한다. scripted 규칙 결과다. */
+/** 임원 4명의 표를 고정된 순서(CEO/CFO/CAIO/CISO)로 확정한다. scripted 규칙 결과다. */
 export function decideBoard(scenario: Scenario, motion: Motion): Ballot[] {
   const ctx: VoteContext = {
     conditionIds: motion.effectiveConditionIds,

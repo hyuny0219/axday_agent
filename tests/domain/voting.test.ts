@@ -67,8 +67,8 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
     const outcomesSeen = new Set<TallyResult['outcome']>();
     const yesSeenByMember: Record<ExecMemberId, boolean> = {
       CEO: false,
-      CFO_CAIO: false,
-      CIO: false,
+      CFO: false,
+      CAIO: false,
       CISO: false,
     };
 
@@ -108,7 +108,7 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
 interface RepresentativePathRow {
   label: string;
   conditionIds: string[];
-  execVotes: [Vote, Vote, Vote, Vote]; // CEO, CFO_CAIO, CIO, CISO 순서
+  execVotes: [Vote, Vote, Vote, Vote]; // CEO, CFO, CAIO, CISO 순서
   participantVote: Vote;
   outcome: TallyResult['outcome'];
   counts: TallyResult['counts'];

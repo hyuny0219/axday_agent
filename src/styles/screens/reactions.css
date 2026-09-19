@@ -111,8 +111,8 @@
   font-size: 20px;
 }
 
-/* CIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
-   2-2, "CIO가 묻습니다"). */
+/* CAIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
+   2-2, "CAIO가 묻습니다"). */
 .reactions-screen__question {
   display: flex;
   align-items: flex-start;

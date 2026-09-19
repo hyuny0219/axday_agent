@@ -14,8 +14,8 @@ const scenario = aiAssistantScenario;
 
 const roleStatus: Record<ExecMemberId, RoleStatus> = {
   CEO: 'answered',
-  CFO_CAIO: 'pending',
-  CIO: 'failed',
+  CFO: 'pending',
+  CAIO: 'failed',
   CISO: 'idle',
 };
 
@@ -56,8 +56,8 @@ describe('LiveStatementCards', () => {
     );
     expect(screen.getByTestId('live-round-REACTIONS')).toHaveClass('live-round__cards--reply');
     expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('작게 시작하는 데 찬성합니다.');
-    expect(screen.getByTestId('statement-pending-CFO_CAIO')).toHaveTextContent('판단 중');
-    expect(screen.getByTestId('statement-failed-CIO')).toHaveTextContent('응답 지연');
+    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
+    expect(screen.getByTestId('statement-failed-CAIO')).toHaveTextContent('응답 지연');
     expect(screen.getByTestId('live-role-CEO')).toHaveClass('live-statement--answered');
   });
 });
