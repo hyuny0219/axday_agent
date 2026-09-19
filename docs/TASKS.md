@@ -513,6 +513,7 @@
 - 만들 것:
   1. 앱 셸: `height: 100dvh; overflow: hidden`, 헤더·진행 스트립·본문 grid rows, 본문 2열(왼쪽 `clamp(400px, 42vw, 860px)`, 720에서는 36vw). 두 열 `min-height: 0`. `.screen__sticky-footer`와 하단 고정 CTA 제거.
   2. 각 화면을 왼쪽/오른쪽 슬롯으로 나눈다. 구현 방식: 각 Screen 컴포넌트가 `{ left, right }` 두 노드를 돌려주거나(`renderSplit`), App이 슬롯 prop으로 받는다 — 한 방식으로 통일. 6절 표대로 배치. 명패는 무대 안 좌상단 pill(testid `nameplate` 유지).
+  2a. (검토 반영, 2026-09-19) DISCUSS: 추천 문구 6장(`phrase-card-*`)을 오른쪽 열 "비서실장 추천 문구" 패널(2×3, 56px)로 옮긴다. 클릭 동작·testid·선택 상태는 그대로. 왼쪽은 입력창 3줄 + 조건 칩 한 줄 + [비서실장][의견 전달]만 둔다. REACTIONS: `followup-open-editor`를 열면 빠른 답 3개(`followup-option-*`)가 있던 자리를 입력창·글자 수·조건 칩이 대체하고, 닫으면 빠른 답이 돌아온다(빠른 답은 DOM에서 숨김, 상태는 유지). `.discuss-screen__scroll`·`.reactions-screen__scroll` 내부 스크롤은 제거한다. 무대 열 폭은 1080에서 40vw.
   3. 타이포 토큰을 6절 값으로 갱신. 추천 문구 카드 720에서 48px 허용.
   4. 넘치는 내용 처리: 근거 카드는 제목+해석(720은 해석만, 원문은 카드 클릭 시 같은 자리에서 토글), 내 발언 인용 2줄 클램프, 결과 기록 패널 하나만 내부 스크롤(페이드 표시). 비서실장 패널은 오른쪽 열 위에 겹치는 드로어(`position: absolute`, 열 안), 열면 오른쪽 정보를 덮고 닫으면 복귀. `assistant-toggle`·`assistant-panel` testid 유지.
   5. E2E: `e2e/noscroll.spec.ts` 신규 — 두 프로젝트(1080·720)에서 ATTRACT→RESULT 전 단계를 진행하며 각 단계에서 `scrollHeight <= clientHeight + 1` 단언(비서실장 드로어 열린 상태 포함). 기존 e2e의 스크롤·푸터 단언 갱신. 스크린샷 갱신.
