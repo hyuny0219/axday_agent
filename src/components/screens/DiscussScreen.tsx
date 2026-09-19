@@ -6,11 +6,14 @@
 // AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
 // (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
 // AssistantPanel에 추가로 넘긴다.
-// T45(조종석 배치): 왼쪽 열(app-body__actions)은 내 행동 전부 — 추천 문구·입력창·조건
-// 칩·[비서실장][의견 전달]. 오른쪽 열(app-body__content)은 회의 정보 — 근거 2×2 +
-// 임원 첫 의견. AssistantPanel은 토글은 왼쪽에 남고, 열렸을 때의 드로어 본문은
-// assistant.css가 오른쪽 열 위에 절대 위치로 겹쳐 그린다(position:absolute, DOM은
-// 그대로 왼쪽 트리 안이지만 .app-body가 위치 기준점이다).
+// T45(조종석 배치): 왼쪽 열(app-body__actions)은 내 행동만 — 입력창·조건 칩(한 줄)·
+// [비서실장][의견 전달]. 오른쪽 열(app-body__content)은 회의 정보 — "비서실장 추천
+// 문구" 2×3 + 근거 2×2(압축) + 임원 첫 의견(2026-09-19 T45 검토 반영: 세로 예산을
+// 넘기지 않도록 추천 문구를 오른쪽으로 옮겼다, DESIGN_SPEC.md v1.0 6절 2a). 추천 문구는
+// 오른쪽 열로 옮겨도 클릭 동작·testid(phrase-card-*)·선택 상태는 그대로다. AssistantPanel은
+// 토글이 왼쪽에 남고, 열렸을 때의 드로어 본문은 assistant.css가 오른쪽 열 위에 절대
+// 위치로 겹쳐 그린다(position:absolute, DOM은 그대로 왼쪽 트리 안이지만 .app-body가
+// 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -174,40 +177,22 @@ export function DiscussScreen({
   return (
     <>
       <div className="app-body__actions screen discuss-screen">
-        {/* 추천 문구+내 발언 묶음만 내부 스크롤한다(화면당 유일한 스크롤 패널,
-            DESIGN_SPEC.md v1.0 6절) — [비서실장][의견 전달] 행은 밖에 그대로 둬
-            항상 보이고 늘 닿을 수 있게 한다. */}
-        <div className="discuss-screen__scroll">
-          <div className="discuss-screen__phrases">
-            <h3 className="discuss-screen__section-label">추천 문구 (여러 개 선택 가능)</h3>
-            <div className="discuss-screen__phrase-list">
-              {scenario.phrases.map((phrase) => (
-                <PhraseCard
-                  key={phrase.id}
-                  phrase={phrase}
-                  selected={draft.selectedPhraseIds.includes(phrase.id)}
-                  onToggle={() => handleTogglePhrase(phrase.id)}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="discuss-screen__editor">
-            <h3 className="discuss-screen__section-label discuss-screen__section-label--mine">
-              <Avatar memberId="PARTICIPANT" size="sm" />내 발언
-            </h3>
-            {pendingPhraseId !== null && (
-              <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />
-            )}
-            <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
-            <ConditionChips
-              scenario={scenario}
-              proposedIds={proposedConditionIds}
-              acceptedIds={acceptedConditionIds}
-              conflictPairs={conflictPairs}
-              showNoMatchHint={showNoMatchHint}
-              onToggle={handleToggleCondition}
-            />
-          </div>
+        <div className="discuss-screen__editor">
+          <h3 className="discuss-screen__section-label discuss-screen__section-label--mine">
+            <Avatar memberId="PARTICIPANT" size="sm" />내 발언
+          </h3>
+          {pendingPhraseId !== null && (
+            <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />
+          )}
+          <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
+          <ConditionChips
+            scenario={scenario}
+            proposedIds={proposedConditionIds}
+            acceptedIds={acceptedConditionIds}
+            conflictPairs={conflictPairs}
+            showNoMatchHint={showNoMatchHint}
+            onToggle={handleToggleCondition}
+          />
         </div>
         <div className="discuss-screen__submit-row screen__submit-row">
           <AssistantPanel
@@ -236,7 +221,22 @@ export function DiscussScreen({
         </p>
       </div>
       <div className="app-body__content screen discuss-screen__info">
-        <EvidenceGrid evidence={scenario.evidence} />
+        <div className="discuss-screen__phrases">
+          <h3 className="discuss-screen__section-label">비서실장 추천 문구 (여러 개 선택 가능)</h3>
+          <div className="discuss-screen__phrase-list">
+            {scenario.phrases.map((phrase) => (
+              <PhraseCard
+                key={phrase.id}
+                phrase={phrase}
+                selected={draft.selectedPhraseIds.includes(phrase.id)}
+                onToggle={() => handleTogglePhrase(phrase.id)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="discuss-screen__evidence">
+          <EvidenceGrid evidence={scenario.evidence} />
+        </div>
         <div className="discuss-screen__execs" data-testid="discuss-exec-row">
           {scenario.initialOpinions.map((opinion) => (
             <article key={opinion.memberId} className="discuss-exec-card">

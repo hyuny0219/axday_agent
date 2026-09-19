@@ -64,16 +64,14 @@
   overflow: hidden;
 }
 
-/* 추천 문구+내 발언 묶음(화면당 유일한 내부 스크롤 후보, v1.0 6절). 1080에서는
-   대개 예산 안에 다 들어가 사실상 스크롤이 없고, 조건 칩까지 여러 개 펼쳐지면
-   이 영역만 스크롤한다 — [비서실장][의견 전달] 행은 형제로 밖에 있어 항상 보인다. */
-.discuss-screen__scroll {
+/* 추천 문구 패널(2026-09-19 T45 검토 반영: 오른쪽 "회의 정보" 열로 옮겼다,
+   DESIGN_SPEC.md v1.0 6절 2a). 내부 스크롤은 두지 않는다 — 왼쪽 열의 입력·CTA가
+   화면당 유일한 스크롤 후보 자리를 대신 쓰지 않으므로 오른쪽 열도 세로 예산 안에서
+   그대로 보여야 한다. */
+.discuss-screen__phrases {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  gap: 4px;
 }
 
 /* 추천 문구 6개는 2열로 감싼다(DESIGN_SPEC.md v1.0 6절 표 "추천 문구 2×3"). */
@@ -81,6 +79,19 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
+}
+
+/* 근거 카드 압축(v1.0 6절 표 "근거 2×2 압축"): 오른쪽 열에 추천 문구·임원 의견과
+   함께 세 블록이 들어가야 해서 evidence.css의 기본 패딩·줄 수보다 더 줄인다. */
+.discuss-screen__evidence .evidence-card {
+  padding: var(--space-1);
+}
+
+.discuss-screen__evidence .evidence-card__insight {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 내 발언 영역: 시안 왼쪽 4px 경계로 참가자 좌석임을 표시한다(DESIGN_SPEC.md
@@ -345,10 +356,6 @@
     text-overflow: ellipsis;
   }
 
-  .discuss-screen__scroll {
-    gap: 4px;
-  }
-
   .discuss-screen__phrases {
     display: flex;
     flex-direction: column;
@@ -409,9 +416,8 @@
   }
 
   /* 조건 칩은 56px 터치 목표를 그대로 유지한다(예외 없음) — 대신 라벨 폭을
-     줄여(ellipsis) 한 줄에 더 들어가게 한다. 넘치는 내용은 .discuss-screen__scroll
-     (추천 문구+내 발언 묶음 전체)이 하나로 스크롤한다(화면당 유일한 스크롤 패널,
-     v1.0 6절). 전체 라벨은 오른쪽 열·MOTION 화면에서 다시 확인할 수 있다. */
+     줄여(ellipsis) 한 줄에 더 들어가게 한다. 내부 스크롤은 두지 않는다(v1.0 6절
+     2a) — 전체 라벨은 오른쪽 열·MOTION 화면에서 다시 확인할 수 있다. */
   .condition-chip {
     min-height: var(--touch-min);
     max-width: 112px;

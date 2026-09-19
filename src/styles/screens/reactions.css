@@ -105,17 +105,13 @@
   padding: var(--space-2);
 }
 
-/* 빠른 답·직접 답하기·조건 칩 묶음(화면당 유일한 내부 스크롤 후보, v1.0 6절).
-   1080에서는 내용이 예산 안에 다 들어가 사실상 스크롤이 없고, 720에서 빠른 답 +
-   직접 답하기 + 조건 칩을 모두 펼치면 이 영역만 스크롤한다 — [비서실장][답변
-   전달] 행은 형제로 밖에 있어 항상 보인다. */
-.reactions-screen__scroll {
+/* 빠른 답 ↔ 직접 답하기가 같은 자리에서 전환하는 슬롯(2026-09-19 T45 검토 반영
+   2a). 내부 스크롤은 두지 않는다 — [비서실장][답변 전달] 행은 형제로 밖에 있어
+   항상 보인다. */
+.reactions-screen__answer {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .reactions-screen__submit-row {
@@ -152,6 +148,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+}
+
+.reactions-screen__options[hidden] {
+  display: none;
 }
 
 /* secondary 버튼: 투명 패널 + 테두리(DESIGN_SPEC.md 4장 "secondary는 투명
@@ -207,29 +207,33 @@
 }
 
 /* 직접 답하기는 기본 접힘이며, 열어야 textarea·글자 수·조건 칩이 나타난다(T40
-   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). */
+   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). 빠른 답과 같은
+   자리를 나눠 쓰므로(hidden 속성) [hidden]이면 그리지 않는다. */
 .reactions-screen__editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   padding: var(--space-1) var(--space-2);
 }
 
-.reactions-screen__editor-toggle {
-  cursor: pointer;
-  color: var(--text);
-  font-family: inherit;
-  list-style: none;
-}
-
-.reactions-screen__editor-toggle::-webkit-details-marker {
+.reactions-screen__editor[hidden] {
   display: none;
 }
 
-.reactions-screen__editor-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+/* 빠른 답 ↔ 직접 답하기 전환 버튼. 기본 버튼 배경·테두리를 지워 이전 <summary>
+   링크처럼 보이게 한다. */
+.reactions-screen__editor-toggle {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: var(--fs-meta);
 }
 
 .reactions-screen__direct-label {

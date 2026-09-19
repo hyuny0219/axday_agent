@@ -40,10 +40,12 @@
   --fs-card: 18px;
   --fs-meta: 14px;
 
-  /* 왼쪽 무대 열 폭(v1.0 6절): 1080에서 clamp(400px,42vw,860px). .app-body의
-     grid-template-columns와 AssistantPanel 드로어(오른쪽 열 위 겹침)가 같은 값을
-     공유해, 무대 열 폭이 바뀌어도 드로어가 오른쪽 열을 정확히 덮게 한다. */
-  --stage-col-width: clamp(400px, 42vw, 860px);
+  /* 왼쪽 무대 열 폭(v1.0 6절, 2026-09-19 T45 검토 반영): 1080에서
+     clamp(400px,40vw,860px) — 오른쪽 열에 추천 문구 패널이 늘어난 만큼 왼쪽 열
+     세로 예산(무대 높이)을 줄여 균형을 맞춘다. .app-body의 grid-template-columns와
+     AssistantPanel 드로어(오른쪽 열 위 겹침)가 같은 값을 공유해, 무대 열 폭이
+     바뀌어도 드로어가 오른쪽 열을 정확히 덮게 한다. */
+  --stage-col-width: clamp(400px, 40vw, 860px);
   /* .app-body의 두 열 사이 column-gap과 같은 값(AssistantPanel 드로어가 오른쪽 열
      왼쪽 경계를 계산할 때도 같이 쓴다, assistant.css). */
   --stage-col-gap: var(--space-3);
