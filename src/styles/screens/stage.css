@@ -73,7 +73,9 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 200px;
+  /* 무대 폭의 22%: 좌석 4개(14.5·39.5·63·87.5%)가 서로 겹치지 않고 양 끝이 무대 안에
+     든다(3.5%~98.5%). 말풍선은 이 폭 안에서만 늘어난다(v1.0 다듬기). */
+  width: 22%;
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -159,20 +161,41 @@
   top: 8%;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 220px;
-  padding: 6px 10px;
-  border-radius: var(--radius-control);
-  background-color: rgba(15, 42, 72, 0.92);
-  border: 1px solid var(--border);
-  color: var(--text);
+  width: max-content;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background-color: var(--text);
+  border: 0;
+  color: #071a2b;
   font-size: 13px;
-  line-height: 1.3;
-  text-align: center;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   animation: stage-bubble-in 200ms ease-out both;
+}
+
+/* 말풍선 꼬리: 캐릭터 머리를 향해 아래로. */
+.stage-band__bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--text);
+  border-bottom: 0;
 }
 
 .stage-band__bubble--participant {
   top: 60%;
+  background-color: var(--accent);
+  color: #03101f;
+}
+
+.stage-band__bubble--participant::after {
+  border-top-color: var(--accent);
 }
 
 @keyframes stage-bubble-in {
@@ -187,9 +210,18 @@
   }
 }
 
+.stage-band__bubble--pending,
 .stage-band__bubble--waiting {
+  background-color: rgba(15, 42, 72, 0.92);
+  border: 1px dashed var(--border);
   color: var(--text-muted);
   font-style: normal;
+  box-shadow: none;
+}
+
+.stage-band__bubble--pending::after,
+.stage-band__bubble--waiting::after {
+  border-top-color: rgba(15, 42, 72, 0.92);
 }
 
 .stage-band__dots {
@@ -325,13 +357,9 @@
 }
 
 @media (max-width: 1280px) {
-  .stage-band__seat {
-    width: 150px;
-  }
-
   .stage-band__bubble {
-    max-width: 160px;
-    font-size: 12px;
+    font-size: 11px;
+    padding: 5px 8px;
   }
 
   .stage-band__nameplate {
