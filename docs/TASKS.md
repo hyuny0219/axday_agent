@@ -32,6 +32,7 @@
 | T41 | 대기 | P1 착수 전 회의록 타임라인(v0.9 B안) |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
+| T44 | 진행중 | v1.0 무대 좌우 분할(인물 안 잘림, 접힘 제거, 본문 2열 대응) |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
 
@@ -488,3 +489,18 @@
 - 하지 말 것: reducer·조건·표결 규칙 변경. 서버 변경. 무대에 읽어야 할 정보를 단독으로 두는 것(본문 블록 중복 유지). setTimeout으로 연출 타이밍 구현. 무입력 타이머에 무대 동작이 영향 주는 것.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1280×720에서 무대 접힌 상태로 모든 화면의 하단 CTA가 보임. RESULT 도장이 1초 안에 찍히고 클릭으로 즉시 완료됨.
 - 크기: L.
+
+## T44 v1.0 무대 좌우 분할
+
+- 목표: 상단 무대 띠를 좌우 분할 레이아웃으로 바꾼다. 왼쪽 고정 무대(원본 16:9, 인물 안 잘림), 오른쪽 본문 스크롤. 1280 좌석 띠·펼치기 토글은 제거한다. 무대 상태·말풍선·배지 규칙과 결과 연출은 그대로다.
+- 읽을 것: docs/design/DESIGN_SPEC.md "v1.0 애니메이션 프레임" 5절(좌우 분할 개정)·1절. `src/app/App.tsx`(AppShell), `src/components/parts/StageBand.tsx`, `src/styles/screens/stage.css`, `src/styles/screens/shell.css`, `src/styles/screens/briefing.css`, `src/styles/screens/opinions.css`, `src/styles/screens/discuss.css`, `src/styles/screens/result.css`, `src/components/screens/BriefingScreen.tsx`, `src/components/screens/ResultScreen.tsx`(도장), `e2e/stage.spec.ts`, `e2e/screenshots.spec.ts`.
+- 만들 것:
+  1. `App.tsx` AppShell: SELECT 이후 `.app-body` 2열 그리드(무대 열 + 본문 열). 무대 열은 sticky. ATTRACT·SELECT는 기존 1열.
+  2. `StageBand`: 접힘 상태·`stage-expand` 버튼·좌석 띠 마크업과 CSS 제거. `stage-band-full` testid는 유지(무대 컨테이너). 말풍선 위치를 머리 위 하늘 여백(상단 0~28%)으로, 좌석별 `left`는 기존 값 유지. '나' 말풍선은 테이블 위 중앙. 벽시계 pill(남은 시간, 헤더 Timer와 같은 clock)을 무대 우상단에 추가(장식, aria-hidden 유지).
+  3. 본문 2열 대응 CSS: 브리핑 자료 카드 2열 + 쟁점 세로, 1280에서 자료 카드 `details` 접힘(기본 접힘, testid·문구 유지, `chair-briefing`·`briefing-issues`·`condition-preview` 가시). 추천 문구 2열. OPINIONS·DISCUSS 임원 카드 2열. 결과 5석 카드 3+2 wrap(1280은 2+2+1). 하단 고정 CTA는 본문 열 안에서 그대로 동작.
+  4. 도장(`result-stamp`)을 무대 열 우하단에 겹쳐 찍는다(StageBand가 `stampText`를 prop으로 받거나 App이 포털 없이 무대 열 안에 렌더). 순차 배지·게이지·건너뛰기 규칙 유지.
+  5. 720 e2e를 "좌석 띠로 접힘"에서 "무대가 왼쪽 열에 보이고 CTA가 가려지지 않음"으로 갱신. 1280×720에서 반응·표결·결과 화면의 하단 CTA와 비서실장 토글이 스크롤 없이 보이는 단언 추가. 스크린샷 갱신.
+- 허용 경로: `src/app/App.tsx`, `src/components/`, `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: reducer·조건·표결 규칙·단계 변경. 서버 변경. 무대에 읽어야 할 정보를 단독으로 두는 것. setTimeout 연출. testid·문구 삭제.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1920×1080에서 반응·표결·결과가 스크롤 없이 한 화면. 1280×720에서 무대 폭 40%·CTA 가시.
+- 크기: M.
