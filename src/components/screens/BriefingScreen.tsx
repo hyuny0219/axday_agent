@@ -42,6 +42,9 @@ export function BriefingScreen({ scenario, onSummaryShown, onNext }: BriefingScr
         </button>
       </div>
       <div className="app-body__content screen briefing-screen__info">
+        <p className="briefing-screen__incident" data-testid="briefing-incident">
+          {scenario.incident.caseLabel} · {scenario.incident.headline}
+        </p>
         <h2 className="briefing-screen__motion">{scenario.originalMotion.text}</h2>
         <div className="chair-briefing" data-testid="chair-briefing">
           <p className="chair-briefing__situation">{scenario.chairBriefing.situation}</p>

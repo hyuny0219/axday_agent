@@ -125,4 +125,25 @@ describe('aiAssistantScenario', () => {
     expect(scenario.voteRules.CAIO).toHaveLength(3);
     expect(scenario.voteRules.CISO).toHaveLength(4);
   });
+
+  const NUMERIC_COPY_PATTERN = /%|절감/;
+
+  it('incident 3필드가 비어 있지 않고 수치 표현이 없다', () => {
+    expect(scenario.incident.caseLabel.length).toBeGreaterThan(0);
+    expect(scenario.incident.headline.length).toBeGreaterThan(0);
+    expect(scenario.incident.hook.length).toBeGreaterThan(0);
+    expect(scenario.incident.caseLabel).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(scenario.incident.headline).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(scenario.incident.hook).not.toMatch(NUMERIC_COPY_PATTERN);
+  });
+
+  it('resultCopy.sixMonthsLater 3필드가 비어 있지 않고 수치 표현이 없다', () => {
+    const { pass, hold, reject } = scenario.resultCopy.sixMonthsLater;
+    expect(pass.length).toBeGreaterThan(0);
+    expect(hold.length).toBeGreaterThan(0);
+    expect(reject.length).toBeGreaterThan(0);
+    expect(pass).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(hold).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(reject).not.toMatch(NUMERIC_COPY_PATTERN);
+  });
 });

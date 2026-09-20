@@ -25,11 +25,17 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await expectNoPageScroll(page, 'SELECT');
+  // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
+  await expect(
+    page.getByTestId('scenario-card-ai-assistant').locator('.scenario-card__title'),
+  ).toBeInViewport();
 
   await page.getByTestId('scenario-card-ai-assistant').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
+  // 사건 표기 eyebrow(T47): 안건 제목 위 한 줄이 잘리지 않고 보인다.
+  await expect(page.getByTestId('briefing-incident')).toBeInViewport();
   // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
   // (무대·행동·회의록)이 잘리지 않는다.
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
@@ -107,6 +113,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByTestId('confirm-vote').click();
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expectNoPageScroll(page, 'RESULT');
+  // "6개월 뒤" 에필로그(T47): 왼쪽 열 게이지 아래·CTA 위, 잘리지 않고 보인다.
+  await expect(page.getByTestId('result-epilogue')).toBeInViewport();
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을

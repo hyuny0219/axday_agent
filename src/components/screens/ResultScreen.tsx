@@ -124,6 +124,15 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         ? scenario.resultCopy.reject
         : scenario.resultCopy.hold;
 
+  const epilogueText =
+    session.outcome === 'PASS'
+      ? scenario.resultCopy.sixMonthsLater.pass
+      : session.outcome === 'REJECT'
+        ? scenario.resultCopy.sixMonthsLater.reject
+        : session.outcome === 'HOLD'
+          ? scenario.resultCopy.sixMonthsLater.hold
+          : null;
+
   return (
     <>
       <div className="app-body__actions screen result-screen__actions">
@@ -131,6 +140,15 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
           <p className="result-screen__gauge" data-testid="result-gauge">
             내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
           </p>
+        )}
+        {epilogueText !== null && (
+          <section className="result-epilogue" data-testid="result-epilogue">
+            <div className="result-epilogue__header">
+              <h3 className="result-epilogue__heading">6개월 뒤</h3>
+              <span className="result-epilogue__badge">체험용 가상 전망</span>
+            </div>
+            <p className="result-epilogue__text">{epilogueText}</p>
+          </section>
         )}
         <button type="button" className="cta" onClick={onReset} data-testid="end-session">
           체험 종료

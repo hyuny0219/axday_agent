@@ -89,13 +89,25 @@
   cursor: not-allowed;
 }
 
+/* 사건 번호 칩(T47): "안건 ①" 카운터 아래·헤드라인 위에 짧게 표시한다. */
+.scenario-card__case {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .scenario-card__title {
   margin: 0 0 var(--space-1);
   font-size: var(--fs-body);
   font-weight: 700;
 }
 
-.scenario-card__subtitle {
+/* 갈등 한 줄(hook, T47): 자료 E1~E4에 있는 사실만 담은 문장. 예전 subtitle(원안
+   문장) 자리를 대신한다. */
+.scenario-card__hook {
   margin: 0;
   color: var(--text-muted);
   font-size: var(--fs-card);

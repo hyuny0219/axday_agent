@@ -93,10 +93,27 @@ export interface VoteRule {
   vote: Vote;
 }
 
+/** "6개월 뒤" 에필로그(v1.0 T47). 결과 화면 왼쪽 열, '체험용 가상 전망' 배지와 함께
+ * 쓴다. 수치·비율·금액 없이 상태만 묘사한다(SCENARIO_AI_ASSISTANT.md). */
+export interface SixMonthsLaterCopy {
+  pass: string;
+  hold: string;
+  reject: string;
+}
+
 export interface ResultCopy {
   pass: string;
   hold: string;
   reject: string;
+  sixMonthsLater: SixMonthsLaterCopy;
+}
+
+/** 안건 사건화 문구(v1.0 T47). SELECT 카드와 BRIEFING 상단 eyebrow에 쓴다. 자료
+ * E1~E4에 있는 사실만 쓰고 새 수치를 만들지 않는다. */
+export interface Incident {
+  caseLabel: string;
+  headline: string;
+  hook: string;
 }
 
 export type ScenarioStatus = 'active' | 'preparing';
@@ -106,6 +123,7 @@ export interface Scenario {
   title: string;
   selectLine: string;
   subtitle: string;
+  incident: Incident;
   originalMotion: Motion;
   evidence: EvidenceCard[];
   briefingSummary: BriefingSummary;
