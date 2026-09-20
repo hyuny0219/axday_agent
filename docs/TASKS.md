@@ -31,6 +31,7 @@
 | T40 | 완료 | P0.5 후속 단순화(v0.9 A-2) — CAIO 질문 귀속·답글형 반응·직접 입력 접기·빠른 답만으로 완료. PR #4 Codex 검토 3건 반영(live 답글형·답변 전 조건 칩 숨김·입력 유지 시 칩 유지) |
 | T41 | 완료 | 회의록 패널(v1.0 7절, v0.9 B안 재정의: 스크롤 통합 대신 무대 아래 창 고정 패널·roundLog). 1라운드 PASS(nit: 내 항목 시안 테두리 반영). PR #7 Codex 검토 2건 반영(행 aria-atomic·text 변경 낭독, 판단 중 상태 문구 노출). 단위 280·E2E 74 |
 | T46 | 완료 | live 후속 라운드 대기 게이트(MOTION CTA, v1.0 7절). 1라운드 PASS. PR #7 Codex 검토 1건 반영(게이트를 세션 상태에서 동기 계산해 MOTION 첫 프레임부터 잠금) |
+| T47 | 진행 | 안건 사건화 문구·"6개월 뒤" 에필로그(v1.0 8절, 카피 보강) |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
@@ -470,6 +471,21 @@
 - 허용 경로: `src/app/App.tsx`, `src/components/screens/MotionScreen.tsx`, `src/styles/screens/motion.css`, `tests/`, `e2e/`.
 - 하지 말 것: reducer·runner의 사슬·시간 예산 변경. 벽시계 타이머로 CTA 열기. 서버 변경.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. live E2E에서 후속 제출 직후 CTA 비활성 → 라운드 도착 후 활성.
+- 크기: S.
+
+## T47 안건 사건화 문구와 "6개월 뒤" 에필로그 (v1.0 8절)
+
+- 목표: 안건 선택 카드를 사건 헤드라인으로, 브리핑 상단에 사건 표기를, 결과 화면에 결과별 "6개월 뒤" 에필로그를 넣는다. 규칙·수치는 그대로이고 문구는 전부 시나리오 데이터에서 읽는다.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 8절(전부), docs/SCENARIO_AI_ASSISTANT.md "사건화 문구"·"결과와 AI 효율 체험"의 6개월 뒤 항목(문구 원문 — 그대로 쓴다). `src/content/types.ts`, `src/content/scenarios/aiAssistant.ts`, `src/content/scenarios/index.ts`(preparing placeholder), `src/components/screens/SelectScreen.tsx`·`BriefingScreen.tsx`·`ResultScreen.tsx`와 대응 CSS, `tests/content/aiAssistant.test.ts`, `e2e/noscroll.spec.ts`, `e2e/screenshots.spec.ts`.
+- 만들 것:
+  1. 타입: `Scenario.incident: { caseLabel: string; headline: string; hook: string }`, `ResultCopy.sixMonthsLater: { pass: string; hold: string; reject: string }`. aiAssistant 데이터는 시나리오 문서의 문구 그대로. preparing placeholder는 headline = title, hook = "준비 중인 안건입니다.", sixMonthsLater는 빈 문자열 3개.
+  2. SelectScreen 카드: 사건 번호 칩(`scenario-card__case`) + 헤드라인(h3, 기존 `scenario-card__title` 클래스 유지) + hook(p). 원안 문장(subtitle)은 카드에서 제거. testid `scenario-card-{id}`·"이사회 입장" 흐름 불변. 준비 중 배지 유지.
+  3. BriefingScreen: 안건 제목(`briefing-screen__motion`) 위에 `<p data-testid="briefing-incident">사건 02 · {headline}</p>` 한 줄(메타 서체, 시안 강조). 720 예산 안.
+  4. ResultScreen 왼쪽 열: 게이지 아래·"체험 종료" 위에 `<section data-testid="result-epilogue">` — 머리글 "6개월 뒤", 배지 "체험용 가상 전망", outcome별 문구(3줄 클램프). outcome이 null이면 렌더하지 않는다.
+  5. 테스트: `tests/content/aiAssistant.test.ts`에 incident 3필드·sixMonthsLater 3필드 비어 있지 않음과 그 문구들에 `%`·"절감" 같은 수치 표현이 없음을 단언. E2E: `e2e/noscroll.spec.ts` scripted 케이스에 SELECT 카드 헤드라인 가시, BRIEFING `briefing-incident` 가시, RESULT `result-epilogue`가 뷰포트 안(두 해상도, 페이지 스크롤 없음 유지). 스크린샷 갱신(`UPDATE_SCREENSHOTS=1`).
+- 허용 경로: `src/content/`, `src/components/screens/SelectScreen.tsx`, `src/components/screens/BriefingScreen.tsx`, `src/components/screens/ResultScreen.tsx`, `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: 표결 규칙·조건·자료 수치 변경. 새 수치·비율·금액 문구. 화면에 문구 하드코딩(시나리오 데이터에서만). 기존 testid 삭제. 페이지·패널 스크롤 추가.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 스크린샷의 select·briefing·result에서 새 요소가 잘리지 않음.
 - 크기: S.
 
 ## T42 v1.0 애니메이션 프레임 스킨
