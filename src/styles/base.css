@@ -46,14 +46,18 @@ h1,
 
 /* prefers-reduced-motion에서 화면 전환 이동·선택 애니메이션·임원 발언 glow를 모두
    제거한다(DESIGN_SPEC.md 4장 "prefers-reduced-motion에서 이동·빛 효과 제거"). 개별
-   컴포넌트마다 예외를 두지 않고 전역에서 지속 시간을 0에 가깝게 만들어 확실히 없앤다. */
+   컴포넌트마다 예외를 두지 않고 전역에서 지속 시간을 0에 가깝게 만들어 확실히 없앤다.
+   animation-delay도 0으로 — 결과 배지·도장은 fill-mode both로 지연 동안 숨겨져 있어,
+   지연을 남기면 reduced-motion 사용자가 결과를 늦게 본다(PR #6 Codex 검토). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }

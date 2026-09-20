@@ -50,7 +50,7 @@ const SEAT_LEFT_PERCENT: Record<ExecMemberId, number> = {
   CISO: 87.5,
 };
 
-type BubbleKind = 'speech' | 'pending' | 'waiting' | 'none';
+type BubbleKind = 'speech' | 'pending' | 'none';
 
 interface SeatOverlay {
   bubbleKind: BubbleKind;
@@ -104,6 +104,11 @@ function execSeatOverlay(
       if (status === 'answered' && statement) {
         return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(statement.text), dimmed: false };
       }
+      if (status === 'failed') {
+        // 응답 실패는 본문 카드(LiveStatementCards "응답 지연·확인 필요")가 전담한다.
+        // 무대(aria-hidden)에서 판단 중으로 보이게 두면 상태가 어긋난다(PR #6 Codex 검토).
+        return { bubbleKind: 'none', bubbleText: '', dimmed: true };
+      }
       return { bubbleKind: 'pending', bubbleText: '', dimmed: false };
     }
 
@@ -121,10 +126,8 @@ function execSeatOverlay(
     return { bubbleKind: 'none', bubbleText: '', dimmed: true };
   }
 
-  if (stage === 'VOTE') {
-    return { bubbleKind: mode === 'live' ? 'pending' : 'waiting', bubbleText: '', dimmed: false };
-  }
-
+  // VOTE: 말풍선 없음. 임원 판단 대기 상태는 본문(vote-waiting-execs)이 접근 가능하게
+  // 알리고, 무대는 장식으로만 남긴다(PR #6 Codex 검토: aria-hidden 층에만 있는 상태 금지).
   return NONE_OVERLAY;
 }
 
@@ -239,8 +242,6 @@ export function StageBand({
                       <span />
                       <span />
                     </span>
-                  ) : overlay.bubbleKind === 'waiting' ? (
-                    '대기'
                   ) : (
                     overlay.bubbleText
                   )}
