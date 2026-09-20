@@ -236,16 +236,21 @@
    Fragment로 평평하게 펼쳐져 .app-body의 직계 grid item이 된다 — React Fragment는
    DOM에 별도 wrapper를 만들지 않기 때문이다. position:relative는 AssistantPanel
    드로어(오른쪽 열 위에 겹치는 절대위치 패널)의 위치 기준점이다. */
+/* 네 번째 grid area(minutes, DESIGN_SPEC.md v1.0 7절 "회의록 패널"·T41): 무대·행동
+   아래 왼쪽 열 세 번째 줄에 회의록 패널을 둔다. BRIEFING·OPINIONS·MOTION·VOTE에서만
+   AppShell이 .app-body__minutes를 렌더하고, 나머지 단계(DISCUSS·REACTIONS·RESULT)는
+   그 grid area가 비어 있는 채로 남는다(각 Screen 컴포넌트는 바꾸지 않는다). */
 .app-body {
   flex: 1;
   min-height: 0;
   position: relative;
   display: grid;
   grid-template-columns: var(--stage-col-width) 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   grid-template-areas:
     'stage info'
-    'actions info';
+    'actions info'
+    'minutes info';
   column-gap: var(--stage-col-gap);
   row-gap: var(--space-2);
   padding: var(--space-2) var(--space-4) var(--space-3);
@@ -272,6 +277,17 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+/* 회의록 패널 grid item(v1.0 7절, T41). BRIEFING·OPINIONS·MOTION·VOTE에서만 AppShell이
+   렌더한다(minutes.css의 .minutes가 실제 카드·스크롤 금지 스타일을 담당). 이 grid
+   item은 세 번째 줄(1fr)을 그대로 채우고, 안의 .minutes가 flex:1로 그 높이를
+   다시 채운다 — 페이지·패널 스크롤 없이 남은 세로 공간 안에서만 항목이 보인다. */
+.app-body__minutes {
+  grid-area: minutes;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 오른쪽 열: 회의 정보(안건·근거·쟁점·임원 의견·반응·결과 기록). 화면당 내부 스크롤
@@ -311,8 +327,9 @@
     grid-template-areas:
       'stage'
       'actions'
+      'minutes'
       'info';
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
   }
 
   .app-body__content {

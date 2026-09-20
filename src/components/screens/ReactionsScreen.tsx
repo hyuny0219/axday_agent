@@ -28,6 +28,7 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
+import { reactionsFor } from '../reactionsFor';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
@@ -147,18 +148,6 @@ export function ReactionsScreen({
   // 막는다. ConditionChips가 같은 목록으로 안내 문구를 보여준다.
   const canSubmit =
     textValue.trim() !== '' && textValue.length <= DRAFT_MAX_LENGTH && conflictPairs.length === 0;
-
-  function reactionsFor(memberId: (typeof EXEC_MEMBER_ORDER)[number]) {
-    if (previousConfirmedIds.length === 0) {
-      return scenario.reactions.filter(
-        (reaction) => reaction.memberId === memberId && reaction.conditionId === 'none',
-      );
-    }
-    return scenario.reactions.filter(
-      (reaction) =>
-        reaction.memberId === memberId && previousConfirmedIds.includes(reaction.conditionId),
-    );
-  }
 
   function handleSelectOption(index: number) {
     const option = scenario.followUp.options[index];
@@ -315,7 +304,7 @@ export function ReactionsScreen({
         ) : (
           <ul className="reactions-screen__replies">
             {EXEC_MEMBER_ORDER.map((memberId) => {
-              const reactions = reactionsFor(memberId);
+              const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
               const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
               const changed = reactions.length > 0;
               return (

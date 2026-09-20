@@ -153,6 +153,41 @@ describe('runner.runRound', () => {
     }
   });
 
+  it('SET_ROLE_STATUS dispatch는 pending·결과 두 시점 모두 stage를 싣는다(회의록 패널 roundLog, T41)', async () => {
+    const clock = fakeClock(0);
+    const store = createStore(toOpinionsStage(clock), clock);
+    const adapter = fakeAdapter({
+      initialOpinions: async () =>
+        EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => {
+          if (roleId === 'CAIO') {
+            return { roleId, status: 'failed', failReason: 'timeout' };
+          }
+          return { roleId, status: 'answered', statement: answeredStatement(roleId) };
+        }),
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    await orchestrator.runRound('OPINIONS');
+
+    const roleStatusActions = store.dispatched.filter(
+      (action): action is Extract<SessionAction, { type: 'SET_ROLE_STATUS' }> =>
+        action.type === 'SET_ROLE_STATUS',
+    );
+    // pending 4건(라운드 시작) + 결과 4건(응답 반영) = 8건, 모두 stage:'OPINIONS'를 싣는다.
+    expect(roleStatusActions).toHaveLength(8);
+    expect(roleStatusActions.every((action) => action.stage === 'OPINIONS')).toBe(true);
+    const caioResult = roleStatusActions.find(
+      (action) => action.roleId === 'CAIO' && action.status === 'failed',
+    );
+    expect(caioResult?.stage).toBe('OPINIONS');
+  });
+
   it('1명만 실패로 응답하면 그 역할만 failed로 남고 나머지 3명 발언만 반영한다', async () => {
     const clock = fakeClock(0);
     const store = createStore(toOpinionsStage(clock), clock);
@@ -309,6 +344,39 @@ describe('runner.runRound', () => {
     expect(session.stage).toBe('RESULT');
     expect(session.transcript.statements).toHaveLength(0);
     expect(reactionsCalls).toBe(0);
+  });
+
+  it('runRound promise가 어댑터 응답 뒤에 settle된다(T46 후속 대기 게이트가 기대는 보장)', async () => {
+    const clock = fakeClock(0);
+    const store = createStore(toOpinionsStage(clock), clock);
+    const pending = deferred<StatementOutcome[]>();
+    let settled = false;
+    const adapter = fakeAdapter({ initialOpinions: () => pending.promise });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    const roundPromise = orchestrator.runRound('OPINIONS').then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    // 어댑터가 아직 응답하지 않았으면 promise도 settle되지 않는다.
+    expect(settled).toBe(false);
+
+    pending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: answeredStatement(roleId),
+      })),
+    );
+    await roundPromise;
+    expect(settled).toBe(true);
   });
 
   it('scripted 어댑터는 지연 없이 즉시 발언을 반영한다', async () => {
