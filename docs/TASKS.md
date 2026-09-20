@@ -29,7 +29,8 @@
 | T35 | 대기 | 임원 에이전트 고도화 2차(검수 1차·리허설 1 이후, 콘텐츠 동결 전) |
 | T39 | 완료 | P0.5 브리핑 이해도 패치(v0.9 A-1) — 의장 브리핑·자료 해석·핵심 쟁점·조건 미리보기·진행 스트립 |
 | T40 | 완료 | P0.5 후속 단순화(v0.9 A-2) — CAIO 질문 귀속·답글형 반응·직접 입력 접기·빠른 답만으로 완료. PR #4 Codex 검토 3건 반영(live 답글형·답변 전 조건 칩 숨김·입력 유지 시 칩 유지) |
-| T41 | 대기 | P1 착수 전 회의록 타임라인(v0.9 B안) |
+| T41 | 진행 | 회의록 패널(v1.0 7절, v0.9 B안 재정의: 스크롤 통합 대신 무대 아래 창 고정 패널·roundLog) |
+| T46 | 진행 | live 후속 라운드 대기 게이트(MOTION CTA, v1.0 7절) |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
@@ -441,20 +442,35 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 추천 문구만 완주·직접 입력만 완주 두 E2E 모두 통과.
 - 크기: S.
 
-## T41 회의록 타임라인 (v0.9 B안, P1 착수 전)
+## T41 회의록 패널 (v1.0 7절, v0.9 B안 재정의)
 
-- 목표: BRIEFING~REACTIONS를 하나의 스크롤 타임라인 화면으로 통합한다. 단계 상태기계·조건·표결 규칙·MOTION 이후 화면은 그대로다.
-- 읽을 것: docs/REVISION_PROPOSAL_v0.9_UX.md 4절(Codex 3라운드 반영본), docs/REVISION_DECISIONS_v0.9.md(3-B·4), CLAUDE_IMPLEMENTATION.md P1 "회의록 타임라인", DESIGN_SPEC "v0.9 회의록 타임라인", `src/app/App.tsx`(단계 라우팅·runRound 배선·scroll 활동 리스너), `src/services/orchestrator/runner.ts`, `src/domain/session.ts`의 `SET_ROLE_STATUS`.
-- 만들 것(요약, 상세는 수정안 4절):
-  1. `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage` 추가(reducer는 읽지 않음), `runRoundNow(stage)`가 채워 dispatch. App 상태 `roundLog`에 stage가 있는 SET_ROLE_STATUS만 기록, 리셋 시 비움.
-  2. `TimelineScreen.tsx`: 블록 순서대로 렌더. 내 차례 블록만 입력 가능. 자료·쟁점은 1280×720에서 접힘. live에서 후속 제출 뒤 "임원 후속 판단 중…" 블록을 두고 `runRound('FOLLOWUP')` promise가 settle된 뒤에만 의장 블록과 [안건 고정으로] CTA 활성(벽시계 타이머 금지). App은 이 promise를 상태로 들고 있어야 한다.
-  3. 자동 스크롤: `scrollIntoView` 전후 억제 플래그로 그 사이 scroll 이벤트를 활동에서 제외. 단위 테스트: 자동 스크롤 뒤 `lastActivityAt` 불변.
-  4. 접근성: 새 블록 `aria-live="polite"`, 내 차례 블록으로 포커스 이동, 키보드만으로 완주 E2E 유지.
-  5. E2E: 기존 flow-full·reactions·live·a11y 스펙을 타임라인 testid로 갱신. 스크린샷 갱신.
-- 허용 경로: `src/app/`, `src/components/`, `src/services/orchestrator/runner.ts`(stage 태그만), `src/domain/session.ts`(액션 타입의 선택 필드만), `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
-- 하지 말 것: reducer 분기 로직·조건·표결 규칙 변경. 서버 변경. 단계 순서 변경.
-- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. live E2E(mock 서버)에서 후속 제출 직후 안건 고정 CTA가 비활성이고 후속 라운드 도착 후 활성.
-- 크기: L(둘로 나눌 수 있음: T41a 타임라인 렌더·roundLog, T41b live 대기·자동 스크롤·접근성).
+- 목표: 왼쪽 열 무대·CTA 아래에 "누가 무엇을 말했는가"를 한 줄씩 쌓는 창 고정 회의록 패널을 BRIEFING·OPINIONS·MOTION·VOTE에 넣는다. 페이지·패널 스크롤은 없다. 라운드별 임원 응답 상태는 화면 쪽 roundLog로 남긴다.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 7절(전부)·6절 표. `src/app/App.tsx`(AppShell grid·dispatch 래퍼·runRound 배선), `src/styles/screens/shell.css`(`.app-body` grid areas, 잠금 해제 미디어 블록은 기본 규칙 뒤), `src/components/parts/StageBand.tsx`(`firstSentenceClipped` 재사용), `src/components/screens/ReactionsScreen.tsx`(`reactionsFor` 규칙), `src/services/orchestrator/runner.ts`(`SET_ROLE_STATUS` dispatch 2곳), `src/domain/session.ts`(액션 타입), `e2e/noscroll.spec.ts`, `e2e/live.spec.ts`(라운드 가로채기 방식).
+- 만들 것:
+  1. `src/domain/session.ts`: `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage` 추가(reducer 분기는 그대로, 읽지 않음). `runner.ts`의 pending·결과 dispatch 두 곳이 `stage`를 채운다.
+  2. `src/app/App.tsx`: `roundLog: RoundLogEntry[]`(`{ stage, roleId, status }`)를 상태로 두고, dispatch 래퍼가 stage가 있는 SET_ROLE_STATUS만 (stage, roleId) 기준 upsert. sessionId가 바뀌면 비운다. orchestrator store의 dispatch도 같은 래퍼를 지난다.
+  3. `src/components/minutes.ts`: 순수 함수 `buildMinutes(session, scenario, roundLog): MinutesEntry[]` — 7절 항목 1~8 규칙. `MinutesEntry = { id, speaker: MemberId, text, kind: 'speech' | 'pending' | 'failed' | 'mine' }`. `reactionsFor` 규칙은 `src/components/reactionsFor.ts`로 뽑아 ReactionsScreen과 공유(동작 불변).
+  4. `src/components/parts/MinutesPanel.tsx` + `src/styles/screens/minutes.css`: `<section aria-label="회의록" data-testid="minutes-panel">`, 머리글 "회의록" + 건수 배지(`minutes-count`), `<ol aria-live="polite" aria-relevant="additions">`, 항목 `data-testid="minutes-entry-{id}"` — 아바타 sm + 라벨 + 1줄 클램프. 창 고정: `.minutes__entry--hidden`(sr-only)을 최근 N건 밖 항목에 붙인다. N은 1080=6, 720=4, VOTE 720=3 — CSS `:nth-last-child` 대신 컴포넌트가 `visibleCount` prop으로 계산하되 값은 `matchMedia('(max-width: 1280px)')`로 고른다(테스트 가능한 순수 함수 `visibleWindow(entries, n)`).
+  5. `App.tsx` AppShell: `.app-body` grid를 `'stage info' / 'actions info' / 'minutes info'`, rows `auto auto 1fr`로 확장하고 BRIEFING·OPINIONS·MOTION·VOTE에서만 `<div className="app-body__minutes">`에 MinutesPanel을 렌더. 잠금 해제 미디어 블록(1열 재배치)에도 `'minutes'` 행을 추가(무대 → 행동 → 회의록 → 정보).
+  6. 테스트: `tests/components/minutes.test.ts`(scripted 전 단계 항목 순서·내용, live pending/failed가 뒤 라운드 후에도 유지, `visibleWindow`), `tests/services/orchestrator.test.ts`에 SET_ROLE_STATUS가 stage를 싣는지 단언 추가. E2E: `e2e/noscroll.spec.ts` scripted·live 두 케이스에서 BRIEFING·OPINIONS·MOTION·VOTE의 `minutes-panel` 가시와 페이지 스크롤 없음(이미 단언)·`.app-body__minutes` 잘림 없음. `e2e/live.spec.ts`의 CAIO 실패 케이스에서 MOTION의 회의록에 CAIO "응답 없음" 항목이 남아 있음을 단언. 스크린샷 갱신(`UPDATE_SCREENSHOTS=1`).
+- 허용 경로: `src/app/`, `src/components/`, `src/styles/`, `src/services/orchestrator/runner.ts`(stage 필드만), `src/domain/session.ts`(액션 타입의 선택 필드만), `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: reducer 분기·조건·표결·타이머 규칙 변경. 서버 변경. 단계 순서 변경. 페이지·패널 스크롤 추가. 기존 testid·문구 삭제. 공개 payload에 roundLog 포함.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 스크린샷의 브리핑·투표에서 회의록 패널이 잘리지 않고 보임.
+- 크기: M.
+
+## T46 live 후속 라운드 대기 게이트 (v1.0 7절)
+
+- 목표: live에서 후속 답을 제출한 뒤 `runRound('FOLLOWUP')`이 settle되기 전에는 MOTION의 "이 안건으로 표결" CTA를 비활성으로 두고 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머는 쓰지 않는다.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 7절 "후속 대기 게이트", docs/REVISION_PROPOSAL_v0.9_UX.md 4절 "FOLLOWUP 대기(live)". `src/app/App.tsx`(followUpRoundRef effect), `src/components/screens/MotionScreen.tsx`, `src/services/orchestrator/runner.ts`(runRound promise·roundChain), `e2e/live.spec.ts`.
+- 만들 것:
+  1. `App.tsx`: `followUpPending` 상태. FOLLOWUP effect가 `runRound('FOLLOWUP')`을 부르기 직전 true, promise가 settle되면(then/catch 모두) 그때의 sessionId가 같을 때만 false. 리셋(sessionId 변경)에서도 false.
+  2. `MotionScreen`에 `freezeDisabled?: boolean` prop. true면 `freeze-motion` 버튼 `disabled`, CTA 아래 `<p data-testid="motion-waiting-followup">임원 후속 판단 중…</p>`(64px CTA 예산 안, 세로 예산 초과 금지). App은 `session.mode === 'live' && followUpPending`을 넘긴다. scripted·'의견 유지' 경로(후속 라운드 없음)는 항상 활성.
+  3. E2E(`e2e/live.spec.ts` 신규 케이스): `page.route('**/api/board/round')`에서 body.stage가 `FOLLOWUP`이면 1500ms 지연 후 정상 응답, 나머지는 즉시 응답. `followup-option-0`(조건 제안)으로 후속 제출 → `freeze-motion`이 `disabled`이고 `motion-waiting-followup`이 보임 → 이후 `freeze-motion`이 활성(`toBeEnabled`, timeout 5s)되고 `motion-waiting-followup`이 사라짐 → RESULT까지 완주해 `result-seat-reason-*` 4개. 기존 케이스(`followup-option-2` 유지 경로)는 즉시 활성임을 한 줄 단언.
+  4. 단위: `tests/services/orchestrator.test.ts`에 "runRound promise가 어댑터 응답 뒤에 settle된다" 단언이 없으면 추가.
+- 허용 경로: `src/app/App.tsx`, `src/components/screens/MotionScreen.tsx`, `src/styles/screens/motion.css`, `tests/`, `e2e/`.
+- 하지 말 것: reducer·runner의 사슬·시간 예산 변경. 벽시계 타이머로 CTA 열기. 서버 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. live E2E에서 후속 제출 직후 CTA 비활성 → 라운드 도착 후 활성.
+- 크기: S.
 
 ## T42 v1.0 애니메이션 프레임 스킨
 
