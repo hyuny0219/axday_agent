@@ -82,7 +82,15 @@
   color: var(--text);
 }
 
-/* 참가자 항목은 시안 테두리로 강조한다(v1.0 7절 "내 항목은 참가자 색"). */
+/* 참가자 항목은 시안 테두리로 강조한다(v1.0 7절 "내 항목은 참가자 색"): 왼쪽 2px
+   시안 선 + 은은한 시안 배경. 행 높이는 다른 항목과 같게 유지한다(창 고정 예산). */
+.minutes__entry--mine {
+  box-shadow: inset 2px 0 0 var(--accent);
+  background-color: rgba(40, 217, 240, 0.08);
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  padding-left: var(--space-1);
+}
+
 .minutes__entry--mine .minutes__text {
   color: var(--accent);
 }
