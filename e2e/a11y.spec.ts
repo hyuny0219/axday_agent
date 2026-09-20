@@ -90,24 +90,42 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
+  // 사용자가 실제로 쓰는 경로(마우스 휠)로만 스크롤한다 — scrollIntoView는
+  // overflow:hidden 컨테이너도 프로그램적으로 움직여 잘림을 숨긴다(PR #6 Codex 4차 검토).
+  // 무스크롤 잠금은 검수 해상도(1920×1080·1280×720)에서만 적용되고, 200% 확대 상당의
+  // 짧은 뷰포트에서는 문서 스크롤이 열려 있어야 한다(DESIGN_SPEC.md 3장·v1.0 6절).
+  async function wheelUntilVisible(testId: string) {
+    const target = page.getByTestId(testId);
+    for (let i = 0; i < 12; i += 1) {
+      if (await target.isVisible()) {
+        const box = await target.boundingBox();
+        const viewport = page.viewportSize();
+        if (box && viewport && box.y >= 0 && box.y + box.height <= viewport.height) {
+          return target;
+        }
+      }
+      await page.mouse.wheel(0, 300);
+    }
+    await expect(target).toBeInViewport();
+    return target;
+  }
+
   await page.getByTestId('phrase-card-P1').click();
-  const submitOpinion = page.getByTestId('submit-opinion');
-  await submitOpinion.scrollIntoViewIfNeeded();
-  await expect(submitOpinion).toBeVisible();
+  const submitOpinion = await wheelUntilVisible('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await page.getByTestId('followup-option-2').click();
+  await page.mouse.wheel(0, -4000);
+  const keepPrevious = await wheelUntilVisible('followup-option-2');
+  await keepPrevious.click();
 
-  const freezeMotion = page.getByTestId('freeze-motion');
-  await freezeMotion.scrollIntoViewIfNeeded();
-  await expect(freezeMotion).toBeVisible();
+  await page.mouse.wheel(0, -4000);
+  const freezeMotion = await wheelUntilVisible('freeze-motion');
   await freezeMotion.click();
 
+  await page.mouse.wheel(0, -4000);
   await page.getByTestId('vote-radio-YES').check();
-  const confirmVote = page.getByTestId('confirm-vote');
-  await confirmVote.scrollIntoViewIfNeeded();
-  await expect(confirmVote).toBeVisible();
+  const confirmVote = await wheelUntilVisible('confirm-vote');
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 

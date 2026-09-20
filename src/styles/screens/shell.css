@@ -35,6 +35,37 @@
   flex-direction: column;
 }
 
+/* 무스크롤 잠금은 검수 해상도(1920×1080·1280×720, 폭 ≥1200·높이 ≥700)에서만 적용한다.
+   그보다 짧거나 좁은 뷰포트(PC 200% 확대 상당 960×540 등)에서는 셸을 문서 흐름으로
+   되돌려 페이지 스크롤을 열고, 두 열을 세로 1열(무대 → 내 행동 → 회의 정보)로
+   재배치한다(DESIGN_SPEC.md 3장 "PC 200% 확대에서 세로 재배치·스크롤을 허용",
+   PR #6 Codex 4차 검토). 아래 .app-main·.app-body·.app-body__content 규칙도 같은
+   조건에서 함께 풀린다. */
+@media (max-height: 699px), (max-width: 1199px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-main {
+    overflow: visible;
+  }
+
+  .app-body {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'stage'
+      'actions'
+      'info';
+    grid-template-rows: auto auto auto;
+  }
+
+  .app-body__content {
+    overflow: visible;
+  }
+}
+
 /* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
    background-attachment:fixed 없이도 스크롤과 무관하게 유지한다. */
 .app-shell::before {
