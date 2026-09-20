@@ -60,7 +60,14 @@ export type SessionAction =
       statements: Statement[];
       baseRevision: number;
     }
-  | { type: 'SET_ROLE_STATUS'; roleId: ExecMemberId; status: RoleStatus }
+  | {
+      type: 'SET_ROLE_STATUS';
+      roleId: ExecMemberId;
+      status: RoleStatus;
+      /** 회의록 패널(v1.0 7절, T41)이 라운드별 기록(roundLog)을 만들 때만 쓰는 선택
+       * 필드. runner.ts가 채우며, 이 reducer는 읽지 않는다(동작 불변). */
+      stage?: StatementStage;
+    }
   | { type: 'RECORD_EXEC_BALLOT'; ballot: Ballot }
   | { type: 'MARK_EXEC_UNAVAILABLE'; roleId: ExecMemberId; reason: string }
   | { type: 'FINALIZE_RESULT' };

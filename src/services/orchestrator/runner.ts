@@ -114,7 +114,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     }
 
     for (const roleId of EXEC_MEMBER_ORDER) {
-      deps.store.dispatch({ type: 'SET_ROLE_STATUS', roleId, status: 'pending' });
+      deps.store.dispatch({ type: 'SET_ROLE_STATUS', roleId, status: 'pending', stage });
     }
 
     const handle = deps.requests.begin(sessionId);
@@ -163,6 +163,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
         type: 'SET_ROLE_STATUS',
         roleId: outcome.roleId,
         status: outcome.status === 'answered' ? 'answered' : 'failed',
+        stage,
       });
     }
   }

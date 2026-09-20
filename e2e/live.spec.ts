@@ -179,6 +179,9 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
 
   await page.getByTestId('followup-option-2').click(); // 후속 라운드 없이 MOTION으로
   await expect(page.getByTestId('motion-card')).toBeVisible();
+  // 회의록 패널(v1.0 7절, T41): OPINIONS 라운드에서 실패한 CAIO 항목이 뒤 라운드
+  // (REACTIONS)가 roleStatus를 덮어써도 "응답 없음"으로 남는다(roundLog 기준).
+  await expect(page.getByTestId('minutes-entry-opinion-CAIO')).toContainText('응답 없음');
   await page.getByTestId('freeze-motion').click();
 
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();

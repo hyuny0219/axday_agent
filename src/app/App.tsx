@@ -45,6 +45,9 @@ import { Header } from '../components/parts/Header';
 import { IdleNotice } from '../components/parts/IdleNotice';
 import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
+import { MinutesPanel } from '../components/parts/MinutesPanel';
+import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
+import type { RoundLogEntry } from '../components/minutes';
 import { computeResultStamp } from '../components/resultStamp';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
@@ -78,6 +81,10 @@ interface SessionContextValue {
   /** live에서 후속 답 제출 뒤 runRound('FOLLOWUP')이 settle되기 전인가(T46, DESIGN_SPEC.md
    * v1.0 7절 "후속 대기 게이트"). MOTION 화면이 "이 안건으로 표결" CTA를 잠그는 데 쓴다. */
   followUpPending: boolean;
+  /** stage가 실린 SET_ROLE_STATUS dispatch만 (stage, roleId) 기준으로 쌓은 라운드별
+   * 임원 응답 기록(v1.0 7절 "회의록 패널", T41). AppShell이 buildMinutes에 넘긴다.
+   * 공개 payload에는 포함하지 않는다(화면 쪽 상태일 뿐이다). */
+  roundLog: RoundLogEntry[];
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -113,8 +120,25 @@ function SessionProvider({ children }: { children: ReactNode }) {
     () => createInitialSession(appClock.now()),
   );
 
-  const dispatch = useCallback((action: SessionAction) => rawDispatch(action), []);
+  // 회의록 패널의 라운드별 기록(roundLog, v1.0 7절, T41). stage가 실린 SET_ROLE_STATUS만
+  // 골라 (stage, roleId) 기준 upsert한다 — 이 dispatch 래퍼를 지나는 모든 호출(외부
+  // dispatch prop과 orchestratorStore.dispatch 둘 다 같은 함수를 쓴다)이 대상이다.
+  // reducer 분기는 건드리지 않는 순수 화면 쪽 부기라 useReducer가 아니라 useState로 둔다.
+  const [roundLog, setRoundLog] = useState<RoundLogEntry[]>([]);
+
+  const dispatch = useCallback((action: SessionAction) => {
+    rawDispatch(action);
+    if (action.type === 'SET_ROLE_STATUS' && action.stage) {
+      const { stage, roleId, status } = action;
+      setRoundLog((previous) => upsertRoundLogEntry(previous, { stage, roleId, status }));
+    }
+  }, []);
   const touchActivity = useCallback(() => rawDispatch({ type: 'TOUCH' }), []);
+
+  // sessionId가 바뀌면(리셋 포함) 이전 세션의 라운드 기록을 지운다.
+  useEffect(() => {
+    setRoundLog([]);
+  }, [session.sessionId]);
 
   // orchestrator(services/orchestrator/runner.ts)가 비동기 호출 중간에도 항상 최신
   // 세션을 읽을 수 있게 한다 — 클로저로 session을 캡처하면 dispatch 직후에는 stale하다.
@@ -299,8 +323,8 @@ function SessionProvider({ children }: { children: ReactNode }) {
   }, [touchActivity]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, touchActivity, followUpPending }),
-    [session, dispatch, touchActivity, followUpPending],
+    () => ({ session, dispatch, touchActivity, followUpPending, roundLog }),
+    [session, dispatch, touchActivity, followUpPending, roundLog],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -463,6 +487,15 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'RESULT',
 ]);
 
+/** 회의록 패널을 렌더하는 단계(v1.0 7절). DISCUSS·REACTIONS는 입력이 왼쪽 열을 이미
+ * 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
+const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
+  'BRIEFING',
+  'OPINIONS',
+  'MOTION',
+  'VOTE',
+]);
+
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
  * 열로 이뤄진 조종석 배치다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙",
@@ -471,9 +504,10 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
  * ResultScreen과 공유하는 순수 함수).
  */
 function AppShell() {
-  const { session, dispatch, touchActivity } = useSession();
+  const { session, dispatch, touchActivity, roundLog } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
+  const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
   const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
 
   const content = <StageRouter />;
@@ -513,6 +547,11 @@ function AppShell() {
               />
             </div>
             {content}
+            {showMinutes && scenario && (
+              <div className="app-body__minutes">
+                <MinutesPanel entries={buildMinutes(session, scenario, roundLog)} stage={session.stage} />
+              </div>
+            )}
           </div>
         </main>
       ) : (

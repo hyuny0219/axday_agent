@@ -30,6 +30,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
+  // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
+  // (무대·행동·회의록)이 잘리지 않는다.
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
   // 근거 카드를 펼쳐도 잘리지 않고, 한 번에 한 장만 펼쳐진다(PR #6 Codex 3차 검토).
   await page.getByTestId('evidence-card-E1').locator('summary').click();
   await expect(page.getByTestId('evidence-card-E1')).toHaveAttribute('open', '');
@@ -45,6 +49,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   // 추천 문구 4개(조건 4개, 시나리오 최대치)를 선택해 가장 내용이 많은 상태를 만든다.
@@ -88,10 +94,14 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'MOTION');
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'MOTION');
 
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE');
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'VOTE');
 
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
@@ -174,6 +184,8 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await expectNoPageScroll(page, 'OPINIONS(live)');
   await expectNoClip(page, '.app-body__content', 'OPINIONS(live)');
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();
@@ -193,6 +205,8 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE(live)');
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expectNoClip(page, '.app-body__minutes', 'VOTE(live)');
   // VOTE에서는 무대(aria-hidden)에 말풍선이 없다 — 대기 상태는 본문이 전담한다.
   await expect(page.locator('[data-testid^="stage-bubble-"]')).toHaveCount(0);
 

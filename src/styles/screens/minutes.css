@@ -1,0 +1,139 @@
+/* 회의록 패널(DESIGN_SPEC.md v1.0 7절, T41). 왼쪽 열 무대·행동 아래 세 번째 grid
+   area(minutes)를 채운다. 페이지·패널 스크롤은 두지 않는다 — 넘치는 옛 항목은
+   .minutes__entry--hidden(sr-only)로 시각적으로만 감춘다(화면에는 최근 N건, 스크린
+   리더에는 전체). */
+.minutes {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background-color: var(--panel);
+}
+
+.minutes__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.minutes__title {
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.minutes__count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.minutes__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.minutes__entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* 최근 N건 밖 항목: 화면에서는 감추되 스크린리더에는 남긴다(표준 sr-only 기법). */
+.minutes__entry--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.minutes__speaker {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.minutes__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* 참가자 항목은 시안 테두리로 강조한다(v1.0 7절 "내 항목은 참가자 색"). */
+.minutes__entry--mine .minutes__text {
+  color: var(--accent);
+}
+
+.minutes__entry--failed .minutes__text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* 판단 중 점 세 개(무대 띠 말풍선과 같은 모양, stage.css의 --dots와 별개로 여기서
+   가볍게 재구현한다 — 이 파일이 minutes 전용 스타일만 담기 때문). */
+.minutes__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.minutes__dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+  animation: minutes-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.minutes__dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.minutes__dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes minutes-dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1280px) {
+  .minutes {
+    padding: 4px var(--space-1);
+  }
+
+  .minutes__speaker,
+  .minutes__text {
+    font-size: 12px;
+  }
+}
