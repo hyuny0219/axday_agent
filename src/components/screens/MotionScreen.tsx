@@ -13,10 +13,19 @@ import '../../styles/screens/motion.css';
 export interface MotionScreenProps {
   scenario: Scenario;
   opinions: Opinion[];
+  /** live에서 후속 답을 제출한 뒤 runRound('FOLLOWUP')이 settle되기 전이면 true(T46,
+   * DESIGN_SPEC.md v1.0 7절 "후속 대기 게이트"). scripted와 '의견 유지'(후속 라운드
+   * 없음) 경로는 항상 undefined/false로 넘어와 CTA가 그대로 활성이다. */
+  freezeDisabled?: boolean;
   onFreeze: (confirmedConditionIds: string[]) => void;
 }
 
-export function MotionScreen({ scenario, opinions, onFreeze }: MotionScreenProps) {
+export function MotionScreen({
+  scenario,
+  opinions,
+  freezeDisabled = false,
+  onFreeze,
+}: MotionScreenProps) {
   const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions), [opinions]);
 
   function conditionLabel(id: string): string {
@@ -29,11 +38,17 @@ export function MotionScreen({ scenario, opinions, onFreeze }: MotionScreenProps
         <button
           type="button"
           className="cta"
+          disabled={freezeDisabled}
           onClick={() => onFreeze(confirmedConditionIds)}
           data-testid="freeze-motion"
         >
           이 안건으로 표결
         </button>
+        {freezeDisabled && (
+          <p className="motion-screen__waiting" data-testid="motion-waiting-followup">
+            임원 후속 판단 중…
+          </p>
+        )}
       </div>
       <div className="app-body__content screen motion-screen__info">
         <h2 className="motion-screen__title">최종 안건</h2>

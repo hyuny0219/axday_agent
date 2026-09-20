@@ -92,6 +92,8 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
 
   await page.getByTestId('followup-option-2').click(); // 이 의견으로 마무리(KEEP_PREVIOUS)
   await expect(page.getByTestId('motion-card')).toBeVisible();
+  // 후속 라운드가 없는 경로(T46)이므로 후속 대기 게이트 없이 곧바로 활성이다.
+  await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();
 
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
@@ -103,6 +105,56 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // 임원 4명 모두 응답했으므로 판단 근거가 4개 모두 보인다.
   await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
   await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
+});
+
+test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드 도착 후 열린다(T46)', async ({ page }) => {
+  // FOLLOWUP 라운드만 1.5초 지연시켜 runRound('FOLLOWUP') promise가 settle되기 전
+  // 구간을 결정적으로 재현한다(OPINIONS·REACTIONS는 그대로 즉시 응답).
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string };
+    if (body.stage === 'FOLLOWUP') {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    await route.continue();
+  });
+
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await enterAiAssistant(page);
+
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  const submitOpinion = page.getByTestId('submit-opinion');
+  await expect(submitOpinion).toBeEnabled();
+  await submitOpinion.click();
+
+  await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  // 조건 제안(followup-option-0)을 골라 후속 답을 전달한다 — opinions가 2건이 되어
+  // FOLLOWUP 라운드가 트리거된다.
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
+
+  const freezeButton = page.getByTestId('freeze-motion');
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await expect(freezeButton).toBeDisabled();
+  await expect(page.getByTestId('motion-waiting-followup')).toBeVisible();
+
+  // FOLLOWUP 라운드(1.5초 지연)가 도착하면 CTA가 열리고 대기 문구는 사라진다.
+  await expect(freezeButton).toBeEnabled({ timeout: 5_000 });
+  await expect(page.getByTestId('motion-waiting-followup')).toHaveCount(0);
+
+  await freezeButton.click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
 });
 
 test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다', async ({ page }) => {

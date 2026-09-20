@@ -311,6 +311,39 @@ describe('runner.runRound', () => {
     expect(reactionsCalls).toBe(0);
   });
 
+  it('runRound promise가 어댑터 응답 뒤에 settle된다(T46 후속 대기 게이트가 기대는 보장)', async () => {
+    const clock = fakeClock(0);
+    const store = createStore(toOpinionsStage(clock), clock);
+    const pending = deferred<StatementOutcome[]>();
+    let settled = false;
+    const adapter = fakeAdapter({ initialOpinions: () => pending.promise });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    const roundPromise = orchestrator.runRound('OPINIONS').then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    // 어댑터가 아직 응답하지 않았으면 promise도 settle되지 않는다.
+    expect(settled).toBe(false);
+
+    pending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: answeredStatement(roleId),
+      })),
+    );
+    await roundPromise;
+    expect(settled).toBe(true);
+  });
+
   it('scripted 어댑터는 지연 없이 즉시 발언을 반영한다', async () => {
     const clock = fakeClock(0);
     const store = createStore(toOpinionsStage(clock), clock);

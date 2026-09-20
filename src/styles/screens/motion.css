@@ -3,6 +3,18 @@
   font-size: var(--fs-title);
 }
 
+/* 후속 대기 게이트(T46): CTA 아래에 보이는 "임원 후속 판단 중…" 문구. vote-screen__waiting과
+   같은 규칙(DESIGN_SPEC.md v1.0 7절)이며, 64px CTA 자체 높이는 그대로 두고 .app-body__actions
+   의 gap(var(--space-2))만으로 세로 예산 안에 들어간다. */
+.motion-screen__waiting {
+  margin: 0;
+  padding: var(--space-2);
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-muted);
+}
+
 /* 최종 안건 카드: 중앙 정렬 + max-width960px(DESIGN_SPEC.md "만들 것 · 최종 안건·투표
    · 안건 카드 중앙 max-width960px·--shadow-card"). */
 .motion-screen__card {

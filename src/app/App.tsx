@@ -17,6 +17,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from 'react';
 import type { ReactNode } from 'react';
 import { touch } from '../domain/clock';
@@ -74,6 +75,9 @@ interface SessionContextValue {
   session: Session;
   dispatch: (action: SessionAction) => void;
   touchActivity: () => void;
+  /** live에서 후속 답 제출 뒤 runRound('FOLLOWUP')이 settle되기 전인가(T46, DESIGN_SPEC.md
+   * v1.0 7절 "후속 대기 게이트"). MOTION 화면이 "이 안건으로 표결" CTA를 잠그는 데 쓴다. */
+  followUpPending: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -199,6 +203,16 @@ function SessionProvider({ children }: { children: ReactNode }) {
     void orchestrator.runRound('REACTIONS');
   }, [session.mode, session.stage, session.sessionId, orchestrator]);
 
+  // 후속 대기 게이트(T46, DESIGN_SPEC.md v1.0 7절): FOLLOWUP 라운드를 시작하는 순간 true로
+  // 세우고, 그 promise가 settle되면(성공·실패 모두) false로 되돌린다 — 단 settle 시점에
+  // sessionRef.current.sessionId가 라운드를 시작했을 때의 sessionId와 같을 때만이다(리셋 뒤
+  // 늦게 온 settle이 다음 세션의 게이트를 잘못 열지 않게). 벽시계 타이머는 쓰지 않는다.
+  const [followUpPending, setFollowUpPending] = useState(false);
+  // 세션이 바뀌면(리셋 포함) 이전 세션에서 남을 수 있는 게이트 상태를 즉시 지운다.
+  useEffect(() => {
+    setFollowUpPending(false);
+  }, [session.sessionId]);
+
   const followUpRoundRef = useRef<string | null>(null);
   useEffect(() => {
     if (session.mode !== 'live' || session.stage !== 'MOTION' || session.opinions.length < 2) {
@@ -208,7 +222,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     followUpRoundRef.current = session.sessionId;
-    void orchestrator.runRound('FOLLOWUP');
+    const triggeredSessionId = session.sessionId;
+    setFollowUpPending(true);
+    void orchestrator.runRound('FOLLOWUP').finally(() => {
+      if (sessionRef.current.sessionId === triggeredSessionId) {
+        setFollowUpPending(false);
+      }
+    });
   }, [session.mode, session.stage, session.opinions.length, session.sessionId, orchestrator]);
 
   // 최종안이 고정되는 즉시(finalMotion이 채워지는 즉시) 임원 최종표를 병렬로 요청한다
@@ -279,8 +299,8 @@ function SessionProvider({ children }: { children: ReactNode }) {
   }, [touchActivity]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, touchActivity }),
-    [session, dispatch, touchActivity],
+    () => ({ session, dispatch, touchActivity, followUpPending }),
+    [session, dispatch, touchActivity, followUpPending],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -288,7 +308,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch } = useSession();
+  const { session, dispatch, followUpPending } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -377,6 +397,7 @@ function StageRouter() {
         <MotionScreen
           scenario={scenario}
           opinions={session.opinions}
+          freezeDisabled={session.mode === 'live' && followUpPending}
           onFreeze={(confirmedConditionIds) =>
             dispatch({ type: 'FREEZE_MOTION', scenario, confirmedConditionIds })
           }
