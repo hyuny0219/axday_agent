@@ -26,44 +26,14 @@
 
 /* 게임 화면처럼 페이지 스크롤을 없앤다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와
    무스크롤 규칙", T45). 셸 자체를 뷰포트 높이에 고정하고 넘치는 내용은 문서가 아니라
-   지정된 패널 하나만 안에서 스크롤한다(화면당 최대 1개). */
+   지정된 패널 하나만 안에서 스크롤한다(화면당 최대 1개). 잠금 해제(짧거나 좁은 뷰포트)는
+   아래 .app-body__content 뒤의 미디어 블록이 맡는다. */
 .app-shell {
   position: relative;
   height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-/* 무스크롤 잠금은 검수 해상도(1920×1080·1280×720, 폭 ≥1200·높이 ≥700)에서만 적용한다.
-   그보다 짧거나 좁은 뷰포트(PC 200% 확대 상당 960×540 등)에서는 셸을 문서 흐름으로
-   되돌려 페이지 스크롤을 열고, 두 열을 세로 1열(무대 → 내 행동 → 회의 정보)로
-   재배치한다(DESIGN_SPEC.md 3장 "PC 200% 확대에서 세로 재배치·스크롤을 허용",
-   PR #6 Codex 4차 검토). 아래 .app-main·.app-body·.app-body__content 규칙도 같은
-   조건에서 함께 풀린다. */
-@media (max-height: 699px), (max-width: 1199px) {
-  .app-shell {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-
-  .app-main {
-    overflow: visible;
-  }
-
-  .app-body {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'stage'
-      'actions'
-      'info';
-    grid-template-rows: auto auto auto;
-  }
-
-  .app-body__content {
-    overflow: visible;
-  }
 }
 
 /* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
@@ -314,6 +284,40 @@
   flex-direction: column;
   gap: var(--space-2);
   overflow: hidden;
+}
+
+/* 무스크롤 잠금은 검수 해상도(1920×1080·1280×720, 폭 ≥1200·높이 ≥700)에서만 적용한다.
+   그보다 짧거나 좁은 뷰포트(PC 200% 확대 상당 960×540 등)에서는 셸을 문서 흐름으로
+   되돌려 페이지 스크롤을 열고, 두 열을 세로 1열(무대 → 내 행동 → 회의 정보)로
+   재배치한다(DESIGN_SPEC.md 3장 "PC 200% 확대에서 세로 재배치·스크롤을 허용",
+   PR #6 Codex 4차 검토). 위 .app-main·.app-body·.app-body__content 규칙도 같은
+   조건에서 함께 풀린다. 이 블록은 반드시 .app-main·.app-body·.app-body__content 기본
+   규칙 뒤에 둔다 — 같은 특이성이라 앞에 두면 기본 규칙이 이겨 2열·overflow:hidden이
+   그대로 남는다(PR #6 Codex 5차 검토). e2e/a11y.spec.ts 960×540 검사가 계산값으로
+   1열·overflow:visible을 단언한다. */
+@media (max-height: 699px), (max-width: 1199px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-main {
+    overflow: visible;
+  }
+
+  .app-body {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'stage'
+      'actions'
+      'info';
+    grid-template-rows: auto auto auto;
+  }
+
+  .app-body__content {
+    overflow: visible;
+  }
 }
 
 /* 무대 열 안 좌상단에 겹쳐 찍는 명패 pill(v1.0 6절 "명패는 무대 안 좌상단 pill").

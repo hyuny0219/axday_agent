@@ -110,6 +110,32 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
     return target;
   }
 
+  // 세로 1열 재배치·overflow 해제가 실제 계산값으로 적용됐는지 확인한다(PR #6 Codex 5차
+  // 검토: 미디어 블록이 기본 규칙보다 앞에 있으면 같은 특이성의 기본 규칙이 이겨 2열과
+  // overflow:hidden이 그대로 남고, CTA만 우연히 닿는 통과가 된다). 오른쪽 열이 뷰포트
+  // 밖으로 밀리거나 가로 스크롤이 생기지 않아야 한다.
+  const layout = await page.evaluate(() => {
+    const style = (selector: string, property: string) => {
+      const element = document.querySelector(selector);
+      return element ? getComputedStyle(element).getPropertyValue(property).trim() : '';
+    };
+    const content = document.querySelector('.app-body__content');
+    return {
+      columns: style('.app-body', 'grid-template-columns').split(/\s+/).length,
+      shellOverflow: style('.app-shell', 'overflow-y'),
+      mainOverflow: style('.app-main', 'overflow-y'),
+      contentOverflow: style('.app-body__content', 'overflow-y'),
+      horizontalScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      contentRight: content ? Math.round(content.getBoundingClientRect().right) : -1,
+    };
+  });
+  expect(layout.columns).toBe(1);
+  expect(layout.shellOverflow).toBe('visible');
+  expect(layout.mainOverflow).toBe('visible');
+  expect(layout.contentOverflow).toBe('visible');
+  expect(layout.horizontalScroll).toBe(false);
+  expect(layout.contentRight).toBeLessThanOrEqual(960);
+
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = await wheelUntilVisible('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
