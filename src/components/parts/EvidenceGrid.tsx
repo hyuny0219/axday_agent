@@ -3,7 +3,9 @@
 // 접힘이고, 카드를 클릭하면 같은 자리에서 원문·관련 임원 아바타가 펼쳐진다(details
 // open을 컴포넌트 상태로 직접 관리 — 닫힌 <details> 본문은 브라우저가 렌더를 건너뛰어
 // 자식 CSS만으로는 강제로 펼칠 수 없다). 720에서는 CSS(evidence.css)가 제목을 숨기고
-// 해석 한 줄만 남긴다.
+// 해석 한 줄만 남긴다. 한 번에 한 장만 펼친다(아코디언) — 여러 장을 동시에 펼치면
+// 고정 높이의 오른쪽 열이 넘쳐 아래 내용이 잘린다(PR #6 Codex 3차 검토). 펼친 원문은
+// evidence.css가 2줄로 클램프해 한 장 펼침의 세로 예산을 고정한다.
 
 import { useState } from 'react';
 import type { EvidenceCard as EvidenceCardData } from '../../content/types';
@@ -15,24 +17,21 @@ export interface EvidenceGridProps {
 }
 
 export function EvidenceGrid({ evidence }: EvidenceGridProps) {
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [openId, setOpenId] = useState<string | null>(null);
 
   function handleToggle(id: string, open: boolean) {
-    setOpenIds((previous) => {
-      const next = new Set(previous);
+    setOpenId((previous) => {
       if (open) {
-        next.add(id);
-      } else {
-        next.delete(id);
+        return id;
       }
-      return next;
+      return previous === id ? null : previous;
     });
   }
 
   return (
     <div className="evidence-grid">
       {evidence.map((card) => {
-        const open = openIds.has(card.id);
+        const open = openId === card.id;
         return (
           <details
             key={card.id}

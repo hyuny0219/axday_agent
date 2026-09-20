@@ -30,6 +30,17 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
+  // 근거 카드를 펼쳐도 잘리지 않고, 한 번에 한 장만 펼쳐진다(PR #6 Codex 3차 검토).
+  await page.getByTestId('evidence-card-E1').locator('summary').click();
+  await expect(page.getByTestId('evidence-card-E1')).toHaveAttribute('open', '');
+  await expectNoPageScroll(page, 'BRIEFING(E1 펼침)');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(E1 펼침)');
+  await page.getByTestId('evidence-card-E2').locator('summary').click();
+  await expect(page.getByTestId('evidence-card-E2')).toHaveAttribute('open', '');
+  await expect(page.getByTestId('evidence-card-E1')).not.toHaveAttribute('open', '');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(E2 펼침)');
+  await expect(page.getByTestId('condition-preview')).toBeInViewport();
+  await page.getByTestId('evidence-card-E2').locator('summary').click();
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
@@ -42,6 +53,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('phrase-card-P4').click();
   await expectNoPageScroll(page, 'DISCUSS(조건 4개 선택)');
+  await page.getByTestId('evidence-card-E4').locator('summary').click();
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(E4 펼침)');
+  await page.getByTestId('evidence-card-E4').locator('summary').click();
 
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
   await page.getByTestId('assistant-toggle').click();
