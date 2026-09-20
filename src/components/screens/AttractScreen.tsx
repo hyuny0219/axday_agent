@@ -4,6 +4,7 @@
 // 확인이 끝나기 전에는 기본값(scripted)을 보여준다.
 
 import type { SessionMode } from '../../domain/types';
+import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/attract.css';
 
 export interface AttractScreenProps {
@@ -19,6 +20,8 @@ const MODE_BADGE_TEXT: Record<SessionMode, string> = {
 export function AttractScreen({ mode, onStart }: AttractScreenProps) {
   return (
     <section className="screen attract-screen">
+      <img src={stageRender} alt="" className="attract-screen__bg" />
+      <div className="attract-screen__overlay" aria-hidden="true" />
       <p className="attract-screen__badge" data-testid="attract-mode-badge">
         {MODE_BADGE_TEXT[mode]}
       </p>

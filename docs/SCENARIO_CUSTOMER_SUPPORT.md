@@ -28,8 +28,8 @@ BRIEFING 자동 AI 정리 카드: “반복 일반 안내의 초안 지원 수�
 | 인물 | 발언 | 근거 |
 | --- | --- | --- |
 | CEO | 일반 안내의 기다림을 줄일 기회를 검토합시다. | E1 |
-| CFO · CAIO | 한 팀에서 처리시간·수정량과 비용을 먼저 확인합시다. | E3, E4 |
-| CIO | 복잡한 문의의 이관과 공유 전 검토 절차가 필요합니다. | E2, E3 |
+| CFO | 한 팀에서 처리시간·수정량과 비용을 먼저 확인합시다. | E3, E4 |
+| CAIO | 복잡한 문의의 이관과 공유 전 검토 절차가 필요합니다. | E2, E3 |
 | CISO | 고객정보의 사용·접근 조건부터 정해야 합니다. | E4 |
 
 ## 추천 문구와 구조화 조건
@@ -51,11 +51,11 @@ ID는 scenarioId로 구분한다. P6의 검증 요청을 최종 HOLD 표로 추�
 
 | 확인 조건 | 반응 |
 | --- | --- |
-| LIMITED_PILOT | CFO·CAIO: “일반 안내 한 팀으로 시범 투자 범위를 정하겠습니다.” |
-| ESCALATE_REVIEW | CIO: “공유 전 검토와 보장 문의 이관 절차를 수정안에 넣겠습니다.” |
+| LIMITED_PILOT | CFO: “일반 안내 한 팀으로 시범 투자 범위를 정하겠습니다.” |
+| ESCALATE_REVIEW | CAIO: “공유 전 검토와 보장 문의 이관 절차를 수정안에 넣겠습니다.” |
 | DATA_ACCESS | CISO: “데이터 조건을 기록하겠습니다. 실제 권한 검증은 착수 전에 필요합니다.” |
-| QUALITY_GATE | CFO·CAIO: “처리시간·수정량·오류를 확대 판단 기준으로 삼겠습니다.” |
-| AUTO_ALL | CIO: “오류가 발견된 보장 판단까지 검토 없이 자동화하는 데 반대합니다.” |
+| QUALITY_GATE | CFO: “처리시간·수정량·오류를 확대 판단 기준으로 삼겠습니다.” |
+| AUTO_ALL | CAIO: “오류가 발견된 보장 판단까지 검토 없이 자동화하는 데 반대합니다.” |
 | 없음 | CEO: “확인 요청을 기록했습니다. 수정 조건이 없으면 원안으로 심의하겠습니다.” |
 
 후속 질문(가정, 최대 1회): “고객이 보장 여부를 지금 확답해 달라고 하면 어떻게 처리할까요?”
@@ -75,12 +75,12 @@ ID는 scenarioId로 구분한다. P6의 검증 요청을 최종 HOLD 표로 추�
 | --- | --- | --- |
 | CEO | AUTO_ALL 있음 | HOLD |
 | CEO | 나머지 | YES |
-| CFO·CAIO | AUTO_ALL 있음 | NO |
-| CFO·CAIO | LIMITED_PILOT 및 QUALITY_GATE 있음 | YES |
-| CFO·CAIO | 나머지 | HOLD |
-| CIO | AUTO_ALL 있음 | NO |
-| CIO | ESCALATE_REVIEW 있음 | YES |
-| CIO | ESCALATE_REVIEW 없음 | NO |
+| CFO | AUTO_ALL 있음 | NO |
+| CFO | LIMITED_PILOT 및 QUALITY_GATE 있음 | YES |
+| CFO | 나머지 | HOLD |
+| CAIO | AUTO_ALL 있음 | NO |
+| CAIO | ESCALATE_REVIEW 있음 | YES |
+| CAIO | ESCALATE_REVIEW 없음 | NO |
 | CISO | AUTO_ALL 있음 | NO |
 | CISO | DATA_ACCESS 및 ESCALATE_REVIEW 있음 | YES |
 | CISO | DATA_ACCESS 있음 | HOLD |
@@ -90,7 +90,7 @@ CISO는 정보 사용 조건과 검토 절차가 함께 포함되면 착수 전 
 
 ## 대표 경로 — v0.6
 
-임원 순서: CEO / CFO·CAIO / CIO / CISO. 마지막 원안·UNCAST 행은 고정 안건 없이 240초 만료된 경우에도 적용한다. 무입력90초 복귀는 집계 없이 종료한다.
+임원 순서: CEO / CFO / CAIO / CISO. 마지막 원안·UNCAST 행은 고정 안건 없이 240초 만료된 경우에도 적용한다. 무입력90초 복귀는 집계 없이 종료한다.
 
 | 조건 | 임원 표 | 참가자 표 | 집계·결론 |
 | --- | --- | --- | --- |

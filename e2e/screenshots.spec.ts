@@ -83,12 +83,12 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'discuss');
   await submitOpinion.click();
 
-  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
+  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
   // 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.getByTestId('followup-open-editor')).toBeVisible();
-  // 앞 화면의 제출 버튼을 누를 때 내려간 스크롤이 남아 헤더가 잘리므로 맨 위로 되돌린다.
-  await page.evaluate(() => window.scrollTo(0, 0));
+  // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
+  // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
   await page.getByTestId('followup-option-2').click();
 
@@ -106,11 +106,15 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 5석·내 의견·기록까지 합치면 한 화면보다 길어질 수 있어, 체험 종료
-  // CTA를 스크롤로 보이게 한 뒤 캡처해 CTA가 잘리지 않는 상태를 확인한다.
+  // RESULT: 왼쪽 열(게이지+체험 종료 CTA)과 오른쪽 열(결론·5석·기록)이 스크롤 없이
+  // 한 화면에 모두 보인다(DESIGN_SPEC.md v1.0 6절 무스크롤). 표결 배지·결론 도장
+  // (T43)이 다 나온 뒤에 캡처한다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
-  await page.getByTestId('end-session').scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('result-stamp')).toBeVisible();
+  await page
+    .getByTestId('result-stamp')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');
 });

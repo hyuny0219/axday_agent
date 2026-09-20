@@ -1,29 +1,40 @@
+/* 대기(ATTRACT) 화면: 무대 렌더 이미지를 전체 배경으로 깔고 어두운 그라데이션
+   오버레이 위에 디스플레이 서체 제목 + 단일 CTA를 올린다(DESIGN_SPEC.md v1.0 2절
+   "대기(ATTRACT): 렌더를 전체 배경으로 깔고(어두운 그라데이션 오버레이), 디스플레이
+   서체 큰 제목 + 단일 CTA"). isolation:isolate로 새 쌓임 맥락을 만들어 배경·오버레이의
+   음수 z-index가 이 섹션 안에만 머물게 한다. */
 .attract-screen {
   position: relative;
+  overflow: hidden;
   flex: 1;
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-card);
   isolation: isolate;
 }
 
-/* 제목 뒤 시안 방사형 조명(DESIGN_SPEC.md 2장 "hero형 대기 화면"). 정적인 효과로
-   애니메이션을 추가하지 않는다(T15 reduced-motion 규칙 유지). */
-.attract-screen::before {
-  content: '';
+.attract-screen__bg {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
   z-index: -1;
-  width: 900px;
-  height: 900px;
-  max-width: 140vw;
-  max-height: 140vw;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(40, 217, 240, 0.35), transparent 60%);
-  opacity: 0.25;
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+/* 위·아래를 더 짙게 눌러 텍스트 대비를 확보한다. 정적 레이어로 애니메이션은 없다
+   (T15 reduced-motion 규칙과 무관하게 항상 정적). */
+.attract-screen__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(6, 20, 36, 0.55) 0%, rgba(6, 20, 36, 0.75) 55%, rgba(6, 20, 36, 0.94) 100%),
+    linear-gradient(90deg, rgba(6, 20, 36, 0.35), transparent 40%, transparent 60%, rgba(6, 20, 36, 0.35));
 }
 
 .attract-screen__badge {

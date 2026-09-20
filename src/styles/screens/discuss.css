@@ -1,50 +1,44 @@
-.discuss-screen__title {
-  margin: 0;
-  font-size: var(--fs-title);
-  line-height: 1.3;
-}
-
 .discuss-screen__section-label {
-  margin: 0 0 var(--space-1);
-  font-size: 20px;
+  margin: 0 0 4px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
-/* 내 좌석 명패: shell.css .nameplate와 같은 시안 테두리 pill 모양을 쓰고, 편집
-   영역 스크롤 중에도 상단에 고정한다(DESIGN_SPEC.md "만들 것 · 내 좌석 · '나 · 특별
-   이사' 명패 상단 고정"). */
+/* 내 좌석 명패(DESIGN_SPEC.md "만들 것 · 내 좌석 · '나 · 특별 이사' 명패"). 왼쪽 열
+   자체가 더는 스크롤되지 않아(T45) sticky는 필요 없다 — 일반 흐름의 pill로 남긴다. */
 .discuss-screen__section-label--mine {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-1);
   width: fit-content;
   color: var(--text);
-  font-size: 22px;
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  font-size: var(--fs-card);
+  padding: 4px var(--space-2) 4px var(--space-1);
   border: 1px solid var(--accent);
   border-radius: 999px;
   background-color: var(--panel-glass);
 }
 
-/* 상단 임원 4열(DESIGN_SPEC.md "의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우
-   textarea"). 각 카드는 이니셜 아바타 + 이름 + 첫 의견 한 줄이다. */
+/* 오른쪽(회의 정보) 열의 임원 첫 의견 4장. 무대 열이 본문 폭을 줄여(T44) 4열은
+   좁아지므로 2열로 감싼다(DESIGN_SPEC.md v1.0 6절 표 "임원 첫 의견 4줄"). */
 .discuss-screen__execs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-2);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .discuss-exec-card {
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  min-height: 0;
+  overflow: hidden;
   background-color: var(--panel);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   box-shadow: var(--shadow-card);
 }
 
@@ -54,26 +48,50 @@
 
 .discuss-exec-card__member {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-meta);
   color: var(--text-muted);
 }
 
+/* 임원 첫 의견은 4줄로 클램프한다(v1.0 6절 표 "임원 첫 의견 4줄") — 패널 자체는
+   스크롤하지 않는다. */
 .discuss-exec-card__text {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--fs-meta);
   color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.discuss-screen__body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.discuss-screen__phrase-list {
+/* 추천 문구 패널(2026-09-19 T45 검토 반영: 오른쪽 "회의 정보" 열로 옮겼다,
+   DESIGN_SPEC.md v1.0 6절 2a). 내부 스크롤은 두지 않는다 — 왼쪽 열의 입력·CTA가
+   화면당 유일한 스크롤 후보 자리를 대신 쓰지 않으므로 오른쪽 열도 세로 예산 안에서
+   그대로 보여야 한다. */
+.discuss-screen__phrases {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+}
+
+/* 추천 문구 6개는 2열로 감싼다(DESIGN_SPEC.md v1.0 6절 표 "추천 문구 2×3"). */
+.discuss-screen__phrase-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-1);
+}
+
+/* 근거 카드 압축(v1.0 6절 표 "근거 2×2 압축"): 오른쪽 열에 추천 문구·임원 의견과
+   함께 세 블록이 들어가야 해서 evidence.css의 기본 패딩·줄 수보다 더 줄인다. */
+.discuss-screen__evidence .evidence-card {
+  padding: var(--space-1);
+}
+
+.discuss-screen__evidence .evidence-card__insight {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 내 발언 영역: 시안 왼쪽 4px 경계로 참가자 좌석임을 표시한다(DESIGN_SPEC.md
@@ -81,21 +99,24 @@
 .discuss-screen__editor {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 4px;
   border-left: 4px solid var(--accent);
   padding-left: var(--space-2);
 }
 
 .phrase-card {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-1);
   min-height: var(--touch-min);
   background-color: var(--panel);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
+  font-size: var(--fs-meta);
   /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
   transition:
     border-color var(--transition-fast) ease,
@@ -109,6 +130,26 @@
 .phrase-card--selected {
   border-color: var(--accent);
   box-shadow: var(--glow-accent);
+}
+
+/* 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절 "추천 문구·빠른 답·조건 칩:
+   ... 선택 시 체크 배지가 튀어나오는120ms 스케일 애니메이션"). */
+.phrase-card--selected::after {
+  content: '✓' / '';
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+  animation: check-badge-pop var(--transition-fast) ease-out both;
 }
 
 .phrase-card__checkbox {
@@ -129,17 +170,21 @@
   gap: var(--space-1);
 }
 
+/* 3줄 높이(v1.0 6절 표 "입력창 3줄") — 왼쪽 열 세로 예산에 맞춰 크게 줄였다. 텍스트
+   전체는 필요하면 입력창 자체 내부 스크롤로 본다(resize:vertical로 참가자가 늘릴 수도
+   있다). */
 .draft-editor__textarea {
   width: 100%;
-  min-height: 200px;
+  min-height: 72px;
+  max-height: 120px;
   resize: vertical;
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 18px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
 }
 
@@ -193,7 +238,7 @@
   min-height: var(--touch-min);
   padding: 0 var(--space-2);
   background: transparent;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--text);
   cursor: pointer;
@@ -215,11 +260,13 @@
   min-height: var(--touch-min);
   padding: 4px var(--space-2);
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   background: transparent;
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
+  font-size: var(--fs-meta);
+  position: relative;
   transition:
     border-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
@@ -228,6 +275,27 @@
 .condition-chip--accepted {
   border-color: var(--accent);
   color: var(--accent);
+  padding-right: calc(var(--space-2) + 22px);
+}
+
+/* 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절, phrase-card와 동일 규칙). */
+.condition-chip--accepted::after {
+  content: '✓' / '';
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  animation: check-badge-pop-center var(--transition-fast) ease-out both;
 }
 
 .condition-chips__conflicts {
@@ -240,33 +308,32 @@
   color: var(--text-muted);
 }
 
+/* [비서실장][의견 전달]을 나란히 둔다(DESIGN_SPEC.md v1.0 6절 표 "[비서실장][의견
+   전달]"). screen__submit-row(shell.css)가 flex-wrap을 이미 주므로 너비가 부족하면
+   줄바꿈된다. */
 .discuss-screen__submit-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  align-items: flex-start;
+  align-items: center;
 }
 
 .discuss-screen__submit-hint {
   margin: 0;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: var(--fs-meta);
 }
 
-/* 1280×720: 임원 카드 4장을 각각 한 줄 요약(아바타+이름+문구 한 줄)으로 접고,
-   본문은 계속 좌 추천 문구(2열×3행)·우 입력 영역으로 나눠 세로 공간을 아낀다
-   (DESIGN_SPEC.md 6장 "1280×720에서 상단 임원 카드는 접힌 한 줄 요약으로 줄이고,
-   하단을 추천 문구 2열×3행 영역과 입력 영역으로 나눈다"). */
+/* 720(무대 열 36vw)에서는 왼쪽 열 세로 예산이 더 빠듯해(v1.0 6절 "720: 아래 입력
+   영역 약 330px") 임원 카드를 한 줄 요약(아바타+이름+문구 한 줄)으로 접는다. 글자
+   크기는 tokens.css의 720 스케일(--fs-meta 12px 등)을 그대로 따른다. */
 @media (max-width: 1280px) {
   .discuss-screen__execs {
-    gap: var(--space-1);
+    gap: 4px;
   }
 
   .discuss-exec-card {
     min-width: 0;
     overflow: hidden;
-    padding: 6px var(--space-1);
-    min-height: 56px;
+    padding: 4px var(--space-1);
+    min-height: 40px;
     gap: 6px;
   }
 
@@ -280,65 +347,104 @@
 
   .discuss-exec-card__member {
     flex-shrink: 0;
-    font-size: 13px;
     white-space: nowrap;
   }
 
   .discuss-exec-card__text {
-    font-size: 13px;
+    -webkit-line-clamp: 1;
     white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .discuss-screen__phrases {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* 720 세로 예산 안에서 조건 칩(56px 터치 목표, 축소 예외 없음)까지 담으려면
+     추천 문구를 2행(3열×2행)으로 눕혀야 한다 — 열이 3개라 칸이 좁아지는 만큼
+     문구는 1줄로 자른다(.phrase-card__text 아래). */
+  /* T45 이후 추천 문구는 오른쪽 열(세로 여유 충분)에 있으므로 2열 3행, 문구 2줄. */
   .discuss-screen__phrase-list {
-    display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-1);
+    gap: 4px;
   }
 
   .phrase-card {
-    min-height: 56px;
-    padding: var(--space-1);
-    font-size: 15px;
+    min-height: 48px;
+    padding: 4px 6px;
   }
 
-  .discuss-screen__section-label {
-    font-size: 16px;
+  .draft-editor {
+    gap: 4px;
   }
 
-  /* rows=8(JSX)로 정해진 기본 높이 대신 명시적 height로 줄이고, 남는 내용은
-     내부 스크롤로 본다(DESIGN_SPEC.md 6장 "텍스트 전체는 입력창 내부 스크롤
-     가능하다"). 글자 축소·항목 누락 대신 이 높이만 줄인다. */
-  .discuss-screen__title {
-    font-size: 28px;
-    line-height: 1.2;
+  .discuss-screen__editor {
+    gap: 4px;
   }
 
-  .draft-editor__textarea {
-    height: 64px;
-    min-height: 0;
-    font-size: 16px;
-  }
-
-  /* 라벨 자체 margin-bottom(base 규칙)과 .discuss-screen__editor의 flex gap이
-     겹쳐 세로 간격이 두 배로 들지 않게, 1280px 이하에서는 gap 하나로 통일한다. */
   .discuss-screen__section-label {
     margin-bottom: 0;
   }
 
-  .discuss-screen__editor {
-    gap: var(--space-1);
+  .discuss-screen__section-label--mine {
+    padding: 2px var(--space-1);
+    font-size: var(--fs-meta);
+  }
+
+  /* 아바타는 장식(aria-hidden)이라 720 세로 예산이 빠듯할 때는 빼고 글자만 남긴다. */
+  .discuss-screen__section-label--mine .avatar {
+    display: none;
+  }
+
+  /* 카드 폭이 좁아 2줄로 꺾이면 최소 높이(48px, 720 예외)를 넘기기 쉬워 1줄로
+     자른다 — 전체 문구는 카드 클릭 전에도 이미 브리핑·근거에서 다뤘다. */
+  .phrase-card__text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .draft-editor__meta {
+    display: none;
   }
 
   .condition-chips__label {
     margin: 0;
-    font-size: 14px;
+    font-size: 11px;
   }
 
+  /* 조건 칩은 56px 터치 목표를 그대로 유지한다(예외 없음) — 대신 라벨 폭을
+     줄여(ellipsis) 한 줄에 더 들어가게 한다. 내부 스크롤은 두지 않는다(v1.0 6절
+     2a) — 전체 라벨은 오른쪽 열·MOTION 화면에서 다시 확인할 수 있다. */
   .condition-chip {
     min-height: var(--touch-min);
     padding: 4px var(--space-1);
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  /* 위 padding 단축 속성이 선택된 칩의 오른쪽 여백(체크 배지 자리)까지 덮어쓰므로
+     여기서 다시 준다 — 안 그러면 배지가 라벨 끝 글자 위에 겹친다. */
+  .condition-chip--accepted {
+    padding-right: calc(var(--space-1) + 22px);
+  }
+
+  /* 720에서는 rows=3(JSX)보다도 낮춰, 남는 텍스트는 입력창 자체 내부 스크롤로 본다
+     (DraftEditor는 resize:vertical도 허용한다). */
+  .draft-editor__textarea {
+    min-height: 32px;
+    max-height: 40px;
+  }
+
+  .discuss-screen__editor {
+    gap: 2px;
+  }
+
+  /* 720 세로 예산(v1.0 6절 "아래 입력 영역 약 330px")에 맞추려면 안내 문구까지 담을
+     여유가 없다 — 전달 규칙(빈 칸·300자)은 조건 칩·글자 수 카운터로도 이미 드러난다. */
+  .discuss-screen__submit-hint {
+    display: none;
   }
 }

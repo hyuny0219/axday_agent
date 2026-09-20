@@ -67,15 +67,15 @@ export type SessionAction =
 
 const IDLE_ROLE_STATUS: Record<ExecMemberId, RoleStatus> = {
   CEO: 'idle',
-  CFO_CAIO: 'idle',
-  CIO: 'idle',
+  CFO: 'idle',
+  CAIO: 'idle',
   CISO: 'idle',
 };
 
 const PENDING_ROLE_STATUS: Record<ExecMemberId, RoleStatus> = {
   CEO: 'pending',
-  CFO_CAIO: 'pending',
-  CIO: 'pending',
+  CFO: 'pending',
+  CAIO: 'pending',
   CISO: 'pending',
 };
 

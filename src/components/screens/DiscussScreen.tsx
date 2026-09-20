@@ -6,6 +6,14 @@
 // AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
 // (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
 // AssistantPanel에 추가로 넘긴다.
+// T45(조종석 배치): 왼쪽 열(app-body__actions)은 내 행동만 — 입력창·조건 칩(한 줄)·
+// [비서실장][의견 전달]. 오른쪽 열(app-body__content)은 회의 정보 — "비서실장 추천
+// 문구" 2×3 + 근거 2×2(압축) + 임원 첫 의견(2026-09-19 T45 검토 반영: 세로 예산을
+// 넘기지 않도록 추천 문구를 오른쪽으로 옮겼다, DESIGN_SPEC.md v1.0 6절 2a). 추천 문구는
+// 오른쪽 열로 옮겨도 클릭 동작·testid(phrase-card-*)·선택 상태는 그대로다. AssistantPanel은
+// 토글이 왼쪽에 남고, 열렸을 때의 드로어 본문은 assistant.css가 오른쪽 열 위에 절대
+// 위치로 겹쳐 그린다(position:absolute, DOM은 그대로 왼쪽 트리 안이지만 .app-body가
+// 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -26,6 +34,7 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { Avatar } from '../parts/Avatar';
+import { EvidenceGrid } from '../parts/EvidenceGrid';
 import { MEMBER_LABELS } from '../memberLabels';
 import '../../styles/screens/discuss.css';
 
@@ -166,33 +175,8 @@ export function DiscussScreen({
   }
 
   return (
-    <section className="screen discuss-screen">
-      <h2 className="discuss-screen__title">이사님의 의견을 전달해 주세요</h2>
-      <div className="discuss-screen__execs" data-testid="discuss-exec-row">
-        {scenario.initialOpinions.map((opinion) => (
-          <article key={opinion.memberId} className="discuss-exec-card">
-            <Avatar memberId={opinion.memberId} size="sm" />
-            <div className="discuss-exec-card__body">
-              <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
-              <p className="discuss-exec-card__text">{opinion.text}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-      <div className="discuss-screen__body">
-        <div className="discuss-screen__phrases">
-          <h3 className="discuss-screen__section-label">추천 문구 (여러 개 선택 가능)</h3>
-          <div className="discuss-screen__phrase-list">
-            {scenario.phrases.map((phrase) => (
-              <PhraseCard
-                key={phrase.id}
-                phrase={phrase}
-                selected={draft.selectedPhraseIds.includes(phrase.id)}
-                onToggle={() => handleTogglePhrase(phrase.id)}
-              />
-            ))}
-          </div>
-        </div>
+    <>
+      <div className="app-body__actions screen discuss-screen">
         <div className="discuss-screen__editor">
           <h3 className="discuss-screen__section-label discuss-screen__section-label--mine">
             <Avatar memberId="PARTICIPANT" size="sm" />내 발언
@@ -210,32 +194,61 @@ export function DiscussScreen({
             onToggle={handleToggleCondition}
           />
         </div>
-      </div>
-      <AssistantPanel
-        scenario={scenario}
-        sessionId={sessionId}
-        selectedConditionIds={confirmedConditionIds}
-        draftText={draft.draftText}
-        draftRevision={draftRevision}
-        transcript={transcript}
-        onApplyDraft={handleDraftTextChange}
-        onAssistantAction={onAssistantAction}
-        adapter={assistantAdapter}
-      />
-      <div className="discuss-screen__submit-row screen__sticky-footer">
-        <button
-          type="button"
-          className="cta"
-          disabled={!canSubmit}
-          onClick={handleSubmit}
-          data-testid="submit-opinion"
-        >
-          의견 전달
-        </button>
+        <div className="discuss-screen__submit-row screen__submit-row">
+          <AssistantPanel
+            scenario={scenario}
+            sessionId={sessionId}
+            selectedConditionIds={confirmedConditionIds}
+            draftText={draft.draftText}
+            draftRevision={draftRevision}
+            transcript={transcript}
+            onApplyDraft={handleDraftTextChange}
+            onAssistantAction={onAssistantAction}
+            adapter={assistantAdapter}
+          />
+          <button
+            type="button"
+            className="cta"
+            disabled={!canSubmit}
+            onClick={handleSubmit}
+            data-testid="submit-opinion"
+          >
+            의견 전달
+          </button>
+        </div>
         <p className="discuss-screen__submit-hint">
           빈 칸이거나 300자를 넘으면 전달할 수 없습니다. 축약 표현은 이사님이 직접 정합니다.
         </p>
       </div>
-    </section>
+      <div className="app-body__content screen discuss-screen__info">
+        <div className="discuss-screen__phrases">
+          <h3 className="discuss-screen__section-label">비서실장 추천 문구 (여러 개 선택 가능)</h3>
+          <div className="discuss-screen__phrase-list">
+            {scenario.phrases.map((phrase) => (
+              <PhraseCard
+                key={phrase.id}
+                phrase={phrase}
+                selected={draft.selectedPhraseIds.includes(phrase.id)}
+                onToggle={() => handleTogglePhrase(phrase.id)}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="discuss-screen__evidence">
+          <EvidenceGrid evidence={scenario.evidence} />
+        </div>
+        <div className="discuss-screen__execs" data-testid="discuss-exec-row">
+          {scenario.initialOpinions.map((opinion) => (
+            <article key={opinion.memberId} className="discuss-exec-card">
+              <Avatar memberId={opinion.memberId} size="sm" />
+              <div className="discuss-exec-card__body">
+                <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                <p className="discuss-exec-card__text">{opinion.text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

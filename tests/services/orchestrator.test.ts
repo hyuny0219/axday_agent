@@ -159,7 +159,7 @@ describe('runner.runRound', () => {
     const adapter = fakeAdapter({
       initialOpinions: async () =>
         EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => {
-          if (roleId === 'CIO') {
+          if (roleId === 'CAIO') {
             return { roleId, status: 'failed', failReason: 'timeout' };
           }
           return { roleId, status: 'answered', statement: answeredStatement(roleId) };
@@ -177,9 +177,9 @@ describe('runner.runRound', () => {
 
     const session = store.getSession();
     expect(session.transcript.statements).toHaveLength(3);
-    expect(session.roleStatus.CIO).toBe('failed');
+    expect(session.roleStatus.CAIO).toBe('failed');
     expect(session.roleStatus.CEO).toBe('answered');
-    expect(session.roleStatus.CFO_CAIO).toBe('answered');
+    expect(session.roleStatus.CFO).toBe('answered');
     expect(session.roleStatus.CISO).toBe('answered');
   });
 

@@ -1,9 +1,12 @@
 /* live 모드 전용 공통 스타일: 임원 발언 카드(OPINIONS·REACTIONS), 최종 표 대기 문구,
    결과의 판단 근거·미표결 사유·제한 안내. scripted 모드는 이 클래스들을 쓰지 않는다. */
 
+/* 무대 열이 본문 폭을 줄여(T44) 4열은 좁아지므로 2열로 감싼다 — scripted 모드의
+   opinions-screen__cards·discuss-screen__execs와 같은 규칙(DESIGN_SPEC.md v1.0
+   5절 "임원 4열 카드는 2열"). */
 .live-round__cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
 }
 
@@ -12,7 +15,7 @@
   flex-direction: column;
   gap: var(--space-1);
   background-color: var(--panel);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
   box-shadow: var(--shadow-card);
@@ -130,9 +133,12 @@
    .reaction-reply와 같은 들여쓰기·연결선을 live 카드에 적용한다. 발언이 온 임원은
    시안 왼쪽 굵은 테두리로 강조하고, 판단 중인 임원은 흐리게 둔다. 실패 카드는
    확인이 필요하므로 흐리지 않는다(PR #4 Codex 검토). */
+/* T45 이후 오른쪽 열은 고정 높이(overflow:hidden)라 세로 스택은 720에서 잘린다.
+   scripted 답글(.reactions-screen__replies)과 같은 2열 그리드로 둔다(PR #6 Codex 검토). */
 .live-round__cards--reply {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
 }
 
 .live-round__cards--reply .live-statement {
@@ -171,6 +177,29 @@
   .live-round__cards--reply .live-statement::before {
     left: calc(-1 * var(--space-2));
     width: var(--space-2);
+  }
+
+  /* 720 세로 예산: 발언 120자는 3줄로 자르고, 근거 칩·인용은 한 줄로 접는다. 전문은
+     RESULT 판단 근거와 회의 기록에 그대로 남는다. */
+  .live-round__cards--reply .live-statement {
+    padding: var(--space-1) var(--space-2);
+    gap: 4px;
+  }
+
+  .live-round__cards--reply .live-statement__text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: var(--fs-meta);
+  }
+
+  .live-round__cards--reply .live-statement__evidence,
+  .live-round__cards--reply .live-statement__references {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-wrap: nowrap;
   }
 }
 

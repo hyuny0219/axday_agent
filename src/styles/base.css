@@ -19,6 +19,23 @@ body {
   line-height: 1.4;
 }
 
+/* 디스플레이 서체(v1.0 애니메이션 프레임, DESIGN_SPEC.md v1.0 2절 "제목·결론·도장에
+   디스플레이 서체 Black Han Sans"). Black Han Sans는 한글 2,350자 범위라 font-weight:900을
+   지정해, 그 폰트가 지원하는 글자는 자체 굵기(400 하나뿐)로, 범위 밖이라 Noto Sans KR로
+   넘어가는 글자는 실제 900 웨이트로 진하게 렌더한다. 본문은 --font-ui 그대로 둔다. */
+h1,
+.attract-screen__title,
+.select-screen__title,
+.opinions-screen__title,
+.discuss-screen__title,
+.reactions-screen__title,
+.motion-screen__title,
+.vote-screen__title,
+.result-screen__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+}
+
 /* 모든 상호작용 요소의 키보드 포커스 표시(DESIGN_SPEC.md 4장 ":focus-visible 유지,
    모든 버튼 키보드 조작 가능"). 개별 컴포넌트 CSS가 더 구체적인 규칙을 두면 그것이
    우선하지만, 여기서 전역 기본값을 보장해 새 컴포넌트도 빠짐없이 포커스가 보인다. */
@@ -29,14 +46,18 @@ body {
 
 /* prefers-reduced-motion에서 화면 전환 이동·선택 애니메이션·임원 발언 glow를 모두
    제거한다(DESIGN_SPEC.md 4장 "prefers-reduced-motion에서 이동·빛 효과 제거"). 개별
-   컴포넌트마다 예외를 두지 않고 전역에서 지속 시간을 0에 가깝게 만들어 확실히 없앤다. */
+   컴포넌트마다 예외를 두지 않고 전역에서 지속 시간을 0에 가깝게 만들어 확실히 없앤다.
+   animation-delay도 0으로 — 결과 배지·도장은 fill-mode both로 지연 동안 숨겨져 있어,
+   지연을 남기면 reduced-motion 사용자가 결과를 늦게 본다(PR #6 Codex 검토). */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }

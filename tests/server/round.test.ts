@@ -35,25 +35,25 @@ describe('handleRound with the mock provider', () => {
 
   it('한 임원만 timeout 장애가 나면 나머지 3명은 answered, 해당 임원만 failed로 남는다', async () => {
     const provider = createMockProvider('mock-model');
-    const input = baseRoundInput({ requestId: 'req-2', budgetMs: 60, mock: { CIO: 'timeout' } });
+    const input = baseRoundInput({ requestId: 'req-2', budgetMs: 60, mock: { CAIO: 'timeout' } });
     const results = await handleRound(input, { provider });
     const grouped = byRole(results);
     expect(grouped.CEO?.status).toBe('answered');
-    expect(grouped.CFO_CAIO?.status).toBe('answered');
+    expect(grouped.CFO?.status).toBe('answered');
     expect(grouped.CISO?.status).toBe('answered');
-    expect(grouped.CIO?.status).toBe('failed');
-    expect(grouped.CIO?.failReason).toBe('timeout');
+    expect(grouped.CAIO?.status).toBe('failed');
+    expect(grouped.CAIO?.failReason).toBe('timeout');
   });
 
   it('스키마에 맞지 않는 JSON을 보낸 임원은 failed:invalid_response로 남고 다른 임원에는 영향이 없다', async () => {
     const provider = createMockProvider('mock-model');
-    const input = baseRoundInput({ requestId: 'req-3', mock: { CFO_CAIO: 'invalid' } });
+    const input = baseRoundInput({ requestId: 'req-3', mock: { CFO: 'invalid' } });
     const results = await handleRound(input, { provider });
     const grouped = byRole(results);
-    expect(grouped.CFO_CAIO?.status).toBe('failed');
-    expect(grouped.CFO_CAIO?.failReason).toBe('invalid_response');
+    expect(grouped.CFO?.status).toBe('failed');
+    expect(grouped.CFO?.failReason).toBe('invalid_response');
     expect(grouped.CEO?.status).toBe('answered');
-    expect(grouped.CIO?.status).toBe('answered');
+    expect(grouped.CAIO?.status).toBe('answered');
     expect(grouped.CISO?.status).toBe('answered');
   });
 

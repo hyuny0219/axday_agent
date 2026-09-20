@@ -1,12 +1,15 @@
 .reactions-screen__title {
   margin: 0;
+  font-size: var(--fs-title);
+  line-height: 1.3;
 }
 
-/* 내 발언 인용 카드를 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 · 반응 ·
-   내 발언 인용 카드(시안 경계)를 맨 위"). */
+/* 내 발언 인용 카드를 왼쪽 열 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 ·
+   반응 · 내 발언 인용 카드(시안 경계)를 맨 위"). 2줄로 클램프한다(v1.0 6절 표
+   "내 발언 인용(2줄 클램프)"). */
 .reactions-screen__quote {
   margin: 0;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--accent);
   border-left-width: 4px;
@@ -14,14 +17,20 @@
   color: var(--text);
   font-size: var(--fs-card);
   box-shadow: var(--shadow-card);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 임원 반응을 내 발언 인용 카드 아래 답글형으로 늘어놓는다(T40, DESIGN_SPEC.md 3장
-   "반응" 행: "들여쓰기·연결선"). 각 항목은 인용 카드에서 이어지는 세로 연결선을
-   왼쪽에 두고, 변한 임원만 강조하며 나머지는 흐리게 보여준다. */
+   "반응" 행: "들여쓰기·연결선"). T44에서 무대 열이 본문 폭을 줄이며(v1.0 5절) 세로
+   목록 하나로는 1920에서도 한 화면에 담기 어려워, 다른 임원 4열 카드와 같은 원칙으로
+   2열로 감싼다 — 변한 임원만 강조·나머지는 흐리게 보여주는 규칙은 그대로다. 2열에서는
+   개별 들여쓰기·연결선 대신 강조 테두리만으로 "인용에 대한 답"임을 나타낸다.*/
 .reactions-screen__replies {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -33,23 +42,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-left: var(--space-3);
   padding: var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-}
-
-/* 인용 카드에서 내려오는 연결선(들여쓰기 왼쪽 바깥에 그린다). */
-.reaction-reply::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: calc(-1 * var(--space-3));
-  width: var(--space-3);
-  height: 1px;
-  background-color: var(--border);
 }
 
 .reaction-reply--changed {
@@ -99,20 +96,36 @@
 .reactions-screen__followup {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: var(--space-1);
   background-color: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: var(--space-3);
+  padding: var(--space-2);
+}
+
+/* 빠른 답 ↔ 직접 답하기가 같은 자리에서 전환하는 슬롯(2026-09-19 T45 검토 반영
+   2a). 내부 스크롤은 두지 않는다 — [비서실장][답변 전달] 행은 형제로 밖에 있어
+   항상 보인다. */
+.reactions-screen__answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.reactions-screen__submit-row {
+  margin-top: 4px;
+  align-items: center;
 }
 
 .reactions-screen__section-label {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-card);
 }
 
-/* CIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
-   2-2, "CIO가 묻습니다"). */
+/* CAIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
+   2-2, "CAIO가 묻습니다"). */
 .reactions-screen__question {
   display: flex;
   align-items: flex-start;
@@ -137,17 +150,23 @@
   gap: var(--space-1);
 }
 
+.reactions-screen__options[hidden] {
+  display: none;
+}
+
 /* secondary 버튼: 투명 패널 + 테두리(DESIGN_SPEC.md 4장 "secondary는 투명
    패널+테두리"). */
 .reactions-screen__option {
+  position: relative;
   min-height: var(--touch-min);
   padding: 0 var(--space-2);
   background-color: transparent;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-control);
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
+  font-size: var(--fs-meta);
   text-align: left;
   transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
@@ -157,35 +176,64 @@
   background-color: var(--panel-active);
 }
 
+/* 빠른 답 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절, phrase-card와 동일
+   규칙). */
+.reactions-screen__option--selected {
+  padding-right: calc(var(--space-2) + 30px);
+}
+
+.reactions-screen__option--selected::after {
+  content: '✓' / '';
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--accent);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 700;
+  animation: check-badge-pop-center var(--transition-fast) ease-out both;
+}
+
 .reactions-screen__option--selected {
   border-color: var(--accent);
   color: var(--accent);
 }
 
 /* 직접 답하기는 기본 접힘이며, 열어야 textarea·글자 수·조건 칩이 나타난다(T40
-   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). */
+   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). 빠른 답과 같은
+   자리를 나눠 쓰므로(hidden 속성) [hidden]이면 그리지 않는다. */
 .reactions-screen__editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
   padding: var(--space-1) var(--space-2);
 }
 
-.reactions-screen__editor-toggle {
-  cursor: pointer;
-  color: var(--text);
-  font-family: inherit;
-  list-style: none;
-}
-
-.reactions-screen__editor-toggle::-webkit-details-marker {
+.reactions-screen__editor[hidden] {
   display: none;
 }
 
-.reactions-screen__editor-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+/* 빠른 답 ↔ 직접 답하기 전환 버튼. 기본 버튼 배경·테두리를 지워 이전 <summary>
+   링크처럼 보이게 한다. */
+.reactions-screen__editor-toggle {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: var(--fs-meta);
 }
 
 .reactions-screen__direct-label {
@@ -200,15 +248,16 @@
 
 .reactions-screen__textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 64px;
+  max-height: 110px;
   resize: vertical;
   background-color: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   color: var(--text);
   font-family: inherit;
-  font-size: 18px;
+  font-size: var(--fs-meta);
   line-height: 1.5;
 }
 
@@ -217,13 +266,25 @@
   outline-offset: 2px;
 }
 
+/* 720: 왼쪽 열 세로 예산이 더 빠듯하다(v1.0 6절 "720: 아래 입력 영역 약 330px"). */
 @media (max-width: 1280px) {
-  .reaction-reply {
-    margin-left: var(--space-2);
+  .reactions-screen__followup {
+    gap: 4px;
+    padding: var(--space-1);
   }
 
-  .reaction-reply::before {
-    left: calc(-1 * var(--space-2));
-    width: var(--space-2);
+  .reaction-reply {
+    padding: var(--space-1);
+    gap: 4px;
+  }
+
+  .reaction-reply__member {
+    font-size: var(--fs-card);
+  }
+
+  .reactions-screen__textarea {
+    min-height: 48px;
+    max-height: 72px;
   }
 }
+

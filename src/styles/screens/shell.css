@@ -1,8 +1,37 @@
 /* 앱 골격: 헤더, 명패, 공통 화면/CTA 스타일. 디자인 마감은 T14에서 다룬다. */
 
+/* 선택 체크 배지 공용 키프레임(DESIGN_SPEC.md v1.0 2절 "추천 문구·빠른 답·조건 칩:
+   선택 시 체크 배지가 튀어나오는120ms 스케일 애니메이션"). App.tsx가 이 파일을 항상
+   불러오므로 다른 화면 CSS(discuss.css·reactions.css)에서도 이 키프레임을 그대로 쓴다.
+   -center 변형은 세로 중앙 정렬(translateY(-50%))이 필요한 칩·리스트용이다. */
+@keyframes check-badge-pop {
+  from {
+    transform: scale(0);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes check-badge-pop-center {
+  from {
+    transform: translateY(-50%) scale(0);
+  }
+
+  to {
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* 게임 화면처럼 페이지 스크롤을 없앤다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와
+   무스크롤 규칙", T45). 셸 자체를 뷰포트 높이에 고정하고 넘치는 내용은 문서가 아니라
+   지정된 패널 하나만 안에서 스크롤한다(화면당 최대 1개). 잠금 해제(짧거나 좁은 뷰포트)는
+   아래 .app-body__content 뒤의 미디어 블록이 맡는다. */
 .app-shell {
   position: relative;
-  min-height: 100%;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -18,7 +47,15 @@
   pointer-events: none;
 }
 
+/* 헤더 유리 패널: backdrop-filter는 앱 전체에서 이 한 곳에만 쓴다(DESIGN_SPEC.md v1.0
+   2절 "헤더: 유리 패널(backdrop-filter: blur(8px))"). backdrop-filter는 새 쌓임 맥락을
+   만들기 때문에, 명시적 position+z-index 없이 두면 뒤 화면(app-main)의 기본 쌓임 순서가
+   문서 순서상 헤더를 덮어버려 운영자 메뉴·확인 대화상자가 클릭을 가로채지 못한다.
+   position:relative + z-index로 헤더(와 그 안의 드롭다운)가 항상 본문 위에 오게 한다. */
 .app-header {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,6 +63,8 @@
   gap: var(--space-1) var(--space-2);
   padding: var(--space-2) var(--space-4);
   background-color: var(--panel-glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 0 rgba(40, 217, 240, 0.15);
 }
@@ -178,8 +217,121 @@
 
 .app-main {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   display: flex;
-  padding: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+}
+
+/* BRIEFING~RESULT(무대가 있는 화면)는 .app-body가 이미 자체 여백을 두므로, 이
+   바깥 main의 padding은 없앤다(이중 여백 방지). */
+.app-main--stage {
+  padding: 0;
+}
+
+/* 조종석 배치(DESIGN_SPEC.md v1.0 6절, T45): 왼쪽 열 = "나"(무대 + 입력·선택·CTA),
+   오른쪽 열 = "회의 정보". 세 영역(무대·왼쪽 아래 행동·오른쪽 정보)을 named grid area로
+   두어, 각 Screen 컴포넌트가 렌더하는 두 wrapper div(.app-body__actions·
+   .app-body__content)가 어디에 몇 번 중첩돼 있든(StageRouter → 개별 Screen 컴포넌트)
+   Fragment로 평평하게 펼쳐져 .app-body의 직계 grid item이 된다 — React Fragment는
+   DOM에 별도 wrapper를 만들지 않기 때문이다. position:relative는 AssistantPanel
+   드로어(오른쪽 열 위에 겹치는 절대위치 패널)의 위치 기준점이다. */
+.app-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--stage-col-width) 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'stage info'
+    'actions info';
+  column-gap: var(--stage-col-gap);
+  row-gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  min-width: 0;
+}
+
+.app-body__stage {
+  grid-area: stage;
+  position: relative;
+  min-height: 0;
+}
+
+/* 왼쪽 열 아래쪽: 무대 아래 참가자 행동(입력·선택·CTA, v1.0 6절 "모든 CTA는 왼쪽 열
+   무대 아래에 있다"). 세로 예산을 넘지 않는 한 내부 스크롤 없이 그대로 보인다.
+   overflow는 visible로 둔다(hidden이 아니다) — DISCUSS·REACTIONS의 AssistantPanel
+   드로어가 이 안에 DOM으로 중첩되면서도 .app-body 기준 절대 위치로 오른쪽 열 위에
+   튀어나와야 하는데, 조상에 overflow:hidden이 있으면 absolute 자손이라도 그 조상의
+   테두리 상자에 잘려 보이지 않는다(포함 블록과 무관하게 클리핑은 DOM 조상 기준).
+   실제 넘침 방지는 각 화면 CSS의 세로 예산 맞춤이 전담한다(overflow:hidden 없이도
+   .app-main이 상위에서 한 번 더 막아 페이지 스크롤로는 새지 않는다). */
+.app-body__actions {
+  grid-area: actions;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* 오른쪽 열: 회의 정보(안건·근거·쟁점·임원 의견·반응·결과 기록). 화면당 내부 스크롤
+   패널은 최대 1개이며, 그 패널만 자체 overflow-y:auto를 갖고 이 컨테이너 자체는
+   넘치는 내용을 문서 스크롤로 흘리지 않는다(overflow:hidden). */
+.app-body__content {
+  grid-area: info;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow: hidden;
+}
+
+/* 무스크롤 잠금은 검수 해상도(1920×1080·1280×720, 폭 ≥1200·높이 ≥700)에서만 적용한다.
+   그보다 짧거나 좁은 뷰포트(PC 200% 확대 상당 960×540 등)에서는 셸을 문서 흐름으로
+   되돌려 페이지 스크롤을 열고, 두 열을 세로 1열(무대 → 내 행동 → 회의 정보)로
+   재배치한다(DESIGN_SPEC.md 3장 "PC 200% 확대에서 세로 재배치·스크롤을 허용",
+   PR #6 Codex 4차 검토). 위 .app-main·.app-body·.app-body__content 규칙도 같은
+   조건에서 함께 풀린다. 이 블록은 반드시 .app-main·.app-body·.app-body__content 기본
+   규칙 뒤에 둔다 — 같은 특이성이라 앞에 두면 기본 규칙이 이겨 2열·overflow:hidden이
+   그대로 남는다(PR #6 Codex 5차 검토). e2e/a11y.spec.ts 960×540 검사가 계산값으로
+   1열·overflow:visible을 단언한다. */
+@media (max-height: 699px), (max-width: 1199px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .app-main {
+    overflow: visible;
+  }
+
+  .app-body {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'stage'
+      'actions'
+      'info';
+    grid-template-rows: auto auto auto;
+  }
+
+  .app-body__content {
+    overflow: visible;
+  }
+}
+
+/* 무대 열 안 좌상단에 겹쳐 찍는 명패 pill(v1.0 6절 "명패는 무대 안 좌상단 pill").
+   .nameplate 기본 pill 모양은 그대로 쓰고 위치만 절대 좌표로 바꾼다. */
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nameplate--header {
+  margin: 0;
+  padding: 2px var(--space-2);
+  font-size: var(--fs-meta);
 }
 
 /* 화면 전환: opacity + 소폭 translate, 180–250ms(DESIGN_SPEC.md 4장). StageRouter가
@@ -196,6 +348,30 @@
   animation: screen-enter var(--transition-screen) ease-out both;
 }
 
+/* BRIEFING~RESULT의 왼쪽/오른쪽 wrapper div는 .screen(전환 애니메이션)과
+   .app-body__actions·.app-body__content(grid area·세로 예산 레이아웃)를 함께 쓴다.
+   두 클래스 결합 선택자로 명시도를 올려, 소스 순서와 무관하게 grid 레이아웃 쪽 값
+   (gap·overflow 등)이 항상 이긴다 — .screen의 gap/max-width/margin은 전환 화면
+   전체를 감쌀 때 값이라 분할된 좁은 열에는 맞지 않는다. */
+.app-body__actions.screen,
+.app-body__content.screen {
+  max-width: none;
+  margin: 0;
+  gap: var(--space-2);
+}
+
+/* 왼쪽 열(app-body__actions)에서는 .screen의 기본 애니메이션(opacity+transform)을
+   완전히 끈다. transform이나 opacity를 애니메이션으로 참조하는 요소는 실행이 끝나
+   fill-mode로 값만 유지 중이어도 그 자체로 새 stacking context/containing block이
+   된다 — 왼쪽 열 안에 DOM으로 중첩된 AssistantPanel 드로어(position:absolute,
+   z-index로 오른쪽 열 위에 떠야 한다)가 이 좁은 왼쪽 열 안에 갇혀 좌표도 어긋나고
+   오른쪽 열 내용에 가려 보이지도 않게 된다(DISCUSS·REACTIONS에서 실측). 오른쪽 열
+   (app-body__content)은 드로어를 담지 않으므로 원래 opacity+translate 전환을 그대로
+   쓴다. */
+.app-body__actions.screen {
+  animation: none;
+}
+
 @keyframes screen-enter {
   from {
     opacity: 0;
@@ -209,41 +385,66 @@
 }
 
 @media (max-width: 1280px) {
-  /* 720 높이에서 고정 하단 CTA 위에 콘텐츠가 들어가도록 헤더와 상단 여백을 줄인다
-     (Codex 검토, PR #2: 비서실장 토글이 푸터에 가려짐). */
+  /* 720 높이는 여유가 크게 없어 헤더·본문 여백을 줄여 세로 예산을 확보한다
+     (v1.0 6절 "720: 무대 열 폭 36vw, 아래 입력 영역 약 330px"). */
   .app-header {
     padding: 6px var(--space-3);
   }
 
   .app-main {
-    padding: var(--space-2) var(--space-3) var(--space-3);
+    padding: var(--space-1) var(--space-3) var(--space-2);
+  }
+
+  .app-body {
+    /* grid-template-columns는 --stage-col-width(tokens.css)를 그대로 쓴다 — 1280
+       미디어쿼리에서 그 변수 값 자체가 36vw로 바뀐다. */
+    padding: var(--space-1) var(--space-3) var(--space-2);
+    column-gap: var(--stage-col-gap);
+    row-gap: var(--space-1);
   }
 
   .screen {
     gap: var(--space-1);
   }
+
+  /* 결합 선택자(.app-body__actions.screen 등, 명시도 0,2,0)가 위 .screen 규칙보다
+     항상 이기므로, 720 축소값도 결합 선택자 쪽에 다시 적어야 실제로 적용된다. */
+  .app-body__actions.screen,
+  .app-body__content.screen {
+    gap: 4px;
+  }
 }
 
+/* 주 CTA: 알약 + 시안→하늘 그라데이션, hover2px 떠오름, active 눌림(DESIGN_SPEC.md
+   v1.0 2절). 64px 높이·56px 최소 클릭 영역은 그대로 유지한다. */
 .cta {
   align-self: flex-start;
   min-height: var(--cta-height);
   min-width: var(--touch-min);
   padding: 0 var(--space-4);
-  border-radius: var(--radius-control);
+  border-radius: 999px;
   border: none;
-  background-color: var(--accent);
+  background-image: linear-gradient(135deg, var(--accent), var(--sky));
   color: var(--bg);
   font-weight: 700;
   font-size: 18px;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast) ease;
+  transition:
+    box-shadow var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
 }
 
 .cta:hover:not(:disabled) {
+  transform: translateY(-2px);
   box-shadow: var(--glow-accent);
 }
 
+.cta:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .cta:disabled {
+  background-image: none;
   background-color: var(--panel-active);
   color: var(--text-muted);
   cursor: not-allowed;
@@ -251,10 +452,15 @@
 
 /* 진행 스트립(v0.9): ① 상황 파악 → ⑤ 표결 5단계를 헤더 아래에 상시 표시한다. */
 .progress-strip {
+  flex-shrink: 0;
   padding: var(--space-1) var(--space-4);
 }
 
+/* 칩을 잇는 선(DESIGN_SPEC.md v1.0 2절 "진행 스트립: 알약 칩을 잇는 선을 그리고 현재
+   단계는 시안 채움, 지난 단계는 체크"). 목록 뒤에 가로선을 깔고, 칩 각각은 불투명
+   배경으로 그 위를 덮어 선이 칩 사이 여백에서만 보이게 한다. */
 .progress-strip__list {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
@@ -263,19 +469,47 @@
   padding: 0;
 }
 
+.progress-strip__list::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--border);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
 .progress-strip__step {
+  position: relative;
+  z-index: 1;
   padding: 2px var(--space-2);
   border-radius: 999px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
+  background-color: var(--bg);
   color: var(--text-muted);
   font-size: var(--fs-meta);
   white-space: nowrap;
 }
 
+/* 현재 단계: 시안 채움(칩 배경을 시안으로 채우고 짙은 네이비 글자). */
 .progress-strip__step[aria-current='step'] {
   border-color: var(--accent);
-  color: var(--accent);
+  background-color: var(--accent);
+  color: var(--bg);
   font-weight: 700;
+}
+
+/* 지난 단계: 체크 표시(data-done="true", App.tsx가 렌더 여부를 결정하는 aria-current와
+   별개로 ProgressStrip이 현재 단계보다 앞선 단계에 붙인다). */
+.progress-strip__step[data-done='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.progress-strip__step[data-done='true']::before {
+  content: '✓ ';
 }
 
 @media (max-width: 1280px) {
@@ -284,6 +518,9 @@
   }
 }
 
+/* SELECT(무대가 없는 유일한 진행 단계)에서만 이 여백 있는 형태로 쓰인다. BRIEFING~
+   RESULT에서는 .nameplate--stage가 같은 pill 모양을 무대 안 절대 위치로 덮어쓴다
+   (v1.0 6절 "명패는 무대 안 좌상단 pill"). */
 .nameplate {
   display: flex;
   gap: var(--space-1);
@@ -296,10 +533,6 @@
   width: fit-content;
 }
 
-/* 1280px 이하에서는 헤더·명패·본문이 720px 세로 폭 안에서 서로 겹치지 않아야
-   한다(카드 "하지 말 것 · 1280×720에서 CTA·입력이 잘리게 하지 않는다"). 명패의
-   테두리 pill 모양은 유지하되, 위아래 여백만 줄여 DISCUSS처럼 내용이 많은 화면에서
-   sticky footer가 AI 비서실장 버튼·조건 칩을 덮지 않게 한다. */
 @media (max-width: 1280px) {
   .nameplate {
     margin: 0 var(--space-4);
@@ -312,29 +545,15 @@
   font-weight: 700;
 }
 
-/* 콘텐츠가 한 화면보다 길어 스크롤이 필요할 때도 전달·확정 CTA에 항상 닿을 수 있게
-   화면 바닥에 붙인다(DESIGN_SPEC.md "만들 것 · sticky footer CTA"). 배경을 불투명
-   단색으로 채워, 아래로 흘러가는 글자가 옅게 겹쳐 보이지 않고 CTA 바가 그 위에
-   놓인 것으로 분명히 보이게 한다. */
-.screen__sticky-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
+/* 화면 바닥 고정 CTA(.screen__sticky-footer)는 T45에서 없앴다 — 모든 CTA가 왼쪽
+   열 무대 아래(.app-body__actions)에 있고 페이지 자체가 스크롤되지 않아 항상
+   보이므로 더는 sticky로 바닥에 붙잡아 둘 필요가 없다(v1.0 6절). 제출 행은
+   .discuss-screen__submit-row 같은 일반 flex 묶음으로만 감싼다. */
+.screen__submit-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin: 0 calc(var(--space-8) * -1) calc(var(--space-8) * -1);
-  padding: var(--space-2) var(--space-8) var(--space-8);
-  background-color: var(--bg);
-  border-top: 1px solid var(--border);
-}
-
-@media (max-width: 1280px) {
-  .screen__sticky-footer {
-    margin: 0 calc(var(--space-3) * -1) calc(var(--space-3) * -1);
-    padding: var(--space-2) var(--space-3) var(--space-3);
-  }
 }
 
 .placeholder-screen {

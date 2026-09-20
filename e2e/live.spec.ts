@@ -9,7 +9,7 @@
 
 import { test, expect, type Page, type Route } from './fixtures';
 
-const EXEC_ROLE_IDS = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'] as const;
+const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
@@ -106,15 +106,15 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
 });
 
 test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다', async ({ page }) => {
-  await mockRoleFailure(page, 'CIO');
+  await mockRoleFailure(page, 'CAIO');
 
   await page.goto('/');
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await enterAiAssistant(page);
 
-  // OPINIONS: CIO만 failed, 나머지 3명은 정상 응답으로 남는다.
-  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 10_000 });
+  // OPINIONS: CAIO만 failed, 나머지 3명은 정상 응답으로 남는다.
+  await expect(page.getByTestId('statement-failed-CAIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();
@@ -123,7 +123,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await submitOpinion.click();
 
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await expect(page.getByTestId('statement-failed-CIO')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('statement-failed-CAIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByTestId('followup-option-2').click(); // 후속 라운드 없이 MOTION으로
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -134,8 +134,8 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await page.getByTestId('confirm-vote').click();
 
   await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByTestId('result-seat-CIO')).toContainText('미표결');
-  await expect(page.getByTestId('result-seat-unavailable-CIO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CAIO')).toContainText('미표결');
+  await expect(page.getByTestId('result-seat-unavailable-CAIO')).toBeVisible();
   await expect(page.getByTestId('result-limited-notice')).toBeVisible();
 });
 

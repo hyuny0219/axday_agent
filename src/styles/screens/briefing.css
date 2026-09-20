@@ -1,17 +1,22 @@
+/* 안건 한 줄은 긴 문장이라 디스플레이 서체 대신 본문 서체 900으로 읽기 쉽게 둔다
+   (v1.0 다듬기). 화면 제목·결론·도장만 디스플레이 서체를 쓴다. */
 .briefing-screen__motion {
   margin: 0;
   font-size: var(--fs-h2);
+  font-weight: 900;
+  line-height: 1.3;
 }
 
 /* 의장 브리핑 3문장(v0.9): 상황 → 결정 질문 → 참가자 역할. */
 .chair-briefing {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  gap: 4px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-card);
   border: 1px solid var(--border);
   background-color: var(--panel);
+  font-size: var(--fs-meta);
 }
 
 .chair-briefing__situation {
@@ -30,72 +35,32 @@
   color: var(--accent);
 }
 
+/* 오른쪽(회의 정보) 열: 근거 2×2(EvidenceGrid, evidence.css 공유) 다음에 쟁점을
+   그 아래 세로로 둔다(DESIGN_SPEC.md v1.0 6절 표). */
 .briefing-screen__body {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--space-3);
-}
-
-.briefing-screen__evidence-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-}
-
-.evidence-card {
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-2);
-}
-
-.evidence-card__title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-card);
-  font-weight: 700;
-}
-
-.evidence-card__content {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-card);
-  line-height: 1.55;
-}
-
-.evidence-card__insight-label {
-  margin: var(--space-1) 0 0;
-  color: var(--accent);
-  font-size: var(--fs-meta);
-  font-weight: 700;
-}
-
-.evidence-card__insight {
-  margin: 0;
-  color: var(--text);
-  font-size: var(--fs-card);
-  line-height: 1.5;
-}
-
-.evidence-card__avatars {
   display: flex;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* 핵심 쟁점 카드: 시안 왼쪽 4px 경계 + 상시 표시(DESIGN_SPEC.md 3장 "AI 정리는 상시
-   표시·체험용 사전 구성 표기·E1~E4 연결"). */
+/* 핵심 쟁점 3칩(DESIGN_SPEC.md v1.0 6절 표 "쟁점 3칩"). T45에서 전면 카드 대신
+   compact한 칩 목록으로 바꿔 왼쪽 열 CTA 예산을 침범하지 않는다(시안 왼쪽 경계 +
+   상시 표시 규칙은 그대로, DESIGN_SPEC.md 3장 "AI 정리는 상시 표시·체험용 사전 구성
+   표기·E1~E4 연결"). */
 .briefing-issues {
   background-color: var(--panel-glass);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: var(--radius-card);
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 .briefing-issues__badge {
   display: inline-block;
-  margin: 0 0 var(--space-2);
-  padding: 4px var(--space-2);
+  margin: 0 0 4px;
+  padding: 2px var(--space-1);
   border-radius: 999px;
   background-color: rgba(40, 217, 240, 0.12);
   color: var(--accent);
@@ -104,43 +69,55 @@
 }
 
 .briefing-issues__heading {
-  margin: 0 0 var(--space-2);
-  font-size: var(--fs-card);
+  margin: 0 0 4px;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
 }
 
 .briefing-issues__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.briefing-issues__text {
-  margin: 0;
-  color: var(--text);
-  font-size: var(--fs-card);
-  line-height: 1.55;
-}
-
-.briefing-issues__evidence-ids {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
   list-style: none;
   padding: 0;
-  margin: var(--space-1) 0 0;
+  margin: 0;
+}
+
+/* 쟁점 칩: 목록 항목을 pill로 감싼다. */
+.briefing-issues__item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  background-color: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px var(--space-2);
+}
+
+.briefing-issues__text {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-meta);
+}
+
+.briefing-issues__evidence-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .briefing-issues__evidence-ids li {
-  padding: 2px var(--space-1);
+  padding: 0 6px;
   border-radius: var(--radius-control);
   border: 1px solid var(--border);
-  background-color: var(--panel);
+  background-color: var(--bg);
   color: var(--text-muted);
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-size: var(--fs-meta);
+  font-size: 11px;
   letter-spacing: 0.02em;
 }
 
@@ -173,10 +150,4 @@
   margin: 0;
   color: var(--text-muted);
   font-size: var(--fs-meta);
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__body {
-    grid-template-columns: 1fr;
-  }
 }

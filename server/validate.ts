@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-export const EXEC_ROLE_IDS = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'] as const;
+export const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 export type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 export const REQUEST_ROLE_IDS = [...EXEC_ROLE_IDS, 'PARTICIPANT'] as const;

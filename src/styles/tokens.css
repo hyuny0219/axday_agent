@@ -1,18 +1,23 @@
 /* Prototype design tokens derived from the proposal; not official brand standards. */
 :root {
   --bg: #061424;
-  --panel: #0b2238;
-  --panel-active: #10344b;
+  --panel: #0f2a48;
+  --panel-active: #16385c;
   --accent: #28d9f0;
   --accent-blue: #4c8dff;
+  --warm: #ffb457;
+  --sky: #8fd3ff;
   --text: #f3f7ff;
   --text-muted: #acc0d3;
-  --border: #28536a;
+  --border: #2a5a86;
   --vote-hold: #ffd27a;
   --vote-no: #ff8e9a;
   --vote-uncast: #a5b1bf;
   --font-ui: 'Noto Sans KR', system-ui, sans-serif;
-  --radius-card: 16px;
+  /* 디스플레이 서체(v1.0 애니메이션 프레임, DESIGN_SPEC.md v1.0 2절). 제목·결론·도장 전용.
+     한글 2,350자 범위라 Noto Sans KR 900을 fallback으로 둔다. */
+  --font-display: 'Black Han Sans', 'Noto Sans KR', system-ui, sans-serif;
+  --radius-card: 20px;
   --radius-control: 12px;
   --space-1: 8px;
   --space-2: 16px;
@@ -25,31 +30,51 @@
   --transition-fast: 120ms;
   --transition-screen: 220ms;
 
-  /* 타이포 스케일(DESIGN_SPEC.md 2장). 1280px 이하에서는 아래 미디어쿼리로 축소한다. */
-  --fs-hero: 64px;
-  --fs-title: 44px;
-  --fs-h2: 32px;
-  --fs-body: 24px;
-  --fs-card: 20px;
-  --fs-meta: 16px;
+  /* 타이포 스케일(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙", T45가 2장 값을
+     덮어쓴다). 1080: 제목32/본문20/카드18/메타14. 1280px 이하(720p)에서는 아래
+     미디어쿼리로 제목26/본문17/카드15/메타12로 줄인다. */
+  --fs-hero: 56px;
+  --fs-title: 32px;
+  --fs-h2: 28px;
+  --fs-body: 20px;
+  --fs-card: 18px;
+  --fs-meta: 14px;
 
-  /* 짙은 네이비 배경 위 좌상단 --accent-blue 12% + 우하단 --accent 8% 방사형 조명
-     (DESIGN_SPEC.md 2장 "미래적 회의실" 분위기). .app-shell::before에서 사용한다. */
+  /* 왼쪽 무대 열 폭(v1.0 6절, 2026-09-19 T45 검토 반영): 1080에서
+     clamp(400px,40vw,860px) — 오른쪽 열에 추천 문구 패널이 늘어난 만큼 왼쪽 열
+     세로 예산(무대 높이)을 줄여 균형을 맞춘다. .app-body의 grid-template-columns와
+     AssistantPanel 드로어(오른쪽 열 위 겹침)가 같은 값을 공유해, 무대 열 폭이
+     바뀌어도 드로어가 오른쪽 열을 정확히 덮게 한다. */
+  --stage-col-width: clamp(400px, 40vw, 860px);
+  /* .app-body의 두 열 사이 column-gap과 같은 값(AssistantPanel 드로어가 오른쪽 열
+     왼쪽 경계를 계산할 때도 같이 쓴다, assistant.css). */
+  --stage-col-gap: var(--space-3);
+
+  /* 짙은 네이비 배경 위 좌상단 --accent-blue 12% + 우하단 --accent 8% 방사형 조명 +
+     우상단 노을(앰버) 6% 조명(DESIGN_SPEC.md v1.0 2절 "우상단 노을(앰버 6%)").
+     .app-shell::before에서 사용한다. */
   --bg-gradient: radial-gradient(1200px circle at 8% 0%, rgba(76, 141, 255, 0.12), transparent 55%),
+    radial-gradient(1000px circle at 95% 5%, rgba(255, 180, 87, 0.06), transparent 55%),
     radial-gradient(1200px circle at 92% 100%, rgba(40, 217, 240, 0.08), transparent 55%),
     linear-gradient(var(--bg), var(--bg));
-  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35);
+  /* 카드 공통 스킨(DESIGN_SPEC.md v1.0 2절 "카드: ... 상단 1px 흰색8% 하이라이트,
+     그림자"). ::before를 이미 다른 용도로 쓰는 카드(안건 번호, 결과 색 띠)와 충돌하지
+     않도록 하이라이트를 별도 레이어 대신 inset box-shadow로 함께 묶는다. */
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --glow-accent: 0 0 0 1px var(--accent), 0 0 24px rgba(40, 217, 240, 0.35);
-  --panel-glass: rgba(11, 34, 56, 0.85);
+  --panel-glass: rgba(15, 42, 72, 0.85);
 }
 
 @media (max-width: 1280px) {
   :root {
-    --fs-hero: 48px;
-    --fs-title: 32px;
-    --fs-h2: 26px;
-    --fs-body: 20px;
-    --fs-card: 18px;
-    --fs-meta: 14px;
+    --fs-hero: 40px;
+    --fs-title: 26px;
+    --fs-h2: 22px;
+    --fs-body: 17px;
+    --fs-card: 15px;
+    --fs-meta: 12px;
+    /* 720: 무대 열 폭 36vw(약 260px 높이, v1.0 6절). */
+    --stage-col-width: clamp(320px, 36vw, 860px);
+    --stage-col-gap: var(--space-2);
   }
 }

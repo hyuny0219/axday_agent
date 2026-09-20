@@ -95,12 +95,12 @@ describe('live board agents adapter', () => {
             suggestedConditionIds: [],
           },
         },
-        { roleId: 'CFO_CAIO', status: 'failed', failReason: 'timeout' },
+        { roleId: 'CFO', status: 'failed', failReason: 'timeout' },
         {
-          roleId: 'CIO',
+          roleId: 'CAIO',
           status: 'answered',
           statement: {
-            roleId: 'CIO',
+            roleId: 'CAIO',
             message: '실행 가능성을 봅시다.',
             evidenceIds: [],
             referencedStatementIds: [],
@@ -134,8 +134,8 @@ describe('live board agents adapter', () => {
     expect(byRole.CEO?.statement?.text).toBe('자료를 검토했습니다.');
     expect(byRole.CEO?.statement?.stage).toBe('OPINIONS');
     expect(byRole.CEO?.statement?.source).toBe('live');
-    expect(byRole.CFO_CAIO?.status).toBe('failed');
-    expect(byRole.CFO_CAIO?.failReason).toBe('timeout');
+    expect(byRole.CFO?.status).toBe('failed');
+    expect(byRole.CFO?.failReason).toBe('timeout');
   });
 
   it('timeout이 되면 임원 4명 모두 failed로 남는다', async () => {
@@ -196,10 +196,10 @@ describe('live board agents adapter', () => {
       json: async () => [
         { roleId: 'CEO', status: 'answered', statement: { message: '괜찮습니다.' } }, // evidenceIds 등 누락
         {
-          roleId: 'CFO_CAIO',
+          roleId: 'CFO',
           status: 'answered',
           statement: {
-            roleId: 'CFO_CAIO',
+            roleId: 'CFO',
             message: '비용을 봅시다.',
             evidenceIds: [],
             referencedStatementIds: [],
@@ -207,7 +207,7 @@ describe('live board agents adapter', () => {
             suggestedConditionIds: [],
           },
         },
-        { roleId: 'CIO', status: 'failed', failReason: 'invalid_response' },
+        { roleId: 'CAIO', status: 'failed', failReason: 'invalid_response' },
         {
           roleId: 'CISO',
           status: 'answered',
@@ -231,8 +231,8 @@ describe('live board agents adapter', () => {
 
     expect(byRole.CEO?.status).toBe('failed');
     expect(byRole.CEO?.failReason).toBe('invalid_response');
-    expect(byRole.CFO_CAIO?.status).toBe('answered');
-    expect(byRole.CIO?.status).toBe('failed');
+    expect(byRole.CFO?.status).toBe('answered');
+    expect(byRole.CAIO?.status).toBe('failed');
     expect(byRole.CISO?.status).toBe('answered');
   });
 

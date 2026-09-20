@@ -4,6 +4,7 @@ import { computeMotionHash } from '../../src/domain/motion';
 import {
   EXEC_MEMBER_ORDER,
   castParticipant,
+  countVotesChangedByConditions,
   decideBoard,
   tally,
   type TallyResult,
@@ -67,8 +68,8 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
     const outcomesSeen = new Set<TallyResult['outcome']>();
     const yesSeenByMember: Record<ExecMemberId, boolean> = {
       CEO: false,
-      CFO_CAIO: false,
-      CIO: false,
+      CFO: false,
+      CAIO: false,
       CISO: false,
     };
 
@@ -108,7 +109,7 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
 interface RepresentativePathRow {
   label: string;
   conditionIds: string[];
-  execVotes: [Vote, Vote, Vote, Vote]; // CEO, CFO_CAIO, CIO, CISO 순서
+  execVotes: [Vote, Vote, Vote, Vote]; // CEO, CFO, CAIO, CISO 순서
   participantVote: Vote;
   outcome: TallyResult['outcome'];
   counts: TallyResult['counts'];
@@ -235,6 +236,35 @@ describe('문서 대표 경로표 — v0.6 (12행)', () => {
       expect(result.counts).toEqual(counts);
     },
   );
+});
+
+describe('countVotesChangedByConditions — 내 조건이 바꾼 표 게이지(T43)', () => {
+  it('원안(조건 없음)과 비교하므로 원안 자체는 0명이 바뀐다', () => {
+    const motion = buildMotion([]);
+    expect(countVotesChangedByConditions(scenario, motion)).toBe(0);
+  });
+
+  it('PILOT,MEASURE는 문서 표 기준 CFO 1명만 바뀐다(HOLD→YES)', () => {
+    const motion = buildMotion(['PILOT', 'MEASURE']);
+    expect(countVotesChangedByConditions(scenario, motion)).toBe(1);
+  });
+
+  it('REVIEW,ACCESS는 문서 표 기준 CAIO·CISO 2명이 바뀐다(NO→YES)', () => {
+    const motion = buildMotion(['REVIEW', 'ACCESS']);
+    expect(countVotesChangedByConditions(scenario, motion)).toBe(2);
+  });
+
+  it('PILOT,REVIEW,ACCESS,MEASURE는 문서 표 기준 CFO·CAIO·CISO 3명이 바뀐다', () => {
+    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+    expect(countVotesChangedByConditions(scenario, motion)).toBe(3);
+  });
+
+  it('4명을 넘길 수 없다(임원은 4명뿐)', () => {
+    for (const combo of allowedCombos) {
+      const motion = buildMotion(combo);
+      expect(countVotesChangedByConditions(scenario, motion)).toBeLessThanOrEqual(4);
+    }
+  });
 });
 
 describe('차단 규칙', () => {

@@ -14,8 +14,8 @@
   min-height: var(--touch-min);
   padding: 0 var(--space-3);
   background-color: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  border: 2px solid var(--border);
+  border-radius: 999px;
   color: var(--text);
   font-family: inherit;
   font-size: var(--fs-meta);
@@ -58,13 +58,35 @@
   box-shadow: var(--glow-accent);
 }
 
+/* 오른쪽 열 위에 겹치는 드로어(DESIGN_SPEC.md v1.0 6절 "비서실장 패널은 오른쪽 열
+   위에 겹치는 드로어(position: absolute, 열 안)"). DOM 위치는 왼쪽 열(토글 옆) 그대로
+   지만, .app-body(position:relative, shell.css)가 위치 기준점이라 right/top/bottom은
+   .app-body 자체 padding과, left는 무대 열 폭+열 간격과 맞춰 정확히 오른쪽 "회의 정보"
+   grid 칸 위에 얹힌다. 열면 오른쪽 정보를 덮고, 닫으면(React가 body를 언마운트) 그
+   자리가 그대로 복귀한다. */
 .assistant-panel__body {
+  position: absolute;
+  z-index: 6;
+  top: var(--space-2);
+  right: var(--space-4);
+  bottom: var(--space-3);
+  left: calc(var(--stage-col-width) + var(--stage-col-gap));
+  overflow-y: auto;
   padding: var(--space-3);
   background-color: var(--panel-glass);
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 1280px) {
+  .assistant-panel__body {
+    top: var(--space-1);
+    right: var(--space-3);
+    bottom: var(--space-2);
+    padding: var(--space-2);
+  }
 }
 
 .assistant-panel__header {

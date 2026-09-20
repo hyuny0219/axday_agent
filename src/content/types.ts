@@ -1,6 +1,6 @@
 // 시나리오 데이터 스키마. 규칙은 코드가 아니라 데이터로 표현한다 (DEV_PLAN.md 4절).
 
-export type ExecMemberId = 'CEO' | 'CFO_CAIO' | 'CIO' | 'CISO';
+export type ExecMemberId = 'CEO' | 'CFO' | 'CAIO' | 'CISO';
 
 export type Vote = 'YES' | 'NO' | 'HOLD' | 'UNCAST';
 
@@ -83,7 +83,7 @@ export interface FollowUpOption {
 
 export interface FollowUp {
   question: string;
-  /** 후속 질문을 던지는 임원(v0.9: CIO, docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"). */
+  /** 후속 질문을 던지는 임원(v0.9: CAIO, docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"). */
   askedBy: ExecMemberId;
   options: FollowUpOption[];
 }

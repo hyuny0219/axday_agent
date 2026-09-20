@@ -7,16 +7,19 @@
 // 조건 칩·AI 비서실장은 live/scripted 모두 참가자가 직접 쓰는 부분이라 그대로 둔다. T31에서
 // draftRevision·transcript·assistantAdapter를 AssistantPanel에 추가로 넘긴다(statements를
 // 그대로 transcript로 재사용한다 — 이미 live 라운드 결과를 담고 있다).
-// T40에서 두 번째 입력을 "질문에 답하기"로 재구성했다: 후속 질문에 발화자(CIO,
-// scenario.followUp.askedBy)를 붙이고, 직접 입력은 <details>로 접어 빠른 답 3개만으로도
-// 완주할 수 있게 한다. 직접 입력만으로 완주하는 경로(토글 열기 → 입력 → 제출)도 그대로
+// T40에서 두 번째 입력을 "질문에 답하기"로 재구성했다: 후속 질문에 발화자(CAIO,
+// scenario.followUp.askedBy)를 붙이고, 직접 입력은 접어 빠른 답 3개만으로도 완주할
+// 수 있게 한다(T45부터는 <details> 대신 버튼 토글 + hidden 속성으로 같은 자리를
+// 나눠 쓴다). 직접 입력만으로 완주하는 경로(토글 열기 → 입력 → 제출)도 그대로
 // 유지한다. 조건 확인·충돌 규칙·SUBMIT_FOLLOWUP/KEEP_PREVIOUS 액션은 바꾸지 않았다.
-// PR #4 Codex 검토: live 반응도 같은 답글형(LiveStatementCards variant='reply')으로 그리고,
-// 조건 칩은 빠른 답을 고르거나 직접 답하기를 연 뒤에만 보인다(답하기 전에 이전 조건을
-// 바꾸지 않게 한다).
+// T45(조종석 배치): 왼쪽 열은 내 발언 인용(2줄 클램프)·빠른 답 3 ↔ 직접 답하기(같은
+// 자리 전환)·조건 칩·[비서실장][답변 전달]. 오른쪽 열은 임원 반응 2×2 + CAIO 질문
+// (DESIGN_SPEC.md v1.0 6절 표). 2026-09-19 T45 검토 반영(2a): 직접 답하기를 열면 빠른
+// 답 3개가 있던 자리를 입력창·글자 수·조건 칩이 그대로 대체한다(같은 slot, DOM에서
+// 빠른 답을 hidden으로 숨기되 선택 상태는 유지). .reactions-screen__scroll 내부
+// 스크롤은 없앴다.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SyntheticEvent } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
@@ -177,15 +180,20 @@ export function ReactionsScreen({
     setDraftRevision((value) => value + 1);
   }
 
-  // 직접 답하기(<details>)는 기본 접힘이며, 열릴 때만 textarea로 포커스를 옮긴다
-  // (T40 만들 것 2: 빠른 답만으로도 완주할 수 있게 직접 입력을 접어 둔다).
-  function handleToggleEditor(event: SyntheticEvent<HTMLDetailsElement>) {
-    const open = event.currentTarget.open;
-    setIsEditorOpen(open);
-    if (open) {
+  // 직접 답하기는 기본 접힘이며(T40 만들 것 2: 빠른 답만으로도 완주할 수 있게
+  // 직접 입력을 접어 둔다), 같은 자리에서 빠른 답 3개와 전환한다(2026-09-19 T45
+  // 검토 반영 2a). 열릴 때만 textarea로 포커스를 옮긴다 — isEditorOpen이 바뀐 뒤
+  // (React가 hidden 속성을 실제로 지운 뒤) 포커스해야 해서 상태 갱신과 분리해
+  // 아래 useEffect에서 처리한다.
+  function handleToggleEditor() {
+    setIsEditorOpen((previous) => !previous);
+  }
+
+  useEffect(() => {
+    if (isEditorOpen) {
       textareaRef.current?.focus();
     }
-  }
+  }, [isEditorOpen]);
 
   function handleToggleCondition(conditionId: string) {
     setAcceptedConditionIds((previous) =>
@@ -207,55 +215,136 @@ export function ReactionsScreen({
   }
 
   return (
-    <section className="screen reactions-screen">
-      <h2 className="reactions-screen__title">
-        이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
-      </h2>
-      <blockquote className="reactions-screen__quote" data-testid="reactions-quote">
-        {lastOpinion?.originalText}
-      </blockquote>
-      {mode === 'live' ? (
-        <LiveStatementCards
-          scenario={scenario}
-          stage="REACTIONS"
-          roleStatus={roleStatus}
-          statements={statements}
-          variant="reply"
-        />
-      ) : (
-        <ul className="reactions-screen__replies">
-          {EXEC_MEMBER_ORDER.map((memberId) => {
-            const reactions = reactionsFor(memberId);
-            const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
-            const changed = reactions.length > 0;
-            return (
-              <li
-                key={memberId}
-                className={`reaction-reply${changed ? ' reaction-reply--changed' : ' reaction-reply--muted'}`}
-                data-testid={`reaction-card-${memberId}`}
-              >
-                <div className="reaction-reply__head">
-                  <Avatar memberId={memberId} size="sm" />
-                  <h3 className="reaction-reply__member">{MEMBER_LABELS[memberId]}</h3>
-                </div>
-                {changed ? (
-                  <ul className="reaction-reply__texts">
-                    {reactions.map((reaction, index) => (
-                      <li key={index}>{reaction.text}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="reaction-reply__maintained">
-                    <span className="reaction-reply__maintained-label">기존 의견 유지</span>
-                    {initial?.text}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <div className="reactions-screen__followup">
+    <>
+      <div className="app-body__actions screen reactions-screen">
+        <blockquote className="reactions-screen__quote" data-testid="reactions-quote">
+          {lastOpinion?.originalText}
+        </blockquote>
+        <div className="reactions-screen__followup">
+          {/* 같은 자리 전환(2026-09-19 T45 검토 반영 2a): isEditorOpen에 따라 빠른 답
+              3개와 직접 입력이 같은 slot을 나눠 쓴다. 둘 다 항상 DOM에 있고 hidden
+              속성으로만 감춰(상태는 유지) 내부 스크롤 없이 한 자리에서 전환한다. */}
+          <div className="reactions-screen__answer">
+            <button
+              type="button"
+              className="reactions-screen__editor-toggle"
+              data-testid="followup-open-editor"
+              aria-expanded={isEditorOpen}
+              onClick={handleToggleEditor}
+            >
+              {isEditorOpen ? '빠른 답으로' : '직접 답하기'}
+            </button>
+            <div className="reactions-screen__options" hidden={isEditorOpen}>
+              {scenario.followUp.options.map((option, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className={`reactions-screen__option${
+                    selectedOptionIndex === index ? ' reactions-screen__option--selected' : ''
+                  }`}
+                  onClick={() => handleSelectOption(index)}
+                  data-testid={`followup-option-${index}`}
+                >
+                  {option.text}
+                </button>
+              ))}
+            </div>
+            <div className="reactions-screen__editor" hidden={!isEditorOpen}>
+              <label className="reactions-screen__direct-label" htmlFor="followup-textarea">
+                직접 입력
+              </label>
+              <textarea
+                id="followup-textarea"
+                ref={textareaRef}
+                className="reactions-screen__textarea"
+                value={textValue}
+                onChange={(event) => handleTextChange(event.target.value)}
+                data-testid="followup-textarea"
+              />
+              <p className="reactions-screen__count" data-testid="followup-char-count">
+                {textValue.length} / {DRAFT_MAX_LENGTH}자
+              </p>
+            </div>
+          </div>
+          {hasStartedAnswer && (
+            <ConditionChips
+              scenario={scenario}
+              proposedIds={proposedConditionIds}
+              acceptedIds={acceptedConditionIds}
+              conflictPairs={conflictPairs}
+              showNoMatchHint={showNoMatchHint}
+              onToggle={handleToggleCondition}
+            />
+          )}
+          <div className="reactions-screen__submit-row screen__submit-row">
+            <AssistantPanel
+              scenario={scenario}
+              sessionId={sessionId}
+              selectedConditionIds={confirmedConditionIds}
+              draftText={textValue}
+              draftRevision={draftRevision}
+              transcript={transcript}
+              onApplyDraft={handleTextChange}
+              onAssistantAction={onAssistantAction}
+              adapter={assistantAdapter}
+            />
+            <button
+              type="button"
+              className="cta"
+              disabled={!canSubmit}
+              onClick={handleSubmit}
+              data-testid="submit-followup"
+            >
+              답변 전달
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="app-body__content screen reactions-screen__info">
+        <h2 className="reactions-screen__title">
+          이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
+        </h2>
+        {mode === 'live' ? (
+          <LiveStatementCards
+            scenario={scenario}
+            stage="REACTIONS"
+            roleStatus={roleStatus}
+            statements={statements}
+            variant="reply"
+          />
+        ) : (
+          <ul className="reactions-screen__replies">
+            {EXEC_MEMBER_ORDER.map((memberId) => {
+              const reactions = reactionsFor(memberId);
+              const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
+              const changed = reactions.length > 0;
+              return (
+                <li
+                  key={memberId}
+                  className={`reaction-reply${changed ? ' reaction-reply--changed' : ' reaction-reply--muted'}`}
+                  data-testid={`reaction-card-${memberId}`}
+                >
+                  <div className="reaction-reply__head">
+                    <Avatar memberId={memberId} size="sm" />
+                    <h3 className="reaction-reply__member">{MEMBER_LABELS[memberId]}</h3>
+                  </div>
+                  {changed ? (
+                    <ul className="reaction-reply__texts">
+                      {reactions.map((reaction, index) => (
+                        <li key={index}>{reaction.text}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="reaction-reply__maintained">
+                      <span className="reaction-reply__maintained-label">기존 의견 유지</span>
+                      {initial?.text}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
         <div className="reactions-screen__question" data-testid="followup-question">
           <Avatar memberId={scenario.followUp.askedBy} size="sm" />
           <div className="reactions-screen__question-body">
@@ -263,77 +352,7 @@ export function ReactionsScreen({
             <h3 className="reactions-screen__section-label">{scenario.followUp.question}</h3>
           </div>
         </div>
-        <div className="reactions-screen__options">
-          {scenario.followUp.options.map((option, index) => (
-            <button
-              key={index}
-              type="button"
-              className={`reactions-screen__option${
-                selectedOptionIndex === index ? ' reactions-screen__option--selected' : ''
-              }`}
-              onClick={() => handleSelectOption(index)}
-              data-testid={`followup-option-${index}`}
-            >
-              {option.text}
-            </button>
-          ))}
-        </div>
-        <details
-          className="reactions-screen__editor"
-          open={isEditorOpen}
-          onToggle={handleToggleEditor}
-        >
-          <summary className="reactions-screen__editor-toggle" data-testid="followup-open-editor">
-            직접 답하기
-          </summary>
-          <div className="reactions-screen__editor-body">
-            <label className="reactions-screen__direct-label" htmlFor="followup-textarea">
-              직접 입력
-            </label>
-            <textarea
-              id="followup-textarea"
-              ref={textareaRef}
-              className="reactions-screen__textarea"
-              value={textValue}
-              onChange={(event) => handleTextChange(event.target.value)}
-              data-testid="followup-textarea"
-            />
-            <p className="reactions-screen__count" data-testid="followup-char-count">
-              {textValue.length} / {DRAFT_MAX_LENGTH}자
-            </p>
-          </div>
-        </details>
-        {hasStartedAnswer && (
-          <ConditionChips
-            scenario={scenario}
-            proposedIds={proposedConditionIds}
-            acceptedIds={acceptedConditionIds}
-            conflictPairs={conflictPairs}
-            showNoMatchHint={showNoMatchHint}
-            onToggle={handleToggleCondition}
-          />
-        )}
-        <AssistantPanel
-          scenario={scenario}
-          sessionId={sessionId}
-          selectedConditionIds={confirmedConditionIds}
-          draftText={textValue}
-          draftRevision={draftRevision}
-          transcript={transcript}
-          onApplyDraft={handleTextChange}
-          onAssistantAction={onAssistantAction}
-          adapter={assistantAdapter}
-        />
-        <button
-          type="button"
-          className="cta"
-          disabled={!canSubmit}
-          onClick={handleSubmit}
-          data-testid="submit-followup"
-        >
-          답변 전달
-        </button>
       </div>
-    </section>
+    </>
   );
 }

@@ -90,24 +90,68 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
+  // 사용자가 실제로 쓰는 경로(마우스 휠)로만 스크롤한다 — scrollIntoView는
+  // overflow:hidden 컨테이너도 프로그램적으로 움직여 잘림을 숨긴다(PR #6 Codex 4차 검토).
+  // 무스크롤 잠금은 검수 해상도(1920×1080·1280×720)에서만 적용되고, 200% 확대 상당의
+  // 짧은 뷰포트에서는 문서 스크롤이 열려 있어야 한다(DESIGN_SPEC.md 3장·v1.0 6절).
+  async function wheelUntilVisible(testId: string) {
+    const target = page.getByTestId(testId);
+    for (let i = 0; i < 12; i += 1) {
+      if (await target.isVisible()) {
+        const box = await target.boundingBox();
+        const viewport = page.viewportSize();
+        if (box && viewport && box.y >= 0 && box.y + box.height <= viewport.height) {
+          return target;
+        }
+      }
+      await page.mouse.wheel(0, 300);
+    }
+    await expect(target).toBeInViewport();
+    return target;
+  }
+
+  // 세로 1열 재배치·overflow 해제가 실제 계산값으로 적용됐는지 확인한다(PR #6 Codex 5차
+  // 검토: 미디어 블록이 기본 규칙보다 앞에 있으면 같은 특이성의 기본 규칙이 이겨 2열과
+  // overflow:hidden이 그대로 남고, CTA만 우연히 닿는 통과가 된다). 오른쪽 열이 뷰포트
+  // 밖으로 밀리거나 가로 스크롤이 생기지 않아야 한다.
+  const layout = await page.evaluate(() => {
+    const style = (selector: string, property: string) => {
+      const element = document.querySelector(selector);
+      return element ? getComputedStyle(element).getPropertyValue(property).trim() : '';
+    };
+    const content = document.querySelector('.app-body__content');
+    return {
+      columns: style('.app-body', 'grid-template-columns').split(/\s+/).length,
+      shellOverflow: style('.app-shell', 'overflow-y'),
+      mainOverflow: style('.app-main', 'overflow-y'),
+      contentOverflow: style('.app-body__content', 'overflow-y'),
+      horizontalScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      contentRight: content ? Math.round(content.getBoundingClientRect().right) : -1,
+    };
+  });
+  expect(layout.columns).toBe(1);
+  expect(layout.shellOverflow).toBe('visible');
+  expect(layout.mainOverflow).toBe('visible');
+  expect(layout.contentOverflow).toBe('visible');
+  expect(layout.horizontalScroll).toBe(false);
+  expect(layout.contentRight).toBeLessThanOrEqual(960);
+
   await page.getByTestId('phrase-card-P1').click();
-  const submitOpinion = page.getByTestId('submit-opinion');
-  await submitOpinion.scrollIntoViewIfNeeded();
-  await expect(submitOpinion).toBeVisible();
+  const submitOpinion = await wheelUntilVisible('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await page.getByTestId('followup-option-2').click();
+  await page.mouse.wheel(0, -4000);
+  const keepPrevious = await wheelUntilVisible('followup-option-2');
+  await keepPrevious.click();
 
-  const freezeMotion = page.getByTestId('freeze-motion');
-  await freezeMotion.scrollIntoViewIfNeeded();
-  await expect(freezeMotion).toBeVisible();
+  await page.mouse.wheel(0, -4000);
+  const freezeMotion = await wheelUntilVisible('freeze-motion');
   await freezeMotion.click();
 
+  await page.mouse.wheel(0, -4000);
   await page.getByTestId('vote-radio-YES').check();
-  const confirmVote = page.getByTestId('confirm-vote');
-  await confirmVote.scrollIntoViewIfNeeded();
-  await expect(confirmVote).toBeVisible();
+  const confirmVote = await wheelUntilVisible('confirm-vote');
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 

@@ -1,0 +1,373 @@
+/* 무대 열(StageBand, T44 좌우 분할). 렌더 배경 위에 HTML 오버레이(명패·글로우·판단
+   중 점·말풍선·표결 배지·결론 도장)만 그린다(DESIGN_SPEC.md v1.0 1·5절). 장식
+   레이어라 컨테이너는 App.tsx에서 aria-hidden="true"로 렌더된다.
+   1280px 이하의 56px 좌석 띠·"무대 펼치기" 토글은 T44에서 없앴다 — 왼쪽 무대 열은
+   App.tsx의 .app-body 그리드가 clamp(420px,42vw,860px)로 폭만 줄일 뿐, 두 해상도
+   모두 항상 전체 무대(원본 16:9)로 보인다.
+   글로우·비네트는 정적 레이어이고, 움직이는 것은 말풍선 등장·판단 중 점·표결 배지·
+   도장 등장뿐이다(성능 규칙, v1.0 1절). */
+
+.stage-band {
+  position: relative;
+  width: 100%;
+}
+
+.stage-band__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.stage-band__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+/* 위·아래 네이비 비네트: 오버레이 텍스트 대비 확보용 정적 레이어(v1.0 1절). */
+.stage-band__vignette {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  pointer-events: none;
+}
+
+.stage-band__vignette--top {
+  top: 0;
+  background-image: linear-gradient(to bottom, rgba(6, 20, 36, 0.75), transparent);
+}
+
+.stage-band__vignette--bottom {
+  bottom: 0;
+  background-image: linear-gradient(to top, rgba(6, 20, 36, 0.85), transparent);
+}
+
+/* 4분 벽시계 pill: 무대 우상단(v1.0 2·5절 "4분 시계는 무대 우상단 벽시계 pill로
+   복제 표시"). 헤더 Timer와 같은 clock을 읽지만 경고색·문구는 없다(순수 장식). */
+.stage-band__clock {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 2;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: rgba(6, 20, 36, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 좌석 열: 세로로 무대 전체 높이를 차지해, 말풍선(상단)과 명패·배지·실루엣(하단)을
+   각각 독립된 퍼센트 위치에 둘 수 있게 한다(v1.0 5절 "머리 위 하늘 여백"). */
+.stage-band__seat {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* 무대 폭의 22%: 좌석 4개(14.5·39.5·63·87.5%)가 서로 겹치지 않고 양 끝이 무대 안에
+     든다(3.5%~98.5%). 말풍선은 이 폭 안에서만 늘어난다(v1.0 다듬기). */
+  width: 22%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.stage-band__seat--participant {
+  left: 50%;
+}
+
+.stage-band__seat-foot {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-band__seat--participant .stage-band__seat-foot {
+  bottom: 4px;
+}
+
+.stage-band__nameplate {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background-color: rgba(6, 20, 36, 0.8);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stage-band__nameplate--ceo {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.stage-band__nameplate--cfo {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.stage-band__nameplate--caio {
+  color: #7ce0b3;
+  border-color: #7ce0b3;
+}
+
+.stage-band__nameplate--ciso {
+  color: var(--vote-hold);
+  border-color: var(--vote-hold);
+}
+
+.stage-band__nameplate--participant {
+  color: var(--sky);
+  border-color: var(--sky);
+}
+
+/* 발언 시 바닥 시안 글로우(v1.0 1절). silhouette는 좌석 바닥의 색 얼룩으로 표현하고,
+   --glow가 붙을 때만 밝아진다(정적 레이어, 애니메이션 없음 — 성능 규칙). */
+.stage-band__silhouette {
+  width: 64px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: rgba(40, 217, 240, 0.12);
+  filter: blur(2px);
+}
+
+.stage-band__silhouette--glow {
+  background-color: rgba(40, 217, 240, 0.55);
+  box-shadow: 0 0 24px rgba(40, 217, 240, 0.6);
+}
+
+.stage-band__silhouette--dimmed {
+  opacity: 0.35;
+}
+
+/* 말풍선: 캐릭터 머리 위 하늘 여백(상단 0~28%)에만 띄운다(v1.0 5절). '나' 말풍선만
+   테이블 위 중앙(상단58%~) 한 곳을 허용한다. */
+.stage-band__bubble {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background-color: var(--text);
+  border: 0;
+  color: #071a2b;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  animation: stage-bubble-in 200ms ease-out both;
+}
+
+/* 말풍선 꼬리: 캐릭터 머리를 향해 아래로. */
+.stage-band__bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--text);
+  border-bottom: 0;
+}
+
+.stage-band__bubble--participant {
+  top: 60%;
+  background-color: var(--accent);
+  color: #03101f;
+}
+
+.stage-band__bubble--participant::after {
+  border-top-color: var(--accent);
+}
+
+@keyframes stage-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+.stage-band__bubble--pending,
+.stage-band__bubble--waiting {
+  background-color: rgba(15, 42, 72, 0.92);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-style: normal;
+  box-shadow: none;
+}
+
+.stage-band__bubble--pending::after,
+.stage-band__bubble--waiting::after {
+  border-top-color: rgba(15, 42, 72, 0.92);
+}
+
+.stage-band__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.stage-band__dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  animation: stage-dot-bounce 900ms ease-in-out infinite;
+}
+
+.stage-band__dots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.stage-band__dots span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes stage-dot-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* 표결 배지: CEO→CFO→CAIO→CISO→나 순으로 0.2초 간격 등장(총 1초 이내, RESULT 전용).
+   VoteBadge가 inline animation-delay를 매겨 CSS animation-delay만으로 순차 공개한다
+   (setTimeout 없음, Clock 규칙과 무관). */
+.stage-band__vote-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+  animation: stage-badge-pop 220ms ease-out both;
+}
+
+@keyframes stage-badge-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage-band__vote-badge--yes {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--hold {
+  background-color: var(--vote-hold);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--no {
+  background-color: var(--vote-no);
+  color: var(--bg);
+}
+
+.stage-band__vote-badge--uncast {
+  background-color: var(--vote-uncast);
+  color: var(--bg);
+}
+
+/* 결론 도장(T44, DESIGN_SPEC.md v1.0 3·5절): 무대 열 우하단에 겹쳐 찍는다. 디스플레이
+   서체, 회전 -9°, 결과색. 렌더 배경 위에 얹히므로 반투명 배경을 더해 대비를 확보한다.
+   배지가 모두 나온 직후(STAMP_DELAY_SECONDS) 등장해 총 1초 안에 끝난다. 클릭·키
+   입력으로 건너뛰면(useResultStampSkip) StageBand가 animation-delay/-duration을
+   0.01ms로 직접 낮춘다(CSS data-skip 선택자 대신 inline style, 도장이 result-screen
+   바깥에 있어서다). */
+.stage-band__stamp {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 3;
+}
+
+.result-stamp {
+  padding: var(--space-1) var(--space-3);
+  border: 4px solid currentColor;
+  border-radius: var(--radius-control);
+  background-color: rgba(6, 20, 36, 0.6);
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  transform: rotate(-9deg) scale(0.6);
+  opacity: 0;
+  animation: result-stamp-in 220ms ease-out both;
+}
+
+@keyframes result-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(-9deg) scale(1);
+  }
+}
+
+.result-stamp--pass {
+  color: var(--accent);
+}
+
+.result-stamp--hold {
+  color: var(--vote-hold);
+}
+
+.result-stamp--reject {
+  color: var(--vote-no);
+}
+
+@media (max-width: 1280px) {
+  .stage-band__bubble {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+
+  .stage-band__nameplate {
+    font-size: 11px;
+  }
+
+  .result-stamp {
+    padding: 6px var(--space-2);
+    font-size: 20px;
+  }
+}

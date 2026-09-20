@@ -26,8 +26,8 @@ AI 자동 정리 카드(자료 옆 상시 표시, ‘체험용 사전 구성’)
 | 임원 | 검토 의견 | 근거 |
 | --- | --- | --- |
 | CEO | 파일럿 근거를 활용해 고객에게 제공할 범위를 판단합시다. | E1, E2 |
-| CFO·CAIO | 확대 규모와 비용·유용성 지표를 함께 정합시다. | E2, E4 |
-| CIO | 기존 검토 절차는 유지됩니다. 확대 인력과 갱신 부하 계획은 필요합니다. | E3 |
+| CFO | 확대 규모와 비용·유용성 지표를 함께 정합시다. | E2, E4 |
+| CAIO | 기존 검토 절차는 유지됩니다. 확대 인력과 갱신 부하 계획은 필요합니다. | E3 |
 | CISO | 원안의 동의·접근 절차 유지를 지지합니다. 대상별 확인 후 연결해야 합니다. | E4 |
 
 ## 추천 문구와 구조화 변경
@@ -54,11 +54,11 @@ STAGED_SCALE/TARGETED_CHECK/REPEAT_PILOT은 상호 배타적이다. 충돌 시 �
 
 | 변경 | 반응 |
 | --- | --- |
-| CAPACITY_PLAN | CIO: “인력·갱신 부하 계획을 착수 조건으로 반영하겠습니다. 실제 검증은 남습니다.” |
-| STAGED_SCALE | CFO·CAIO: “단계별 투자 범위와 확인할 지표를 함께 정합시다.” |
-| VALUE_TRACK | CFO·CAIO: “유용성·운영 부담·비용을 다음 투자 판단 근거로 삼겠습니다.” |
-| TARGETED_CHECK | CIO: “미검증인 확대 인력·부하에 집중하는 검증에 찬성합니다.” |
-| REPEAT_PILOT | CFO·CAIO: “같은 시험을 반복하는 비용과 지연을 설명해 주세요. 새로 확인할 질문이 필요합니다.” |
+| CAPACITY_PLAN | CAIO: “인력·갱신 부하 계획을 착수 조건으로 반영하겠습니다. 실제 검증은 남습니다.” |
+| STAGED_SCALE | CFO: “단계별 투자 범위와 확인할 지표를 함께 정합시다.” |
+| VALUE_TRACK | CFO: “유용성·운영 부담·비용을 다음 투자 판단 근거로 삼겠습니다.” |
+| TARGETED_CHECK | CAIO: “미검증인 확대 인력·부하에 집중하는 검증에 찬성합니다.” |
+| REPEAT_PILOT | CFO: “같은 시험을 반복하는 비용과 지연을 설명해 주세요. 새로 확인할 질문이 필요합니다.” |
 | DROP_CONSENT | CISO: “원안의 정보 동의 절차를 삭제한 안건에는 반대합니다.” |
 | 변경 없음 | CEO: “기존 절차를 유지한 원안으로 심의합니다. 확대 운영 과제는 남아 있습니다.” |
 
@@ -78,24 +78,24 @@ STAGED_SCALE/TARGETED_CHECK/REPEAT_PILOT은 상호 배타적이다. 충돌 시 �
 | CEO | 동의 없음 | HOLD |
 | CEO | VALIDATE_FIRST 또는 REPEAT_FIRST | HOLD |
 | CEO | 나머지 | YES |
-| CFO·CAIO | 동의 없음 | NO |
-| CFO·CAIO | REPEAT_FIRST | NO |
-| CFO·CAIO | VALIDATE_FIRST | HOLD |
-| CFO·CAIO | STAGED_SCALE 및 VALUE_TRACK | YES |
-| CFO·CAIO | 나머지 | HOLD |
-| CIO | 동의 없음 | NO |
-| CIO | VALIDATE_FIRST | YES |
-| CIO | REPEAT_FIRST | HOLD |
-| CIO | CAPACITY_PLAN | YES |
-| CIO | 나머지 | NO |
+| CFO | 동의 없음 | NO |
+| CFO | REPEAT_FIRST | NO |
+| CFO | VALIDATE_FIRST | HOLD |
+| CFO | STAGED_SCALE 및 VALUE_TRACK | YES |
+| CFO | 나머지 | HOLD |
+| CAIO | 동의 없음 | NO |
+| CAIO | VALIDATE_FIRST | YES |
+| CAIO | REPEAT_FIRST | HOLD |
+| CAIO | CAPACITY_PLAN | YES |
+| CAIO | 나머지 | NO |
 | CISO | 동의 없음 | NO |
 | CISO | 나머지 | YES |
 
-CISO는 원안의 정보 조건으로 찬성 가능하다. CIO의 반대는 ‘기존 검토 절차 미선택’ 때문이 아니라 확대 용량 계획 부재 때문이다. 제안한 착수 조건에 찬성하는 것과 실제 검증 완료를 구분한다. 과반 기준은 YES≥3 가결 / NO≥3 부결 / 나머지 보류, 전체5석이다.
+CISO는 원안의 정보 조건으로 찬성 가능하다. CAIO의 반대는 ‘기존 검토 절차 미선택’ 때문이 아니라 확대 용량 계획 부재 때문이다. 제안한 착수 조건에 찬성하는 것과 실제 검증 완료를 구분한다. 과반 기준은 YES≥3 가결 / NO≥3 부결 / 나머지 보류, 전체5석이다.
 
 ## 대표 경로
 
-임원 순서: CEO / CFO·CAIO / CIO / CISO. 검증안 가결과 확대 가결의 의미를 구분한다.
+임원 순서: CEO / CFO / CAIO / CISO. 검증안 가결과 확대 가결의 의미를 구분한다.
 
 | 확인 변경 | 임원 표 | 참가자 | 집계·결론 |
 | --- | --- | --- | --- |

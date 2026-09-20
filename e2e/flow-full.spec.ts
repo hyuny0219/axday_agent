@@ -40,8 +40,8 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   // RESULT: 결론과 동등한 5석 카드가 보인다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-CEO')).toBeVisible();
-  await expect(page.getByTestId('result-seat-CFO_CAIO')).toBeVisible();
-  await expect(page.getByTestId('result-seat-CIO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CFO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CAIO')).toBeVisible();
   await expect(page.getByTestId('result-seat-CISO')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 
@@ -95,8 +95,8 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   // RESULT: 5석 카드가 모두 보인다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-CEO')).toBeVisible();
-  await expect(page.getByTestId('result-seat-CFO_CAIO')).toBeVisible();
-  await expect(page.getByTestId('result-seat-CIO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CFO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CAIO')).toBeVisible();
   await expect(page.getByTestId('result-seat-CISO')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 });

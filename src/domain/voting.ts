@@ -4,7 +4,7 @@
 import type { ExecMemberId, Predicate, Scenario, Vote, VoteRule } from '../content/types';
 import type { Ballot, BallotSource, MemberId, Motion } from './types';
 
-export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO_CAIO', 'CIO', 'CISO'];
+export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO', 'CAIO', 'CISO'];
 
 export interface VoteContext {
   conditionIds: string[];
@@ -41,7 +41,7 @@ export function decideMember(rules: VoteRule[], ctx: VoteContext): Vote {
   throw new Error('일치하는 표결 규칙이 없습니다. 규칙 목록의 총괄성을 확인하십시오.');
 }
 
-/** 임원 4명의 표를 고정된 순서(CEO/CFO·CAIO/CIO/CISO)로 확정한다. scripted 규칙 결과다. */
+/** 임원 4명의 표를 고정된 순서(CEO/CFO/CAIO/CISO)로 확정한다. scripted 규칙 결과다. */
 export function decideBoard(scenario: Scenario, motion: Motion): Ballot[] {
   const ctx: VoteContext = {
     conditionIds: motion.effectiveConditionIds,
@@ -55,6 +55,29 @@ export function decideBoard(scenario: Scenario, motion: Motion): Ballot[] {
     vote: decideMember(scenario.voteRules[memberId], ctx),
     confirmedAt: motion.frozenAt,
   }));
+}
+
+/**
+ * "내 조건이 바꾼 표" 게이지(T43, DESIGN_SPEC.md v1.0 3절)가 쓰는 순수 함수. 조건이
+ * 하나도 없는 안건(effectiveConditionIds: [])의 decideBoard 결과와 실제 안건의
+ * decideBoard 결과를 임원 4명 순서로 비교해, 표가 달라진 임원 수를 센다. executionMode는
+ * 실제 안건 그대로 두고 조건만 비운다 — "조건이 표를 얼마나 바꿨는지"만 측정하기
+ * 위해서다. 이 함수는 scripted 표시용이며 live 표와는 무관하다(호출부가 scripted에서만
+ * 부른다).
+ */
+export function countVotesChangedByConditions(scenario: Scenario, motion: Motion): number {
+  const baseline: Motion = { ...motion, effectiveConditionIds: [] };
+  const baselineBallots = decideBoard(scenario, baseline);
+  const actualBallots = decideBoard(scenario, motion);
+  let changed = 0;
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    const baselineVote = baselineBallots.find((b) => b.memberId === memberId)?.vote;
+    const actualVote = actualBallots.find((b) => b.memberId === memberId)?.vote;
+    if (baselineVote !== actualVote) {
+      changed += 1;
+    }
+  }
+  return changed;
 }
 
 export interface TallyResult {

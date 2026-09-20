@@ -49,6 +49,7 @@ export function ProgressStrip({ stage }: ProgressStripProps) {
             className="progress-strip__step"
             data-testid={`progress-step-${step}`}
             aria-current={step === currentStep ? 'step' : undefined}
+            data-done={step < currentStep ? 'true' : undefined}
           >
             {label}
           </li>
