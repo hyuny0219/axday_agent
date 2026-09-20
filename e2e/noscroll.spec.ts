@@ -93,7 +93,30 @@ const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 const LONG_STATEMENT =
   '출처와 기준일을 표시하고 담당자가 확인한 뒤에만 공유해야 합니다. 권한이 확인되지 않은 부서 자료는 파일럿 범위에서 제외하고 준비시간과 수정량을 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
 
+const LONG_REASON =
+  '출처·기준일 표시와 담당자 검토, 권한 확인이 조건으로 들어갔으므로 찬성합니다. 다만 파일럿 기간의 준비시간과 수정량 기록이 실제로 쌓이는지, 확대 판단 전에 이사회가 그 수치를 직접 확인하는지가 남은 관건입니다. 그 절차가 빠지면 재검토가 필요합니다.';
+const LONG_CONCERNS = ['권한 확인 절차의 실제 운영 주체', '검토 담당자 부재 시 대체 절차', '파일럿 성과 측정 기준의 합의'];
+
 async function mockLongStatements(page: Page): Promise<void> {
+  // 표결 응답도 최대 길이로 채운다: reason 160자 상한(server/validate.ts) + 남은 우려 3개.
+  await page.route('**/api/board/vote', async (route: Route) => {
+    const body = route.request().postDataJSON() as { motion: { id: string; hash: string } };
+    const json = EXEC_ROLE_IDS.map((roleId) => ({
+      roleId,
+      status: 'answered',
+      ballot: {
+        motionId: body.motion.id,
+        motionHash: body.motion.hash,
+        vote: 'YES',
+        reason: LONG_REASON.slice(0, 160),
+        evidenceIds: ['E1', 'E2'],
+        remainingConcerns: LONG_CONCERNS,
+      },
+      modelId: 'mock',
+      promptVersion: 'mock',
+    }));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
   await page.route('**/api/board/round', async (route: Route) => {
     const json = EXEC_ROLE_IDS.map((roleId, index) => ({
       roleId,
@@ -158,4 +181,15 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoPageScroll(page, 'VOTE(live)');
   // VOTE에서는 무대(aria-hidden)에 말풍선이 없다 — 대기 상태는 본문이 전담한다.
   await expect(page.locator('[data-testid^="stage-bubble-"]')).toHaveCount(0);
+
+  // RESULT: 임원 4명 모두 160자 판단 근거 + 남은 우려 3개를 달아도 5석 카드·기록
+  // 패널·체험 종료 CTA가 잘리지 않는다(PR #6 Codex 2차 검토).
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
+  await expectNoPageScroll(page, 'RESULT(live)');
+  await expectNoClip(page, '.app-body__content', 'RESULT(live)');
+  await expect(page.getByTestId('end-session')).toBeInViewport();
+  await expect(page.getByTestId('result-ai-help')).toBeInViewport();
 });

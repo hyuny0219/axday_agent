@@ -226,9 +226,43 @@
 /* 5석은 두 해상도 모두 같은 크기로 둔다(DESIGN_SPEC.md "결과 5석 동일 크기"). 감싸는
    줄 수만 1280에서 2+2+1로 한 번 더 좁힌다(무대 열이 40%를 차지해 본문 폭이 더
    줄어든다, v1.0 5절). */
+/* live 판단 근거(reason ≤160자)·남은 우려(길이 제한 없음)는 세로 예산을 넘길 수 있어
+   줄 수를 고정한다(PR #6 Codex 2차 검토). 전문은 스크린리더에 그대로 읽히고, 회의
+   기록에도 남는다. */
+.result-seat__reason,
+.result-seat__concerns,
+.result-seat__unavailable {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+
+.result-seat__reason {
+  -webkit-line-clamp: 2;
+}
+
+.result-seat__concerns,
+.result-seat__unavailable {
+  -webkit-line-clamp: 1;
+}
+
 @media (max-width: 1280px) {
+  /* 720: 5석을 3+2로 두 줄에 담는다(2+2+1 세 줄은 live 근거가 붙으면 넘친다). */
   .result-screen__seats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .result-seat__reason {
+    -webkit-line-clamp: 1;
+    font-size: 12px;
+  }
+
+  .result-seat__concerns,
+  .result-seat__unavailable {
+    font-size: 12px;
   }
 
   .result-seat {
