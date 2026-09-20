@@ -52,8 +52,11 @@
   min-width: 0;
 }
 
-/* 최근 N건 밖 항목: 화면에서는 감추되 스크린리더에는 남긴다(표준 sr-only 기법). */
-.minutes__entry--hidden {
+/* 최근 N건 밖 항목과 "판단 중" 상태 문구: 화면에서는 감추되 스크린리더에는 남긴다
+   (표준 sr-only 기법). 점 세 개는 장식(aria-hidden)이라 상태 문구가 없으면 pending 행이
+   발화자 이름만 읽힌다(PR #7 Codex 2차 검토). */
+.minutes__entry--hidden,
+.minutes__sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

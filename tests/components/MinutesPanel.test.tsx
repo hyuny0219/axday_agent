@@ -44,6 +44,9 @@ describe('MinutesPanel 낭독', () => {
     );
     const before = screen.getByTestId('minutes-entry-op-CFO');
     expect(before.querySelector('.minutes__dots')).not.toBeNull();
+    // 점은 장식(aria-hidden)이라 상태 문구가 접근 가능한 텍스트로 따로 있어야 한다.
+    expect(before).toHaveTextContent('판단 중');
+    expect(before.querySelector('.minutes__dots')).toHaveAttribute('aria-hidden', 'true');
 
     rerender(
       <MinutesPanel
@@ -56,6 +59,7 @@ describe('MinutesPanel 낭독', () => {
     expect(after).toHaveAttribute('aria-atomic', 'true');
     expect(after).toHaveTextContent('재무책임임원(CFO)');
     expect(after).toHaveTextContent('작게 시작합시다.');
+    expect(after).not.toHaveTextContent('판단 중');
     expect(after.querySelector('.minutes__dots')).toBeNull();
   });
 });

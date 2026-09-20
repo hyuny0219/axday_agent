@@ -63,11 +63,16 @@ export function MinutesPanel({ entries, stage }: MinutesPanelProps) {
             <Avatar memberId={entry.speaker} size="sm" />
             <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
             {entry.kind === 'pending' ? (
-              <span className="minutes__dots" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
+              <>
+                <span className="minutes__dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                {/* 점은 장식이므로 상태 문구를 스크린리더용으로 따로 둔다 — pending 행이
+                    추가될 때 발화자와 함께 "판단 중"이 읽힌다(v1.0 7절, PR #7 Codex 2차). */}
+                <span className="minutes__sr-only">판단 중…</span>
+              </>
             ) : (
               <span className="minutes__text">{firstSentenceClipped(entry.text)}</span>
             )}

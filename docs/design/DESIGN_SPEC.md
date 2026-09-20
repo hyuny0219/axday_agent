@@ -216,7 +216,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - 위치: 왼쪽 열 무대·행동(CTA) 아래 네 번째 grid area(`'stage info' / 'actions info' / 'minutes info'`, rows `auto auto 1fr`). AppShell이 **BRIEFING·OPINIONS·MOTION·VOTE**에서만 렌더한다. DISCUSS·REACTIONS는 입력이 왼쪽 열을 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. 각 Screen 컴포넌트는 바꾸지 않는다.
 - 항목(시간순, 순수 함수 `buildMinutes(session, scenario, roundLog)`가 세션 상태에서 매번 계산):
   1. 의장 브리핑 — CEO · `chairBriefing.situation`
-  2. 임원 첫 의견 4건 — scripted는 `scenario.initialOpinions`, live는 transcript의 OPINIONS 발언. live 미도착은 "판단 중…"(점 3개), 실패는 "응답 없음"(roundLog 기준, 뒤 라운드가 roleStatus를 덮어도 남는다)
+  2. 임원 첫 의견 4건 — scripted는 `scenario.initialOpinions`, live는 transcript의 OPINIONS 발언. live 미도착은 "판단 중…"(점 3개 + 스크린리더용 상태 문구), 실패는 "응답 없음"(roundLog 기준, 뒤 라운드가 roleStatus를 덮어도 남는다)
   3. 내 발언 — `opinions[0].originalText`
   4. 임원 반응 4건 — scripted는 `scenario.reactions`를 첫 의견의 확정 조건으로 고른 것(ReactionsScreen의 `reactionsFor` 규칙을 공용 함수로 뽑아 같이 쓴다. 해당 반응이 없는 임원은 "기존 의견 유지"), live는 REACTIONS 발언
   5. CAIO 질문 — `followUp.question` (REACTIONS 이후)
