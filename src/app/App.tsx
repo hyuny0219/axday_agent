@@ -30,6 +30,7 @@ import { useTicker } from './useTicker';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
+import { isFollowUpGateActive } from './followUpGate';
 import {
   createOrchestrator,
   type Orchestrator,
@@ -227,15 +228,14 @@ function SessionProvider({ children }: { children: ReactNode }) {
     void orchestrator.runRound('REACTIONS');
   }, [session.mode, session.stage, session.sessionId, orchestrator]);
 
-  // 후속 대기 게이트(T46, DESIGN_SPEC.md v1.0 7절): FOLLOWUP 라운드를 시작하는 순간 true로
-  // 세우고, 그 promise가 settle되면(성공·실패 모두) false로 되돌린다 — 단 settle 시점에
-  // sessionRef.current.sessionId가 라운드를 시작했을 때의 sessionId와 같을 때만이다(리셋 뒤
-  // 늦게 온 settle이 다음 세션의 게이트를 잘못 열지 않게). 벽시계 타이머는 쓰지 않는다.
-  const [followUpPending, setFollowUpPending] = useState(false);
-  // 세션이 바뀌면(리셋 포함) 이전 세션에서 남을 수 있는 게이트 상태를 즉시 지운다.
-  useEffect(() => {
-    setFollowUpPending(false);
-  }, [session.sessionId]);
+  // 후속 대기 게이트(T46, DESIGN_SPEC.md v1.0 7절): state로는 "이 세션의 FOLLOWUP promise가
+  // settle됐는가"(settle된 sessionId)만 들고, 게이트 자체는 isFollowUpGateActive가 세션
+  // 상태에서 동기적으로 계산한다 — SUBMIT_FOLLOWUP 직후 MOTION의 첫 프레임부터 CTA가
+  // 잠긴다(effect가 세우는 boolean은 첫 프레임에 false라 빠른 클릭이 새어 나갔다, PR #7
+  // Codex 1차 검토). 리셋으로 sessionId가 바뀌면 비교가 어긋나 자동으로 다시 잠기고,
+  // 만료(RESULT)에서는 stage 조건으로 꺼진다. 벽시계 타이머는 쓰지 않는다.
+  const [followUpSettledSessionId, setFollowUpSettledSessionId] = useState<string | null>(null);
+  const followUpPending = isFollowUpGateActive(session, followUpSettledSessionId);
 
   const followUpRoundRef = useRef<string | null>(null);
   useEffect(() => {
@@ -247,11 +247,10 @@ function SessionProvider({ children }: { children: ReactNode }) {
     }
     followUpRoundRef.current = session.sessionId;
     const triggeredSessionId = session.sessionId;
-    setFollowUpPending(true);
+    // 성공·실패 모두 settle로 본다. 리셋 뒤 늦게 settle돼도 이전 sessionId를 기록할 뿐이라
+    // 다음 세션의 게이트를 열지 않는다.
     void orchestrator.runRound('FOLLOWUP').finally(() => {
-      if (sessionRef.current.sessionId === triggeredSessionId) {
-        setFollowUpPending(false);
-      }
+      setFollowUpSettledSessionId(triggeredSessionId);
     });
   }, [session.mode, session.stage, session.opinions.length, session.sessionId, orchestrator]);
 

@@ -225,7 +225,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
   8. 의장 — "이 조건으로 안건을 고정합니다" (MOTION 이후)
 - 한 항목 = 아바타(sm) + 발화자 라벨 + 첫 문장 1줄 클램프(무대 말풍선과 같은 `firstSentenceClipped` 규칙). 내 항목은 참가자 색(시안 테두리).
 - 창 고정: 1080은 최근 6건, 720은 최근 4건(VOTE는 3건)만 보이고 더 오래된 항목은 시각적으로만 숨긴다(sr-only — 스크린리더에는 전체가 남는다). 머리글 "회의록"과 총 건수 배지. 페이지·패널 스크롤 금지(6절 예산 규칙 유지, `e2e/noscroll.spec.ts`가 두 해상도에서 단언).
-- 접근성: `<section aria-label="회의록">` + `<ol aria-live="polite" aria-relevant="additions">`. 새 항목이 도착하면 발화자와 첫 문장을 읽어 준다. 포커스는 옮기지 않는다(입력 블록이 없다).
+- 접근성: `<section aria-label="회의록">` + `<ol aria-live="polite" aria-relevant="additions text">`, 각 행 `<li aria-atomic="true">`. 새 항목이 도착하거나 live의 "판단 중" 행이 같은 행 안에서 응답으로 바뀔 때 발화자와 첫 문장을 한 덩어리로 읽어 준다(PR #7 Codex 1차 검토). 포커스는 옮기지 않는다(입력 블록이 없다).
 - 라운드별 기록(roundLog): `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage`를 더하고 runner가 채운다(reducer는 읽지 않음, 동작 불변). App이 stage가 있는 SET_ROLE_STATUS만 `{stage, roleId, status}`로 upsert해 보관하고 sessionId가 바뀌면 비운다. 공개 payload에는 넣지 않는다.
-- 후속 대기 게이트(live, T46): 후속 답을 제출하면 reducer는 지금처럼 MOTION으로 넘어가되, App이 `runRound('FOLLOWUP')` promise를 상태로 들고 있어 **settle 전에는 "이 안건으로 표결" CTA를 비활성**으로 두고 CTA 아래에 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머로 열지 않는다(앞 라운드가 사슬에 남아 있으면 8초 상한은 그 뒤에 시작한다). scripted와 '의견 유지'(후속 라운드 없음)는 게이트가 없다. 회의록 패널의 7번 항목이 같은 상태를 "판단 중…"으로 보여준다.
+- 후속 대기 게이트(live, T46): 후속 답을 제출하면 reducer는 지금처럼 MOTION으로 넘어가되, App이 "이 세션의 `runRound('FOLLOWUP')` promise가 settle됐는가"만 상태로 들고 게이트는 세션 상태에서 동기적으로 계산해(`isFollowUpGateActive`, MOTION 첫 프레임부터 잠김) **settle 전에는 "이 안건으로 표결" CTA를 비활성**으로 두고 CTA 아래에 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머로 열지 않는다(앞 라운드가 사슬에 남아 있으면 8초 상한은 그 뒤에 시작한다). scripted와 '의견 유지'(후속 라운드 없음)는 게이트가 없다. 회의록 패널의 7번 항목이 같은 상태를 "판단 중…"으로 보여준다.
 

@@ -46,7 +46,11 @@ export function MinutesPanel({ entries, stage }: MinutesPanelProps) {
           {entries.length}건
         </span>
       </header>
-      <ol className="minutes__list" aria-live="polite" aria-relevant="additions">
+      {/* 새 항목은 물론, live에서 "판단 중" 행이 응답으로 바뀔 때도(같은 key의 행 안에서
+          점 표시가 문장으로 교체된다) 발화자와 첫 문장을 한 덩어리로 읽어야 한다(v1.0 7절).
+          그래서 목록은 additions뿐 아니라 text 변경도 알리고, 각 행을 aria-atomic으로
+          묶는다 — 기본값(false)이면 바뀐 노드만 읽어 발화자가 빠진다(PR #7 Codex 1차 검토). */}
+      <ol className="minutes__list" aria-live="polite" aria-relevant="additions text">
         {windowed.map(({ hidden, ...entry }) => (
           <li
             key={entry.id}
@@ -54,6 +58,7 @@ export function MinutesPanel({ entries, stage }: MinutesPanelProps) {
               hidden ? ' minutes__entry--hidden' : ''
             }`}
             data-testid={`minutes-entry-${entry.id}`}
+            aria-atomic="true"
           >
             <Avatar memberId={entry.speaker} size="sm" />
             <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
