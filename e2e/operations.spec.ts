@@ -159,3 +159,70 @@ test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반�
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toHaveCount(1);
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toContainText('찬성');
 });
+
+/** operator-probe 패널을 열고 결과가 나올 때까지 기다린다. 전역 10초 1회 제한(T49)에
+ * 다른 프로젝트(desktop-1080/desktop-720)의 동시 호출과 겹치면 probe_rate_limit으로
+ * 실패할 수 있어, 그 경우에만 패널을 닫고 잠깐 기다렸다가 다시 연다. */
+async function openProbeUntilSettled(page: Page): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    await page.getByTestId('operator-probe').click();
+    await expect(page.getByTestId('operator-probe-panel')).toBeVisible();
+    await expect(page.getByTestId('operator-probe-pending')).toBeHidden({ timeout: 10_000 });
+
+    const failLocator = page.getByTestId('operator-probe-fail');
+    const failed = (await failLocator.count()) > 0;
+    const failText = failed ? await failLocator.textContent() : '';
+    if (failed && failText?.includes('probe_rate_limit') && Date.now() < deadline) {
+      await page.getByTestId('operator-probe-close').click();
+      await page.waitForTimeout(2000);
+      continue;
+    }
+    return;
+  }
+}
+
+test('mock 서버 기준 "모델 연결 확인"은 실제 mock 제공자 정보를 보여준다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('operator-menu-button').click();
+
+  await openProbeUntilSettled(page);
+
+  await expect(page.getByTestId('operator-probe-ok')).toContainText('mock');
+});
+
+test('모델 연결 확인이 실패하면 오류 메시지를 보여준다', async ({ page }) => {
+  await page.route('**/api/ops/probe', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        provider: 'anthropic',
+        modelId: 'claude-sonnet-5',
+        latencyMs: 10,
+        error: 'anthropic_api_error 401: invalid x-api-key',
+      }),
+    });
+  });
+
+  await page.goto('/?mode=scripted');
+  await page.getByTestId('operator-menu-button').click();
+  await page.getByTestId('operator-probe').click();
+
+  await expect(page.getByTestId('operator-probe-fail')).toContainText('401');
+});
+
+test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted 배지를 보인다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByTestId('operator-menu-button').click();
+  await page.getByTestId('operator-restart-scripted').click();
+
+  await expect(page.getByTestId('operator-confirm-restart-scripted')).toBeVisible();
+  await page.getByTestId('operator-confirm-restart-scripted-yes').click();
+
+  await page.waitForURL(/mode=scripted/);
+  await expect(page.getByTestId('mode-badge')).toHaveText('사전 구성 시뮬레이션');
+});

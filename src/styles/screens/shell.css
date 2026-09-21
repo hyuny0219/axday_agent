@@ -189,6 +189,27 @@
   justify-content: flex-end;
 }
 
+/* 모델 연결 확인 결과 줄(T49, DESIGN_SPEC.md v1.0 10절). 패널 폭(220px) 안에서 두 줄
+   이내로 줄바꿈되도록 별도 폭 지정 없이 기존 .operator-menu__panel 흐름을 따른다. */
+.operator-probe__result {
+  margin: 0;
+  font-size: 14px;
+}
+
+.operator-probe__result--ok {
+  color: var(--accent);
+}
+
+.operator-probe__result--fail {
+  color: var(--vote-no);
+}
+
+.operator-probe__info {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .idle-notice {
   position: fixed;
   left: 50%;

@@ -143,6 +143,13 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 export function createMockProvider(modelId = 'mock-model'): ModelProvider {
   return {
     async complete(req: ModelCompleteRequest): Promise<ModelCompleteResult> {
+      // 운영 메뉴 "모델 연결 확인"(T49, server/handlers/probe.ts)의 고정 호출은 라운드·표·
+      // 비서 envelope과 달리 그냥 user:'ok'를 보낸다 — round/vote/assistant 4종 kind
+      // 안에는 { ok:true } 계약을 만족하는 분기가 없으므로 여기서 먼저 처리한다.
+      if (req.user === 'ok') {
+        return { json: { ok: true }, modelId };
+      }
+
       const envelope = parseEnvelope(req.user);
       const fault = envelope.mock;
 

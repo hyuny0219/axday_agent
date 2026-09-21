@@ -18,6 +18,7 @@ import {
   handleAssistantRefine,
   handleAssistantSummarize,
 } from './handlers/assistant';
+import { handleProbe } from './handlers/probe';
 import {
   isAuthorized,
   isProtectedApiPath,
@@ -30,10 +31,13 @@ import { tryServeStatic } from './static';
 
 const config = loadConfig();
 
+// mock 제공자는 항상 자체 고정 modelId('mock-model')를 쓴다(config.modelId는 실제 모델
+// 전환용이라 anthropic에만 넘긴다) — 그래야 운영 메뉴 "모델 연결 확인"(T49)이 mock 서버에서
+// 실제로 "mock-model"을 보여줘 live/mock을 화면에서 구분할 수 있다.
 const provider: ModelProvider =
   config.provider === 'anthropic'
     ? createAnthropicProvider({ modelId: config.modelId })
-    : createMockProvider(config.modelId);
+    : createMockProvider();
 
 const requestIds = new RequestIdRegistry();
 const accessTokenConfig = loadAccessTokenConfig();
@@ -89,6 +93,27 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
     return {};
   }
   return JSON.parse(raw);
+}
+
+/** 모델 연결 확인(T49) 전역 남용 방지: 서버 전체에서 10초에 1회만 허용한다(세션별이
+ * 아니다 — 세션 상한 레지스트리를 거치지 않는 진단 호출이라 별도의 모듈 변수로 마지막
+ * 호출 시각만 기억한다). */
+const PROBE_RATE_LIMIT_MS = 10_000;
+let lastProbeAt: number | null = null;
+
+async function handleOpsProbe(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const now = systemClock.now();
+  if (lastProbeAt !== null && now - lastProbeAt < PROBE_RATE_LIMIT_MS) {
+    sendJson(res, 429, { error: 'probe_rate_limit' });
+    return;
+  }
+  lastProbeAt = now;
+  const result = await handleProbe({
+    provider,
+    config: { provider: config.provider, modelId: config.modelId },
+    clock: systemClock,
+  });
+  sendJson(res, 200, result);
 }
 
 /** 항상 200을 준다(호스팅 헬스체크가 토큰 없이도 통과해야 한다). 토큰이 요구되는데
@@ -167,6 +192,7 @@ type RouteHandler = (req: IncomingMessage, res: ServerResponse) => void | Promis
 
 const routes: Record<string, RouteHandler> = {
   'GET /api/health': handleHealth,
+  'POST /api/ops/probe': handleOpsProbe,
   'POST /api/board/round': (req, res) =>
     handleBoardEndpoint(
       'board.round',
