@@ -230,15 +230,21 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             세로 예산을 넘지 않게 한다. */}
         <div className="result-screen__records">
           <section className="result-summary" data-testid="result-summary">
-            <h3 className="result-screen__section-label">이사회 한 장 요약</h3>
-            {resultSummary && (
-              <>
+            {/* 머리글과 집계 배지를 한 줄에 둔다 — live 최악 조합(조건 4개 + 160자 근거
+                4행)이 두 해상도 세로 예산 안에 들어가야 한다(PR #9 Codex 1차 검토). */}
+            <div className="result-summary__head">
+              <h3 className="result-screen__section-label">이사회 한 장 요약</h3>
+              {resultSummary && (
                 <p className="result-summary__tally" data-testid="result-summary-tally">
                   찬성 {resultSummary.tally.counts.YES} · 보류 {resultSummary.tally.counts.HOLD} ·
                   반대 {resultSummary.tally.counts.NO}
                   {resultSummary.tally.counts.UNCAST > 0 &&
                     ` · 미표결 ${resultSummary.tally.counts.UNCAST}`}
                 </p>
+              )}
+            </div>
+            {resultSummary && (
+              <>
                 <p className="result-summary__conditions" data-testid="result-summary-conditions">
                   {resultSummary.conditionLabels.length > 0
                     ? `이사님이 붙인 조건: ${resultSummary.conditionLabels.join(', ')}`

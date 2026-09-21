@@ -204,7 +204,11 @@ export const aiAssistantScenario: Scenario = {
         vote: 'YES',
         reason: '작은 범위로 시작하고 준비시간·수정량을 확인하는 조건이 있어 찬성',
       },
-      { when: { always: true }, vote: 'HOLD', reason: '투자 효과를 확인할 조건이 없어 보류' },
+      {
+        when: { always: true },
+        vote: 'HOLD',
+        reason: '작은 범위로 시작과 준비시간·수정량 확인 후 확대 조건이 함께 있지 않아 보류',
+      },
     ],
     CAIO: [
       {

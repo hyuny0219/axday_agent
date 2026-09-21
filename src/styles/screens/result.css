@@ -269,11 +269,20 @@
 
 /* "이사회 한 장 요약"(T48): 집계 배지 → 조건 한 줄 → 임원 4행 + 내 행 → 내 의견
    원문 순서다(DESIGN_SPEC.md v1.0 9절). */
+.result-summary__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
 .result-summary__tally {
   margin: 0;
   font-weight: 700;
   color: var(--text);
-  font-size: var(--fs-card);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
 }
 
 .result-summary__conditions {
@@ -282,13 +291,15 @@
   font-size: var(--fs-meta);
 }
 
+/* 행 목록은 줄어들지 않는다(flex-shrink:0) — 세로가 모자라면 행을 조용히 감추는 대신
+   e2e(noscroll live 케이스)의 요약 패널 잘림 검사가 실패하도록 한다. */
 .result-summary__rows {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 /* 임원·내 행 공통: 아바타 + 이름 + 표 배지(4장 규칙: 색+텍스트+아이콘) + 판단 이유
@@ -297,7 +308,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 8px 0;
+  padding: 4px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -366,11 +377,14 @@
   gap: 4px;
 }
 
+/* 원문은 1줄 클램프(전문은 스크린리더·회의 기록에 남는다). live 최악 조합의 세로
+   예산 때문에 2줄에서 줄였다(PR #9 Codex 1차 검토). */
 .result-mine__quote {
   margin: 0;
   color: var(--text);
+  font-size: var(--fs-meta);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -392,8 +406,10 @@
   color: var(--text-muted);
 }
 
+/* 판단 근거는 두 해상도 모두 1줄(요약 패널이 같은 근거를 한 줄로 다시 보여주고, live
+   최악 조합의 기록 영역 세로 예산을 확보한다 — PR #9 Codex 1차 검토). */
 .result-seat__reason {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .result-seat__concerns,
@@ -415,6 +431,14 @@
   .result-seat__concerns,
   .result-seat__unavailable {
     font-size: 12px;
+  }
+
+  /* 720: 좌석 아바타를 sm 크기로 줄여 live 근거·우려 두 줄이 붙어도 5석 두 줄이
+     기록 영역을 밀어내지 않게 한다(PR #9 Codex 1차 검토). */
+  .result-seat .avatar--md {
+    width: 36px;
+    height: 36px;
+    font-size: 11px;
   }
 
   .result-seat {

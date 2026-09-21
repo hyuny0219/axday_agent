@@ -136,6 +136,9 @@ describe('aiAssistantScenario', () => {
         total += 1;
         expect(rule.reason, `${memberId}: ${JSON.stringify(rule.when)}`).toBeTruthy();
         expect(rule.reason).not.toMatch(NUMERIC_COPY_PATTERN);
+        // 자료 E1~E4 밖의 틀("투자 효과" 등)이나 "조건이 없다"는 단정으로 부분 조건을
+        // 부정하지 않는다(PR #9 Codex 1차 검토: MEASURE만 있어도 CFO는 이 행이 맞는다).
+        expect(rule.reason).not.toContain('투자 효과');
       }
     }
     expect(total).toBe(12);

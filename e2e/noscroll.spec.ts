@@ -200,7 +200,12 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
+  // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('phrase-card-P2').click();
+  await page.getByTestId('phrase-card-P3').click();
+  await page.getByTestId('phrase-card-P4').click();
   await page.getByTestId('submit-opinion').click();
 
   await expect(
@@ -233,4 +238,10 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await expect(page.getByTestId('result-summary')).toBeInViewport();
   await expect(page.getByTestId('result-ai-help')).toBeInViewport();
+  // 요약 패널은 overflow:hidden이라 바깥 컨테이너 검사만으로는 안쪽 잘림을 못 잡는다.
+  // 조건 4개(두 줄) + 160자 판단 근거 4행 + 내 행 + 원문이 패널 자체 높이 안에 있고,
+  // 마지막 블록(내 의견 원문)이 실제로 보이는지 단언한다(PR #9 Codex 1차 검토).
+  await expectNoClip(page, '[data-testid="result-summary"]', 'RESULT(live, 조건 4개)');
+  await expect(page.getByTestId('result-mine')).toBeInViewport();
+  await expect(page.getByTestId('result-summary-row-PARTICIPANT')).toBeInViewport();
 });
