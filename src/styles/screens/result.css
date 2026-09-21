@@ -446,7 +446,9 @@
   }
 
   .result-screen__tasks ul,
-  .result-screen__ai-help-list {
+  .result-screen__ai-help-list,
+  .result-screen__ai-help-none,
+  .result-screen__ai-help-placeholder {
     font-size: 12px;
   }
 
