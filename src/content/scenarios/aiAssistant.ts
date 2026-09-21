@@ -183,26 +183,67 @@ export const aiAssistantScenario: Scenario = {
       },
     ],
   },
+  // 판단 이유 한 줄(v1.0 T48, docs/SCENARIO_AI_ASSISTANT.md "판단 이유 한 줄" 표 원문).
   voteRules: {
     CEO: [
-      { when: { has: 'OPEN_ALL' }, vote: 'HOLD' },
-      { when: { always: true }, vote: 'YES' },
+      {
+        when: { has: 'OPEN_ALL' },
+        vote: 'HOLD',
+        reason: '권한 검토 없이 전체 연결하는 안은 보류',
+      },
+      { when: { always: true }, vote: 'YES', reason: '보고 준비를 줄이는 방향에 찬성' },
     ],
     CFO: [
-      { when: { has: 'OPEN_ALL' }, vote: 'NO' },
-      { when: { all: [{ has: 'PILOT' }, { has: 'MEASURE' }] }, vote: 'YES' },
-      { when: { always: true }, vote: 'HOLD' },
+      {
+        when: { has: 'OPEN_ALL' },
+        vote: 'NO',
+        reason: '권한 검토 없이 전체 연결하는 안은 반대',
+      },
+      {
+        when: { all: [{ has: 'PILOT' }, { has: 'MEASURE' }] },
+        vote: 'YES',
+        reason: '작은 범위로 시작하고 준비시간·수정량을 확인하는 조건이 있어 찬성',
+      },
+      {
+        when: { always: true },
+        vote: 'HOLD',
+        reason: '작은 범위로 시작과 준비시간·수정량 확인 후 확대 조건이 함께 있지 않아 보류',
+      },
     ],
     CAIO: [
-      { when: { has: 'OPEN_ALL' }, vote: 'NO' },
-      { when: { has: 'REVIEW' }, vote: 'YES' },
-      { when: { always: true }, vote: 'NO' },
+      {
+        when: { has: 'OPEN_ALL' },
+        vote: 'NO',
+        reason: '권한 검토 없이 전체 연결하는 안은 반대',
+      },
+      {
+        when: { has: 'REVIEW' },
+        vote: 'YES',
+        reason: '출처·기준일 표시 후 담당자 검토 조건이 있어 찬성',
+      },
+      {
+        when: { always: true },
+        vote: 'NO',
+        reason: '출처·기준일 표시 후 담당자 검토 조건이 없어 반대',
+      },
     ],
     CISO: [
-      { when: { has: 'OPEN_ALL' }, vote: 'NO' },
-      { when: { all: [{ has: 'ACCESS' }, { has: 'REVIEW' }] }, vote: 'YES' },
-      { when: { has: 'ACCESS' }, vote: 'HOLD' },
-      { when: { always: true }, vote: 'NO' },
+      {
+        when: { has: 'OPEN_ALL' },
+        vote: 'NO',
+        reason: '권한 검토 없이 전체 연결하는 안은 반대',
+      },
+      {
+        when: { all: [{ has: 'ACCESS' }, { has: 'REVIEW' }] },
+        vote: 'YES',
+        reason: '권한·공유 범위 확인과 담당자 검토 조건이 있어 찬성',
+      },
+      {
+        when: { has: 'ACCESS' },
+        vote: 'HOLD',
+        reason: '권한·공유 범위 확인은 있으나 담당자 검토 조건이 없어 보류',
+      },
+      { when: { always: true }, vote: 'NO', reason: '권한·공유 범위 확인 조건이 없어 반대' },
     ],
   },
   resultCopy: {

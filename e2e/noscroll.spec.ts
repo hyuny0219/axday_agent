@@ -115,6 +115,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'RESULT');
   // "6개월 뒤" 에필로그(T47): 왼쪽 열 게이지 아래·CTA 위, 잘리지 않고 보인다.
   await expect(page.getByTestId('result-epilogue')).toBeInViewport();
+  // "이사회 한 장 요약"(T48): 기록 영역 2/3 패널과 보조 패널의 'AI가 도운 일'이 모두
+  // 뷰포트 안에 있다(페이지 스크롤 없음은 위 expectNoPageScroll로 이미 확인했다).
+  await expect(page.getByTestId('result-summary')).toBeInViewport();
+  await expect(page.getByTestId('result-ai-help')).toBeInViewport();
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을
@@ -196,7 +200,12 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
+  // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('phrase-card-P2').click();
+  await page.getByTestId('phrase-card-P3').click();
+  await page.getByTestId('phrase-card-P4').click();
   await page.getByTestId('submit-opinion').click();
 
   await expect(
@@ -227,5 +236,12 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoPageScroll(page, 'RESULT(live)');
   await expectNoClip(page, '.app-body__content', 'RESULT(live)');
   await expect(page.getByTestId('end-session')).toBeInViewport();
+  await expect(page.getByTestId('result-summary')).toBeInViewport();
   await expect(page.getByTestId('result-ai-help')).toBeInViewport();
+  // 요약 패널은 overflow:hidden이라 바깥 컨테이너 검사만으로는 안쪽 잘림을 못 잡는다.
+  // 조건 4개(두 줄) + 160자 판단 근거 4행 + 내 행 + 원문이 패널 자체 높이 안에 있고,
+  // 마지막 블록(내 의견 원문)이 실제로 보이는지 단언한다(PR #9 Codex 1차 검토).
+  await expectNoClip(page, '[data-testid="result-summary"]', 'RESULT(live, 조건 4개)');
+  await expect(page.getByTestId('result-mine')).toBeInViewport();
+  await expect(page.getByTestId('result-summary-row-PARTICIPANT')).toBeInViewport();
 });

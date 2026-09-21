@@ -6,6 +6,8 @@ import {
   castParticipant,
   countVotesChangedByConditions,
   decideBoard,
+  explainBoard,
+  participantDecisive,
   tally,
   type TallyResult,
 } from '../../src/domain/voting';
@@ -264,6 +266,65 @@ describe('countVotesChangedByConditions — 내 조건이 바꾼 표 게이지(T
       const motion = buildMotion(combo);
       expect(countVotesChangedByConditions(scenario, motion)).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+describe('explainBoard — 이사회 한 장 요약의 임원별 이유·바뀐 표(T48)', () => {
+  it('4조건(PILOT,REVIEW,ACCESS,MEASURE): 임원 표는 전원 YES, CFO·CAIO·CISO만 바뀐다', () => {
+    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+    const rows = explainBoard(scenario, motion);
+    expect(rows.map((r) => r.vote)).toEqual(['YES', 'YES', 'YES', 'YES']);
+    expect(rows.map((r) => r.changed)).toEqual([false, true, true, true]);
+    expect(rows.every((r) => typeof r.reason === 'string' && r.reason!.length > 0)).toBe(true);
+    expect(rows.find((r) => r.memberId === 'CFO')?.reason).toBe(
+      '작은 범위로 시작하고 준비시간·수정량을 확인하는 조건이 있어 찬성',
+    );
+  });
+
+  it('PILOT,MEASURE: 임원 표는 YES,YES,NO,NO이고 CFO만 바뀐다', () => {
+    const motion = buildMotion(['PILOT', 'MEASURE']);
+    const rows = explainBoard(scenario, motion);
+    expect(rows.map((r) => r.vote)).toEqual(['YES', 'YES', 'NO', 'NO']);
+    expect(rows.map((r) => r.changed)).toEqual([false, true, false, false]);
+  });
+
+  it('조건 없음(원안): 자기 자신과 비교하므로 아무도 바뀌지 않는다', () => {
+    const motion = buildMotion([]);
+    const rows = explainBoard(scenario, motion);
+    expect(rows.map((r) => r.vote)).toEqual(['YES', 'HOLD', 'NO', 'NO']);
+    expect(rows.every((r) => !r.changed)).toBe(true);
+  });
+
+  it('OPEN_ALL: CEO·CFO가 바뀌고 CAIO·CISO는 원안과 같은 NO라 바뀌지 않는다', () => {
+    const motion = buildMotion(['OPEN_ALL']);
+    const rows = explainBoard(scenario, motion);
+    expect(rows.map((r) => r.vote)).toEqual(['HOLD', 'NO', 'NO', 'NO']);
+    expect(rows.map((r) => r.changed)).toEqual([true, true, false, false]);
+    expect(rows.every((r) => r.reason?.includes('권한 검토 없이 전체 연결'))).toBe(true);
+  });
+});
+
+describe('participantDecisive — 내 표의 결정력(T48)', () => {
+  it('PILOT,MEASURE + 참가자 YES: 대안 표에 따라 결론이 갈려 결정적이다', () => {
+    const motion = buildMotion(['PILOT', 'MEASURE']);
+    const boardBallots = decideBoard(scenario, motion);
+    const ballots = withParticipant(boardBallots, motion, 'YES');
+    expect(participantDecisive(ballots)).toBe(true);
+  });
+
+  it('4조건 + 참가자 NO: 임원만으로 이미 가결이라 결정적이지 않다', () => {
+    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+    const boardBallots = decideBoard(scenario, motion);
+    const ballots = withParticipant(boardBallots, motion, 'NO');
+    expect(participantDecisive(ballots)).toBe(false);
+  });
+
+  it('PILOT,MEASURE + 참가자 UNCAST: UNCAST를 포함한 대안 중 다른 결론이 있어 결정적이다', () => {
+    const motion = buildMotion(['PILOT', 'MEASURE']);
+    const boardBallots = decideBoard(scenario, motion);
+    const ballots = withParticipant(boardBallots, motion, 'UNCAST');
+    expect(tally(ballots).outcome).toBe('HOLD');
+    expect(participantDecisive(ballots)).toBe(true);
   });
 });
 

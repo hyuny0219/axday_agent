@@ -91,6 +91,10 @@ export interface FollowUp {
 export interface VoteRule {
   when: Predicate;
   vote: Vote;
+  /** 판단 이유 한 줄(v1.0 T48). 결과 화면 "이사회 한 장 요약"에 표시한다. 조건 라벨을
+   * 그대로 인용하고 새 수치·확정 사실을 만들지 않는다(SCENARIO_AI_ASSISTANT.md). 없는
+   * 규칙은 표 텍스트만 쓴다(기존 테스트·준비 중 안건 호환). */
+  reason?: string;
 }
 
 /** "6개월 뒤" 에필로그(v1.0 T47). 결과 화면 왼쪽 열, '체험용 가상 전망' 배지와 함께

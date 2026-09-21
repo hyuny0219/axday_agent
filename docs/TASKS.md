@@ -32,6 +32,7 @@
 | T41 | 완료 | 회의록 패널(v1.0 7절, v0.9 B안 재정의: 스크롤 통합 대신 무대 아래 창 고정 패널·roundLog). 1라운드 PASS(nit: 내 항목 시안 테두리 반영). PR #7 Codex 검토 2건 반영(행 aria-atomic·text 변경 낭독, 판단 중 상태 문구 노출). 단위 280·E2E 74 |
 | T46 | 완료 | live 후속 라운드 대기 게이트(MOTION CTA, v1.0 7절). 1라운드 PASS. PR #7 Codex 검토 1건 반영(게이트를 세션 상태에서 동기 계산해 MOTION 첫 프레임부터 잠금) |
 | T47 | 완료 | 안건 사건화 문구·"6개월 뒤" 에필로그(v1.0 8절, 카피 보강). 1라운드 PASS. 다듬기: 회의록 패널 내용 높이·직함 숨김(아바타 이니셜로 대체), 선택 카드 머리줄 한 줄. 단위 282·E2E 74 |
+| T48 | 완료 | 이사회 한 장 요약(결과 화면 기록 영역 재배치, v1.0 9절). 1라운드 PASS(다듬기: 720 AI 도움 미사용 문구 12px). 단위 298·E2E 76 |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
@@ -487,6 +488,22 @@
 - 하지 말 것: 표결 규칙·조건·자료 수치 변경. 새 수치·비율·금액 문구. 화면에 문구 하드코딩(시나리오 데이터에서만). 기존 testid 삭제. 페이지·패널 스크롤 추가.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 스크린샷의 select·briefing·result에서 새 요소가 잘리지 않음.
 - 크기: S.
+
+## T48 이사회 한 장 요약 (v1.0 9절)
+
+- 목표: 결과 화면 오른쪽 열 아래 기록 영역을 "이사회 한 장 요약" 패널(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운 일)로 재배치해, 집계·내가 붙인 조건·임원별 판단 이유와 바뀐 표·내 표의 결정력·내 원문을 한 번에 읽게 한다. 표결 규칙·조건·집계는 그대로.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 9절(전부)·6절 표. docs/SCENARIO_AI_ASSISTANT.md "판단 이유 한 줄" 표(문구 원문 — 그대로 쓴다). `src/domain/voting.ts`(`decideMember`·`decideBoard`·`countVotesChangedByConditions`·`tally`), `src/content/types.ts`(`VoteRule`), `src/content/scenarios/aiAssistant.ts`(`voteRules`), `src/components/screens/ResultScreen.tsx`, `src/styles/screens/result.css`(기록 영역·1280 규칙), `src/components/memberLabels.ts`, `tests/domain/voting.test.ts`, `e2e/noscroll.spec.ts`(scripted·live 두 케이스의 RESULT 단언), `e2e/assistant.spec.ts`(`result-ai-help` 단언).
+- 만들 것:
+  1. `VoteRule.reason?: string` 추가. aiAssistant `voteRules`의 12행 모두 시나리오 문서 표의 문구를 채운다. `decideMember`는 그대로 두고, `src/domain/voting.ts`에 순수 함수 `explainMember(rules, ctx): { vote, reason?: string }`와 `explainBoard(scenario, motion): Array<{ memberId, vote, reason?: string, changed: boolean }>`(changed = 조건 없는 baseline과 표가 다름, `countVotesChangedByConditions`와 같은 계산 — 그 함수는 `explainBoard`로 재구현하거나 유지)를 추가.
+  2. `src/domain/voting.ts`에 `participantDecisive(ballots): boolean` — 참가자 표를 YES/NO/HOLD/UNCAST 각각으로 바꿔 `tally`했을 때 outcome이 실제와 달라지는 경우가 하나라도 있으면 true.
+  3. `src/components/resultSummary.ts`: 순수 함수 `buildResultSummary(scenario, session)` → `{ tally, conditionLabels, execRows: Array<{ memberId, vote, reason, changed }>, participant: { vote, decisive }, quote }`. scripted는 `explainBoard`, live는 `session.ballots`의 `reason`(없으면 `unavailableReason`, 그것도 없으면 "판단 근거 없음")이고 changed는 항상 false.
+  4. ResultScreen: 기록 영역을 9절대로 재배치. 요약 패널 `result-summary`(집계 배지 `result-summary-tally`, 조건 한 줄 `result-summary-conditions`, 임원 행 `result-summary-row-{id}`+태그 `result-summary-changed`, 내 행 `result-summary-row-PARTICIPANT`+`result-summary-decisive`, 원문 `result-mine` 2줄 클램프). 오른쪽 스택 `result-tasks`·`result-ai-help`(내부 스크롤·`result-ai-help-none` 유지). 기존 "내 의견" 패널의 반영 태그 목록은 제거(조건 한 줄이 대체).
+  5. CSS: `result.css` 기록 영역 `grid-template-columns: 2fr 1fr`, 오른쪽 스택 세로 flex, 요약 행 1줄 클램프, 표 배지 4장 규칙(색+텍스트+아이콘), 바뀐 표 태그 pill(시안). 1280: 행 12px, 원문 2줄 유지.
+  6. 테스트: `tests/domain/voting.test.ts`에 `explainBoard`(4조건·PILOT+MEASURE·조건 없음·OPEN_ALL의 표와 reason·changed), `participantDecisive`(YES/YES/NO/NO + YES → true, 4 YES + NO → false, UNCAST 대안 포함). `tests/components/resultSummary.test.ts`(scripted·live 각 1건, live는 reason 없는 UNCAST 좌석). 콘텐츠 테스트: 12개 규칙 모두 reason 있고 수치 표현 없음. E2E: `e2e/noscroll.spec.ts` scripted·live 두 케이스 RESULT에서 `result-summary`·`result-ai-help` 뷰포트 안(페이지 스크롤 없음 단언은 기존), `e2e/flow-full.spec.ts`에 PILOT+MEASURE+찬성 경로로 `result-summary-decisive`가 "이사님의 한 표가 결과를 정했습니다"이고 `result-summary-changed`가 CFO 행에만 있음을 단언. 스크린샷 갱신.
+- 허용 경로: `src/domain/voting.ts`, `src/content/`, `src/components/`, `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
+- 하지 말 것: 표결 규칙의 표 값·조건·집계 규칙 변경. reducer·서버 변경. 페이지·패널 스크롤 추가("AI가 도운 일" 하나 유지). 기존 testid 삭제(`result-mine`·`result-tasks`·`result-ai-help`·`result-ai-help-none`·`result-gauge`·`result-epilogue` 유지). 화면에 이유 문구 하드코딩(시나리오 데이터에서만).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 결과 스크린샷에서 요약 패널 5행과 오른쪽 두 패널이 잘리지 않음.
+- 크기: M.
 
 ## T42 v1.0 애니메이션 프레임 스킨
 

@@ -126,6 +126,24 @@ describe('aiAssistantScenario', () => {
     expect(scenario.voteRules.CISO).toHaveLength(4);
   });
 
+  // v1.0 9절(T48): 판단 이유 한 줄. 규칙 12행 모두 reason이 있어야 하고, 새 수치를
+  // 만들지 않는다(SCENARIO_AI_ASSISTANT.md "검증되지 않은 수치 금지").
+  it('12개 규칙 모두 판단 이유가 있고 수치 표현이 없다', () => {
+    const NUMERIC_COPY_PATTERN = /%|절감/;
+    let total = 0;
+    for (const memberId of Object.keys(scenario.voteRules) as ExecMemberId[]) {
+      for (const rule of scenario.voteRules[memberId]) {
+        total += 1;
+        expect(rule.reason, `${memberId}: ${JSON.stringify(rule.when)}`).toBeTruthy();
+        expect(rule.reason).not.toMatch(NUMERIC_COPY_PATTERN);
+        // 자료 E1~E4 밖의 틀("투자 효과" 등)이나 "조건이 없다"는 단정으로 부분 조건을
+        // 부정하지 않는다(PR #9 Codex 1차 검토: MEASURE만 있어도 CFO는 이 행이 맞는다).
+        expect(rule.reason).not.toContain('투자 효과');
+      }
+    }
+    expect(total).toBe(12);
+  });
+
   const NUMERIC_COPY_PATTERN = /%|절감/;
 
   it('incident 3필드가 비어 있지 않고 수치 표현이 없다', () => {

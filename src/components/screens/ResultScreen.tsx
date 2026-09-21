@@ -10,9 +10,11 @@
 // UNCAST 좌석은 사유를 함께 보여준다. 응답 장애로 판단이 제한됐으면(tally().limitedBy
 // Unavailable) 공통 안내를 띄운다. scripted 표에는 reason이 없으므로 그대로 조용하다.
 // T45(조종석 배치): 왼쪽 열은 게이지 + "체험 종료" CTA만(무대 위 배지·도장은 StageBand가
-// 그린다), 오른쪽 열은 결론·5석·기록 3패널을 담는다(DESIGN_SPEC.md v1.0 6절 표). 기록
-// 패널 중 'AI가 도운 일' 하나만 내부 스크롤(overflow-y:auto + 아래쪽 페이드)이고, 내
-// 의견 인용은 4줄로 클램프한다(result.css).
+// 그린다), 오른쪽 열은 결론·5석·기록 영역을 담는다(DESIGN_SPEC.md v1.0 6절 표).
+// T48: 기록 영역은 "이사회 한 장 요약"(2/3, result-summary — buildResultSummary가
+// 집계·조건·임원별 이유와 바뀐 표·내 표의 결정력·내 원문을 계산)과 보조 패널(1/3: 남은
+// 과제 + AI가 도운 일)로 나뉜다. 'AI가 도운 일' 하나만 내부 스크롤(overflow-y:auto +
+// 아래쪽 페이드)이고, 요약 패널의 행·원문은 각각 1~2줄로 클램프한다(result.css).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -21,6 +23,7 @@ import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, tally } from '../../d
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
+import { buildResultSummary } from '../resultSummary';
 import { SEAT_REVEAL_STEP_SECONDS } from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
 import { Avatar } from '../parts/Avatar';
@@ -83,6 +86,13 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
     [allConfirmedIds, finalMotion],
   );
 
+  // "이사회 한 장 요약"(v1.0 9절, T48): finalMotion이 있을 때만 계산한다(buildResultSummary는
+  // 없으면 던진다). RESULT는 항상 finalMotion이 있으므로 안전하다(아래 이른 반환 참고).
+  const resultSummary = useMemo(
+    () => (finalMotion ? buildResultSummary(scenario, session) : null),
+    [scenario, session, finalMotion],
+  );
+
   // scripted에서만 계산한다(조건 없는 안건의 임원 표와 실제 표를 비교). live 표는 임원
   // 에이전트가 실제로 판단한 결과라 "조건 없는 안건" 가정 자체가 성립하지 않는다.
   const votesChangedByConditions = useMemo(() => {
@@ -112,10 +122,6 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
 
   if (!finalMotion) {
     return null;
-  }
-
-  function conditionLabel(id: string): string {
-    return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
   }
 
   const conclusion =
@@ -218,56 +224,115 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             );
           })}
         </div>
-        {/* 세 기록 패널을 나란히 둔다. 'AI가 도운 일'만 내부 스크롤(화면당 유일한
-            스크롤 패널, DESIGN_SPEC.md v1.0 6절)이고, 내 의견 인용은 4줄로 클램프해
-            자체적으로 세로 예산을 넘지 않게 한다. */}
+        {/* 기록 영역을 "이사회 한 장 요약"(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운
+            일)로 재배치한다(DESIGN_SPEC.md v1.0 9절, T48). 'AI가 도운 일'만 내부
+            스크롤(화면당 유일한 스크롤 패널)이고, 요약 행·내 의견 원문은 클램프로
+            세로 예산을 넘지 않게 한다. */}
         <div className="result-screen__records">
-          <section className="result-screen__mine" data-testid="result-mine">
-            <h3 className="result-screen__section-label">내 의견</h3>
-            {session.opinions.map((opinion) => (
-              <p key={opinion.id} className="result-screen__quote">
-                {opinion.originalText}
-              </p>
-            ))}
-            {allConfirmedIds.length > 0 ? (
-              <ul className="result-screen__conditions">
-                {allConfirmedIds.map((id) => (
-                  <li key={id}>
-                    {conditionLabel(id)}
-                    {includedIds.includes(id) && (
-                      <span className="result-screen__reflected-tag"> 반영</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="result-screen__no-conditions">확정한 수정 조건이 없습니다.</p>
-            )}
-          </section>
-          <section className="result-screen__tasks">
-            <h3 className="result-screen__section-label">남은 과제</h3>
-            <ul>
-              {scenario.remainingTasks.map((task) => (
-                <li key={task}>{task}</li>
-              ))}
-            </ul>
-          </section>
-          <section className="result-screen__ai-help" data-testid="result-ai-help">
-            <h3 className="result-screen__section-label">AI가 도운 일</h3>
-            <div className="result-screen__ai-help-scroll">
-              <ul className="result-screen__ai-help-list">
-                <li>자료 4장 자동 정리 데모 표시</li>
-                {additionalHelp.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-              {additionalHelp.length === 0 && (
-                <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
-                  추가 AI 도움은 사용하지 않았습니다.
+          <section className="result-summary" data-testid="result-summary">
+            {/* 머리글과 집계 배지를 한 줄에 둔다 — live 최악 조합(조건 4개 + 160자 근거
+                4행)이 두 해상도 세로 예산 안에 들어가야 한다(PR #9 Codex 1차 검토). */}
+            <div className="result-summary__head">
+              <h3 className="result-screen__section-label">이사회 한 장 요약</h3>
+              {resultSummary && (
+                <p className="result-summary__tally" data-testid="result-summary-tally">
+                  찬성 {resultSummary.tally.counts.YES} · 보류 {resultSummary.tally.counts.HOLD} ·
+                  반대 {resultSummary.tally.counts.NO}
+                  {resultSummary.tally.counts.UNCAST > 0 &&
+                    ` · 미표결 ${resultSummary.tally.counts.UNCAST}`}
                 </p>
               )}
             </div>
+            {resultSummary && (
+              <>
+                <p className="result-summary__conditions" data-testid="result-summary-conditions">
+                  {resultSummary.conditionLabels.length > 0
+                    ? `이사님이 붙인 조건: ${resultSummary.conditionLabels.join(', ')}`
+                    : '조건 없이 원안 그대로 상정'}
+                </p>
+                <ul className="result-summary__rows">
+                  {resultSummary.execRows.map((row) => (
+                    <li
+                      key={row.memberId}
+                      className="result-summary__row"
+                      data-testid={`result-summary-row-${row.memberId}`}
+                    >
+                      <Avatar memberId={row.memberId} size="sm" />
+                      <span className="result-summary__name">{MEMBER_LABELS[row.memberId]}</span>
+                      <span className={`result-summary__vote result-summary__vote--${row.vote.toLowerCase()}`}>
+                        {VOTE_ICON[row.vote] && (
+                          <span aria-hidden="true">{VOTE_ICON[row.vote]}</span>
+                        )}
+                        {VOTE_TEXT[row.vote]}
+                      </span>
+                      <span className="result-summary__reason">{row.reason}</span>
+                      {row.changed && (
+                        <span
+                          className="result-summary__changed"
+                          data-testid="result-summary-changed"
+                        >
+                          이사님 조건으로 바뀜
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                  <li
+                    className="result-summary__row result-summary__row--participant"
+                    data-testid="result-summary-row-PARTICIPANT"
+                  >
+                    <Avatar memberId="PARTICIPANT" size="sm" />
+                    <span className="result-summary__name">나 · 특별 이사</span>
+                    <span
+                      className={`result-summary__vote result-summary__vote--${resultSummary.participant.vote.toLowerCase()}`}
+                    >
+                      {VOTE_ICON[resultSummary.participant.vote] && (
+                        <span aria-hidden="true">{VOTE_ICON[resultSummary.participant.vote]}</span>
+                      )}
+                      {VOTE_TEXT[resultSummary.participant.vote]}
+                    </span>
+                    <span className="result-summary__reason" data-testid="result-summary-decisive">
+                      {resultSummary.participant.decisive
+                        ? '이사님의 한 표가 결과를 정했습니다'
+                        : '결과는 임원 표만으로 정해졌습니다'}
+                    </span>
+                  </li>
+                </ul>
+                <div className="result-mine" data-testid="result-mine">
+                  {resultSummary.quote.map((text, index) => (
+                    <p key={index} className="result-mine__quote">
+                      {text}
+                    </p>
+                  ))}
+                </div>
+              </>
+            )}
           </section>
+          <div className="result-screen__side">
+            <section className="result-screen__tasks" data-testid="result-tasks">
+              <h3 className="result-screen__section-label">남은 과제</h3>
+              <ul>
+                {scenario.remainingTasks.map((task) => (
+                  <li key={task}>{task}</li>
+                ))}
+              </ul>
+            </section>
+            <section className="result-screen__ai-help" data-testid="result-ai-help">
+              <h3 className="result-screen__section-label">AI가 도운 일</h3>
+              <div className="result-screen__ai-help-scroll">
+                <ul className="result-screen__ai-help-list">
+                  <li>자료 4장 자동 정리 데모 표시</li>
+                  {additionalHelp.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                {additionalHelp.length === 0 && (
+                  <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
+                    추가 AI 도움은 사용하지 않았습니다.
+                  </p>
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </>
