@@ -11,8 +11,8 @@ export const aiAssistantScenario: Scenario = {
     '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다. 사용자별 권한, 검토 담당자, 확대 기준은 미정이다.',
   incident: {
     caseLabel: '사건 02',
-    headline: '매주 월요일, 보고서는 아직 사람 손으로 만들어진다',
-    hook: '실적표는 120건, 메일은 126건. 어느 숫자로 보고할지 아무도 정하지 못했다.',
+    headline: '매주 반복되는 보고, 자료는 아직 사람 손으로 모은다',
+    hook: '실적표는 120건, 메일은 126건. 어느 쪽이 최종인지 이 자료만으로는 알 수 없다.',
   },
   originalMotion: {
     id: 'work-assistant-original',
