@@ -223,9 +223,18 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
   6. 내 답 — `opinions[1].originalText`, 유지를 골랐으면 "앞서 전달한 의견을 유지"
   7. 임원 후속 4건 — live에서 `opinions.length >= 2`일 때만. FOLLOWUP 발언 / "판단 중…" / "응답 없음"
   8. 의장 — "이 조건으로 안건을 고정합니다" (MOTION 이후)
-- 한 항목 = 아바타(sm) + 발화자 라벨 + 첫 문장 1줄 클램프(무대 말풍선과 같은 `firstSentenceClipped` 규칙). 내 항목은 참가자 색(시안 테두리).
+- 한 항목 = 아바타(sm, 이니셜이 역할을 보여준다) + 발화자 직함(스크린리더용, 화면에서는 숨김) + 첫 문장 1줄 클램프(무대 말풍선과 같은 `firstSentenceClipped` 규칙). 내 항목은 참가자 색(시안 왼쪽 선). 패널은 내용 높이만 차지한다(1건뿐인 BRIEFING에서 빈 틀이 아래까지 늘어나지 않음, T47 다듬기).
 - 창 고정: 1080은 최근 6건, 720은 최근 4건(VOTE는 3건)만 보이고 더 오래된 항목은 시각적으로만 숨긴다(sr-only — 스크린리더에는 전체가 남는다). 머리글 "회의록"과 총 건수 배지. 페이지·패널 스크롤 금지(6절 예산 규칙 유지, `e2e/noscroll.spec.ts`가 두 해상도에서 단언).
 - 접근성: `<section aria-label="회의록">` + `<ol aria-live="polite" aria-relevant="additions text">`, 각 행 `<li aria-atomic="true">`. 새 항목이 도착하거나 live의 "판단 중" 행이 같은 행 안에서 응답으로 바뀔 때 발화자와 첫 문장을 한 덩어리로 읽어 준다(PR #7 Codex 1차 검토). 포커스는 옮기지 않는다(입력 블록이 없다).
 - 라운드별 기록(roundLog): `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage`를 더하고 runner가 채운다(reducer는 읽지 않음, 동작 불변). App이 stage가 있는 SET_ROLE_STATUS만 `{stage, roleId, status}`로 upsert해 보관하고 sessionId가 바뀌면 비운다. 공개 payload에는 넣지 않는다.
 - 후속 대기 게이트(live, T46): 후속 답을 제출하면 reducer는 지금처럼 MOTION으로 넘어가되, App이 "이 세션의 `runRound('FOLLOWUP')` promise가 settle됐는가"만 상태로 들고 게이트는 세션 상태에서 동기적으로 계산해(`isFollowUpGateActive`, MOTION 첫 프레임부터 잠김) **settle 전에는 "이 안건으로 표결" CTA를 비활성**으로 두고 CTA 아래에 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머로 열지 않는다(앞 라운드가 사슬에 남아 있으면 8초 상한은 그 뒤에 시작한다). scripted와 '의견 유지'(후속 라운드 없음)는 게이트가 없다. 회의록 패널의 7번 항목이 같은 상태를 "판단 중…"으로 보여준다.
+
+### 8. 안건 사건화와 "6개월 뒤" 에필로그 — 2026-09-20 (T47)
+
+안건이 딱딱하다는 진단(2026-09-19)에 대한 카피 보강이다. 표결 규칙·조건·자료 수치는 그대로이고, 새 수치·절감률·확정 사실을 만들지 않는다(SCENARIO_AI_ASSISTANT.md "검증되지 않은 수치 금지"). 모든 문구는 시나리오 데이터(`Scenario.incident`, `resultCopy.sixMonthsLater`)에서 읽고 화면은 하드코딩하지 않는다.
+
+- 사건 카드(SELECT): 안건 카드의 제목을 원안 문장 대신 **사건 헤드라인**으로 바꾼다. 구성 = 사건 번호 칩(`incident.caseLabel`, 예 "사건 02") + 헤드라인(`incident.headline`, 한 문장, 서술형) + 갈등 한 줄(`incident.hook`, 자료 E1~E4에 이미 있는 사실만). 원안 문장(`subtitle`)은 카드에서 빼고 BRIEFING 상단 안건 제목이 그대로 담당한다. 준비 중 안건은 헤드라인 = 제목, hook = "준비 중인 안건입니다."
+- 사건 표기(BRIEFING): 안건 제목 위에 한 줄 eyebrow "사건 02 · {headline}"(testid `briefing-incident`). 720 세로 예산 안(한 줄, 메타 서체).
+- "6개월 뒤" 에필로그(RESULT): 왼쪽 열 게이지 아래·"체험 종료" 위에 카드 하나(testid `result-epilogue`). 머리글 "6개월 뒤" + 배지 "체험용 가상 전망" + 결과(PASS/HOLD/REJECT)별 두 문장(`resultCopy.sixMonthsLater.{pass,passOriginal,hold,reject}`). 가결은 도장과 같은 기준으로 나눈다 — 참가자가 확정한 조건이 최종안에 반영됐으면 `pass`, 없으면(원안 그대로, live에서 임원 표로 가능) 조건을 전제하지 않는 `passOriginal`(PR #8 Codex 2차 검토). 시간 만료로 원안이 집계된 경우도 outcome·반영 조건 기준으로 같은 규칙을 쓴다. 3줄 클램프. 두 해상도 무스크롤 유지.
+- 문구 원칙: 미래 서술은 "~합니다"의 현재형 묘사로 쓰되 수치·비율·금액을 넣지 않는다. 가결 문구는 붙인 조건이 실행 점검표가 된다는 뜻을, 보류는 다시 상정되기까지 현 상태가 이어진다는 뜻을, 부결은 이사님의 우려가 다음 안건의 출발점이 된다는 뜻을 담는다.
 

@@ -93,10 +93,32 @@ export interface VoteRule {
   vote: Vote;
 }
 
+/** "6개월 뒤" 에필로그(v1.0 T47). 결과 화면 왼쪽 열, '체험용 가상 전망' 배지와 함께
+ * 쓴다. 수치·비율·금액 없이 상태만 묘사한다(SCENARIO_AI_ASSISTANT.md). */
+/** "6개월 뒤" 에필로그 문구(v1.0 T47). pass는 이사회가 붙인 조건이 최종안에 반영된
+ * 가결(도장 "조건부 가결"과 같은 기준), passOriginal은 반영 조건 없이 원안이 그대로
+ * 가결된 경우 — live에서는 조건 없는 원안도 임원 모델 표로 PASS가 될 수 있으므로
+ * "붙인 조건이 점검표가 되었다"는 문구를 쓰면 안 된다(PR #8 Codex 2차 검토). */
+export interface SixMonthsLaterCopy {
+  pass: string;
+  passOriginal: string;
+  hold: string;
+  reject: string;
+}
+
 export interface ResultCopy {
   pass: string;
   hold: string;
   reject: string;
+  sixMonthsLater: SixMonthsLaterCopy;
+}
+
+/** 안건 사건화 문구(v1.0 T47). SELECT 카드와 BRIEFING 상단 eyebrow에 쓴다. 자료
+ * E1~E4에 있는 사실만 쓰고 새 수치를 만들지 않는다. */
+export interface Incident {
+  caseLabel: string;
+  headline: string;
+  hook: string;
 }
 
 export type ScenarioStatus = 'active' | 'preparing';
@@ -106,6 +128,7 @@ export interface Scenario {
   title: string;
   selectLine: string;
   subtitle: string;
+  incident: Incident;
   originalMotion: Motion;
   evidence: EvidenceCard[];
   briefingSummary: BriefingSummary;

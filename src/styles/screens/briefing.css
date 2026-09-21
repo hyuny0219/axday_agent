@@ -1,3 +1,13 @@
+/* 사건 표기(T47): 안건 제목 위 한 줄 eyebrow. 메타 서체로 강조색을 준다(720 세로
+   예산 안, 한 줄 유지). */
+.briefing-screen__incident {
+  margin: 0;
+  color: var(--accent);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 /* 안건 한 줄은 긴 문장이라 디스플레이 서체 대신 본문 서체 900으로 읽기 쉽게 둔다
    (v1.0 다듬기). 화면 제목·결론·도장만 디스플레이 서체를 쓴다. */
 .briefing-screen__motion {

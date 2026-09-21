@@ -125,4 +125,37 @@ describe('aiAssistantScenario', () => {
     expect(scenario.voteRules.CAIO).toHaveLength(3);
     expect(scenario.voteRules.CISO).toHaveLength(4);
   });
+
+  const NUMERIC_COPY_PATTERN = /%|절감/;
+
+  it('incident 3필드가 비어 있지 않고 수치 표현이 없다', () => {
+    expect(scenario.incident.caseLabel.length).toBeGreaterThan(0);
+    expect(scenario.incident.headline.length).toBeGreaterThan(0);
+    expect(scenario.incident.hook.length).toBeGreaterThan(0);
+    expect(scenario.incident.caseLabel).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(scenario.incident.headline).not.toMatch(NUMERIC_COPY_PATTERN);
+    expect(scenario.incident.hook).not.toMatch(NUMERIC_COPY_PATTERN);
+  });
+
+  it('incident 문구는 자료 E1~E4에 없는 요일·확정 상태를 만들지 않는다(PR #8 Codex 1차 검토)', () => {
+    // E3은 "주간 보고마다"라고만 하고 요일을 밝히지 않으며, E1·E2는 "이 자료만으로는 알 수
+    // 없다"까지만 말한다. 요일 표현과 "아무도 정하지 못했다"류의 단정은 새 사실이다.
+    const UNGROUNDED_PATTERN = /[월화수목금토일]요일|아무도|정하지 못/;
+    expect(scenario.incident.headline).not.toMatch(UNGROUNDED_PATTERN);
+    expect(scenario.incident.hook).not.toMatch(UNGROUNDED_PATTERN);
+    // hook의 수치는 E1·E2 insight에 있는 값만 쓴다.
+    expect(scenario.incident.hook).toContain('120건');
+    expect(scenario.incident.hook).toContain('126건');
+  });
+
+  it('resultCopy.sixMonthsLater 4필드가 비어 있지 않고 수치 표현이 없다', () => {
+    const { pass, passOriginal, hold, reject } = scenario.resultCopy.sixMonthsLater;
+    for (const text of [pass, passOriginal, hold, reject]) {
+      expect(text.length).toBeGreaterThan(0);
+      expect(text).not.toMatch(NUMERIC_COPY_PATTERN);
+    }
+    // 조건 없는 원안 가결 문구는 "붙인 조건"을 전제하지 않는다(PR #8 Codex 2차 검토).
+    expect(passOriginal).not.toContain('조건');
+    expect(pass).toContain('조건');
+  });
 });

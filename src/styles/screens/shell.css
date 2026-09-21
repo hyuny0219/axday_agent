@@ -281,10 +281,13 @@
 
 /* 회의록 패널 grid item(v1.0 7절, T41). BRIEFING·OPINIONS·MOTION·VOTE에서만 AppShell이
    렌더한다(minutes.css의 .minutes가 실제 카드·스크롤 금지 스타일을 담당). 이 grid
-   item은 세 번째 줄(1fr)을 그대로 채우고, 안의 .minutes가 flex:1로 그 높이를
-   다시 채운다 — 페이지·패널 스크롤 없이 남은 세로 공간 안에서만 항목이 보인다. */
+   item은 세 번째 줄(1fr) 안에서 위에 붙고 내용 높이만 차지한다(align-self: start) —
+   BRIEFING처럼 1건뿐일 때 빈 틀이 아래까지 늘어나지 않는다(T47 다듬기). 보이는 행 수는
+   MinutesPanel의 창(1080 6건·720 4건·VOTE 720 3건)이 이미 제한하므로 세로 예산을
+   넘지 않는다(e2e/noscroll.spec.ts가 두 해상도에서 단언). */
 .app-body__minutes {
   grid-area: minutes;
+  align-self: start;
   min-height: 0;
   display: flex;
   flex-direction: column;
