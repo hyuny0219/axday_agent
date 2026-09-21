@@ -253,3 +253,13 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - 세로 예산: 1080·720 모두 무스크롤. 최악 조합 = live 조건 4개(조건 줄 2줄) + 160자 근거 4행 + 우려 3개. 이를 위해 머리글과 집계 배지는 한 줄, 임원·내 행 패딩 4px, 원문 1줄 클램프, 5석 근거 1줄(720 아바타 36px). `e2e/noscroll.spec.ts` live 케이스가 조건 4개로 진행해 요약 패널 자체의 `scrollHeight <= clientHeight`와 마지막 블록(원문·내 행) 가시를 단언한다(PR #9 Codex 1차 검토). 기존 "AI가 도운 일" 내부 스크롤 1개 외 스크롤 추가 금지. 왼쪽 열 게이지·에필로그·CTA는 그대로.
 - 문구 원칙: 이유는 조건 라벨을 그대로 인용하고(예: "출처·기준일 검토 조건이 없어 반대"), 새 수치·확정 사실을 만들지 않는다.
 
+### 10. 운영 메뉴 — 모델 연결 확인과 scripted 재시작 — 2026-09-21 (T49)
+
+부스 개장 전 운영자가 "실제 임원 에이전트가 답하는가"를 화면에서 확인할 수 있어야 한다. 지금은 헤더 배지 LIVE가 "서버가 살아 있다"만 뜻하고, 키가 틀리면 임원 카드가 전부 "응답 지연·확인 필요"로 나올 때까지 알 수 없다(2026-09-11 실측 144회 전부 `provider_error`). AGENT_BOARDROOM_SPEC.md 6장 "장애 시 운영자가 별도 확인 후 세션을 초기화하고 scripted 모드로 새로 시작할 수 있다"를 화면으로 만든다.
+
+- 운영 메뉴 항목 추가(기존 새 체험·전체화면·닫기 유지): **모델 연결 확인**(`operator-probe`), **scripted로 새 체험**(`operator-restart-scripted`).
+- 모델 연결 확인 패널(`operator-probe-panel`): 누르면 서버 `POST /api/ops/probe`를 호출해 실제 제공자에 아주 짧은 호출 1회를 보낸다(응답 스키마 `{ ok: true }`, 8초 상한). 결과 줄: 성공 "연결됨 · {modelId} · {latencyMs}ms"(`operator-probe-ok`), 실패 "실패 · {error}"(`operator-probe-fail`) + 안내 "키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요". 아래에 서버 정보 한 줄 "provider {provider} · 모드 {mode} · 프롬프트 {promptVersion}"(`/api/health`에서). 확인 중에는 "확인 중…"(`operator-probe-pending`)과 버튼 비활성.
+- scripted로 새 체험: 확인 대화상자(`operator-confirm-restart-scripted`) 뒤 `/?mode=scripted`로 이동한다(세션 초기화 + 모드 고정, `mode.ts`의 기존 쿼리 규칙 재사용). live 도중 실패한 역할을 몰래 scripted로 바꾸지 않는다는 규칙은 그대로다 — 새 세션부터만 scripted.
+- 서버 `POST /api/ops/probe`: 접속 토큰 보호 대상(`isProtectedApiPath`에 `/api/ops/` 추가). 세션 상한·호출 상한을 소비하지 않는다. 남용 방지로 서버 전역 10초에 1회(초과 시 429 `probe_rate_limit`). 응답은 항상 200 JSON `{ ok, provider, modelId, latencyMs, error? }`(진단 결과이므로 실패도 200). mock 제공자는 즉시 ok.
+- 화면 문구는 운영자용이며 참가자 화면(대기·본문)에는 아무것도 추가하지 않는다. 720 운영 패널 폭 안에서 두 줄 이내.
+

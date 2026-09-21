@@ -33,6 +33,7 @@
 | T46 | 완료 | live 후속 라운드 대기 게이트(MOTION CTA, v1.0 7절). 1라운드 PASS. PR #7 Codex 검토 1건 반영(게이트를 세션 상태에서 동기 계산해 MOTION 첫 프레임부터 잠금) |
 | T47 | 완료 | 안건 사건화 문구·"6개월 뒤" 에필로그(v1.0 8절, 카피 보강). 1라운드 PASS. 다듬기: 회의록 패널 내용 높이·직함 숨김(아바타 이니셜로 대체), 선택 카드 머리줄 한 줄. 단위 282·E2E 74 |
 | T48 | 완료 | 이사회 한 장 요약(결과 화면 기록 영역 재배치, v1.0 9절). 1라운드 PASS(다듬기: 720 AI 도움 미사용 문구 12px). 단위 298·E2E 76 |
+| T49 | 진행 | 운영 메뉴: 모델 연결 확인·scripted로 새 체험(v1.0 10절) |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
@@ -503,6 +504,22 @@
 - 허용 경로: `src/domain/voting.ts`, `src/content/`, `src/components/`, `src/styles/`, `tests/`, `e2e/`, `docs/screenshots/`.
 - 하지 말 것: 표결 규칙의 표 값·조건·집계 규칙 변경. reducer·서버 변경. 페이지·패널 스크롤 추가("AI가 도운 일" 하나 유지). 기존 testid 삭제(`result-mine`·`result-tasks`·`result-ai-help`·`result-ai-help-none`·`result-gauge`·`result-epilogue` 유지). 화면에 이유 문구 하드코딩(시나리오 데이터에서만).
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 결과 스크린샷에서 요약 패널 5행과 오른쪽 두 패널이 잘리지 않음.
+- 크기: M.
+
+## T49 운영 메뉴 — 모델 연결 확인과 scripted 재시작 (v1.0 10절)
+
+- 목표: 운영자가 부스 개장 전 실제 모델 연결을 화면에서 확인하고, 실패 시 scripted로 새 체험을 시작할 수 있게 한다. 참가자 화면은 바꾸지 않는다.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 10절(전부), docs/AGENT_BOARDROOM_SPEC.md 6장 마지막 문단, docs/DEPLOY.md Render 5번. `server/index.ts`(라우팅·`handleHealth`·`handleBoardEndpoint`), `server/auth.ts`(`isProtectedApiPath`), `server/providers/types.ts`·`mock.ts`, `server/handlers/timeout.ts`, `src/app/mode.ts`(`?mode=scripted` 규칙), `src/services/transport/accessToken.ts`(`accessHeaders`), `src/components/parts/OperatorMenu.tsx`, `src/styles/screens/shell.css`(`.operator-menu__*`), `tests/server/auth.test.ts`(서버 기동 방식), `e2e/operations.spec.ts`.
+- 만들 것:
+  1. `server/handlers/probe.ts`: `handleProbe({ provider, config, clock })` — `provider.complete({ system: '연결 확인. JSON {"ok": true}만 응답.', user: 'ok', schema: {type:'object',properties:{ok:{type:'boolean'}},required:['ok']}, maxTokens: 20, timeoutMs: 8000 })`을 `withTimeout`으로 감싸 성공이면 `{ ok: true, provider, modelId: result.modelId, latencyMs }`, 예외·타임아웃·`json.ok !== true`면 `{ ok: false, provider, modelId: config.modelId, latencyMs, error: <메시지 200자 이내> }`. 순수 함수(deps 주입).
+  2. `server/index.ts`: `POST /api/ops/probe` 라우트. 본문 없음. 전역 10초 1회 제한(마지막 호출 시각 모듈 변수, 초과 시 429 `{ error: 'probe_rate_limit' }`). 세션 상한 레지스트리를 거치지 않는다. `server/auth.ts` `isProtectedApiPath`에 `/api/ops/` 추가(주석·테스트 갱신).
+  3. `src/services/transport/probe.ts`: `probeModel(): Promise<ProbeResult>` — `fetch('/api/ops/probe', { method:'POST', headers: accessHeaders() })`, 429는 `{ ok:false, error:'probe_rate_limit' }`, 네트워크 예외는 `{ ok:false, error:'network' }`. `fetchHealth(): Promise<{ mode, provider, modelId, promptVersion } | null>`.
+  4. `OperatorMenu.tsx`: 메뉴에 "모델 연결 확인"(`operator-probe`)·"scripted로 새 체험"(`operator-restart-scripted`) 추가. 패널 상태 `probe`(`operator-probe-panel`: 확인 중 `operator-probe-pending` → 결과 `operator-probe-ok`/`operator-probe-fail` + 서버 정보 줄 `operator-probe-info` + 닫기)와 `confirmRestartScripted`(`operator-confirm-restart-scripted`, 예 → `window.location.assign('/?mode=scripted')`, 취소). 문구는 10절 그대로. `onRestartScripted?: () => void` prop으로 이동 함수를 주입 가능하게 해 테스트에서 가로챌 수 있게 한다(기본값은 location.assign).
+  5. CSS: 기존 `.operator-menu__panel` 안에서 결과 줄 색(성공 `--accent`, 실패 `--vote-no`), 720에서 두 줄 이내.
+  6. 테스트: `tests/server/probe.test.ts`(mock ok / 던지는 provider → ok:false+error / `{ok:false}` 응답 → ok:false / 타임아웃), `tests/server/auth.test.ts`에 `/api/ops/probe` 보호·429 rate limit 단언, `tests/components/OperatorMenu.test.tsx`(fetch mock: ok 결과 렌더, 실패 결과 렌더, scripted 재시작 확인 시 주입 함수 호출). E2E `e2e/operations.spec.ts`: mock 서버 기준 "모델 연결 확인" → `operator-probe-ok`에 "mock" 포함; `page.route('**/api/ops/probe')`로 `{ok:false,error:'anthropic_api_error 401: invalid x-api-key'}` 반환 → `operator-probe-fail`에 "401" 포함; "scripted로 새 체험" 확인 → URL에 `mode=scripted`, 헤더 배지 "사전 구성 시뮬레이션".
+- 허용 경로: `server/handlers/probe.ts`(신규), `server/index.ts`, `server/auth.ts`, `src/services/transport/`, `src/components/parts/OperatorMenu.tsx`, `src/styles/`, `tests/`, `e2e/`, `docs/DEPLOY.md`.
+- 하지 말 것: 라운드·표결 핸들러·프롬프트 변경. 세션 상한 로직 변경. 참가자 화면 문구·배지 변경. live 도중 자동 scripted 전환. 키를 코드·로그에 남기기.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. mock 서버에서 운영 메뉴 "모델 연결 확인"이 "연결됨 · mock-model"을 보인다.
 - 크기: M.
 
 ## T42 v1.0 애니메이션 프레임 스킨
