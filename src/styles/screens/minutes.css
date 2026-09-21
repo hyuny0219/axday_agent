@@ -3,7 +3,6 @@
    .minutes__entry--hidden(sr-only)로 시각적으로만 감춘다(화면에는 최근 N건, 스크린
    리더에는 전체). */
 .minutes {
-  flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -68,12 +67,19 @@
   border: 0;
 }
 
+/* 발화자 직함은 스크린리더용으로만 남긴다(아바타는 aria-hidden이라 접근 가능한
+   이름은 이 텍스트다). 화면에서는 아바타 이니셜(CEO·CFO·CAIO·CISO·나)이 역할을 보여
+   주므로 긴 직함을 매 행 반복하지 않아 문장 공간이 넓어진다(T47 다듬기). */
 .minutes__speaker {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-muted);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border: 0;
 }
 
 .minutes__text {
@@ -143,7 +149,6 @@
     padding: 4px var(--space-1);
   }
 
-  .minutes__speaker,
   .minutes__text {
     font-size: 12px;
   }

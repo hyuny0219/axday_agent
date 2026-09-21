@@ -47,10 +47,13 @@
     box-shadow var(--transition-fast) ease;
 }
 
+/* 카드 머리줄: "안건 ②"(카운터)와 사건 번호 칩을 한 줄에 둔다(T47 다듬기 — 두 줄로
+   쌓이면 라벨만 둘이라 산만하다). 칩은 caseLabel이 있을 때만 렌더된다. */
 .scenario-card::before {
   content: '안건 ' counter(agenda-index, agenda-circled);
-  display: block;
+  display: inline-block;
   margin-bottom: var(--space-1);
+  margin-right: var(--space-1);
   color: var(--text-muted);
   font-size: var(--fs-meta);
   letter-spacing: 0.02em;
@@ -92,11 +95,19 @@
 /* 사건 번호 칩(T47): "안건 ①" 카운터 아래·헤드라인 위에 짧게 표시한다. */
 .scenario-card__case {
   display: inline-block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
+  padding: 1px var(--space-1);
+  border-radius: 999px;
+  border: 1px solid rgba(40, 217, 240, 0.45);
   color: var(--accent);
-  font-size: var(--fs-meta);
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  vertical-align: baseline;
+}
+
+.scenario-card__title {
+  display: block;
 }
 
 .scenario-card__title {

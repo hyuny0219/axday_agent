@@ -31,7 +31,9 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
               data-testid={`scenario-card-${scenario.id}`}
               onClick={() => setSelectedId(scenario.id)}
             >
-              <span className="scenario-card__case">{scenario.incident.caseLabel}</span>
+              {scenario.incident.caseLabel && (
+                <span className="scenario-card__case">{scenario.incident.caseLabel}</span>
+              )}
               <h3 className="scenario-card__title">{scenario.incident.headline}</h3>
               <p className="scenario-card__hook">{scenario.incident.hook}</p>
               {disabled && <span className="scenario-card__badge">준비 중</span>}
