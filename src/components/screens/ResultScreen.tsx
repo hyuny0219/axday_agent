@@ -22,6 +22,7 @@ import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { SEAT_REVEAL_STEP_SECONDS } from '../resultStamp';
+import { epilogueText } from '../resultEpilogue';
 import { Avatar } from '../parts/Avatar';
 // 결론 도장(result-stamp)은 T44에서 무대 열 우하단으로 옮겨 AppShell이 StageBand에
 // 넘긴다(components/resultStamp.ts computeResultStamp). 이 화면은 더는 도장을
@@ -124,14 +125,13 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         ? scenario.resultCopy.reject
         : scenario.resultCopy.hold;
 
-  const epilogueText =
-    session.outcome === 'PASS'
-      ? scenario.resultCopy.sixMonthsLater.pass
-      : session.outcome === 'REJECT'
-        ? scenario.resultCopy.sixMonthsLater.reject
-        : session.outcome === 'HOLD'
-          ? scenario.resultCopy.sixMonthsLater.hold
-          : null;
+  // 가결은 도장과 같은 기준(반영 조건 유무)으로 pass/passOriginal을 가른다
+  // (components/resultEpilogue.ts, PR #8 Codex 2차 검토).
+  const epilogue = epilogueText(
+    session.outcome,
+    includedIds.length > 0,
+    scenario.resultCopy.sixMonthsLater,
+  );
 
   return (
     <>
@@ -141,13 +141,13 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
           </p>
         )}
-        {epilogueText !== null && (
+        {epilogue !== null && (
           <section className="result-epilogue" data-testid="result-epilogue">
             <div className="result-epilogue__header">
               <h3 className="result-epilogue__heading">6개월 뒤</h3>
               <span className="result-epilogue__badge">체험용 가상 전망</span>
             </div>
-            <p className="result-epilogue__text">{epilogueText}</p>
+            <p className="result-epilogue__text">{epilogue}</p>
           </section>
         )}
         <button type="button" className="cta" onClick={onReset} data-testid="end-session">

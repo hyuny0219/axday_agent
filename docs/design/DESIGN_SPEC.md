@@ -235,6 +235,6 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 - 사건 카드(SELECT): 안건 카드의 제목을 원안 문장 대신 **사건 헤드라인**으로 바꾼다. 구성 = 사건 번호 칩(`incident.caseLabel`, 예 "사건 02") + 헤드라인(`incident.headline`, 한 문장, 서술형) + 갈등 한 줄(`incident.hook`, 자료 E1~E4에 이미 있는 사실만). 원안 문장(`subtitle`)은 카드에서 빼고 BRIEFING 상단 안건 제목이 그대로 담당한다. 준비 중 안건은 헤드라인 = 제목, hook = "준비 중인 안건입니다."
 - 사건 표기(BRIEFING): 안건 제목 위에 한 줄 eyebrow "사건 02 · {headline}"(testid `briefing-incident`). 720 세로 예산 안(한 줄, 메타 서체).
-- "6개월 뒤" 에필로그(RESULT): 왼쪽 열 게이지 아래·"체험 종료" 위에 카드 하나(testid `result-epilogue`). 머리글 "6개월 뒤" + 배지 "체험용 가상 전망" + 결과(PASS/HOLD/REJECT)별 두 문장(`resultCopy.sixMonthsLater.{pass,hold,reject}`). 시간 만료로 원안이 집계된 경우도 outcome 기준으로 같은 문구를 쓴다. 3줄 클램프. 두 해상도 무스크롤 유지.
+- "6개월 뒤" 에필로그(RESULT): 왼쪽 열 게이지 아래·"체험 종료" 위에 카드 하나(testid `result-epilogue`). 머리글 "6개월 뒤" + 배지 "체험용 가상 전망" + 결과(PASS/HOLD/REJECT)별 두 문장(`resultCopy.sixMonthsLater.{pass,passOriginal,hold,reject}`). 가결은 도장과 같은 기준으로 나눈다 — 참가자가 확정한 조건이 최종안에 반영됐으면 `pass`, 없으면(원안 그대로, live에서 임원 표로 가능) 조건을 전제하지 않는 `passOriginal`(PR #8 Codex 2차 검토). 시간 만료로 원안이 집계된 경우도 outcome·반영 조건 기준으로 같은 규칙을 쓴다. 3줄 클램프. 두 해상도 무스크롤 유지.
 - 문구 원칙: 미래 서술은 "~합니다"의 현재형 묘사로 쓰되 수치·비율·금액을 넣지 않는다. 가결 문구는 붙인 조건이 실행 점검표가 된다는 뜻을, 보류는 다시 상정되기까지 현 상태가 이어진다는 뜻을, 부결은 이사님의 우려가 다음 안건의 출발점이 된다는 뜻을 담는다.
 

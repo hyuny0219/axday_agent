@@ -148,13 +148,14 @@ describe('aiAssistantScenario', () => {
     expect(scenario.incident.hook).toContain('126건');
   });
 
-  it('resultCopy.sixMonthsLater 3필드가 비어 있지 않고 수치 표현이 없다', () => {
-    const { pass, hold, reject } = scenario.resultCopy.sixMonthsLater;
-    expect(pass.length).toBeGreaterThan(0);
-    expect(hold.length).toBeGreaterThan(0);
-    expect(reject.length).toBeGreaterThan(0);
-    expect(pass).not.toMatch(NUMERIC_COPY_PATTERN);
-    expect(hold).not.toMatch(NUMERIC_COPY_PATTERN);
-    expect(reject).not.toMatch(NUMERIC_COPY_PATTERN);
+  it('resultCopy.sixMonthsLater 4필드가 비어 있지 않고 수치 표현이 없다', () => {
+    const { pass, passOriginal, hold, reject } = scenario.resultCopy.sixMonthsLater;
+    for (const text of [pass, passOriginal, hold, reject]) {
+      expect(text.length).toBeGreaterThan(0);
+      expect(text).not.toMatch(NUMERIC_COPY_PATTERN);
+    }
+    // 조건 없는 원안 가결 문구는 "붙인 조건"을 전제하지 않는다(PR #8 Codex 2차 검토).
+    expect(passOriginal).not.toContain('조건');
+    expect(pass).toContain('조건');
   });
 });

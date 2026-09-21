@@ -32,7 +32,7 @@ function preparingPlaceholder(id: string, title: string): Scenario {
       CAIO: [{ when: { always: true }, vote: 'HOLD' }],
       CISO: [{ when: { always: true }, vote: 'HOLD' }],
     },
-    resultCopy: { pass: '', hold: '', reject: '', sixMonthsLater: { pass: '', hold: '', reject: '' } },
+    resultCopy: { pass: '', hold: '', reject: '', sixMonthsLater: { pass: '', passOriginal: '', hold: '', reject: '' } },
     remainingTasks: [],
     baseConditionIds: [],
     status: 'preparing',
