@@ -80,6 +80,66 @@ export function countVotesChangedByConditions(scenario: Scenario, motion: Motion
   return changed;
 }
 
+export interface MemberExplanation {
+  vote: Vote;
+  reason?: string;
+}
+
+/** 한 임원의 규칙 목록에서 처음 일치한 행의 표와 판단 이유를 함께 반환한다(T48,
+ * "이사회 한 장 요약"). decideMember와 같은 평가 순서를 쓰되 reason도 돌려준다. */
+export function explainMember(rules: VoteRule[], ctx: VoteContext): MemberExplanation {
+  for (const rule of rules) {
+    if (evalPredicate(rule.when, ctx)) {
+      return { vote: rule.vote, reason: rule.reason };
+    }
+  }
+  throw new Error('일치하는 표결 규칙이 없습니다. 규칙 목록의 총괄성을 확인하십시오.');
+}
+
+export interface BoardExplanation {
+  memberId: ExecMemberId;
+  vote: Vote;
+  reason?: string;
+  /** 조건 없는 baseline(countVotesChangedByConditions와 같은 계산)과 표가 다르면 true. */
+  changed: boolean;
+}
+
+/** 임원 4명의 표·판단 이유·바뀐 표 여부를 고정 순서(CEO/CFO/CAIO/CISO)로 반환한다
+ * (T48, "이사회 한 장 요약"). changed는 조건이 하나도 없는 안건의 표와 비교한다 — 게이지
+ * "내 조건이 바꾼 표 n명"과 같은 계산(countVotesChangedByConditions)이다. */
+export function explainBoard(scenario: Scenario, motion: Motion): BoardExplanation[] {
+  const ctx: VoteContext = {
+    conditionIds: motion.effectiveConditionIds,
+    executionMode: motion.executionMode,
+  };
+  const baselineCtx: VoteContext = { conditionIds: [], executionMode: motion.executionMode };
+  return EXEC_MEMBER_ORDER.map((memberId) => {
+    const { vote, reason } = explainMember(scenario.voteRules[memberId], ctx);
+    const baselineVote = decideMember(scenario.voteRules[memberId], baselineCtx);
+    return { memberId, vote, reason, changed: vote !== baselineVote };
+  });
+}
+
+/**
+ * 참가자 표가 결론을 정했는지(T48, "이사회 한 장 요약" 결정력 문구). 참가자 표를
+ * YES/NO/HOLD/UNCAST 각각으로 바꿔 tally했을 때 outcome이 실제와 하나라도 다르면
+ * true다. 참가자 좌석이 없으면(결과 전) false.
+ */
+export function participantDecisive(ballots: Ballot[]): boolean {
+  const participant = ballots.find((b) => b.memberId === 'PARTICIPANT');
+  if (!participant) {
+    return false;
+  }
+  const actualOutcome = tally(ballots).outcome;
+  const alternativeVotes: Vote[] = ['YES', 'NO', 'HOLD', 'UNCAST'];
+  return alternativeVotes.some((vote) => {
+    const alternativeBallots = ballots.map((b) =>
+      b.memberId === 'PARTICIPANT' ? { ...b, vote } : b,
+    );
+    return tally(alternativeBallots).outcome !== actualOutcome;
+  });
+}
+
 export interface TallyResult {
   outcome: 'PASS' | 'HOLD' | 'REJECT';
   counts: { YES: number; NO: number; HOLD: number; UNCAST: number };

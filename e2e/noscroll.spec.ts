@@ -115,6 +115,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'RESULT');
   // "6개월 뒤" 에필로그(T47): 왼쪽 열 게이지 아래·CTA 위, 잘리지 않고 보인다.
   await expect(page.getByTestId('result-epilogue')).toBeInViewport();
+  // "이사회 한 장 요약"(T48): 기록 영역 2/3 패널과 보조 패널의 'AI가 도운 일'이 모두
+  // 뷰포트 안에 있다(페이지 스크롤 없음은 위 expectNoPageScroll로 이미 확인했다).
+  await expect(page.getByTestId('result-summary')).toBeInViewport();
+  await expect(page.getByTestId('result-ai-help')).toBeInViewport();
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을
@@ -227,5 +231,6 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoPageScroll(page, 'RESULT(live)');
   await expectNoClip(page, '.app-body__content', 'RESULT(live)');
   await expect(page.getByTestId('end-session')).toBeInViewport();
+  await expect(page.getByTestId('result-summary')).toBeInViewport();
   await expect(page.getByTestId('result-ai-help')).toBeInViewport();
 });

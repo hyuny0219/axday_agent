@@ -100,3 +100,56 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(page.getByTestId('result-seat-CISO')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 });
+
+test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 표의 결정력과 CFO만 바뀐 표가 보인다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+
+  // PILOT(작은 범위로 시작) + MEASURE(준비시간·수정량 확인 후 확대)만 확정한다.
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('phrase-card-P4').click();
+  const submitOpinion = page.getByTestId('submit-opinion');
+  await expect(submitOpinion).toBeEnabled();
+  await submitOpinion.click();
+
+  // REACTIONS: 앞선 의견을 유지해 REVIEW 조건을 추가하지 않는다.
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+  await page.getByTestId('followup-option-2').click();
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  const confirmVote = page.getByTestId('confirm-vote');
+  await expect(confirmVote).toBeEnabled();
+  await confirmVote.click();
+
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  // PILOT+MEASURE만 있으면 임원 표는 YES/YES/NO/NO라 참가자 표에 따라 가결/부결/보류가
+  // 갈린다(SCENARIO_AI_ASSISTANT.md "대표 경로") — 내 한 표가 결과를 정한다.
+  await expect(page.getByTestId('result-summary-decisive')).toContainText(
+    '이사님의 한 표가 결과를 정했습니다',
+  );
+  // 조건 없는 baseline 대비 CFO만 표가 바뀐다(HOLD→YES).
+  await expect(
+    page.getByTestId('result-summary-row-CFO').getByTestId('result-summary-changed'),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId('result-summary-row-CEO').getByTestId('result-summary-changed'),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId('result-summary-row-CAIO').getByTestId('result-summary-changed'),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId('result-summary-row-CISO').getByTestId('result-summary-changed'),
+  ).toHaveCount(0);
+});
