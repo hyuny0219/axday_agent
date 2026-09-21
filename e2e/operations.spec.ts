@@ -176,6 +176,8 @@ async function openProbeUntilSettled(page: Page): Promise<void> {
     if (failed && failText?.includes('probe_rate_limit') && Date.now() < deadline) {
       await page.getByTestId('operator-probe-close').click();
       await page.waitForTimeout(2000);
+      await page.getByTestId('operator-menu-button').click();
+      await expect(page.getByTestId('operator-menu-panel')).toBeVisible();
       continue;
     }
     return;
