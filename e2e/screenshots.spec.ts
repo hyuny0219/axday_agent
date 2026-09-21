@@ -39,7 +39,7 @@ async function capture(page: Page, projectName: string, screenName: string) {
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
-test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {
+test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
 
@@ -60,6 +60,13 @@ test('선택·토론·투표·결과를 실제 콘텐츠로 채운 상태로 캡
   await capture(page, testInfo.project.name, 'briefing');
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
+
+  // OPINIONS: 임원 4명의 첫 의견 카드(오른쪽)와 무대 말풍선·회의록 패널(왼쪽). 말풍선
+  // 등장 애니메이션이 끝난 뒤 캡처한다.
+  await expect(page.locator('.opinion-card')).toHaveCount(4);
+  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await capture(page, testInfo.project.name, 'opinions');
+
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
   // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
