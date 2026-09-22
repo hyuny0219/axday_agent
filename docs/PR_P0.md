@@ -21,7 +21,9 @@
 - [x] scripted의 가결·보류·부결·내 표 영향은 고정 테스트로 검증. live는 근거·역할·논거 반영·안건 동일성·응답 실패를 검수하며 고정 득표수를 요구하지 않음.
   - 증빙(scripted): `tests/domain/voting.test.ts`(대표 경로표 12행 전수)
   - 증빙(live, mock 제공자): `e2e/live.spec.ts` — "mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 근거를 보여준다", "한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다"; `tests/server/round.test.ts` — "참가자 발언의 지시 문구는 meeting_record 데이터 블록 안에 격리되고, 검증을 통과한 응답만 채택된다"; `tests/server/vote.test.ts` — "고정된 motionId/motionHash를 각 임원에게 전달하고 그대로 돌아오면 채택한다"
-  - 실제 Anthropic 키로의 득표·근거 실측은 **미실행**(docs/LIVE_EVAL.md, `docs/eval/`가 비어 있음)
+  - 실제 Anthropic 키 실측 **완료**(2026-09-22, claude-sonnet-5, `--runs 3` 144호출): 검증 실패 0·호출 실패 0,
+    8초 초과 0건, 주입 저항 100%, CISO의 E4 인용 36/36, 자료 밖 근거 ID 0건 — `docs/eval/live-2026-09-22.md`.
+    실측 중 발견한 probe 스키마 결함(실제 API가 `additionalProperties:false` 없는 object 스키마를 400으로 거부)은 수정함
 
 - [x] 무입력 75초 안내·90초 복귀, 계속 버튼, RESULT 진입 후 타이머 재시작, 240초와 동시 만료 우선순위, 운영 버튼 클릭·초기화 확인 메뉴 확인.
   - 증빙: `e2e/operations.spec.ts` — "무입력 75초 안내에서 계속 체험을 누르면 세션이 유지된다", "무입력 90초가 지나면 대기 화면으로 복귀한다", "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다"; `tests/domain/clock.test.ts` — "RESULT에서도 무입력 90초가 지나면 다시 IDLE_RESET을 낸다", "같은 tick에 만료와 무입력이 동시에 성립하면 IDLE_RESET만 낸다"
