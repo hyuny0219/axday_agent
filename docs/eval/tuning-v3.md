@@ -1,0 +1,45 @@
+# 임원 에이전트 고도화 1차 — 튜닝 라운드 v3 (T34, PR #10 Codex 검토 반영)
+
+- 대상: `server/prompts/common.ts`(문체 지시 제거), `server/prompts/roles/index.ts`(`EXEC_STYLE_RULE` 신설), `server/prompts/version.ts`(v2 → v3)
+- 평가 세트: `scripts/eval-set.json`(12케이스) · 실행기 `scripts/eval-set-run.ts`
+- provider: anthropic · modelId: claude-sonnet-5
+- before 기록: `docs/eval/tuning-v2-after.jsonl`(promptVersion=v2, 144행)
+- after 기록: `docs/eval/tuning-v3-after.jsonl`(promptVersion=v3, 144행)
+
+## 왜 v3 라운드를 돌았는가
+
+PR #10의 Codex 교차 검토(`docs/AGENT_WORKFLOW.md` §7)가 v2 라운드에 P2 두 건을 지적했고, 두 건 모두 확인됐다.
+
+1. **문체 지시가 비서실장 프롬프트까지 상속됐다.** `buildCommonGuardrails()`는 임원 4명뿐 아니라 `server/prompts/assistant.ts`의 refine·summarize도 쓴다. refine은 참가자 본인의 발언을 참가자 목소리로 다듬는 기능인데, 거기에 "참가자는 당신이 보고하는 대상"이라는 지시가 붙으면 보조자 역할과 충돌한다. 평가 세트가 round·vote만 실행하므로 이 회귀는 v2 라운드에서 측정되지도 않았다.
+2. **(4) 항목의 집계가 원시 데이터와 어긋났다.** v2 라운드는 "하자/한다/해라" 같은 명시 문자열만 셌다. 문장 종결 단위로 다시 세면 before(v1)는 3건이 아니라 **187건**(144행 중 104행), after(v2)는 0건이 아니라 **1건**(`negation-2` CAIO REACTIONS의 "권한합의는 아님")이었다. 개선 자체는 실재했지만(187 → 1) 판정 근거가 틀렸다.
+
+## 무엇을 고쳤는가
+
+- **문체 지시의 적용 범위**: `buildCommonGuardrails()`에서 빼고 `prompts/roles/index.ts`의 `EXEC_STYLE_RULE`로 옮겨 임원 역할 프롬프트 조합에만 붙인다. `withExecStyle()`이 네 역할 빌더를 감싸므로 핸들러는 바뀌지 않는다. `buildCommonGuardrails()` 주석에 "임원 전용 규칙을 여기 넣지 말 것"과 그 이유를 남겨 재발을 막았다.
+- **규칙 문구**: 반말체 어미에 더해 "필요", "아님" 같은 명사형 종결도 금지했다. 실제 기준선 187건의 대부분이 반말체가 아니라 명사형·체언 종결이었다.
+- **집계를 코드로**: `scripts/eval-set-run.ts`에 `findStyleViolations()`를 심었다. 문장 단위로 쪼개고, 말미 근거 괄호("…입니다(E3,E4)")를 제거한 뒤 존댓말 종결 여부를 본다. `--check <파일.jsonl>`로 모델 호출 없이 기존 기록을 재집계할 수 있고, 실행 후에도 자동으로 검사 결과를 찍는다.
+
+## 전후 비교 (both 144행)
+
+| 항목 | before(v2) | after(v3) | 판정 |
+| --- | --- | --- | --- |
+| (4) 비존댓말 종결 문장 | 1건 | **0건** | 개선 |
+| (1) 자료 밖 근거 ID | 0건 | 0건 | 유지 — 완료 기준 충족 |
+| (1) 근거 미인용(evidenceIds 빈 배열) | 0건 | 0건 | 유지 |
+| (2) CFO 비용·효과 키워드 | 36/36 | 36/36 | 유지 |
+| (2) CISO 정보·권한 키워드 | 36/36 | 36/36 | 유지 |
+| (2) CAIO 연결·운영 키워드 | 34/36 | 35/36 | 유지(미세 개선) |
+| (3) REACTIONS 동료 발언 인용 | 48/48 | 48/48 | 유지 |
+| (5) 무조건 찬성·반대만 내는 역할 | 없음 | 없음 | 유지 — 완료 기준 충족 |
+| (6) 라운드당 8초 초과 | 0/96 | 0/96 | 유지 — 완료 기준 충족 |
+| 검증 실패·호출 실패 | 0건 | 0건 | 유지 |
+| 지연 중앙값 / 최대 | 3329ms / 7517ms | 3242ms / 5600ms | 유지(최대값 개선) |
+| 문장 길이 message / reason 최대 | 100자 / 111자 | 97자 / 99자 | 유지(한도 120·160) |
+
+표 분포(케이스별 4표)는 두 버전 모두 조건 집합을 따라 갈린다 — 상충·부정·조건 없음은 NO, 조건 보완은 YES가 다수다. 소수 의견이 나타나는 케이스만 달라졌다(v2: `condition_supplement-1`에서 CISO HOLD / v3: `conflict-3`에서 HOLD 1, `condition_supplement-3`에서 HOLD 1). 역할별로 보면 v3에서 CEO·CFO가 각 1건 HOLD를 던져 무조건 찬성·반대 역할이 없다는 조건은 그대로 충족한다. 이 분포는 관측값이며 합격 기준이 아니다(`AGENT_BOARDROOM_SPEC.md` 7장).
+
+## 라운드 판정
+
+완료 기준 "전후 비교표에서 (1)(6)이 0건이고 (2)(5)가 악화되지 않음" — 충족. v2에서 남았던 (4) 잔여 1건도 해소됐다. 카드의 최대 3라운드 중 v2·v3 두 라운드를 썼고, 추가로 측정된 결함이 없어 여기서 멈춘다.
+
+비서실장(refine·summarize) 동작은 이 평가 세트의 범위가 아니다. v3의 수정은 그 프롬프트에서 문체 지시를 제거하는 방향이므로 v1 상태로 되돌아간 것이고, 별도 평가가 필요하면 T35에서 다룬다.

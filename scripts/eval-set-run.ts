@@ -196,22 +196,119 @@ function hasAnthropicCredential(): boolean {
   );
 }
 
-function parseArgs(argv: string[]): { out: string } {
+// --- 문체 검사: 튜닝 항목 (4) "존댓말 종결"을 문자열 몇 개가 아니라 문장 종결 단위로 센다.
+// PR #10 Codex 검토 P2: v2 라운드는 "하자/한다/해라" 같은 명시 문자열만 세어 기준선을 3건으로
+// 과소 집계했고(실제 187건), after의 0건 판정도 원시 데이터와 어긋났다(실제 1건). 이제 판정
+// 근거를 코드로 남긴다. `--check <파일.jsonl>`로 API 호출 없이 기존 기록을 재집계할 수 있다.
+
+/** 존댓말 종결로 인정하는 어미. */
+const HONORIFIC_ENDING = /(습니다|합니다|입니다|됩니다|십시오|세요|니다|까요)$/;
+
+/** 문장 끝에 붙은 근거 인용 괄호("…입니다(E3,E4)")는 종결 판정에서 제외한다. */
+const TRAILING_CITATION = /[([][^)\]]*[)\]]\s*$/;
+
+export interface StyleViolation {
+  line: number;
+  caseId: string;
+  roleId: string;
+  stage: string;
+  field: 'message' | 'reason';
+  sentence: string;
+}
+
+function splitSentences(text: string): string[] {
+  return text
+    .trim()
+    .split(/(?<=[.!?])\s+|\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+/** 종결 판정에 쓰는 어미 부분: 말미 문장부호와 근거 괄호를 반복 제거한다. */
+function sentenceEnding(sentence: string): string {
+  let core = sentence.replace(/[.!?\s"']+$/, '');
+  for (let prev = ''; prev !== core; ) {
+    prev = core;
+    core = core.replace(TRAILING_CITATION, '').replace(/[.!?\s]+$/, '');
+  }
+  return core;
+}
+
+/** 존댓말로 끝나지 않는 문장을 모두 돌려준다(명사형 종결 "…필요", "…아님"도 위반으로 본다). */
+export function findStyleViolations(rows: EvalRow[]): StyleViolation[] {
+  const violations: StyleViolation[] = [];
+  rows.forEach((row, index) => {
+    for (const field of ['message', 'reason'] as const) {
+      const text = row[field];
+      if (!text) continue;
+      for (const sentence of splitSentences(text)) {
+        const ending = sentenceEnding(sentence);
+        if (ending.length > 0 && !HONORIFIC_ENDING.test(ending)) {
+          violations.push({
+            line: index + 1,
+            caseId: row.caseId,
+            roleId: row.roleId,
+            stage: row.stage,
+            field,
+            sentence,
+          });
+        }
+      }
+    }
+  });
+  return violations;
+}
+
+function readRows(file: string): EvalRow[] {
+  return readFileSync(file, 'utf-8')
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as EvalRow);
+}
+
+/** `--check` 모드: 기록 파일마다 위반 수를 찍는다(모델 호출 없음). */
+function runCheck(files: string[]): void {
+  for (const file of files) {
+    const rows = readRows(file);
+    const violations = findStyleViolations(rows);
+    const affectedRows = new Set(violations.map((v) => v.line)).size;
+    const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
+    console.log(
+      `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
+        ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)`,
+    );
+    for (const v of violations) {
+      console.log(`    ${v.line} ${v.caseId}/${v.roleId}/${v.stage}.${v.field}: ${v.sentence}`);
+    }
+  }
+}
+
+function parseArgs(argv: string[]): { out: string; check: string[] } {
   let out = '';
+  const check: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--out' && argv[i + 1] !== undefined) {
       out = argv[i + 1] as string;
       i += 1;
+    } else if (argv[i] === '--check' && argv[i + 1] !== undefined) {
+      check.push(argv[i + 1] as string);
+      i += 1;
     }
   }
-  if (!out) {
-    throw new Error('usage: eval-set-run.ts --out <path.jsonl>');
+  if (!out && check.length === 0) {
+    throw new Error('usage: eval-set-run.ts --out <path.jsonl> | --check <path.jsonl> [--check ...]');
   }
-  return { out };
+  return { out, check };
 }
 
 async function main(): Promise<void> {
-  const { out } = parseArgs(process.argv.slice(2));
+  const { out, check } = parseArgs(process.argv.slice(2));
+  if (check.length > 0) {
+    runCheck(check);
+    if (!out) {
+      return;
+    }
+  }
   const useMock = process.env.MODEL_PROVIDER === 'mock';
 
   if (!useMock && !hasAnthropicCredential()) {
@@ -245,6 +342,7 @@ async function main(): Promise<void> {
   writeFileSync(out, allRows.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf-8');
   console.log(`[eval-set-run] provider=${providerName} modelId=${modelId} promptVersion=${PROMPT_VERSION} rows=${allRows.length}`);
   console.log(`[eval-set-run] 기록 파일: ${out}`);
+  runCheck([out]);
 }
 
 main().catch((err) => {
