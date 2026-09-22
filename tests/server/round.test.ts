@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { handleRound, type RoundRequest } from '../../server/handlers/round';
 import { createMockProvider } from '../../server/providers/mock';
 import type { ModelProvider } from '../../server/providers/types';
+import { PROMPT_VERSION } from '../../server/prompts/version';
 
 function baseRoundInput(overrides: Partial<RoundRequest> = {}): RoundRequest {
   return {
@@ -30,7 +31,7 @@ describe('handleRound with the mock provider', () => {
     const results = await handleRound(input, { provider });
     expect(results).toHaveLength(4);
     expect(results.every((r) => r.status === 'answered')).toBe(true);
-    expect(results.every((r) => r.promptVersion === 'v1')).toBe(true);
+    expect(results.every((r) => r.promptVersion === PROMPT_VERSION)).toBe(true);
   });
 
   it('한 임원만 timeout 장애가 나면 나머지 3명은 answered, 해당 임원만 failed로 남는다', async () => {
