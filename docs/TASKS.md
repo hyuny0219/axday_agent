@@ -341,7 +341,7 @@
 - 전제: 실제 키로 T32 하네스를 최소 3회 돌린 기록이 있을 것. 없으면 이 카드는 건너뛰고 T35로 미룬다.
 - 읽을 것: `docs/eval/live-*.md` 최신 요약, `server/prompts/`, docs/AGENT_BOARDROOM_SPEC.md 2·7장.
 - 만들 것: 고정 평가 세트(안건 ② 네 경로 × 참가자 발언 변형 3개 = 12케이스)를 `scripts/eval-set.json`으로 고정. 개선 대상은 순서대로 (1) 근거 인용 정확도(자료 밖 사실 0건), (2) 역할 일관성(CISO는 정보 조건, CFO는 비용·효과를 반드시 언급), (3) 동료 발언 인용·반론의 자연스러움, (4) 120·160자 안의 한국어 문장 품질(C레벨 대상 존댓말, 단정 대신 근거), (5) 표 분포(같은 조건에서 만장일치를 요구하지 않되 무조건 찬성·반대 없음), (6) 지연(8초 초과 0건). 라운드마다 `PROMPT_VERSION`을 올리고 평가 세트로 전후 비교표를 `docs/eval/tuning-<version>.md`에 남긴다. 최대 3라운드.
-- 허용 경로: `server/prompts/`, `scripts/`, `docs/eval/`.
+- 허용 경로: `server/prompts/`, `scripts/`, `docs/eval/`. (예외: `PROMPT_VERSION`을 올리면 `tests/server/round.test.ts`의 하드코딩된 `'v1'` 비교가 깨지므로, 해당 assertion을 `PROMPT_VERSION` import로 바꾸는 1줄 기계적 수정은 이 카드 범위에 포함한다. 그 외 테스트 로직 변경은 범위 밖.)
 - 하지 말 것: 검증 규칙·집계·클라이언트 변경. 시나리오 규칙표를 프롬프트에 넣기.
 - 완료 확인: 전후 비교표에서 (1)(6)이 0건이고 (2)(5)가 악화되지 않음.
 - 크기: M.
