@@ -204,8 +204,15 @@ function hasAnthropicCredential(): boolean {
 /** 존댓말 종결로 인정하는 어미. */
 const HONORIFIC_ENDING = /(습니다|합니다|입니다|됩니다|십시오|세요|니다|까요)$/;
 
-/** 문장 끝에 붙은 근거 인용 괄호("…입니다(E3,E4)")는 종결 판정에서 제외한다. */
-const TRAILING_CITATION = /[([][^)\]]*[)\]]\s*$/;
+/**
+ * 문장 끝에 붙은 **인용** 괄호만 종결 판정에서 제외한다 — "…입니다(E3,E4)", "…동의합니다(st-2-op-0,3)".
+ * 괄호 안에 자료 ID(E1~)나 발언 ID(st-…/op-…)가 하나라도 있어야 인용으로 본다. 모든 말미 괄호를
+ * 제거하면 "검토합니다(권한 확인 필요)."처럼 설명성 괄호에 들어간 금지 종결이 가려진다
+ * (PR #10 Codex 2차 검토). 반대로 ID만 정확히 일치하도록 좁히면 "(E3, E4 참조)"·"(op-0~3)" 같은
+ * 실제 인용이 위반으로 잘못 잡히므로, ID 포함 여부로 판단한다.
+ */
+const TRAILING_PAREN = /[([]([^)\]]*)[)\]]\s*$/;
+const CITATION_TOKEN = /\bE\d+\b|\b(?:st|op|re)-/i;
 
 export interface StyleViolation {
   line: number;
@@ -216,10 +223,15 @@ export interface StyleViolation {
   sentence: string;
 }
 
+/**
+ * 문장 경계: 문장부호 뒤 공백·줄바꿈뿐 아니라 **공백 없이 다음 문장이 붙는 경우**도 나눈다
+ * ("권한 확인 필요.검토하겠습니다." → 2문장). 응답 스키마가 이런 문자열을 막지 않으므로 공백을
+ * 요구하면 앞 문장의 위반을 놓친다(PR #10 Codex 2차 검토). 소수점(1.5)은 뒤가 숫자라 나뉘지 않는다.
+ */
 function splitSentences(text: string): string[] {
   return text
     .trim()
-    .split(/(?<=[.!?])\s+|\n/)
+    .split(/(?<=[.!?])\s+|\n|(?<=[.!?])(?=[가-힣A-Za-z])/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 }
@@ -229,7 +241,11 @@ function sentenceEnding(sentence: string): string {
   let core = sentence.replace(/[.!?\s"']+$/, '');
   for (let prev = ''; prev !== core; ) {
     prev = core;
-    core = core.replace(TRAILING_CITATION, '').replace(/[.!?\s]+$/, '');
+    const match = TRAILING_PAREN.exec(core);
+    if (!match || !CITATION_TOKEN.test(match[1] ?? '')) {
+      break;
+    }
+    core = core.slice(0, match.index).replace(/[.!?\s]+$/, '');
   }
   return core;
 }
