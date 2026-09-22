@@ -12,3 +12,4 @@ playwright-report
 .env.*
 docs/eval/*-mock.jsonl
 docs/eval/*-mock.md
+.codex
