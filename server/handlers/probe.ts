@@ -15,10 +15,13 @@ export const PROBE_TIMEOUT_MS = 8000;
 /** 오류 메시지를 화면·로그에 남길 때 자르는 길이. */
 const MAX_ERROR_LENGTH = 200;
 
+// 실제 API는 object 스키마에 additionalProperties:false를 명시하지 않으면 400으로 거부한다
+// (round.ts·vote.ts·assistant.ts의 스키마와 같은 규칙).
 const PROBE_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: { ok: { type: 'boolean' } },
   required: ['ok'],
+  additionalProperties: false,
 };
 
 export interface ProbeResult {
