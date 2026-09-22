@@ -39,15 +39,29 @@ git push
 MODEL_ID=claude-opus-5 npm run eval:live -- --runs 3
 ```
 
-## 3. 방법 B — Claude Code 원격 환경에서 실행
+## 3. 방법 B — Claude Code 클라우드 세션에서 실행
 
-1. Claude Code 웹의 환경 설정에서 환경변수 `ANTHROPIC_API_KEY`를 추가한다(설정 방법: https://code.claude.com/docs/en/claude-code-on-the-web).
-2. 환경의 네트워크 정책이 `api.anthropic.com` 접근을 허용하는지 확인한다.
-3. 새 세션을 열고 실측을 요청한다. 원격 환경은 `ANTHROPIC_BASE_URL`을 내부 프록시로 덮어쓰므로 실행 시 그 변수를 뺀다.
+키를 채팅에 붙여 넣지 않는다(대화 기록에 남는다). 환경변수로 넣고 새 세션에서 돌린다.
 
-```bash
-env -u ANTHROPIC_BASE_URL npm run eval:live -- --runs 3
-```
+1. 브라우저(휴대폰도 됨)에서 https://claude.ai/code → 새 세션 화면 → 메시지 입력창 **위 행의 구름 아이콘(환경 이름 "기본값")** 을 누른다. 별도 설정 페이지나 URL은 없다.
+2. 목록의 Cloud 항목에서 "기본값" 오른쪽 **설정(톱니) 아이콘** → "Update cloud environment" 대화상자의 **Environment variables** 칸에 한 줄 추가 후 저장.
+
+   ```
+   ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+   이 값은 "이 환경을 쓰는 누구에게나 보인다"고 안내된다(개인 계정이면 본인뿐). 실측이 끝나면 지운다.
+3. **새 세션**을 연다(이미 떠 있는 세션은 새 변수를 읽지 못한다). "live 실측 돌려줘"라고 하면 아래를 실행한다.
+
+   ```bash
+   MODEL_PROVIDER=anthropic npm run eval:live -- --runs 1
+   ```
+
+   - 첫 호출 전에 연결 확인 1회(운영 메뉴 "모델 연결 확인"과 같은 호출)를 보내고, 실패하면 원인을 찍고 종료 코드 1로 멈춘다 — 빈 실측 파일을 남기지 않는다. `401`이면 키 값, `ENOTFOUND`/`fetch failed`면 네트워크·`ANTHROPIC_BASE_URL` 문제다.
+   - 클라우드 환경에는 `MODEL_PROVIDER`·`ANTHROPIC_BASE_URL`이 미리 설정돼 있을 수 있다. 위 명령처럼 `MODEL_PROVIDER=anthropic`을 명시하고, 연결 확인이 네트워크 오류로 실패하면 `env -u ANTHROPIC_BASE_URL MODEL_PROVIDER=anthropic npm run eval:live -- --runs 1`로 다시 시도한다.
+   - 결과 `docs/eval/live-<날짜>.md`·`.jsonl`(같은 날 두 번째부터 `-2`, `-3`)을 커밋·푸시하면 된다. 파일에 키는 들어가지 않는다.
+
+> 2026-09-11 실측(144회 전부 `provider_error`)은 키가 SDK에 전달되지 않은 상태로 돈 결과다. 당시 스크립트가 CLI 로그인(`ant auth`)을 키 대용으로 받았기 때문이며, 지금은 `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN`만 인정하고 연결 확인을 먼저 한다.
 
 ## 4. 브라우저에서 실제 세션 체험
 

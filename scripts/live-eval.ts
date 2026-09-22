@@ -15,7 +15,6 @@
 //   - CI에는 포함하지 않는다(package.json에 별도 스크립트로만 존재).
 
 import { randomUUID } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -25,6 +24,7 @@ type ConditionId = (typeof CONDITION_IDS)[number];
 import { getScenarioMaterials } from '../server/scenario-data';
 import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
+import { handleProbe } from '../server/handlers/probe';
 import { createMockProvider } from '../server/providers/mock';
 import { createAnthropicProvider } from '../server/providers/anthropic';
 import type {
@@ -142,24 +142,60 @@ function instrumentProvider(base: ModelProvider, clock: Clock, sink: CallRecord[
 }
 
 // --- 키 확인: MODEL_PROVIDER=mock이 아니면 실제 키가 있는지 먼저 확인한다. ---
-function hasAnthropicApiKey(): boolean {
-  return (process.env.ANTHROPIC_API_KEY ?? '').trim().length > 0;
+// SDK(@anthropic-ai/sdk)가 실제로 읽는 자격은 ANTHROPIC_API_KEY 또는 ANTHROPIC_AUTH_TOKEN
+// 뿐이다. 예전에는 `ant auth status`(CLI 로그인)도 키 대용으로 받았는데, 그 로그인은 SDK에
+// 전달되지 않아 2026-09-11 실측 144회가 전부 provider_error로 끝났다. 이제는 환경변수만
+// 인정하고, 아래 preflightProbe가 첫 호출 전에 연결을 한 번 더 확인한다.
+function hasAnthropicCredential(): boolean {
+  return (
+    (process.env.ANTHROPIC_API_KEY ?? '').trim().length > 0 ||
+    (process.env.ANTHROPIC_AUTH_TOKEN ?? '').trim().length > 0
+  );
 }
 
-function hasActiveAntAuth(): boolean {
-  try {
-    const result = spawnSync('ant', ['auth', 'status'], { encoding: 'utf-8', timeout: 5000 });
-    if (result.error || result.status !== 0) {
-      return false;
-    }
-    const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-    if (/not logged in|inactive|no active|비활성/i.test(output)) {
-      return false;
-    }
-    return /active|logged in|authenticated|활성/i.test(output);
-  } catch {
-    return false;
+/** ANTHROPIC_BASE_URL이 설정돼 있으면 호스트만 돌려준다(값 전체는 로그에 남기지 않는다). */
+function baseUrlHost(): string | null {
+  const raw = (process.env.ANTHROPIC_BASE_URL ?? '').trim();
+  if (!raw) {
+    return null;
   }
+  try {
+    return new URL(raw).host;
+  } catch {
+    return raw.slice(0, 40);
+  }
+}
+
+/** 실제 실행 전 연결 확인 1회(server/handlers/probe.ts, 운영 메뉴 "모델 연결 확인"과 같은
+ * 호출). 실패하면 48회 호출을 헛되이 돌리지 않고 원인을 찍고 멈춘다. */
+async function preflightProbe(
+  provider: ModelProvider,
+  providerName: 'mock' | 'anthropic',
+  modelId: string,
+): Promise<boolean> {
+  const result = await handleProbe({
+    provider,
+    config: { provider: providerName, modelId },
+    clock: systemClock,
+  });
+  if (result.ok) {
+    console.log(`[eval:live] 연결 확인 OK · ${result.modelId} · ${result.latencyMs}ms`);
+    return true;
+  }
+  console.error(`[eval:live] 연결 확인 실패 · ${result.error ?? 'unknown'} (${result.latencyMs}ms)`);
+  const host = baseUrlHost();
+  if (host) {
+    console.error(`[eval:live] ANTHROPIC_BASE_URL 호스트: ${host}`);
+  }
+  if (/401|authentication|x-api-key/i.test(result.error ?? '')) {
+    console.error('[eval:live] 키가 거부됐습니다. ANTHROPIC_API_KEY 값을 다시 확인하십시오.');
+  } else if (/ENOTFOUND|ECONN|fetch failed|timeout/i.test(result.error ?? '')) {
+    console.error(
+      '[eval:live] 네트워크 경로 문제입니다. 프록시·ANTHROPIC_BASE_URL을 확인하거나' +
+        ' `env -u ANTHROPIC_BASE_URL`로 다시 실행하십시오.',
+    );
+  }
+  return false;
 }
 
 function parseArgs(argv: string[]): { runs: number } {
@@ -543,10 +579,10 @@ async function main(): Promise<void> {
   const { runs } = parseArgs(process.argv.slice(2));
   const useMock = process.env.MODEL_PROVIDER === 'mock';
 
-  if (!useMock && !hasAnthropicApiKey() && !hasActiveAntAuth()) {
+  if (!useMock && !hasAnthropicCredential()) {
     console.log(
-      '[eval:live] 실제 모델 키가 없어 건너뜁니다. ANTHROPIC_API_KEY 환경변수를 설정하거나' +
-        ' `ant auth login`으로 인증한 뒤 다시 실행하십시오(또는 MODEL_PROVIDER=mock으로 스모크 실행).',
+      '[eval:live] 실제 모델 키가 없어 건너뜁니다. ANTHROPIC_API_KEY 환경변수를 설정한 뒤' +
+        ' 다시 실행하십시오(또는 MODEL_PROVIDER=mock으로 스모크 실행).',
     );
     process.exit(0);
     return;
@@ -555,6 +591,12 @@ async function main(): Promise<void> {
   const modelId = process.env.MODEL_ID?.trim() || DEFAULT_MODEL_ID;
   const providerName = useMock ? 'mock' : 'anthropic';
   const baseProvider = useMock ? createMockProvider(modelId) : createAnthropicProvider({ modelId });
+
+  // 첫 호출 전 연결 확인. 실패하면 종료 코드 1로 멈춘다(빈 실측 파일을 남기지 않는다).
+  if (!(await preflightProbe(baseProvider, providerName, modelId))) {
+    process.exit(1);
+    return;
+  }
 
   const sink: CallRecord[] = [];
   const provider = instrumentProvider(baseProvider, systemClock, sink);
