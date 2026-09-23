@@ -37,6 +37,24 @@ describe('probe transport 시간 상한', () => {
     await expect(fetchHealth({ timeoutMs: 20 })).resolves.toBeNull();
   });
 
+  // 헤더는 왔는데 본문이 멈추는 경우(프록시 스톨). fetch()는 이미 끝났으므로 상한이 본문 해석까지
+  // 걸려 있어야 한다(Codex 10차 검토).
+  it('헤더만 오고 본문이 멈추면 상한 뒤 timeout 실패로 끝난다', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, status: 200, json: () => new Promise<never>(() => {}) }) as unknown as Response),
+    );
+    await expect(probeModel({ timeoutMs: 20 })).resolves.toEqual({ ok: false, error: 'timeout' });
+    await expect(fetchHealth({ timeoutMs: 20 })).resolves.toBeNull();
+  });
+
+  it('429는 본문을 읽지 않고 probe_rate_limit으로 끝난다', async () => {
+    const json = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 429, json }) as unknown as Response));
+    await expect(probeModel({ timeoutMs: 1_000 })).resolves.toEqual({ ok: false, error: 'probe_rate_limit' });
+    expect(json).not.toHaveBeenCalled();
+  });
+
   it('정상 응답은 상한 안에서 그대로 돌려준다', async () => {
     vi.stubGlobal(
       'fetch',

@@ -29,12 +29,26 @@ export interface ProbeOptions {
   timeoutMs?: number;
 }
 
+interface JsonResponse {
+  status: number;
+  ok: boolean;
+  /** 429처럼 본문을 읽지 않는 상태에서는 undefined. */
+  body?: unknown;
+}
+
 /**
- * fetch를 시간 상한으로 감싼다. AbortController로 요청을 끊고, 신호를 무시하는 구현(테스트
- * 스텁 등)에서도 반드시 끝나도록 타이머와 경주시킨다. 상한을 넘기면 name이 'TimeoutError'인
- * 오류로 거절한다.
+ * fetch와 **본문 해석까지** 시간 상한으로 감싼다. 헤더만 오고 본문이 멈추는 서버·프록시에서
+ * fetch()는 이미 끝났으므로 상한을 fetch에만 걸면 res.json()이 무한 대기한다(PR #10 Codex
+ * 10차 검토 P2). AbortController로 요청·본문 읽기를 함께 끊고, 신호를 무시하는 구현(테스트
+ * 스텁 등)에서도 반드시 끝나도록 전체 작업을 타이머와 경주시킨다. 상한을 넘기면 name이
+ * 'TimeoutError'인 오류로 거절한다. skipBodyFor에 든 상태 코드는 본문을 읽지 않는다.
  */
-async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchJsonWithTimeout(
+  input: string,
+  init: RequestInit,
+  timeoutMs: number,
+  skipBodyFor: readonly number[] = [],
+): Promise<JsonResponse> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -45,8 +59,16 @@ async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs: num
       reject(err);
     }, timeoutMs);
   });
+  const work = (async (): Promise<JsonResponse> => {
+    const res = await fetch(input, { ...init, signal: controller.signal });
+    if (skipBodyFor.includes(res.status)) {
+      return { status: res.status, ok: res.ok };
+    }
+    const body: unknown = await res.json();
+    return { status: res.status, ok: res.ok, body };
+  })();
   try {
-    return await Promise.race([fetch(input, { ...init, signal: controller.signal }), timeout]);
+    return await Promise.race([work, timeout]);
   } finally {
     clearTimeout(timer);
   }
@@ -61,15 +83,16 @@ function isTimeout(err: unknown): boolean {
  * 시간 상한을 넘기면 error 'timeout'이다. */
 export async function probeModel(options: ProbeOptions = {}): Promise<ProbeResult> {
   try {
-    const res = await fetchWithTimeout(
+    const res = await fetchJsonWithTimeout(
       '/api/ops/probe',
       { method: 'POST', headers: accessHeaders() },
       options.timeoutMs ?? PROBE_TIMEOUT_MS,
+      [429],
     );
     if (res.status === 429) {
       return { ok: false, error: 'probe_rate_limit' };
     }
-    const body: unknown = await res.json();
+    const body = res.body;
     if (typeof body === 'object' && body !== null) {
       return body as ProbeResult;
     }
@@ -83,7 +106,7 @@ export async function probeModel(options: ProbeOptions = {}): Promise<ProbeResul
  * null을 돌려주고 호출부가 정보 줄을 생략한다. */
 export async function fetchHealth(options: ProbeOptions = {}): Promise<HealthInfo | null> {
   try {
-    const res = await fetchWithTimeout(
+    const res = await fetchJsonWithTimeout(
       '/api/health',
       { method: 'GET', headers: accessHeaders() },
       options.timeoutMs ?? HEALTH_TIMEOUT_MS,
@@ -91,7 +114,7 @@ export async function fetchHealth(options: ProbeOptions = {}): Promise<HealthInf
     if (!res.ok) {
       return null;
     }
-    const body: unknown = await res.json();
+    const body = res.body;
     if (typeof body !== 'object' || body === null) {
       return null;
     }
