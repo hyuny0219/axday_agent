@@ -9,7 +9,7 @@ test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택
   await expect(page.getByTestId('scenario-card-data-openness')).toBeDisabled();
   await expect(page.getByTestId('scenario-card-prevention')).toBeDisabled();
 
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
   const briefingNext = page.getByRole('button', { name: '의견 듣기' });

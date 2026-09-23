@@ -3,10 +3,10 @@
 // hash를 고정").
 
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { computeMotionHash, freezeMotion } from '../../src/domain/motion';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const T0 = 1_700_000_000_000;
 
 describe('computeMotionHash', () => {

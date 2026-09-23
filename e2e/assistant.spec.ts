@@ -3,7 +3,7 @@ import { test, expect, type Page } from './fixtures';
 async function reachDiscuss(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -90,7 +90,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
 

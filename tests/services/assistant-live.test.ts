@@ -3,14 +3,14 @@
 // 확인한다(AGENT_BOARDROOM_SPEC.md 4장). compareConditions는 실제 AI를 부르지 않는다.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import {
   AssistantRefineConcurrentError,
   AssistantRefineLimitError,
   createLiveAssistantAdapter,
 } from '../../src/services/assistant/live';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 function makeBase(sessionId: string, requestId: string, signal: AbortSignal = new AbortController().signal) {
   return { sessionId, requestId, signal };

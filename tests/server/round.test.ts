@@ -14,7 +14,7 @@ function baseRoundInput(overrides: Partial<RoundRequest> = {}): RoundRequest {
     mode: 'live',
     stage: 'OPINIONS',
     transcript: { revision: 0, statements: [] },
-    scenarioId: 'ai-assistant',
+    scenarioId: 'anon-board',
     budgetMs: 8000,
     ...overrides,
   };

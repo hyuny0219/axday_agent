@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import type { ExecMemberId, Predicate } from '../../src/content/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 function collectHasIds(predicate: Predicate): string[] {
   if ('has' in predicate) return [predicate.has];
@@ -12,7 +12,7 @@ function collectHasIds(predicate: Predicate): string[] {
   return [];
 }
 
-describe('aiAssistantScenario', () => {
+describe('anonBoardScenario', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
@@ -155,8 +155,8 @@ describe('aiAssistantScenario', () => {
     expect(scenario.incident.headline).not.toMatch(UNGROUNDED_PATTERN);
     expect(scenario.incident.hook).not.toMatch(UNGROUNDED_PATTERN);
     // hook의 수치는 E1·E2 insight에 있는 값만 쓴다.
-    expect(scenario.incident.hook).toContain('120건');
-    expect(scenario.incident.hook).toContain('126건');
+    expect(scenario.incident.hook).toContain('320건');
+    expect(scenario.incident.hook).toContain('140건');
   });
 
   it('resultCopy.sixMonthsLater 4필드가 비어 있지 않고 수치 표현이 없다', () => {

@@ -26,7 +26,7 @@ import type { ModelProvider } from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
 import { systemClock, type Clock } from '../server/clock';
 
-const SCENARIO_ID = 'ai-assistant';
+const SCENARIO_ID = 'anon-board';
 const BUDGET_MS = 8000;
 
 interface EvalCase {

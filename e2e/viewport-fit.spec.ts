@@ -49,7 +49,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await startCta.click();
 
   await expectNoPageScroll(page, 'SELECT');
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   const enterBoard = page.getByRole('button', { name: '이사회 입장' });
   await expect(enterBoard).toBeInViewport();
   await enterBoard.click();

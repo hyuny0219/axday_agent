@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const T0 = 1_700_000_000_000;
 
 /** ATTRACT에서 REACTIONS 직전(의견 전달 완료)까지 정상 경로로 진행한 세션을 만든다. */
@@ -71,7 +71,7 @@ describe('후속 1회 제한', () => {
         type: 'SUBMIT_FOLLOWUP',
         originalText: '권한 확인도 함께 해봅시다.',
         selectedPhraseIds: ['P3'],
-        confirmedConditionIds: ['ACCESS'],
+        confirmedConditionIds: ['TRACE'],
       },
       T0,
     );
@@ -113,7 +113,7 @@ describe('FREEZE_MOTION 충돌 조건 방어', () => {
 
     const result = reduce(
       session,
-      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['ACCESS', 'OPEN_ALL'] },
+      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['TRACE', 'ANON_FULL'] },
       T0,
     );
 
@@ -127,7 +127,7 @@ describe('FREEZE_MOTION 충돌 조건 방어', () => {
 
     const result = reduce(
       session,
-      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['ACCESS'] },
+      { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: ['TRACE'] },
       T0,
     );
 

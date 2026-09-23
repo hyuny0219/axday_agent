@@ -14,7 +14,7 @@ type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
 }

@@ -12,7 +12,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
@@ -48,7 +48,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
 test('무대 명패 5개가 서로 겹치지 않는다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
   const seatIds = ['CEO', 'CFO', 'CAIO', 'CISO', 'PARTICIPANT'];

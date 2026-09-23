@@ -27,10 +27,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
   await expect(
-    page.getByTestId('scenario-card-ai-assistant').locator('.scenario-card__title'),
+    page.getByTestId('scenario-card-anon-board').locator('.scenario-card__title'),
   ).toBeInViewport();
 
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
@@ -81,7 +81,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   // 직접 답하기(가장 내용이 많은 경로)를 열고 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-open-editor').click();
-  await page.getByTestId('followup-textarea').fill('출처와 기준일 차이를 표시하고 공유 전 담당자 확인 절차를 정합니다.');
+  await page.getByTestId('followup-textarea').fill('신고가 들어온 글에 한해 담당자가 확인할 수 있게 절차를 정합니다.');
   await expectNoPageScroll(page, 'REACTIONS(직접 답하기 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
@@ -122,7 +122,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 // 가로채 최대 길이로 채우고, 페이지 스크롤과 오른쪽 열 내부 잘림이 모두 없는지 본다.
 const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 const LONG_STATEMENT =
-  '출처와 기준일을 표시하고 담당자가 확인한 뒤에만 공유해야 합니다. 권한이 확인되지 않은 부서 자료는 파일럿 범위에서 제외하고 준비시간과 수정량을 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
+  '게시 전 검수를 거친 뒤에만 공개해야 합니다. 신고가 들어온 글은 담당자가 확인할 수 있게 하고 게시 건수와 신고 처리 결과를 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
 
 const LONG_REASON =
   '출처·기준일 표시와 담당자 검토, 권한 확인이 조건으로 들어갔으므로 찬성합니다. 다만 파일럿 기간의 준비시간과 수정량 기록이 실제로 쌓이는지, 확대 판단 전에 이사회가 그 수치를 직접 확인하는지가 남은 관건입니다. 그 절차가 빠지면 재검토가 필요합니다.';
@@ -185,7 +185,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });

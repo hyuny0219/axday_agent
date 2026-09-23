@@ -3,7 +3,7 @@
 // AGENT_BOARDROOM_SPEC.md 5·6장.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
@@ -15,7 +15,7 @@ function toOpinionsStage(clock: FakeClock): Session {
   let session = createInitialSession(clock.now());
   session = reduce(session, { type: 'START' }, clock.now());
   session = reduce(session, { type: 'SET_MODE', mode: 'live' }, clock.now());
-  session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: aiAssistantScenario.id }, clock.now());
+  session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: anonBoardScenario.id }, clock.now());
   return reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // BRIEFING -> OPINIONS
 }
 
@@ -35,7 +35,7 @@ function toVoteStage(clock: FakeClock): Session {
   session = reduce(session, { type: 'KEEP_PREVIOUS' }, clock.now()); // REACTIONS -> MOTION
   return reduce(
     session,
-    { type: 'FREEZE_MOTION', scenario: aiAssistantScenario, confirmedConditionIds: [] },
+    { type: 'FREEZE_MOTION', scenario: anonBoardScenario, confirmedConditionIds: [] },
     clock.now(),
   ); // MOTION -> VOTE
 }
@@ -45,7 +45,7 @@ function makeCtx(session: Session, signal: AbortSignal = new AbortController().s
     sessionId: session.sessionId,
     requestId: 'req-1',
     session,
-    scenario: aiAssistantScenario,
+    scenario: anonBoardScenario,
     budgetMs: 8000,
     signal,
   };

@@ -13,11 +13,11 @@ import { test, expect, type Page } from './fixtures';
 // P1~P4 문구를 그대로 이어 붙인 뒤, 실제 이사회 발언처럼 이어지는 문장을 더해
 // 300자 제한에 가깝지만 넘지 않는 분량으로 만든다(축약 없이 실제 콘텐츠).
 const DRAFT_TEXT =
-  '주간 보고 초안부터 작은 범위로 시작합시다. 출처와 기준일을 표시하고 담당자가 검토한 뒤 공유합시다. ' +
-  '사용자 권한과 공유 범위를 확인한 자료만 사용합시다. 준비시간과 수정량을 확인한 뒤 확대합시다. ' +
-  '파일럿 기간에는 매주 처리 건수와 수정 비율을 함께 공유해 신뢰를 쌓고, 확대 여부는 이 데이터를 근거로 ' +
-  '다음 이사회에서 다시 판단하겠습니다. 권한이 확인되지 않은 부서 자료는 이번 파일럿 범위에서 제외하고, ' +
-  '검토 담당자 지정과 접근 로그 확인을 먼저 마친 뒤 순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
+  '한 게시판에서 먼저 시범 운영합시다. 게시 전 검수 절차를 두고 시작합시다. ' +
+  '문제가 생기면 작성자를 확인할 수 있게 해 둡시다. 운영 효과를 측정한 뒤 전사로 넓힙시다. ' +
+  '시범 기간에는 게시 건수와 신고 처리 결과를 함께 공유해 신뢰를 쌓고, 확대 여부는 이 기록을 근거로 ' +
+  '다음 이사회에서 다시 판단하겠습니다. 신고 처리 담당자를 먼저 지정하고, 로그 보관 기간을 정한 뒤 ' +
+  '순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
 
 // 기본 실행에서는 커밋된 PNG를 덮어쓰지 않도록 임시 폴더에 저장한다.
 // 문서용 스크린샷을 갱신할 때만 UPDATE_SCREENSHOTS=1 로 실행한다.
@@ -44,8 +44,8 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   // SELECT: 안건 카드 3열 중 활성 안건을 선택한 상태.
-  await page.getByTestId('scenario-card-ai-assistant').click();
-  await expect(page.getByTestId('scenario-card-ai-assistant')).toHaveAttribute(
+  await page.getByTestId('scenario-card-anon-board').click();
+  await expect(page.getByTestId('scenario-card-anon-board')).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -71,7 +71,7 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
   // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
-  // 4개(PILOT·REVIEW·ACCESS·MEASURE)를 확정하고, 300자에 가까운 직접 입력으로
+  // 4개(PILOT·SCREEN·TRACE·MEASURE)를 확정하고, 300자에 가까운 직접 입력으로
   // 덮어써 textarea 분량을 함께 보여준다.
   await expect(page.getByTestId('phrase-card-P6')).toBeVisible();
   await page.getByTestId('phrase-card-P1').click();
@@ -82,8 +82,8 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill(DRAFT_TEXT);
   await expect(page.getByTestId('condition-chip-PILOT')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-REVIEW')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-ACCESS')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
   await expect(page.getByTestId('condition-chip-MEASURE')).toBeVisible();
 
   const submitOpinion = page.getByTestId('submit-opinion');

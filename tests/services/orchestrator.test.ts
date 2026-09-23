@@ -4,7 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequestRegistry } from '../../src/app/requests';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce, type SessionAction } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
@@ -27,7 +27,7 @@ function selectScenario(clock: FakeClock, mode: SessionMode): Session {
   session = reduce(session, { type: 'SET_MODE', mode }, clock.now());
   session = reduce(
     session,
-    { type: 'SELECT_SCENARIO', scenarioId: aiAssistantScenario.id },
+    { type: 'SELECT_SCENARIO', scenarioId: anonBoardScenario.id },
     clock.now(),
   );
   return session;
@@ -54,7 +54,7 @@ function toVoteStage(clock: FakeClock): Session {
   session = reduce(session, { type: 'KEEP_PREVIOUS' }, clock.now()); // REACTIONS -> MOTION
   session = reduce(
     session,
-    { type: 'FREEZE_MOTION', scenario: aiAssistantScenario, confirmedConditionIds: [] },
+    { type: 'FREEZE_MOTION', scenario: anonBoardScenario, confirmedConditionIds: [] },
     clock.now(),
   ); // MOTION -> VOTE (live: 임원표 비어 있고 roleStatus pending)
   return session;
@@ -77,7 +77,7 @@ function createStore(
 }
 
 function getScenario(id: string) {
-  return id === aiAssistantScenario.id ? aiAssistantScenario : undefined;
+  return id === anonBoardScenario.id ? anonBoardScenario : undefined;
 }
 
 function fakeAdapter(overrides: Partial<BoardAgentsAdapter>): BoardAgentsAdapter {
@@ -339,7 +339,7 @@ describe('runner.runRound', () => {
     store.dispatch({ type: 'KEEP_PREVIOUS' }); // REACTIONS -> MOTION
     store.dispatch({
       type: 'FREEZE_MOTION',
-      scenario: aiAssistantScenario,
+      scenario: anonBoardScenario,
       confirmedConditionIds: [],
     }); // MOTION -> VOTE
     store.dispatch({ type: 'SELECT_VOTE', vote: 'YES' });
@@ -409,7 +409,7 @@ describe('runner.runRound', () => {
     await orchestrator.runRound('OPINIONS');
 
     const session = store.getSession();
-    expect(session.transcript.statements).toHaveLength(aiAssistantScenario.initialOpinions.length);
+    expect(session.transcript.statements).toHaveLength(anonBoardScenario.initialOpinions.length);
     expect(session.transcript.statements.every((s) => s.source === 'scripted')).toBe(true);
     expect(session.roleStatus.CEO).toBe('answered');
   });
@@ -518,7 +518,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     store.dispatch({ type: 'KEEP_PREVIOUS' });
     store.dispatch({
       type: 'FREEZE_MOTION',
-      scenario: aiAssistantScenario,
+      scenario: anonBoardScenario,
       confirmedConditionIds: [],
     });
     const frozen = store.getSession().finalMotion;

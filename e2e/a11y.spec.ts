@@ -12,7 +12,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.keyboard.press('Enter');
 
   // SELECT: 카드 선택도, 입장 CTA도 마우스 클릭 없이 포커스+Enter로만 조작한다.
-  await page.getByTestId('scenario-card-ai-assistant').focus();
+  await page.getByTestId('scenario-card-anon-board').focus();
   await page.keyboard.press('Enter');
   const enterBoard = page.getByRole('button', { name: '이사회 입장' });
   await expect(enterBoard).toBeEnabled();
@@ -85,7 +85,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.setViewportSize({ width: 960, height: 540 });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();

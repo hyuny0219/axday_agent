@@ -5,13 +5,13 @@
 // 카드로 인해 기존 흐름·결과가 달라지지 않는다.
 
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Ballot, Session, Statement } from '../../src/domain/types';
 import { EXEC_MEMBER_ORDER, tally } from '../../src/domain/voting';
 import type { ExecMemberId, Vote } from '../../src/content/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const T0 = 1_700_000_000_000;
 
 /** ATTRACT부터 live 모드 VOTE 단계(임원표 없음, roleStatus pending)까지 진행한다. */

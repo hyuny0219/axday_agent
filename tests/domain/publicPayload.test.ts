@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import { selectPublic } from '../../src/domain/publicPayload';
 import type { Session } from '../../src/domain/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const T0 = 1_700_000_000_000;
 
 const MARKER_ORIGINAL_TEXT = 'MARKER_원문_절대_전송_금지_XYZ';

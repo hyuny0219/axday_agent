@@ -1,7 +1,9 @@
 // 안건 ①②③ 레지스트리. ②만 active이고 ①③은 콘텐츠 확정 전 자리표시(preparing)다.
+// 안건 ②는 2026-09-23에 '사내 게시판 익명제'(anonBoard)로 교체했다. 이전 안건
+// (aiAssistant.ts)은 되돌릴 수 있게 파일로 남겨 두되 레지스트리에서는 뺀다(T53).
 
 import type { Scenario } from '../types';
-import { aiAssistantScenario } from './aiAssistant';
+import { anonBoardScenario } from './anonBoard';
 
 function preparingPlaceholder(id: string, title: string): Scenario {
   return {
@@ -40,8 +42,8 @@ function preparingPlaceholder(id: string, title: string): Scenario {
 
 export const scenarios: Scenario[] = [
   preparingPlaceholder('data-openness', '안건 ① (준비 중)'),
-  aiAssistantScenario,
+  anonBoardScenario,
   preparingPlaceholder('prevention', '안건 ③ (준비 중)'),
 ];
 
-export { aiAssistantScenario };
+export { anonBoardScenario };

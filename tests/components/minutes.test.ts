@@ -3,7 +3,7 @@
 // visibleWindow의 창 계산을 확인한다.
 
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
 import {
@@ -14,7 +14,7 @@ import {
   type RoundLogEntry,
 } from '../../src/components/minutes';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const T0 = 1_700_000_000_000;
 
 function selectScenario(mode: SessionMode, now = T0): Session {
@@ -71,7 +71,7 @@ describe('buildMinutes(scripted)', () => {
         type: 'SUBMIT_FOLLOWUP',
         originalText: '출처와 기준일을 표시하고 담당자가 확인한 뒤 공유합시다.',
         selectedPhraseIds: [],
-        confirmedConditionIds: ['PILOT', 'REVIEW'],
+        confirmedConditionIds: ['PILOT', 'SCREEN'],
       },
       T0,
     ); // -> MOTION
@@ -97,7 +97,7 @@ describe('buildMinutes(scripted)', () => {
     // "기존 의견 유지"다(scenario.reactions에 PILOT용 CISO 반응이 없다).
     const cfoReaction = entries.find((entry) => entry.id === 'reaction-CFO');
     const cisoReaction = entries.find((entry) => entry.id === 'reaction-CISO');
-    expect(cfoReaction?.text).toContain('효과를 확인');
+    expect(cfoReaction?.text).toContain('처리 공수');
     expect(cisoReaction?.text).toBe('기존 의견 유지');
 
     const myOpinion = entries.find((entry) => entry.id === 'my-opinion');
@@ -191,7 +191,7 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
       opinions: [
         {
           id: 'op-1',
-          originalText: '검토했습니다. 작은 범위로 시작하는 데 동의합니다.',
+          originalText: '검토했습니다. 한 게시판에서 시범하는 데 동의합니다.',
           selectedPhraseIds: [],
           confirmedConditionIds: [],
           createdAt: T0,

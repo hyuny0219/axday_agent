@@ -1,11 +1,11 @@
 import { test, expect, type Page } from './fixtures';
-import { aiAssistantScenario } from '../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../src/content/scenarios/anonBoard';
 import { buildDraftText } from '../src/domain/draft';
 
 async function reachDiscuss(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -20,7 +20,7 @@ test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다
   await page.getByTestId('phrase-card-P2').click();
 
   const textarea = page.getByTestId('draft-editor-textarea');
-  await expect(textarea).toHaveValue(buildDraftText(aiAssistantScenario, ['P1', 'P2']));
+  await expect(textarea).toHaveValue(buildDraftText(anonBoardScenario, ['P1', 'P2']));
 
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();

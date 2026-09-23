@@ -1,4 +1,4 @@
-// server 전용 시나리오 자료 사본. src/content/scenarios/aiAssistant.ts의 자료 본문·원안·
+// server 전용 시나리오 자료 사본. src/content/scenarios/anonBoard.ts의 자료 본문·원안·
 // 조건 라벨만 그대로 옮겨 쓴다. server는 src/에 의존하지 않는다(validate.ts와 같은 원칙).
 // 표결표(voteRules)·문구(phrases)·반응(reactions)은 scripted 데모 전용이므로 여기 옮기지
 // 않는다 — live 프롬프트의 정답표로 쓰지 않기 위해서다(AGENT_BOARDROOM_SPEC.md 1장).
@@ -23,37 +23,48 @@ export interface ScenarioMaterials {
   conditions: ScenarioCondition[];
 }
 
-const AI_ASSISTANT_MATERIALS: ScenarioMaterials = {
-  scenarioId: 'ai-assistant',
-  originalMotionId: 'work-assistant-original',
+const ANON_BOARD_MATERIALS: ScenarioMaterials = {
+  scenarioId: 'anon-board',
+  originalMotionId: 'anon-board-original',
   originalMotionText:
-    '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다.' +
-    ' 사용자별 권한, 검토 담당자, 확대 기준은 미정이다.',
+    '사내 게시판을 익명제로 전환한다.' +
+    ' 작성자 추적 범위, 게시 전 검수, 임원 열람 범위는 미정이다.',
   evidence: [
-    { id: 'E1', title: '실적표', content: '기준일 2026-08-31, 처리 건수 120건. 담당자 검토 완료.' },
-    { id: 'E2', title: '업무 메일', content: '기준일 2026-09-01, 처리 건수 126건. 잠정 집계, 검토 전.' },
+    {
+      id: 'E1',
+      title: '게시판 운영 기록',
+      content: '집계 기간 2026-06-01~08-31, 실명 게시글 월 평균 320건. 전사 게시판 기준.',
+    },
+    {
+      id: 'E2',
+      title: '시범 게시판 집계',
+      content:
+        '집계 기간 2026-08-15~09-14, 익명 시범 게시글 월 140건. 참여 부서 일부, 집계 기간과 범위가 E1과 다르다.',
+    },
     {
       id: 'E3',
-      title: '회의록',
-      content: '주간 보고마다 자료 취합을 반복한다. 다음 회의 전 보고 초안 검토 담당자를 지정해야 한다.',
+      title: '운영 회의록',
+      content:
+        '신고 처리 절차는 있으나 담당자 지정이 없다. 신고가 들어올 때마다 담당을 새로 정하고 있다.',
     },
     {
       id: 'E4',
-      title: '권한·운영 메모',
-      content: '부서 자료별 조회 권한이 다르다. 권한 확인, 공유 대상, 담당자 검토 절차는 아직 설계 중이다.',
+      title: '정보보호 메모',
+      content:
+        '접속 로그 보관 기간과 작성자 추적 권한은 아직 설계 중이다. 익명 표시와 로그 보관은 별개 문제다.',
     },
   ],
   conditions: [
-    { id: 'PILOT', label: '작은 범위로 시작' },
-    { id: 'REVIEW', label: '출처·기준일 표시 후 담당자 검토' },
-    { id: 'ACCESS', label: '권한·공유 범위 확인' },
-    { id: 'MEASURE', label: '준비시간·수정량 확인 후 확대' },
-    { id: 'OPEN_ALL', label: '권한 검토 없이 전체 연결' },
+    { id: 'PILOT', label: '한 게시판에서 시범' },
+    { id: 'SCREEN', label: '게시 전 검수' },
+    { id: 'TRACE', label: '문제 발생 시 추적 가능' },
+    { id: 'MEASURE', label: '운영 효과 측정 후 확대' },
+    { id: 'ANON_FULL', label: '완전 익명 — 추적 불가' },
   ],
 };
 
 const SCENARIOS: Record<string, ScenarioMaterials> = {
-  'ai-assistant': AI_ASSISTANT_MATERIALS,
+  'anon-board': ANON_BOARD_MATERIALS,
 };
 
 export function getScenarioMaterials(scenarioId: string): ScenarioMaterials | undefined {

@@ -5,7 +5,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -54,7 +54,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -106,19 +106,19 @@ test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 �
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
-  // PILOT(작은 범위로 시작) + MEASURE(준비시간·수정량 확인 후 확대)만 확정한다.
+  // PILOT(한 게시판에서 시범) + MEASURE(운영 효과 측정 후 확대)만 확정한다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P4').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  // REACTIONS: 앞선 의견을 유지해 REVIEW 조건을 추가하지 않는다.
+  // REACTIONS: 앞선 의견을 유지해 SCREEN 조건을 추가하지 않는다.
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();

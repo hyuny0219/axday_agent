@@ -46,8 +46,8 @@ const ROLE_EVIDENCE: Record<string, string> = {
 const ROLE_CONDITION: Record<string, string> = {
   CEO: 'PILOT',
   CFO: 'MEASURE',
-  CAIO: 'REVIEW',
-  CISO: 'ACCESS',
+  CAIO: 'SCREEN',
+  CISO: 'TRACE',
 };
 
 const ROLE_VOTE: Record<string, 'YES' | 'HOLD' | 'NO'> = {
