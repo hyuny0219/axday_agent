@@ -96,7 +96,7 @@
       "pathLabel": "조건 보완",
       "variant": "구어체",
       "effectiveConditionIds": ["PILOT", "SCREEN", "TRACE", "MEASURE"],
-      "participantOpinion": "조건 다 넣어서 안전하게 갑시다. 대신 빨리 시작했으면 좋겠어요."
+      "participantOpinion": "시범 운영, 게시 전 검수, 문제 생기면 작성자 확인, 효과 측정까지 조건 다 넣어서 안전하게 갑시다. 대신 빨리 시작했으면 좋겠어요."
     }
   ]
 }

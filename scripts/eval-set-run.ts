@@ -12,6 +12,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { CONDITION_IDS, type ExecRoleId } from '../server/validate';
 
@@ -53,7 +54,7 @@ function loadEvalSet(): EvalCase[] {
   return parsed.cases;
 }
 
-interface EvalRow {
+export interface EvalRow {
   caseId: string;
   pathId: string;
   pathLabel: string;
@@ -201,8 +202,15 @@ function hasAnthropicCredential(): boolean {
 // 과소 집계했고(실제 187건), after의 0건 판정도 원시 데이터와 어긋났다(실제 1건). 이제 판정
 // 근거를 코드로 남긴다. `--check <파일.jsonl>`로 API 호출 없이 기존 기록을 재집계할 수 있다.
 
-/** 존댓말 종결로 인정하는 어미. */
-const HONORIFIC_ENDING = /(습니다|합니다|입니다|됩니다|십시오|세요|니다|까요)$/;
+/**
+ * 존댓말 종결로 인정하는 어미. 합쇼체(-습니다/-니까/-십시오)뿐 아니라 해요체(-해요/-이에요/
+ * -예요/-죠 등)도 정상 존댓말이므로 인정한다 — 규칙 문구가 "존댓말(-습니다/-합니다 등)"이지
+ * 격식체 한정이 아니다(PR #10 Codex 6차 검토 P2: "괜찮아요."·"필요합니까?"를 위반으로 오집계).
+ * 다만 맨끝 "요" 하나만 보고 통과시키지는 않는다 — "…지정 필요."의 명사형 종결(위반)이
+ * 해요체로 오인된다. 그래서 해요체는 어간 결합 형태를 열거한다.
+ */
+const HONORIFIC_ENDING =
+  /(니다|십시오|세요|니까|까요|[아어여해와워봐줘돼내래게네]요|이에요|예요|에요|죠|지요|군요|나요|가요|든요|거든요|는데요|ㄴ데요|은데요)$/;
 
 /**
  * 문장 끝에 붙은 **인용** 괄호만 종결 판정에서 제외한다 — "…입니다(E3,E4)", "…동의합니다(st-2-op-0,3)".
@@ -361,7 +369,10 @@ async function main(): Promise<void> {
   runCheck([out]);
 }
 
-main().catch((err) => {
+// 직접 실행할 때만 main()을 돌린다. 테스트가 findStyleViolations()를 import할 때 실행되면 안 된다.
+const isDirectRun =
+  typeof process.argv[1] === 'string' && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (isDirectRun) main().catch((err) => {
   console.error('[eval-set-run] 실행 중 오류:', err);
   process.exitCode = 1;
 });
