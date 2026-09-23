@@ -63,7 +63,7 @@
 
 시간당 새 세션(`sessionId`) 수가 `MAX_SESSIONS_PER_HOUR`(기본 30)를 넘으면 서버가 새 세션의
 요청을 429 `session_limit`으로 거절한다(`server/sessionLimit.ts`). 등록된 세션도 무제한은
-아니다: 첫 요청 뒤 `SESSION_TTL_MINUTES`(기본 15분)가 지나면 `session_expired`, 엔드포인트별
+아니다: 마지막 요청 뒤 `SESSION_TTL_MINUTES`(기본 30분) 동안 요청이 없으면 `session_expired`(체험이 시간으로 끝나지 않으므로 첫 요청 기준이 아니라 슬라이딩), 엔드포인트별
 호출 상한(라운드 3·최종표 1·정리 2·요약 4)을 넘으면 `call_limit`으로 거절한다. 요청 본문은
 64KiB를 넘으면 413이다. 이미 시작된 세션은 시간당 상한과 무관하게 계속
 진행할 수 있다. 행사 참가자 수에 맞춰 Render 환경변수에서 값을 조정할 수 있다.

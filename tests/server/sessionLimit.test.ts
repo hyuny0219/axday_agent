@@ -68,15 +68,41 @@ describe('SessionLimitRegistry', () => {
     expect(registry.allow('s1', 'refine')).toBe('call_limit');
   });
 
-  it('수명(기본 15분)이 지난 세션은 새 requestId로 와도 session_expired로 거절한다', () => {
+  it('마지막 요청 뒤 수명(기본 30분)이 지난 세션은 새 requestId로 와도 session_expired로 거절한다', () => {
     const { clock, advance } = fakeClock(0);
     const registry = new SessionLimitRegistry(clock, 5);
     expect(registry.allow('s1', 'round')).toBe('ok');
-    advance(DEFAULT_SESSION_TTL_MINUTES * 60 * 1000 - 1);
-    expect(registry.allow('s1', 'round')).toBe('ok');
-    advance(1);
+    advance(DEFAULT_SESSION_TTL_MINUTES * 60 * 1000);
     expect(registry.allow('s1', 'round')).toBe('session_expired');
     expect(registry.allow('s1', 'summarize')).toBe('session_expired');
+  });
+
+  // 체험이 시간으로 끝나지 않으므로(T50) 수명은 첫 요청이 아니라 마지막 요청부터 잰다 —
+  // 첫 라운드 뒤 15분 넘게 토론한 참가자의 반응·표결이 거절되면 안 된다(PR #10 Codex 8차 검토).
+  it('요청이 이어지는 동안은 첫 요청 뒤 수명이 지나도 만료하지 않는다(슬라이딩)', () => {
+    const { clock, advance } = fakeClock(0);
+    const registry = new SessionLimitRegistry(clock, 5);
+    const ttl = DEFAULT_SESSION_TTL_MINUTES * 60 * 1000;
+    expect(registry.allow('s1', 'round')).toBe('ok'); // OPINIONS
+    advance(ttl - 1);
+    expect(registry.allow('s1', 'round')).toBe('ok'); // REACTIONS — 첫 요청 뒤 거의 수명만큼 지남
+    advance(ttl - 1);
+    expect(registry.allow('s1', 'round')).toBe('ok'); // FOLLOWUP — 첫 요청 뒤 수명의 두 배 가까이
+    advance(ttl - 1);
+    expect(registry.allow('s1', 'vote')).toBe('ok'); // 최종표
+    // 호출 횟수는 그대로 누적된다(라운드 상한 3).
+    expect(registry.allow('s1', 'round')).toBe('call_limit');
+  });
+
+  it('거절된 요청은 수명을 갱신하지 않는다 — 만료된 세션은 계속 만료다', () => {
+    const { clock, advance } = fakeClock(0);
+    const registry = new SessionLimitRegistry(clock, 5);
+    const ttl = DEFAULT_SESSION_TTL_MINUTES * 60 * 1000;
+    expect(registry.allow('s1', 'round')).toBe('ok');
+    advance(ttl);
+    expect(registry.allow('s1', 'round')).toBe('session_expired');
+    advance(1);
+    expect(registry.allow('s1', 'round')).toBe('session_expired');
   });
 
   it('윈도가 지나기 전에는 새 세션을 계속 거절한다', () => {

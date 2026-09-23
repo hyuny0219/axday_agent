@@ -210,10 +210,31 @@ function hasAnthropicCredential(): boolean {
  * 해요체로 오인된다. 그래서 해요체는 어간 결합 형태를 열거한다.
  */
 // -니까는 통째로 두면 "없으니까."(반말 연결형)까지 통과하므로 합쇼체 의문형(-습니까/-ㅂ니까)만
-// 열거한다. -ㄴ데요는 자모 'ㄴ'으로 쓰면 완성형 음절("인데요")과 맞지 않으므로 "데요"로 본다
-// (PR #10 Codex 7차 검토 P2).
+// 인정한다. -ㅂ니까는 앞 음절을 열거할 수 없으므로("책임집니까"·"바꿉니까"·"압니까"·"씁니까")
+// 앞 음절의 종성이 ㅂ인지 유니코드로 판정한다(isFormalQuestion, PR #10 Codex 7·8차 검토 P2).
+// -ㄴ데요는 자모 'ㄴ'으로 쓰면 완성형 음절("인데요")과 맞지 않으므로 "데요"로 본다.
 const HONORIFIC_ENDING =
-  /(니다|십시오|세요|습니까|[합입됩갑옵봅줍납십]니까|까요|[아어여해와워봐줘돼내래게네]요|이에요|예요|에요|죠|지요|군요|나요|가요|거든요|데요)$/;
+  /(니다|십시오|세요|까요|[아어여해와워봐줘돼내래게네]요|이에요|예요|에요|죠|지요|군요|나요|가요|거든요|데요)$/;
+
+const HANGUL_BASE = 0xac00;
+const HANGUL_LAST = 0xd7a3;
+const JONG_BIEUP = 17; // 종성 ㅂ의 인덱스(28진)
+
+/** 합쇼체 의문형 "-ㅂ니까/-습니까": 끝이 "니까"이고 바로 앞 음절의 종성이 ㅂ이어야 한다. */
+function isFormalQuestion(ending: string): boolean {
+  if (!ending.endsWith('니까') || ending.length < 3) {
+    return false;
+  }
+  const code = ending.codePointAt(ending.length - 3) ?? 0;
+  if (code < HANGUL_BASE || code > HANGUL_LAST) {
+    return false;
+  }
+  return (code - HANGUL_BASE) % 28 === JONG_BIEUP;
+}
+
+function isHonorificEnding(ending: string): boolean {
+  return HONORIFIC_ENDING.test(ending) || isFormalQuestion(ending);
+}
 
 /**
  * 문장 끝에 붙은 **인용** 괄호만 종결 판정에서 제외한다 — "…입니다(E3,E4)", "…동의합니다(st-2-op-0,3)".
@@ -270,7 +291,7 @@ export function findStyleViolations(rows: EvalRow[]): StyleViolation[] {
       if (!text) continue;
       for (const sentence of splitSentences(text)) {
         const ending = sentenceEnding(sentence);
-        if (ending.length > 0 && !HONORIFIC_ENDING.test(ending)) {
+        if (ending.length > 0 && !isHonorificEnding(ending)) {
           violations.push({
             line: index + 1,
             caseId: row.caseId,

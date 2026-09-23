@@ -41,6 +41,9 @@ describe('findStyleViolations — 존댓말 종결', () => {
 
   it('합쇼체 의문형은 통과하고, 반말 연결형 "-니까."는 위반이다(Codex 7차 검토)', () => {
     expect(violations('그렇습니까? 담당자가 있습니까?')).toEqual([]);
+    // -ㅂ니까는 앞 음절을 열거할 수 없다 — 종성 ㅂ 판정(Codex 8차 검토)
+    expect(violations('누가 책임집니까? 왜 방식을 바꿉니까?')).toEqual([]);
+    expect(violations('누가 압니까? 내용을 씁니까?')).toEqual([]);
     expect(violations('추적 권한이 없으니까.')).toEqual(['추적 권한이 없으니까.']);
     expect(violations('먼저 정하니까.')).toEqual(['먼저 정하니까.']);
   });
