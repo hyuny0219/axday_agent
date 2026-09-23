@@ -209,7 +209,7 @@ export function castParticipant(
  * finalMotion 기준으로 아직 도착하지 않은 임원 좌석·참가자 좌석을 UNCAST(source:
  * 'unavailable')로 채워 5석을 완성한다. 다른 motionHash의 표는 재사용하지 않고(다른
  * 안건에 대한 표는 버리고) 그 좌석도 UNCAST로 채운다. HOLD나 사전 표로 대체하지
- * 않는다(AGENT_BOARDROOM_SPEC.md 6장). EXPIRE·FINALIZE_RESULT가 함께 쓴다.
+ * 않는다(AGENT_BOARDROOM_SPEC.md 6장). FINALIZE_RESULT가 쓴다.
  */
 export function fillMissingBallots(
   ballots: Ballot[],

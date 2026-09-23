@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
-import { createInitialSession, reduce, SESSION_DURATION_MS } from '../../src/domain/session';
+import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
 
 const scenario = aiAssistantScenario;
@@ -60,15 +60,6 @@ describe('정상 완주', () => {
     expect(session.warnings).toEqual([]);
 
     expect(session.assistantActions).toEqual(['SUMMARY_SHOWN']);
-  });
-
-  it('deadline은 SELECT_SCENARIO 시점부터 240초로 계산한다', () => {
-    const session = reduce(
-      reduce(createInitialSession(T0), { type: 'START' }, T0),
-      { type: 'SELECT_SCENARIO', scenarioId: scenario.id },
-      T0,
-    );
-    expect(session.deadline).toBe(T0 + SESSION_DURATION_MS);
   });
 });
 
@@ -146,44 +137,6 @@ describe('FREEZE_MOTION 충돌 조건 방어', () => {
   });
 });
 
-describe('시간 만료', () => {
-  it('안건이 이미 고정된 뒤 만료되면 그 안건으로 종료하고 참가자는 UNCAST다', () => {
-    let session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
-    session = reduce(session, { type: 'FREEZE_MOTION', scenario, confirmedConditionIds: [] }, T0);
-    const frozenMotionId = session.finalMotion?.id;
-    expect(session.stage).toBe('VOTE');
-
-    const expired = reduce(session, { type: 'EXPIRE', scenario }, T0 + SESSION_DURATION_MS);
-    expect(expired.stage).toBe('RESULT');
-    expect(expired.expiredWithoutMotion).toBe(false);
-    expect(expired.finalMotion?.id).toBe(frozenMotionId);
-    expect(expired.ballots).toHaveLength(5);
-    const participantBallot = expired.ballots.find((b) => b.memberId === 'PARTICIPANT');
-    expect(participantBallot?.vote).toBe('UNCAST');
-    // 대표 경로표: 없음(원안) / YES,HOLD,NO,NO / 참가자 UNCAST → HOLD.
-    expect(expired.outcome).toBe('HOLD');
-  });
-
-  it('안건이 고정되지 않은 채 만료되면 원안을 자동 고정하고 참가자는 UNCAST다', () => {
-    const session = sessionAtReactions();
-    const expired = reduce(session, { type: 'EXPIRE', scenario }, T0 + SESSION_DURATION_MS);
-    expect(expired.stage).toBe('RESULT');
-    expect(expired.expiredWithoutMotion).toBe(true);
-    expect(expired.finalMotion?.kind).toBe('original');
-    expect(expired.ballots).toHaveLength(5);
-    const participantBallot = expired.ballots.find((b) => b.memberId === 'PARTICIPANT');
-    expect(participantBallot?.vote).toBe('UNCAST');
-  });
-
-  it('ATTRACT·RESULT 단계에서는 만료를 무시한다', () => {
-    const attract = createInitialSession(T0);
-    const ignored = reduce(attract, { type: 'EXPIRE', scenario }, T0);
-    expect(ignored.stage).toBe('ATTRACT');
-    expect(ignored.finalMotion).toBeNull();
-    expect(ignored.warnings.length).toBeGreaterThan(0);
-  });
-});
-
 describe('이중 확정', () => {
   function sessionAtVote(): Session {
     let session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
@@ -248,14 +201,8 @@ describe('리셋 후 이전 값 없음', () => {
 
   it('리셋은 순수하다: 같은 (session, action, now)를 두 번 reduce하면 같은 결과가 나온다', () => {
     const session = sessionAtReactions();
-    const action = { type: 'IDLE_RESET', nextSessionId: 'reset-same' } as const;
+    const action = { type: 'OPERATOR_RESET', nextSessionId: 'reset-same' } as const;
     expect(reduce(session, action, T0 + 1)).toEqual(reduce(session, action, T0 + 1));
-  });
-
-  it('IDLE_RESET도 동일하게 초기화한다', () => {
-    const reset = reduce(sessionAtReactions(), { type: 'IDLE_RESET', nextSessionId: 'reset-2' }, T0 + 1);
-    expect(reset.stage).toBe('ATTRACT');
-    expect(reset.opinions).toEqual([]);
   });
 });
 

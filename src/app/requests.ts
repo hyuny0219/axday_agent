@@ -1,5 +1,5 @@
 // 비동기 요청(사전 구성 AI 비서실장 등, T12)의 sessionId·requestId 레지스트리.
-// 리셋(IDLE_RESET·OPERATOR_RESET) 시 진행 중인 요청을 모두 abort하고, 이미 폐기된
+// 리셋(OPERATOR_RESET) 시 진행 중인 요청을 모두 abort하고, 이미 폐기된
 // 요청의 늦은 응답은 isCurrent()로 걸러 무시한다. 이 파일 자체는 실제 요청을 만들지
 // 않는다 — AbortSignal을 내주고 취소 여부만 추적한다.
 

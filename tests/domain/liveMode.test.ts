@@ -290,68 +290,10 @@ describe('scripted 모드 결과가 기존과 동일', () => {
   });
 });
 
-describe('모델 응답 도착은 무입력 시계를 연장하지 않는다', () => {
-  it('APPEND_STATEMENTS·RECORD_EXEC_BALLOT·MARK_EXEC_UNAVAILABLE는 lastActivityAt을 바꾸지 않는다', () => {
-    let session = createInitialSession(T0);
-    session = reduce(session, { type: 'SET_MODE', mode: 'live' }, T0);
-    session = reduce(session, { type: 'START' }, T0);
-    session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
-    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // BRIEFING -> OPINIONS
-    const before = session.lastActivityAt;
-
-    const statement: Statement = {
-      id: 'st-late',
-      roleId: 'CEO',
-      stage: 'OPINIONS',
-      text: '늦게 도착한 발언',
-      evidenceIds: [],
-      referencedStatementIds: [],
-      concerns: [],
-      suggestedConditionIds: [],
-      source: 'live',
-      createdAt: T0 + 8_000,
-    };
-    session = reduce(
-      session,
-      {
-        type: 'APPEND_STATEMENTS',
-        stage: 'OPINIONS',
-        statements: [statement],
-        baseRevision: session.transcript.revision,
-      },
-      T0 + 8_000,
-    );
-    expect(session.transcript.statements).toHaveLength(1);
-    expect(session.lastActivityAt).toBe(before);
-
-    const atVote = sessionAtLiveVote(T0);
-    const voteBefore = atVote.lastActivityAt;
-    const ballot: Ballot = {
-      memberId: 'CEO',
-      motionId: atVote.finalMotion!.id,
-      motionHash: atVote.finalMotion!.hash,
-      vote: 'YES',
-      source: 'live',
-      confirmedAt: T0 + 7_000,
-    };
-    const withBallot = reduce(atVote, { type: 'RECORD_EXEC_BALLOT', ballot }, T0 + 7_000);
-    expect(withBallot.ballots).toHaveLength(1);
-    expect(withBallot.lastActivityAt).toBe(voteBefore);
-
-    const unavailable = reduce(
-      withBallot,
-      { type: 'MARK_EXEC_UNAVAILABLE', roleId: 'CAIO', reason: 'timeout' },
-      T0 + 8_000,
-    );
-    expect(unavailable.roleStatus.CAIO).toBe('failed');
-    expect(unavailable.lastActivityAt).toBe(voteBefore);
-  });
-});
-
 describe('끝난 세션에는 발언을 붙이지 않는다', () => {
   it('RESULT 단계에서 온 APPEND_STATEMENTS는 무시하고 경고만 남긴다', () => {
     let session = sessionAtLiveVote(T0);
-    session = reduce(session, { type: 'EXPIRE', scenario }, T0 + 240_000);
+    session = reduce(session, { type: 'FINALIZE_RESULT' }, T0 + 8_000);
     expect(session.stage).toBe('RESULT');
     const revision = session.transcript.revision;
     const late: Statement = {

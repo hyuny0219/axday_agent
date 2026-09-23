@@ -38,6 +38,7 @@
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
 | T44 | 완료 | v1.0 무대 좌우 분할(인물 안 잘림, 접힘 제거, 본문 2열 대응). 1라운드 PASS. E2E 68. 1280×720 반응 화면은 스크롤 허용 |
+| T50 | 완료 | 타이머 제거(240초 만료·75/90초 무입력 복귀, 2026-09-22 사용자 결정). 세션 종료 경로는 결과 화면 "체험 종료"·운영 메뉴 "새 체험"·"scripted로 새 체험"만 남김. 1라운드 PASS |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
@@ -587,3 +588,39 @@
 - 하지 말 것: reducer·조건·표결·타이머 규칙 변경. 서버 변경. testid·문구 삭제(이동은 허용). 56px 클릭 목표 위반(추천 문구 720 예외만). 내부 스크롤 패널을 화면당 2개 이상.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(noscroll 스펙 포함). 두 해상도 스크린샷 각 단계가 한 화면에 전부 보임.
 - 크기: L.
+
+## T50 타이머 제거 — 240초 만료와 75/90초 무입력 복귀
+
+- 목표: 체험에서 시간 제약을 없앤다. 240초 세션 만료(EXPIRE)와 75/90초 무입력 경고·복귀(IDLE_WARN·IDLE_RESET)를 모두 제거하고, 화면의 카운트다운 표시도 뺀다. 세션을 끝내는 경로는 결과 화면의 "체험 종료"와 운영 메뉴의 "새 체험"·"scripted로 새 체험"만 남는다(2026-09-22 사용자 결정).
+- 읽을 것: `src/domain/clock.ts`, `src/domain/session.ts`(EXPIRE·IDLE_RESET 케이스), `src/app/App.tsx`(tick 루프), `src/components/parts/Timer.tsx`, `src/components/parts/StageBand.tsx`(무대 안 시간 표시), `e2e/operations.spec.ts`.
+- 만들 것:
+  1. `domain/clock.ts`에서 `EXPERIENCE_MS`·`WARN_60`·`WARN_30`·`IDLE_WARN_MS`·`IDLE_RESET_MS`·`remaining()`·`idleState()`·`tick()`과 `ClockAction`을 제거한다. 주입형 `Clock`·`systemClock`·`fakeClock`은 **남긴다** — 서버 핸들러와 orchestrator가 지연 측정에 쓴다.
+  2. `domain/session.ts`에서 `EXPIRE`·`IDLE_RESET` 액션과 그 case, `deadline`·무입력 관련 세션 필드, `EXPIRE_REASON`으로 미확정 표를 채우던 `fillMissingBallots` 호출을 제거한다. **UNCAST 자체는 남긴다** — live에서 임원이 응답하지 못한 좌석은 여전히 미표결이다.
+  3. `App.tsx`의 시계 tick 루프와 그로 인한 dispatch를 제거한다. 사용자 활동(touch) 추적도 무입력 판정에만 쓰였으면 함께 제거한다.
+  4. 화면에서 시간 표시를 뺀다: 헤더 `Timer` 컴포넌트와 `StageBand`의 남은 시간 배지. 60초·30초 경고 문구도 제거한다.
+  5. `e2e/operations.spec.ts`에서 240초 만료·75초 안내·90초 복귀 테스트 3건을 제거하고, "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다"는 유지한다. 시계 조작 헬퍼(`advanceClock*`)가 다른 곳에서 안 쓰이면 함께 제거한다.
+  6. 단위 테스트 정리: `tests/domain/clock.test.ts`에서 만료·무입력 케이스를 제거(파일이 비면 삭제), `tests/domain/session.test.ts`·`liveMode.test.ts`·`services/orchestrator.test.ts`의 해당 케이스를 제거한다. 남은 테스트가 UNCAST를 만료 경로로 만들고 있으면 live 응답 실패 경로로 바꾼다.
+  7. 문서 갱신: `docs/FACILITATOR_GUIDE.md`(75/90/240초 안내 문단과 구간표의 시간 배분 → 권장 흐름으로 표기, 세션 종료는 요원이 새 체험으로만 한다는 점 명시), `docs/design/DESIGN_SPEC.md` 4장의 타이머 항목.
+- 허용 경로: `src/domain/`, `src/app/`, `src/components/parts/`, `e2e/`, `tests/`, `docs/FACILITATOR_GUIDE.md`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·조건 집계·프롬프트·서버 핸들러 변경. 부스명 "4분 이사회"와 기획서(`AX_Day_2026_Boardroom_Plan.md`) 수정(기획 문서는 사용자가 따로 정리한다). `Clock` 주입 구조 삭제.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 시계를 앞으로 돌려도 화면이 바뀌지 않음을 e2e 1건으로 단언(`advanceClock` 대체 없이 시간 경과만으로는 ATTRACT 복귀·결과 종료가 일어나지 않는다). 화면 어디에도 카운트다운이 없음.
+- 크기: M.
+
+## T51 화면 맞춤 축소 — 설계 크기보다 작은 뷰포트에서 한 화면 유지
+
+- 목표: 노트북 창 모드처럼 설계 크기(1200×700)보다 조금 작은 뷰포트에서도 조종석 배치를 그대로 유지한다. 지금은 `shell.css`의 `@media (max-height: 699px), (max-width: 1199px)`가 걸려 세로 1열·페이지 스크롤로 내려가고, 그 결과 임원 의견·의견 작성·반응·최종 안건·표결·결과가 모두 화면 밖으로 나간다. 실측(2026-09-22): 맥 `availHeight` 863px → Edge 창 모드 뷰포트 **698px**로 임계값에서 2px 모자람. 전체화면(1512×907)에서는 정상.
+- 읽을 것: `src/styles/screens/shell.css`(무스크롤 잠금·해제 블록, `.app-shell::before` 고정 배경), `docs/design/DESIGN_SPEC.md` v1.0 6절(세로 예산·무스크롤 규칙)·3장(200% 확대 규칙), `e2e/noscroll.spec.ts`, `e2e/a11y.spec.ts`.
+- 만들 것:
+  1. 셸을 감싸는 축소 래퍼를 둔다. 뷰포트가 설계 크기(1200×700)보다 작으면 `scale = min(vw/1200, vh/700)`로 `transform: scale()`(origin 상단 중앙)을 적용하고, 래퍼 자체는 설계 크기를 유지한다. **1을 넘겨 확대하지 않는다** — 1920×1080은 지금 그대로다.
+  2. 축소 하한을 둔다: `scale < 0.85`면 축소를 쓰지 않고 **기존 세로 1열 + 페이지 스크롤 대체 배치를 그대로 쓴다**. 200% 확대(960×540 → 0.8)는 반드시 기존 경로로 가야 한다(`e2e/a11y.spec.ts`가 1열·`overflow:visible`을 단언한다). 56px 클릭 목표가 0.85에서 약 48px로 줄어드는 것이 하한 근거다.
+  3. 고정 배경 레이어를 축소 대상 밖으로 뺀다. `.app-shell::before`는 `position: fixed`인데, 조상에 `transform`이 걸리면 그 요소가 컨테이닝 블록이 되어 배경이 함께 축소·잘린다. 배경은 축소되지 않는 바깥 레이어(body 또는 래퍼 상위)에서 그린다.
+  4. 축소 시 래퍼가 뷰포트보다 작으면 가로 가운데 정렬하고, 남는 영역은 배경색으로 채워 빈 흰 띠가 보이지 않게 한다.
+  5. 뷰포트 변화(리사이즈·전체화면 전환)에 반응해 scale을 다시 계산한다. 계산은 CSS만으로 되지 않으므로 셸에서 `resize` 관찰 후 CSS 변수(`--app-scale`)를 갱신하는 최소 코드만 둔다. 렌더 루프·타이머를 새로 만들지 않는다.
+- 허용 경로: `src/styles/screens/shell.css`, `src/styles/base.css`, `src/app/`(셸 컴포넌트와 scale 계산), `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 조종석 배치·세로 예산·타이포 스케일 변경. 내부 스크롤 패널 추가. 화면별 컴포넌트 수정. 200% 확대 경로(1열 재배치)를 없애기.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공.
+  - 새 e2e 케이스: 1272×698에서 페이지 스크롤 0이고, 각 단계의 주 CTA가 뷰포트 안에 보이며 클릭으로 다음 단계가 진행된다.
+  - 기존 1920×1080·1280×720 스냅샷·noscroll 스펙이 그대로 통과(축소 미적용, scale = 1).
+  - 960×540에서 기존 1열·스크롤 경로 유지(`e2e/a11y.spec.ts`).
+  - 축소 상태에서 운영 메뉴와 AI 비서실장 드로어가 화면 안에 정상 위치한다(드로어는 `position:absolute`라 축소 컨테이닝 블록의 영향을 받는다).
+- 크기: M.

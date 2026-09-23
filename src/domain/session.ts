@@ -1,13 +1,15 @@
-// 세션 상태 전이. CLAUDE_IMPLEMENTATION.md 3장 상태표와 "시간 만료·리셋" 절을 그대로
-// 따르는 순수 reducer. 시계·무입력 판정(언제 EXPIRE/IDLE_RESET을 보낼지)은 이 파일의
-// 책임이 아니다(T07). 이 파일은 주어진 action을 받아 상태를 결정적으로 바꿀 뿐이다.
+// 세션 상태 전이. CLAUDE_IMPLEMENTATION.md 3장 상태표를 따르는 순수 reducer. T50
+// (2026-09-22 사용자 결정)에서 240초 만료(EXPIRE)와 75/90초 무입력 복귀(IDLE_RESET)를
+// 제거했다 — 체험은 더 이상 시간으로 끝나지 않는다. 세션을 끝내는 경로는 결과 화면의
+// "체험 종료"와 운영 메뉴의 "새 체험"·"scripted로 새 체험"(OPERATOR_RESET)뿐이다.
+// 이 파일은 주어진 action을 받아 상태를 결정적으로 바꿀 뿐이다.
 
 import type { ExecMemberId, Scenario } from '../content/types';
 import { findConflicts } from './conditions';
 import type { AssistantActionEvent } from './assistantLog';
 import { encodeAssistantLogEntry } from './assistantLog';
 import { EMPTY_DRAFT_STATE } from './draft';
-import { freezeMotion, freezeOriginal } from './motion';
+import { freezeMotion } from './motion';
 import type {
   Ballot,
   Opinion,
@@ -25,8 +27,6 @@ import {
   fillMissingBallots,
   tally,
 } from './voting';
-
-export const SESSION_DURATION_MS = 240_000;
 
 export type SessionAction =
   | { type: 'START' }
@@ -48,8 +48,6 @@ export type SessionAction =
   | { type: 'FREEZE_MOTION'; scenario: Scenario; confirmedConditionIds: string[] }
   | { type: 'SELECT_VOTE'; vote: PendingVote }
   | { type: 'CONFIRM_VOTE' }
-  | { type: 'EXPIRE'; scenario: Scenario }
-  | { type: 'IDLE_RESET'; nextSessionId: string }
   | { type: 'OPERATOR_RESET'; nextSessionId: string }
   | { type: 'MARK_SUMMARY_SHOWN' }
   | { type: 'RECORD_ASSISTANT_ACTION'; entry: AssistantActionEvent }
@@ -92,16 +90,16 @@ export function newSessionId(): string {
 }
 
 /** 새 세션(참가자 이전 값 없음)을 만든다. ATTRACT에서 시작하고 기본 모드는 scripted다.
- * sessionId를 넘기지 않으면 새로 만든다(앱 초기화용). reducer는 항상 액션에 실린 ID를 넘긴다. */
-export function createInitialSession(now: number, sessionId: string = newSessionId()): Session {
+ * sessionId를 넘기지 않으면 새로 만든다(앱 초기화용). reducer는 항상 액션에 실린 ID를 넘긴다.
+ * `now`는 호출부(App.tsx·reduce·테스트)가 세션 생성 시각을 명시하는 관례를 유지하기 위해
+ * 시그니처에 남겨 두지만, 만료·무입력 필드가 사라진 뒤로는 본문에서 쓰지 않는다. */
+export function createInitialSession(_now: number, sessionId: string = newSessionId()): Session {
   return {
     stage: 'ATTRACT',
     sessionId,
     mode: 'scripted',
     scenarioId: null,
     startedAt: null,
-    deadline: null,
-    lastActivityAt: now,
     draft: EMPTY_DRAFT_STATE,
     opinions: [],
     followUpUsed: false,
@@ -134,7 +132,6 @@ function withConfirmedAtNow(ballots: Ballot[], now: number): Ballot[] {
   return ballots.map((b) => (b.memberId === 'PARTICIPANT' ? { ...b, confirmedAt: now } : b));
 }
 
-const EXPIRE_REASON = '시간 만료로 응답을 받지 못했습니다.';
 const FINALIZE_TIMEOUT_REASON = '응답 시간 안에 표를 받지 못했습니다.';
 
 /**
@@ -147,7 +144,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.stage !== 'ATTRACT') {
         return ignore(session, '체험 시작은 ATTRACT 단계에서만 가능합니다.');
       }
-      return withNoWarnings({ ...session, stage: 'SELECT', lastActivityAt: now });
+      return withNoWarnings({ ...session, stage: 'SELECT' });
     }
 
     case 'SELECT_SCENARIO': {
@@ -159,17 +156,15 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         stage: 'BRIEFING',
         scenarioId: action.scenarioId,
         startedAt: now,
-        deadline: now + SESSION_DURATION_MS,
-        lastActivityAt: now,
       });
     }
 
     case 'NEXT_STAGE': {
       if (session.stage === 'BRIEFING') {
-        return withNoWarnings({ ...session, stage: 'OPINIONS', lastActivityAt: now });
+        return withNoWarnings({ ...session, stage: 'OPINIONS' });
       }
       if (session.stage === 'OPINIONS') {
-        return withNoWarnings({ ...session, stage: 'DISCUSS', lastActivityAt: now });
+        return withNoWarnings({ ...session, stage: 'DISCUSS' });
       }
       return ignore(session, '이 단계에서는 다음 단계로 넘어갈 수 없습니다.');
     }
@@ -190,7 +185,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         stage: 'REACTIONS',
         opinions: [...session.opinions, opinion],
         draft: EMPTY_DRAFT_STATE,
-        lastActivityAt: now,
       });
     }
 
@@ -211,7 +205,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         opinions: [...session.opinions, opinion],
         draft: EMPTY_DRAFT_STATE,
         followUpUsed: true,
-        lastActivityAt: now,
       });
     }
 
@@ -223,7 +216,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ...session,
         stage: 'MOTION',
         followUpUsed: true,
-        lastActivityAt: now,
       });
     }
 
@@ -249,7 +241,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           ballots: [],
           roleStatus: { ...PENDING_ROLE_STATUS },
           execBallotsPending: true,
-          lastActivityAt: now,
         });
       }
       const ballots = decideBoard(action.scenario, finalMotion);
@@ -259,7 +250,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         finalMotion,
         ballots,
         execBallotsPending: false,
-        lastActivityAt: now,
       });
     }
 
@@ -267,7 +257,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.stage !== 'VOTE') {
         return ignore(session, '표 선택은 VOTE 단계에서만 가능합니다.');
       }
-      return withNoWarnings({ ...session, pendingVote: action.vote, lastActivityAt: now });
+      return withNoWarnings({ ...session, pendingVote: action.vote });
     }
 
     case 'CONFIRM_VOTE': {
@@ -289,13 +279,12 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       );
       const execBallotCount = withParticipant.filter((b) => b.memberId !== 'PARTICIPANT').length;
       // live에서는 참가자표만 기록한다. 4표가 모두 이미 있으면 즉시 집계하고, 아니면
-      // VOTE에 머물며 FINALIZE_RESULT(늦어도 8초/deadline 안)를 기다린다.
+      // VOTE에 머물며 FINALIZE_RESULT(늦어도 8초 안)를 기다린다.
       if (execBallotCount < EXEC_MEMBER_ORDER.length) {
         return withNoWarnings({
           ...session,
           ballots: withParticipant,
           pendingVote: null,
-          lastActivityAt: now,
         });
       }
       return withNoWarnings({
@@ -305,50 +294,9 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         outcome: tally(withParticipant).outcome,
         pendingVote: null,
         execBallotsPending: false,
-        lastActivityAt: now,
       });
     }
 
-    case 'EXPIRE': {
-      if (session.stage === 'ATTRACT' || session.stage === 'RESULT') {
-        return ignore(session, '만료는 진행 중인 세션에만 적용됩니다.');
-      }
-      if (session.finalMotion) {
-        const ballots = fillMissingBallots(
-          session.ballots,
-          session.finalMotion,
-          now,
-          EXPIRE_REASON,
-        );
-        return withNoWarnings({
-          ...session,
-          stage: 'RESULT',
-          ballots,
-          outcome: tally(ballots).outcome,
-          pendingVote: null,
-          execBallotsPending: false,
-          lastActivityAt: now,
-        });
-      }
-      const finalMotion = freezeOriginal(action.scenario, now);
-      // scripted는 규칙대로 임원표를 채우고, live는 호출이 없었으므로 그대로
-      // UNCAST로 채운다(실패한 역할을 몰래 scripted 표로 바꾸지 않는다).
-      const boardBallots = session.mode === 'live' ? [] : decideBoard(action.scenario, finalMotion);
-      const ballots = fillMissingBallots(boardBallots, finalMotion, now, EXPIRE_REASON);
-      return withNoWarnings({
-        ...session,
-        stage: 'RESULT',
-        finalMotion,
-        ballots,
-        outcome: tally(ballots).outcome,
-        expiredWithoutMotion: true,
-        pendingVote: null,
-        execBallotsPending: false,
-        lastActivityAt: now,
-      });
-    }
-
-    case 'IDLE_RESET':
     case 'OPERATOR_RESET': {
       // 새 sessionId는 액션에 실려 온다. 같은 (session, action, now)를 두 번 reduce해도 같은
       // 결과가 나오도록 reducer 안에서 난수를 만들지 않는다.
@@ -357,7 +305,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
 
     case 'MARK_SUMMARY_SHOWN': {
       // 지시서 5장: BRIEFING에서 자동 정리 카드가 실제 렌더되면 세션당 한 번 기록한다.
-      // 자동 표시는 참가자 활동이 아니므로 lastActivityAt을 갱신하지 않는다.
       if (session.stage !== 'BRIEFING') {
         return ignore(session, '자료 정리 표시 기록은 BRIEFING 단계에서만 가능합니다.');
       }
@@ -379,7 +326,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       return withNoWarnings({
         ...session,
         assistantActions: [...session.assistantActions, encodeAssistantLogEntry(action.entry, now)],
-        lastActivityAt: now,
       });
     }
 
@@ -389,7 +335,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.stage !== 'ATTRACT' && session.stage !== 'SELECT') {
         return ignore(session, '진행 방식 설정은 ATTRACT·SELECT 단계에서만 가능합니다.');
       }
-      return withNoWarnings({ ...session, mode: action.mode, lastActivityAt: now });
+      return withNoWarnings({ ...session, mode: action.mode });
     }
 
     case 'APPEND_STATEMENTS': {
@@ -408,7 +354,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           revision: session.transcript.revision + 1,
           statements: [...session.transcript.statements, ...action.statements],
         },
-        // 모델 응답 도착은 참가자 활동이 아니므로 lastActivityAt(무입력 시계)을 건드리지 않는다.
       });
     }
 
@@ -443,7 +388,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ballots,
         roleStatus: { ...session.roleStatus, [ballot.memberId as ExecMemberId]: 'answered' },
         execBallotsPending: execBallotCount < EXEC_MEMBER_ORDER.length,
-        // 임원 표 도착은 참가자 활동이 아니므로 lastActivityAt을 갱신하지 않는다.
       });
     }
 
@@ -480,8 +424,8 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     }
 
     case 'FINALIZE_RESULT': {
-      // 참가자 확정과 함께 기다리다 8초 또는 deadline을 넘기면 호출자가 이 액션을
-      // 보낸다. 미도착 임원은 UNCAST+사유로 채우고 그 자리에서 집계를 확정한다.
+      // 참가자 확정과 함께 기다리다 8초를 넘기면 호출자가 이 액션을 보낸다.
+      // 미도착 임원은 UNCAST+사유로 채우고 그 자리에서 집계를 확정한다.
       if (session.stage !== 'VOTE') {
         return ignore(session, '결과 확정은 VOTE 단계에서만 가능합니다.');
       }
@@ -501,7 +445,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         outcome: tally(ballots).outcome,
         pendingVote: null,
         execBallotsPending: false,
-        lastActivityAt: now,
       });
     }
 

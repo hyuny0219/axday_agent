@@ -107,8 +107,6 @@ export interface Session {
   mode: SessionMode;
   scenarioId: string | null;
   startedAt: number | null;
-  deadline: number | null;
-  lastActivityAt: number;
   draft: DraftState;
   opinions: Opinion[];
   followUpUsed: boolean;
