@@ -40,17 +40,12 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // (무대·행동·회의록)이 잘리지 않는다.
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
-  // 근거 카드를 펼쳐도 잘리지 않고, 한 번에 한 장만 펼쳐진다(PR #6 Codex 3차 검토).
-  await page.getByTestId('evidence-card-E1').locator('summary').click();
-  await expect(page.getByTestId('evidence-card-E1')).toHaveAttribute('open', '');
-  await expectNoPageScroll(page, 'BRIEFING(E1 펼침)');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(E1 펼침)');
-  await page.getByTestId('evidence-card-E2').locator('summary').click();
-  await expect(page.getByTestId('evidence-card-E2')).toHaveAttribute('open', '');
-  await expect(page.getByTestId('evidence-card-E1')).not.toHaveAttribute('open', '');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(E2 펼침)');
-  await expect(page.getByTestId('condition-preview')).toBeInViewport();
-  await page.getByTestId('evidence-card-E2').locator('summary').click();
+  // 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보이고 잘리지 않는다(T52).
+  for (const id of ['E1', 'E2', 'E3', 'E4']) {
+    await expect(page.getByTestId(`evidence-card-${id}`)).toBeVisible();
+  }
+  await expectNoPageScroll(page, 'BRIEFING(자료 4장)');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 4장)');
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();

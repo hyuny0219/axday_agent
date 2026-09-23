@@ -1,12 +1,14 @@
-// 브리핑 화면: 안건·의장 브리핑 3문장·자료 4장(해석 한 줄 + 관련 임원)·핵심 쟁점
-// 3개·조건 미리보기 4칩(읽기 전용)을 보여준다(v0.9, REVISION_DECISIONS_v0.9.md 1-1~1-4).
-// 핵심 쟁점 카드는 버튼 조작 없이 상시 표시하고 '체험용 사전 구성'을 함께 보여준다
-// (CLAUDE_IMPLEMENTATION.md 5장 첫 문단). 카드가 화면에 렌더되면 세션당 한 번만
-// MARK_SUMMARY_SHOWN을 기록한다(briefingSummary는 그 기록용으로만 남아 있다).
+// 브리핑 화면: 사건 라벨+결정 질문 → 현재 상황·제안·아직 정하지 않은 것 → 특별
+// 이사님이 할 일+최종 결정 → 판단에 참고할 자료 4장(T52, 2026-09-23 사용자 검토
+// "명패 겹침·자료 카드가 안 보임·오른쪽 열을 읽어도 모르겠다"). 안건 콘텐츠 문구
+// 자체는 그대로 두고 구조만 바꿨다(T53에서 문구 교체). 카드가 화면에 렌더되면
+// 세션당 한 번만 MARK_SUMMARY_SHOWN을 기록한다(briefingSummary는 그 기록용으로만
+// 남아 있다).
 // T45(조종석 배치): 왼쪽 열(app-body__actions)은 "나"의 행동(CTA)만, 오른쪽 열
-// (app-body__content)은 회의 정보(안건·브리핑·근거·쟁점·조건 미리보기)를 담는다
+// (app-body__content)은 회의 정보(안건·브리핑·근거)를 담는다
 // (DESIGN_SPEC.md v1.0 6절 표). 근거 카드는 EvidenceGrid(parts)로 옮겨 DiscussScreen과
-// 공유한다.
+// 공유한다. 자료 카드에는 E1~E4 ID를 쓰지 않는다(T52) — EvidenceGrid variant="expanded"가
+// 클릭 없이 네 장 모두 자료명·해석·원문을 보여준다.
 
 import { useEffect, useRef } from 'react';
 import type { Scenario } from '../../content/types';
@@ -30,10 +32,6 @@ export function BriefingScreen({ scenario, onSummaryShown, onNext }: BriefingScr
     onSummaryShown();
   }, [onSummaryShown]);
 
-  const previewConditions = scenario.previewConditionIds
-    .map((id) => scenario.conditions.find((condition) => condition.id === id))
-    .filter((condition): condition is NonNullable<typeof condition> => condition !== undefined);
-
   return (
     <>
       <div className="app-body__actions screen briefing-screen">
@@ -42,50 +40,38 @@ export function BriefingScreen({ scenario, onSummaryShown, onNext }: BriefingScr
         </button>
       </div>
       <div className="app-body__content screen briefing-screen__info">
-        <p className="briefing-screen__incident" data-testid="briefing-incident">
-          {scenario.incident.caseLabel} · {scenario.incident.headline}
-        </p>
-        <h2 className="briefing-screen__motion">{scenario.originalMotion.text}</h2>
-        <div className="chair-briefing" data-testid="chair-briefing">
-          <p className="chair-briefing__situation">{scenario.chairBriefing.situation}</p>
-          <p className="chair-briefing__question">{scenario.chairBriefing.question}</p>
-          <p className="chair-briefing__role">{scenario.chairBriefing.role}</p>
+        <div className="briefing-screen__block" data-testid="chair-briefing">
+          <p className="briefing-screen__incident" data-testid="briefing-incident">
+            {scenario.incident.caseLabel} · {scenario.incident.headline}
+          </p>
+          <h2 className="briefing-screen__question">{scenario.chairBriefing.question}</h2>
         </div>
-        <div className="briefing-screen__body">
-          <EvidenceGrid evidence={scenario.evidence} />
-          <aside className="briefing-issues" data-testid="briefing-issues">
-            <p className="briefing-issues__badge">체험용 사전 구성</p>
-            <h3 className="briefing-issues__heading">핵심 쟁점</h3>
-            <ul className="briefing-issues__list">
-              {scenario.briefingIssues.map((issue) => (
-                <li key={issue.text} className="briefing-issues__item">
-                  <p className="briefing-issues__text">{issue.text}</p>
-                  <ul className="briefing-issues__evidence-ids">
-                    {issue.evidenceIds.map((id) => (
-                      <li key={id}>{id}</li>
-                    ))}
-                  </ul>
-                </li>
+        <div className="briefing-screen__status" data-testid="briefing-status">
+          <p className="briefing-screen__situation">
+            <span className="briefing-screen__label">현재 상황</span>
+            {scenario.chairBriefing.situation}
+          </p>
+          <p className="briefing-screen__proposal">
+            <span className="briefing-screen__label">제안</span>
+            {scenario.motionBreakdown.proposal}
+          </p>
+          <div className="briefing-screen__undecided">
+            <span className="briefing-screen__label">아직 정하지 않은 것</span>
+            <ul className="briefing-screen__undecided-list">
+              {scenario.motionBreakdown.undecidedItems.map((item) => (
+                <li key={item}>{item}</li>
               ))}
             </ul>
-          </aside>
-        </div>
-        <div className="condition-preview" data-testid="condition-preview">
-          <p className="condition-preview__heading">
-            아래 네 가지를 조건으로 붙이면 임원들의 판단이 달라집니다.
-          </p>
-          <div className="condition-preview__chips">
-            {previewConditions.map((condition) => (
-              <span
-                key={condition.id}
-                className="condition-preview__chip"
-                data-testid={`condition-preview-chip-${condition.id}`}
-                aria-disabled="true"
-              >
-                {condition.label}
-              </span>
-            ))}
           </div>
+        </div>
+        <div className="briefing-screen__role" data-testid="briefing-role">
+          <h3 className="briefing-screen__role-heading">특별 이사님이 할 일</h3>
+          <p className="briefing-screen__role-text">{scenario.chairBriefing.role}</p>
+          <p className="briefing-screen__final-decision">최종 결정: 승인 · 보류 · 부결</p>
+        </div>
+        <div className="briefing-screen__body">
+          <h3 className="briefing-screen__evidence-heading">판단에 참고할 자료</h3>
+          <EvidenceGrid evidence={scenario.evidence} variant="expanded" />
         </div>
       </div>
     </>

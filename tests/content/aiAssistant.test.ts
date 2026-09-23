@@ -44,21 +44,14 @@ describe('aiAssistantScenario', () => {
     }
   });
 
-  it('핵심 쟁점이 3개이고 참조 자료 ID가 모두 존재한다', () => {
-    expect(scenario.briefingIssues).toHaveLength(3);
-    for (const issue of scenario.briefingIssues) {
-      for (const id of issue.evidenceIds) {
-        expect(evidenceIds.has(id)).toBe(true);
-      }
+  // T52: 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 표시용 필드. 새 사실을
+  // 만들지 않고 기존 원안 문장(subtitle)을 그대로 쪼갠 것인지 확인한다.
+  it('motionBreakdown의 제안과 미정 항목이 원안 문장 밖의 새 사실을 만들지 않는다', () => {
+    expect(scenario.motionBreakdown.proposal.length).toBeGreaterThan(0);
+    expect(scenario.motionBreakdown.undecidedItems.length).toBeGreaterThan(0);
+    for (const item of scenario.motionBreakdown.undecidedItems) {
+      expect(scenario.subtitle).toContain(item);
     }
-  });
-
-  it('previewConditionIds는 4개이며 모두 conditions에 존재하고 OPEN_ALL은 포함하지 않는다', () => {
-    expect(scenario.previewConditionIds).toHaveLength(4);
-    for (const id of scenario.previewConditionIds) {
-      expect(conditionIds.has(id)).toBe(true);
-    }
-    expect(scenario.previewConditionIds).not.toContain('OPEN_ALL');
   });
 
   it('initialOpinions가 참조하는 자료 ID가 모두 존재한다', () => {

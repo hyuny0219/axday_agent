@@ -24,7 +24,7 @@ async function enterScenario(page: Page): Promise<void> {
 test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ page }) => {
   await page.goto('/?testClock=1&mode=scripted');
   await enterScenario(page);
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
   // 예전 240초 만료·90초 무입력 복귀 기준을 모두 넉넉히 넘기는 시간을 한 번에
   // 앞당긴다. advanceClock 자체는 orchestrator·서버 지연 측정용 Clock.now()만 옮길
@@ -32,7 +32,7 @@ test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ pag
   // ATTRACT 복귀도 결과 종료도 일어나지 않아야 한다.
   await advanceClock(page, 10 * 60_000);
 
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByRole('button', { name: '체험 시작' })).toHaveCount(0);
   await expect(page.getByTestId('result-conclusion')).toHaveCount(0);
 
@@ -45,7 +45,7 @@ test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ pag
 test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await enterScenario(page);
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-new-session').click();
@@ -56,7 +56,7 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
   // 취소하면 세션이 그대로 유지된다.
   await page.getByTestId('operator-confirm-new-session-cancel').click();
   await expect(confirmDialog).toBeHidden();
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-new-session').click();
@@ -68,12 +68,12 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
 test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await enterScenario(page);
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
+  await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
   await page.reload();
 
   await expect(page.getByRole('button', { name: '체험 시작' })).toBeVisible();
-  await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
+  await expect(page.getByTestId('chair-briefing')).toHaveCount(0);
 });
 
 test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {

@@ -53,10 +53,11 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
 
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
-  // BRIEFING: 의장 브리핑·자료 4장·핵심 쟁점·조건 미리보기 4칩·CTA(v0.9, T39).
+  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·자료 4장·CTA(T52).
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
-  await expect(page.getByTestId('briefing-issues')).toBeVisible();
-  await expect(page.getByTestId('condition-preview')).toBeVisible();
+  await expect(page.getByTestId('briefing-status')).toBeVisible();
+  await expect(page.getByTestId('briefing-role')).toBeVisible();
+  await expect(page.getByTestId('evidence-card-E4')).toBeVisible();
   await capture(page, testInfo.project.name, 'briefing');
 
   await page.getByRole('button', { name: '의견 듣기' }).click();

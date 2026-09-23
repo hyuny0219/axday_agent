@@ -13,7 +13,6 @@
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Ballot, MemberId, Opinion, RoleStatus, SessionMode, SessionStage, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
-import { MEMBER_LABELS } from '../memberLabels';
 import { firstSentenceClipped } from '../stageText';
 import type { ResultStamp } from '../resultStamp';
 import { STAMP_DELAY_SECONDS } from '../resultStamp';
@@ -222,8 +221,11 @@ export function StageBand({
                 </span>
               )}
               <div className="stage-band__seat-foot">
+                {/* 무대 명패는 약칭만 쓴다(T52) — 전체 직함(MEMBER_LABELS)은 좌석 폭(22%)을
+                    넘어 이웃 명패를 덮었다. 전체 직함은 임원 의견 카드 등 본문에서 계속
+                    보여준다. memberId 자체가 이미 약칭(CEO/CFO/CAIO/CISO)이다. */}
                 <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
-                  {MEMBER_LABELS[memberId]}
+                  {memberId}
                 </span>
                 {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
                 <span
@@ -248,7 +250,9 @@ export function StageBand({
             </span>
           )}
           <div className="stage-band__seat-foot">
-            <span className="stage-band__nameplate stage-band__nameplate--participant">나 · 특별 이사</span>
+            {/* 약칭만 쓴다(T52) — 전체 표기 "나 · 특별 이사"는 무대 안 좌상단 pill
+                (Nameplate.tsx)이 화면 전환과 무관하게 항상 보여준다. */}
+            <span className="stage-band__nameplate stage-band__nameplate--participant">나</span>
             {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
             <span
               className={`stage-band__silhouette stage-band__silhouette--participant${
