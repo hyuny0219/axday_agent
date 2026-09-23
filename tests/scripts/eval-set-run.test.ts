@@ -39,6 +39,18 @@ describe('findStyleViolations — 존댓말 종결', () => {
     expect(violations('먼저 정해야죠.')).toEqual([]);
   });
 
+  it('합쇼체 의문형은 통과하고, 반말 연결형 "-니까."는 위반이다(Codex 7차 검토)', () => {
+    expect(violations('그렇습니까? 담당자가 있습니까?')).toEqual([]);
+    expect(violations('추적 권한이 없으니까.')).toEqual(['추적 권한이 없으니까.']);
+    expect(violations('먼저 정하니까.')).toEqual(['먼저 정하니까.']);
+  });
+
+  it('"-인데요/-은데요/-는데요" 같은 완성형 활용도 해요체로 통과한다(Codex 7차 검토)', () => {
+    expect(violations('핵심은 추적 권한인데요.')).toEqual([]);
+    expect(violations('검수 인력이 관건은 아닌데요.')).toEqual([]);
+    expect(violations('지금은 담당자가 없는데요.')).toEqual([]);
+  });
+
   it('반말체·명사형 종결은 위반이다 — "요"로 끝나는 명사도 해요체로 보지 않는다', () => {
     expect(violations('담당자 지정 필요.')).toEqual(['담당자 지정 필요.']);
     expect(violations('권한합의는 아님(E4).')).toEqual(['권한합의는 아님(E4).']);
