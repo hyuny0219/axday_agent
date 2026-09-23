@@ -77,6 +77,18 @@ describe('proposeFromText', () => {
     ).toEqual(['ANON_FULL']);
   });
 
+  // 후속 빠른 답은 선택 즉시 초안(textValue)이 되어 proposeFromText()를 거친다
+  // (ReactionsScreen). 그래서 문구 자체가 키워드에 걸리면 proposeConditionId가 null인
+  // 답에서도 조건이 제안·자동 승인된다 — "신고가 들어온 뒤에 처리해도 충분합니다."가
+  // TRACE 키워드 '신고가 들어온'에 걸려 추적 조건이 몰래 확정됐다(PR #10 Codex 5차 검토 P1).
+  it('후속 빠른 답 문구는 각각 proposeConditionId와 정확히 같은 조건만 제안한다', () => {
+    expect(scenario.followUp.options.length).toBeGreaterThanOrEqual(3);
+    for (const option of scenario.followUp.options) {
+      const expected = option.proposeConditionId ? [option.proposeConditionId] : [];
+      expect(proposeFromText(scenario, option.text), option.text).toEqual(expected);
+    }
+  });
+
   it('"검토 없이 공유"는 REVIEW를 제안하지 않는다', () => {
     expect(proposeFromText(scenario, '검토 없이 공유')).not.toContain('SCREEN');
   });
