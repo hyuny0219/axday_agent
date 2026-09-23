@@ -89,6 +89,42 @@ describe('proposeFromText', () => {
     }
   });
 
+  // 후속 직접 답변 "작성자를 확인하지 않겠습니다."가 TRACE 키워드 '작성자를 확인'에 걸려,
+  // 참가자가 추적을 거부했는데도 ReactionsScreen이 새 제안을 자동 승인해 최종안에 "문제
+  // 발생 시 추적 가능"이 들어가고 표결까지 바뀌었다(PR #10 Codex 12차 검토 P1). 부정
+  // 표지는 없이·생략·말고만이 아니다.
+  it('"-지 않-"·"없-"·"안 -"·"못 하-"·"반대"로 부정한 언급은 제안하지 않는다', () => {
+    const negated = [
+      '작성자를 확인하지 않겠습니다.',
+      '문제가 생겨도 작성자를 확인하지는 않을 것입니다.',
+      '작성자를 확인할 수 있게 하는 것에는 반대합니다.',
+      '추적 가능 조건은 없어야 합니다.',
+      '추적 가능하게 안 하겠습니다.',
+      '작성자를 확인 못 하게 합시다.',
+    ];
+    for (const text of negated) {
+      expect(proposeFromText(scenario, text), text).not.toContain('TRACE');
+    }
+  });
+
+  it('부정 표지는 같은 절 안에서만 본다 — 쉼표·마침표 뒤의 부정어는 앞 언급을 지우지 않는다', () => {
+    expect(
+      proposeFromText(scenario, '작성자를 확인할 수 있게 합시다. 다만 완전 익명은 반대합니다.'),
+    ).toEqual(['TRACE']);
+    expect(
+      proposeFromText(scenario, '한 게시판에서 시범 운영하되, 게시 전 검수는 두지 않겠습니다.'),
+    ).toEqual(['PILOT']);
+  });
+
+  it('부정 표지를 넓혀도 P1~P5 문구와 후속 빠른 답의 제안은 그대로다', () => {
+    expect(proposeFromText(scenario, '작성자를 누구도 확인 못 하게 합시다.')).toEqual([
+      'ANON_FULL',
+    ]);
+    expect(
+      proposeFromText(scenario, '작성자를 누구도 확인할 수 없는 완전 익명으로 합시다.'),
+    ).toEqual(['ANON_FULL']);
+  });
+
   it('"검토 없이 공유"는 REVIEW를 제안하지 않는다', () => {
     expect(proposeFromText(scenario, '검토 없이 공유')).not.toContain('SCREEN');
   });

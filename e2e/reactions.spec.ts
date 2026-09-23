@@ -91,6 +91,37 @@ test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 
   await expect(conditions).toContainText('게시 전 검수');
 });
 
+// 후속 직접 답변 "작성자를 확인하지 않겠습니다."가 TRACE 키워드 '작성자를 확인'에 걸려
+// 새 제안으로 자동 승인되고, 참가자가 추적을 거부했는데도 최종안에 "문제 발생 시 추적
+// 가능"이 들어가 표결까지 바뀌었다(PR #10 Codex 12차 검토 P1).
+test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되지 않고 최종 안건에도 들어가지 않는다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // P1 = PILOT만 확정한 채 첫 의견을 전달한다(TRACE는 아직 없다).
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+
+  await page.getByTestId('followup-open-editor').click();
+  await page.getByTestId('followup-textarea').fill('작성자를 확인하지 않겠습니다.');
+  await expect(page.getByTestId('condition-chip-PILOT')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-TRACE')).toHaveCount(0);
+
+  const submitFollowup = page.getByTestId('submit-followup');
+  await expect(submitFollowup).toBeEnabled();
+  await submitFollowup.click();
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  const conditions = page.getByTestId('motion-conditions');
+  await expect(conditions).toContainText('한 게시판에서 시범');
+  await expect(conditions).not.toContainText('문제 발생 시 추적 가능');
+});
+
 test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 답만으로 MOTION까지 도달한다', async ({
   page,
 }) => {

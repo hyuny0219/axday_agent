@@ -140,7 +140,9 @@ export const anonBoardScenario: Scenario = {
     {
       id: 'ANON_FULL',
       label: '완전 익명 — 추적 불가',
-      keywords: ['완전 익명', '추적할 수 없', '추적 불가', '누구도 확인'],
+      // '누구도 확인'은 늘 "…할 수 없는"이 뒤따라 부정 표지 '없'에 자기 부정되므로
+      // 부정어까지 포함한 형태로 둔다(PR #10 Codex 12차 검토 P1 뒤 부정 표지 확장).
+      keywords: ['완전 익명', '추적할 수 없', '추적 불가', '누구도 확인할 수 없', '누구도 확인 못'],
     },
   ],
   conflicts: [['TRACE', 'ANON_FULL']],
