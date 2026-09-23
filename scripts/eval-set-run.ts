@@ -207,18 +207,37 @@ function hasAnthropicCredential(): boolean {
  * -예요/-죠 등)도 정상 존댓말이므로 인정한다 — 규칙 문구가 "존댓말(-습니다/-합니다 등)"이지
  * 격식체 한정이 아니다(PR #10 Codex 6차 검토 P2: "괜찮아요."·"필요합니까?"를 위반으로 오집계).
  * 다만 맨끝 "요" 하나만 보고 통과시키지는 않는다 — "…지정 필요."의 명사형 종결(위반)이
- * 해요체로 오인된다. 그래서 해요체는 어간 결합 형태를 열거한다.
+ * 해요체로 오인된다. 그래서 해요체는 "-아/-어 + 요"의 음절 구조로 판정한다(아래 isContractedHaeyo).
  */
 // -니까는 통째로 두면 "없으니까."(반말 연결형)까지 통과하므로 합쇼체 의문형(-습니까/-ㅂ니까)만
 // 인정한다. -ㅂ니까는 앞 음절을 열거할 수 없으므로("책임집니까"·"바꿉니까"·"압니까"·"씁니까")
 // 앞 음절의 종성이 ㅂ인지 유니코드로 판정한다(isFormalQuestion, PR #10 Codex 7·8차 검토 P2).
 // -ㄴ데요는 자모 'ㄴ'으로 쓰면 완성형 음절("인데요")과 맞지 않으므로 "데요"로 본다.
-const HONORIFIC_ENDING =
-  /(니다|십시오|세요|까요|[아어여해와워봐줘돼내래게네]요|이에요|예요|에요|죠|지요|군요|나요|가요|거든요|데요)$/;
+// 해요체 축약 활용("맡겨요"·"알려요"·"둬요"·"써요")도 앞 음절을 열거할 수 없다(PR #10 Codex 13차
+// 검토 P2). -아/-어가 어간과 융합된 음절은 중성이 ㅏ·ㅐ·ㅓ·ㅔ·ㅕ·ㅖ·ㅘ·ㅙ·ㅝ·ㅞ이고 종성이 없으므로
+// 유니코드로 판정한다(isContractedHaeyo). "필요"·"중요"·"수요" 같은 명사는 중성이 ㅣ·ㅜ거나 종성이
+// 있어 여전히 위반이다. "개요."처럼 중성이 맞는 명사는 통과하지만 임원 발언에서 문장을 그 명사로
+// 끝내는 경우는 없었다(기존 기록 재집계 187/1/0 동일).
+const HONORIFIC_ENDING = /(니다|십시오|이에요|죠|지요|군요|거든요|데요)$/;
 
 const HANGUL_BASE = 0xac00;
 const HANGUL_LAST = 0xd7a3;
 const JONG_BIEUP = 17; // 종성 ㅂ의 인덱스(28진)
+// 중성 인덱스(21진): ㅏ0 ㅐ1 ㅓ4 ㅔ5 ㅕ6 ㅖ7 ㅘ9 ㅙ10 ㅝ14 ㅞ15
+const JUNG_HAEYO = new Set([0, 1, 4, 5, 6, 7, 9, 10, 14, 15]);
+
+/** 해요체 "-아요/-어요"(축약 포함): 끝이 "요"이고 바로 앞 음절이 종성 없이 위 중성으로 끝나야 한다. */
+function isContractedHaeyo(ending: string): boolean {
+  if (!ending.endsWith('요') || ending.length < 2) {
+    return false;
+  }
+  const code = ending.codePointAt(ending.length - 2) ?? 0;
+  if (code < HANGUL_BASE || code > HANGUL_LAST) {
+    return false;
+  }
+  const offset = code - HANGUL_BASE;
+  return offset % 28 === 0 && JUNG_HAEYO.has(Math.floor(offset / 28) % 21);
+}
 
 /** 합쇼체 의문형 "-ㅂ니까/-습니까": 끝이 "니까"이고 바로 앞 음절의 종성이 ㅂ이어야 한다. */
 function isFormalQuestion(ending: string): boolean {
@@ -233,7 +252,7 @@ function isFormalQuestion(ending: string): boolean {
 }
 
 function isHonorificEnding(ending: string): boolean {
-  return HONORIFIC_ENDING.test(ending) || isFormalQuestion(ending);
+  return HONORIFIC_ENDING.test(ending) || isFormalQuestion(ending) || isContractedHaeyo(ending);
 }
 
 /**

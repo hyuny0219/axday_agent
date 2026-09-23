@@ -54,10 +54,21 @@ describe('findStyleViolations — 존댓말 종결', () => {
     expect(violations('지금은 담당자가 없는데요.')).toEqual([]);
   });
 
+  it('축약 해요체 활용("맡겨요"·"알려요"·"둬요")도 통과한다(Codex 13차 검토)', () => {
+    expect(violations('담당자에게 맡겨요.')).toEqual([]);
+    expect(violations('결과를 알려요.')).toEqual([]);
+    expect(violations('권한을 열어 둬요.')).toEqual([]);
+    expect(violations('먼저 써요. 나중에 봐요. 그래도 돼요.')).toEqual([]);
+    expect(violations('기간을 정해요. 검수는 담당자가 해요.')).toEqual([]);
+  });
+
   it('반말체·명사형 종결은 위반이다 — "요"로 끝나는 명사도 해요체로 보지 않는다', () => {
     expect(violations('담당자 지정 필요.')).toEqual(['담당자 지정 필요.']);
     expect(violations('권한합의는 아님(E4).')).toEqual(['권한합의는 아님(E4).']);
     expect(violations('먼저 시작하자.')).toEqual(['먼저 시작하자.']);
+    // 중성이 ㅣ·ㅜ거나 종성이 있는 "-요" 명사는 축약 해요체 판정에도 걸리지 않는다
+    expect(violations('검수 인력 중요.')).toEqual(['검수 인력 중요.']);
+    expect(violations('로그 보관 수요.')).toEqual(['로그 보관 수요.']);
   });
 
   it('말미 인용 괄호만 제거하고 설명성 괄호는 남긴다(Codex 2차 검토)', () => {
