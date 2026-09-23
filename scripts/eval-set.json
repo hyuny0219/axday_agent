@@ -88,7 +88,7 @@
       "pathLabel": "조건 보완",
       "variant": "반론형",
       "effectiveConditionIds": ["PILOT", "SCREEN", "TRACE", "MEASURE"],
-      "participantOpinion": "조건이 네 개나 되면 오히려 진행이 늦어지지 않을까요? 시범 운영과 효과 측정만 넣고 검수·추적은 빼면 어떨까요?"
+      "participantOpinion": "조건이 네 개나 되면 진행이 늦어지지 않을까요? 그래도 시범 운영, 게시 전 검수, 문제 발생 시 작성자 확인, 효과 측정까지 다 넣고 가되, 시범 기간은 짧게 잡으면 어떨까요?"
     },
     {
       "id": "condition_supplement-3",
