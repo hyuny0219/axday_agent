@@ -7,8 +7,8 @@ import { fetchHealth, probeModel, type HealthInfo, type ProbeResult } from '../.
 
 export interface OperatorMenuProps {
   onNewSession: () => void;
-  /** scripted로 새 체험 확인 뒤 실행할 이동 함수. 기본값은 location.assign('/?mode=scripted')이며,
-   * 테스트에서 가로채려면 이 prop을 주입한다. */
+  /** scripted로 새 체험 확인 뒤 실행할 이동 함수. 기본값은 현재 경로(배포 base 유지)에
+   * `?mode=scripted`를 붙여 location.assign하며, 테스트에서 가로채려면 이 prop을 주입한다. */
   onRestartScripted?: () => void;
 }
 
@@ -26,9 +26,19 @@ function isFullscreenSupported(): boolean {
   return typeof document !== 'undefined' && document.fullscreenEnabled === true;
 }
 
+/**
+ * scripted 재시작 URL. 루트 절대 경로('/?mode=scripted')를 쓰면 GitHub Pages처럼 `/<repo>/`
+ * 아래에 배포된 경우 앱을 벗어나 도메인 루트(404)로 가므로, 현재 pathname을 그대로 두고
+ * 쿼리만 바꾼다(PR #10 Codex 9차 검토 P2). 기존 쿼리(`?key=` 등)는 버린다 — 접근 토큰은
+ * sessionStorage에 이미 저장돼 있다(accessToken.ts).
+ */
+export function scriptedRestartUrl(pathname: string): string {
+  return `${pathname || '/'}?mode=scripted`;
+}
+
 function defaultRestartScripted(): void {
   if (typeof window !== 'undefined') {
-    window.location.assign('/?mode=scripted');
+    window.location.assign(scriptedRestartUrl(window.location.pathname));
   }
 }
 

@@ -5,7 +5,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OperatorMenu } from '../../src/components/parts/OperatorMenu';
+import { OperatorMenu, scriptedRestartUrl } from '../../src/components/parts/OperatorMenu';
 
 afterEach(() => {
   cleanup();
@@ -94,5 +94,17 @@ describe('OperatorMenu scripted로 새 체험', () => {
     await userEvent.click(screen.getByTestId('operator-confirm-restart-scripted-cancel'));
 
     expect(onRestartScripted).not.toHaveBeenCalled();
+  });
+});
+
+
+// GitHub Pages는 `/<repo>/` 아래에 배포된다. 루트 절대 경로로 이동하면 앱을 벗어나 404가
+// 된다(PR #10 Codex 9차 검토 P2). 현재 pathname을 유지하고 쿼리만 바꾼다.
+describe('scriptedRestartUrl', () => {
+  it('배포 base를 유지한 채 mode=scripted 쿼리만 붙인다', () => {
+    expect(scriptedRestartUrl('/')).toBe('/?mode=scripted');
+    expect(scriptedRestartUrl('/axday_agent/')).toBe('/axday_agent/?mode=scripted');
+    expect(scriptedRestartUrl('/axday_agent/index.html')).toBe('/axday_agent/index.html?mode=scripted');
+    expect(scriptedRestartUrl('')).toBe('/?mode=scripted');
   });
 });
