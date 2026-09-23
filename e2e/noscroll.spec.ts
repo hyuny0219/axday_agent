@@ -8,6 +8,28 @@
 
 import { test, expect, type Page, type Route } from './fixtures';
 
+/**
+ * 문서 스크롤이 없어도 패널 안에서 내용이 잘릴 수 있다(T56: 회의록 최신 항목이 아래로
+ * 넘쳐 잘리고, 오른쪽 열 제목이 flex-shrink로 줄어 글자가 잘렸다). 그래서 스크롤
+ * 여부와 별개로 "이 요소가 잘리지 않고 다 보이는가"를 함께 단언한다.
+ */
+async function expectFullyVisible(page: Page, testId: string, label: string) {
+  const box = await page.getByTestId(testId).boundingBox();
+  expect(box, `${label}: ${testId} 요소를 찾지 못했다`).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport, `${label}: viewport 크기를 알 수 없다`).not.toBeNull();
+  if (!box || !viewport) {
+    return;
+  }
+  expect(
+    box.y >= -1 && box.y + box.height <= viewport.height + 1,
+    `${label}: ${testId}가 뷰포트를 벗어났다(top=${box.y}, bottom=${box.y + box.height}, viewport=${viewport.height})`,
+  ).toBe(true);
+  // 패널 자체가 안에서 잘리는 경우(자식이 넘침)도 잡는다.
+  const clipped = await page.getByTestId(testId).evaluate((el) => el.scrollHeight - el.clientHeight);
+  expect(clipped <= 1, `${label}: ${testId} 내부 내용이 ${clipped}px 넘쳐 잘린다`).toBe(true);
+}
+
 async function expectNoPageScroll(page: Page, label: string) {
   const overflow = await page.evaluate(() => {
     const el = document.scrollingElement ?? document.documentElement;
@@ -34,6 +56,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
+  await expectFullyVisible(page, 'minutes-panel', 'BRIEFING');
   // 사건 표기 eyebrow(T47): 안건 제목 위 한 줄이 잘리지 않고 보인다.
   await expect(page.getByTestId('briefing-incident')).toBeInViewport();
   // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
@@ -50,6 +73,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
+  await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
 
@@ -95,12 +119,14 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'MOTION');
+  await expectFullyVisible(page, 'minutes-panel', 'MOTION');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'MOTION');
 
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE');
+  await expectFullyVisible(page, 'minutes-panel', 'VOTE');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
 

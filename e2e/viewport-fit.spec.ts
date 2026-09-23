@@ -130,3 +130,61 @@ test('1920×1080·1280×720에서는 축소가 걸리지 않는다(natural, scal
     expect(fitMode, `${size.width}×${size.height}`).toBe('natural');
   }
 });
+
+// T56: 문서 스크롤이 없어도 패널 안에서 내용이 잘릴 수 있다. 회의록은 폭만 보고 고정
+// 건수(6/4/3)를 쓰던 탓에 세로가 빠듯한 창에서 **가장 최근 항목**이 잘렸다. 항목이 가장
+// 많이 쌓이는 MOTION·VOTE에서 확인한다. 1568×777은 축소(data-fit=scale)가 걸리지 않아
+// 세로 예산이 그대로 빠듯한 크기이며, 실측으로 잘림이 나던 창이다(2026-09-23).
+test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리지 않는다', async ({ page }) => {
+  await page.setViewportSize({ width: 1568, height: 777 });
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
+
+  async function expectMinutesNotClipped(label: string) {
+    const panel = page.getByTestId('minutes-panel');
+    // 세로가 한 건도 못 담을 만큼 빠듯하면 패널을 통째로 감춘다(sr-only). 그때는
+    // 잘릴 글자가 없으므로 검사 대상이 아니다(T56).
+    const collapsed = await panel.evaluate((el) => el.classList.contains('minutes--collapsed'));
+    if (collapsed) {
+      return;
+    }
+    await expect(panel).toBeVisible();
+    // 창 고정 패널이라 오래된 항목은 잘려도 된다. 지켜야 할 것은 **가장 최근 항목이
+    // 온전히 보이는가**다 — 참가자가 방금 한 말이 반쯤 잘리면 안 된다(T56).
+    const lastEntryClipped = await panel.evaluate((el) => {
+      const entries = el.querySelectorAll('.minutes__entry:not(.minutes__entry--hidden)');
+      const last = entries[entries.length - 1];
+      if (!last) {
+        return 0;
+      }
+      return Math.round(last.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom);
+    });
+    expect(
+      lastEntryClipped <= 1,
+      `${label}: 회의록 최신 항목이 패널 밖으로 ${lastEntryClipped}px 밀렸다`,
+    ).toBe(true);
+    const box = await panel.boundingBox();
+    expect(box, `${label}: 회의록 패널이 없다`).not.toBeNull();
+    if (box) {
+      expect(
+        box.y + box.height <= 777 + 1,
+        `${label}: 회의록 하단이 뷰포트를 벗어났다(${box.y + box.height})`,
+      ).toBe(true);
+    }
+  }
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await expectMinutesNotClipped('MOTION');
+
+  await page.getByTestId('freeze-motion').click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await expectMinutesNotClipped('VOTE');
+});

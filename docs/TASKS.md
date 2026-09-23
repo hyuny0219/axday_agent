@@ -42,6 +42,7 @@
 | T51 | 완료 | 화면 맞춤 축소(설계 크기 1200×700보다 작은 뷰포트에서 조종석 배치 유지, 노트북 창 모드 대응). 1라운드 PASS. `.app-scale-outer`/`.app-scale-wrapper`가 리사이즈마다 `viewportFit.ts`로 scale을 계산해 `--app-scale` CSS 변수로 반영(0.85 미만은 기존 1열 재배치로 폴백). 고정 배경은 축소 wrapper 밖(app-scale-outer)에서 그림. 구현 중 발견: transform은 시각 크기만 줄이고 레이아웃 크기는 그대로라 outer에 `overflow:hidden`을 추가로 둬야 문서 스크롤이 생기지 않음(실측 1272×698: scrollHeight 700 vs clientHeight 698). 단위 296·E2E 82(타이머 e2e 3건이 T50에서 빠지고 뷰포트 e2e 3건이 들어와 총계 유지). 로컬 검증은 이 환경의 Chromium 바이너리 다운로드가 걸려 있어 `playwright.config.ts`를 로컬에서만 `channel:'chrome'`로 임시 전환해 통과 확인 후 원복(커밋에는 미포함) |
 | T52 | 완료 | 브리핑 화면 정리 — 무대 명패 약칭(`CEO`·`CFO`·`CAIO`·`CISO`·`나`)으로 겹침 해소, 자료 카드에서 `E1~E4` 표기 제거하고 자료명·해석·원문을 클릭 없이 상시 표시(아코디언 제거), "이 자료가 말하는 것" 라벨·"체험용 사전 구성" 배지·핵심 쟁점 목록·조건 미리보기 제거, 오른쪽 열을 결정 질문(최대) → 현재 상황·제안·미정 → 특별 이사님이 할 일 + `최종 결정: 승인·보류·부결` → 자료 4장 순으로 재구성. **reviewer 미실행** — builder가 API 네트워크 오류로 중단돼 오케스트레이터가 남은 작업(라벨 제거·죽은 CSS 정리·낡은 testid 교체)을 마치고 검증·커밋함. 단위 295·E2E 84 |
 | T53 | 완료 | 안건 ② 교체 — 사내 게시판 익명제(`anon-board`). 시나리오 문서 `docs/SCENARIO_ANON_BOARD.md`, 콘텐츠 `src/content/scenarios/anonBoard.ts`, 서버 사본·검증 조건 ID(`PILOT·SCREEN·TRACE·MEASURE·ANON_FULL`), 상충쌍 `TRACE↔ANON_FULL`. 이전 안건(aiAssistant.ts)은 파일로 남기고 레지스트리에서만 제외. **reviewer 미실행** — builder가 API 네트워크 오류로 중단돼 오케스트레이터가 전부 작성·검증·커밋함. 구현 중 발견 2건: (1) `TRACE` 키워드 `추적`이 "추적할 수 없는 완전 익명" 문장에도 걸려 상충 조건이 동시에 제안되던 것을 긍정형 표현으로 좁힘, (2) 후속 질문이 앞 단계에서 이미 확정한 조건을 다시 제안해 새 조건을 끌어내지 못하던 것을 E3(신고 처리 담당자 부재) 쟁점으로 재설계. 단위 295·E2E 84 |
+| T56 | 완료 | 세로 예산 재점검 — 회의록·오른쪽 열 잘림. 원인 셋: (1) 회의록이 폭만 보고 고정 건수(6/4/3)를 써 남은 높이를 몰랐고, (2) 래퍼 `align-self: start` 때문에 행이 줄어도 패널이 원래 높이를 유지해 화면 밖(VOTE에서 하단 890px)으로 밀렸으며, (3) 오른쪽 열 제목이 flex-shrink로 함께 줄어 글자가 잘렸다. 남은 높이로 건수를 계산하고(ResizeObserver), 래퍼를 stretch로, 제목은 flex-shrink 0으로 바꿈. 한 건도 못 들어가면 패널을 시각적으로 접고 스크린리더에는 남긴다. **reviewer 미실행** — 오케스트레이터가 직접 작성·검증·커밋. 단위 295·E2E 86 |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
@@ -687,3 +688,55 @@
 - 하지 말 것: 검증 스키마에서 `evidenceIds` 제거. 화면·시나리오 데이터 변경. 시나리오 규칙표를 프롬프트에 넣기.
 - 완료 확인: `npm run check` 성공. 전후 비교표에서 위 네 항목 충족. T52 완료 후에 진행한다(화면이 먼저 바뀌어야 비교가 의미 있다).
 - 크기: S.
+
+## T55 의견 작성·반응 화면 재설계 — 비서실장 정리를 거쳐야 전달
+
+- 목표: 참가자 입력 단계(DISCUSS·REACTIONS)를 "추천 문구 선택 → AI 비서실장 발언 정리 → 의견 전달" 흐름으로 바꾼다(2026-09-23 사용자). 지금은 직접 타이핑이 주 경로이고 비서실장은 선택 사항이라, 입력창이 무대 이미지와 겹치고 버튼이 아래로 밀린다. 오른쪽 열도 추천 문구·자료·임원 의견이 구분 없이 이어져 읽기 어렵다.
+- 읽을 것: `src/components/screens/DiscussScreen.tsx`·`ReactionsScreen.tsx`, `src/components/parts/AssistantPanel*`, `src/services/assistant/`, `src/styles/screens/discuss.css`·`reactions.css`, `docs/design/DESIGN_SPEC.md` v1.0 6절, `docs/AGENT_BOARDROOM_SPEC.md` 4장(비서실장 호출 상한).
+- 만들 것:
+  1. **흐름 변경**: 추천 문구를 하나 이상 고르면 `AI 비서실장 정리` 버튼이 활성화되고, 정리 결과를 확인·적용해야 `의견 전달`이 활성화된다. 직접 타이핑은 "직접 고쳐 쓰기"로 남기되 기본 경로에서 접어 둔다(키보드 없이 완주 가능 원칙 유지).
+  2. **입력 영역과 무대 분리**: textarea·버튼이 무대 프레임과 겹치지 않게 왼쪽 열 세로 배치를 다시 잡는다. `AI 비서실장 정리`·`의견 전달` 버튼은 항상 화면 안에 보여야 한다.
+  3. **오른쪽 열 구획화**: 추천 문구 / 판단에 참고할 자료 / 임원 의견을 각각 제목과 경계가 있는 블록으로 나눈다. 지금처럼 이어 붙이지 않는다.
+  4. REACTIONS도 같은 규칙을 적용한다(빠른 답 선택 → 비서실장 정리 → 답변 전달). 오른쪽 열 제목이 상단에서 잘리지 않게 한다.
+  5. scripted 모드는 기존 규칙 기반 정리를 쓰고, live 모드는 `/api/assistant/refine`을 쓴다. 비서실장 호출 상한(세션당 2회)을 이 흐름에 맞게 다시 정하고 문서에 남긴다.
+- 허용 경로: `src/components/`, `src/styles/screens/`, `src/services/assistant/`, `docs/design/DESIGN_SPEC.md`, `docs/AGENT_BOARDROOM_SPEC.md`, `e2e/`, `tests/`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·조건 집계 변경. 조건이 최종안에 실리는 경로를 끊기. 서버 스키마 변경(호출 상한 값 조정은 허용).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도와 1272×698에서 입력 영역·버튼이 무대와 겹치지 않고 스크롤 없이 보임을 e2e로 단언. 추천 문구를 고르지 않으면 정리·전달이 모두 비활성인 것을 단언.
+- 크기: L.
+
+## T56 세로 예산 재점검 — 회의록·오른쪽 열 잘림
+
+- 목표: 여러 화면에서 아래가 잘리는 문제를 없앤다(2026-09-23 사용자). 확인된 곳: 상황 파악·최종 안건·최종 투표의 회의록 패널이 아래에서 잘리고, 임원 의견·반응 화면은 오른쪽 열 제목이 잘린다. 무스크롤 원칙(v1.0 6절)은 유지한다.
+- 읽을 것: `src/styles/screens/shell.css`(grid·세로 예산), `minutes.css`, `opinions.css`, `reactions.css`, `src/app/viewportFit.ts`, `e2e/noscroll.spec.ts`.
+- 만들 것:
+  1. 회의록 패널이 남은 공간에 맞춰 표시 건수를 줄이도록 고친다(지금은 고정 건수라 넘친다). 잘린 항목은 스크린리더에 남긴다(기존 sr-only 규칙 유지).
+  2. 임원 의견·반응 화면 오른쪽 열의 제목이 상단에서 잘리지 않게 한다.
+  3. `e2e/noscroll.spec.ts`에 **각 단계의 마지막 요소가 뷰포트 안에 있는지**를 단언하는 케이스를 더한다(지금은 문서 스크롤 없음만 본다 — 잘림은 잡지 못한다).
+- 허용 경로: `src/styles/screens/`, `src/components/parts/MinutesPanel*`, `src/app/`, `e2e/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 페이지 스크롤 허용. 타이포 스케일 축소로 때우기(먼저 표시 건수·여백을 조정한다).
+- 완료 확인: 1920×1080·1280×720·1272×698에서 모든 단계의 마지막 요소가 뷰포트 안. e2e 단언 추가.
+- 크기: M.
+
+## T57 최종 안건·표결 화면에 AI 요약 먼저
+
+- 목표: 최종 안건(MOTION)과 최종 투표(VOTE) 오른쪽 열에 **무엇으로 정리됐는지**를 먼저 보여준다(2026-09-23 사용자). 지금은 안건 원문·조건 칩·남은 과제만 있어 "내 의견이 어떻게 반영됐는지"가 안 보인다.
+- 만들 것:
+  1. 오른쪽 열 맨 위에 **한 문단 요약**(AI 비서실장 정리)을 둔다. 그 아래에 의견 주요 내용을 나열한다: 내가 낸 의견 → 확정 조건 → 임원들이 짚은 쟁점 → 남은 확인 사항.
+  2. VOTE 화면도 같은 요약을 보여준다(표결 직전에 무엇에 투표하는지 확인).
+  3. scripted는 규칙 기반 요약, live는 비서실장 요약 API를 쓴다. 새 사실·수치를 만들지 않는다.
+- 허용 경로: `src/components/screens/MotionScreen.tsx`·`VoteScreen.tsx`, `src/components/`, `src/services/assistant/`, `src/styles/screens/`, `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·집계 변경. 요약이 조건을 새로 추가하거나 빼기.
+- 완료 확인: `npm run check && npx playwright test` 성공. 두 해상도 무스크롤 유지. 요약이 확정 조건과 어긋나지 않는지 테스트.
+- 크기: M.
+
+## T58 결과 보고서 화면 신설
+
+- 목표: 표결 결과 뒤에 **결과 보고서 한 페이지**를 추가한다(2026-09-23 사용자). 지금은 결과 화면 하나에 게이지·5석·요약·에필로그가 모두 들어가 밀도가 높다. 보고서 화면은 이사회가 끝난 뒤 받아 보는 문서처럼 정리한다.
+- 만들 것:
+  1. RESULT 다음 단계로 `REPORT` 화면을 더한다. 결과 화면의 "체험 종료" 자리에 "결과 보고서 보기"를 두고, 보고서 화면에서 "체험 종료"로 끝낸다.
+  2. 보고서 구성: 안건과 결론 → 집계(찬성·보류·반대·미표결) → 내가 낸 의견과 확정 조건 → 임원별 판단 이유 → 남은 과제 → **6개월 뒤 예측**(기존 `resultCopy.sixMonthsLater`, "체험용 가상 전망" 배지 유지).
+  3. 스크롤 규칙: 보고서는 예외적으로 세로 스크롤을 허용할지, 한 화면에 맞출지 명세에 정한다(권장: 한 화면, 넘치면 보고서 패널 하나만 내부 스크롤).
+- 허용 경로: `src/components/screens/`, `src/domain/`(단계 추가), `src/styles/screens/`, `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 집계·결론 계산 변경. 새 수치·예측 창작(에필로그 문구는 시나리오 데이터에서 읽는다).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. RESULT → REPORT → 종료 경로 e2e 추가. 두 해상도에서 보고서가 규칙대로 보임.
+- 크기: M.
