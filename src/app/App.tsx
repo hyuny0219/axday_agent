@@ -22,7 +22,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
 import type { Session } from '../domain/types';
@@ -32,6 +32,7 @@ import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
+import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
   createOrchestrator,
   type Orchestrator,
@@ -284,6 +285,25 @@ function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
+/** 화면 맞춤 축소(T51, src/app/viewportFit.ts): 뷰포트 리사이즈·전체화면 전환에 반응해
+ * scale을 다시 계산한다. 렌더 루프·타이머는 두지 않고 resize 이벤트에만 반응한다. 초기값도
+ * 첫 렌더에서 바로 실제 창 크기로 계산해(useState lazy init) 뒤늦게 튀는 현상을 없앤다. */
+function useViewportFit(): ViewportFit {
+  const [fit, setFit] = useState<ViewportFit>(() =>
+    computeViewportFit(window.innerWidth, window.innerHeight),
+  );
+
+  useEffect(() => {
+    function handleResize() {
+      setFit(computeViewportFit(window.innerWidth, window.innerHeight));
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return fit;
+}
+
 /** stage별 화면 라우팅. */
 function StageRouter() {
   const { session, dispatch, followUpPending } = useSession();
@@ -463,53 +483,61 @@ function AppShell() {
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
   const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
+  const fit = useViewportFit();
+  const wrapperStyle: CSSProperties | undefined =
+    fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;
 
   const content = <StageRouter />;
 
   return (
-    <div className="app-shell">
-      <Header
-        session={session}
-        onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
-      />
-      {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
-        <ProgressStrip stage={session.stage} />
-      )}
-      {hasStageBand && scenario ? (
-        // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
-        // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
-        // 컴포넌트는 각각 .app-body__actions·.app-body__content 두 wrapper div를
-        // Fragment로 돌려주고(renderSplit 규칙), React Fragment는 DOM에 별도
-        // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
-        // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
-        <main className="app-main app-main--stage">
-          <div className="app-body">
-            <div className="app-body__stage">
-              <StageBand
-                stage={session.stage}
-                mode={session.mode}
-                roleStatus={session.roleStatus}
-                statements={session.transcript.statements}
-                opinions={session.opinions}
-                scenario={scenario}
-                ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-                chairLine={chairLineFor(session.stage, scenario)}
-                resultStamp={resultStamp}
-              />
-            </div>
-            {content}
-            {showMinutes && scenario && (
-              <div className="app-body__minutes">
-                <MinutesPanel entries={buildMinutes(session, scenario, roundLog)} stage={session.stage} />
+    <div className="app-scale-outer" data-fit={fit.mode}>
+      <div className="app-scale-wrapper" data-fit={fit.mode} style={wrapperStyle}>
+        <div className="app-shell">
+          <Header
+            session={session}
+            onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
+          />
+          {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
+            <ProgressStrip stage={session.stage} />
+          )}
+          {hasStageBand && scenario ? (
+            // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
+            // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
+            // 컴포넌트는 각각 .app-body__actions·.app-body__content 두 wrapper div를
+            // Fragment로 돌려주고(renderSplit 규칙), React Fragment는 DOM에 별도
+            // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
+            // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
+            <main className="app-main app-main--stage">
+              <div className="app-body">
+                <div className="app-body__stage">
+                  <StageBand
+                    stage={session.stage}
+                    mode={session.mode}
+                    roleStatus={session.roleStatus}
+                    statements={session.transcript.statements}
+                    opinions={session.opinions}
+                    scenario={scenario}
+                    ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+                    chairLine={chairLineFor(session.stage, scenario)}
+                    resultStamp={resultStamp}
+                  />
+                </div>
+                {content}
+                {showMinutes && scenario && (
+                  <div className="app-body__minutes">
+                    <MinutesPanel
+                      entries={buildMinutes(session, scenario, roundLog)}
+                      stage={session.stage}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </main>
-      ) : (
-        <>
-          <main className="app-main">{content}</main>
-        </>
-      )}
+            </main>
+          ) : (
+            <main className="app-main">{content}</main>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
