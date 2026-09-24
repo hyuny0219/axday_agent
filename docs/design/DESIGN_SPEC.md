@@ -201,7 +201,7 @@ BRIEFING~REACTIONS를 한 개의 스크롤 타임라인으로 그린다. 상단 
 | 브리핑 | 무대(명패 약칭 CEO·CFO·CAIO·CISO·나) + "의견 듣기" + 회의록 패널(7절) | 결정 질문(최대) · 현재 상황·제안·아직 정하지 않은 것 · 특별 이사님이 할 일 + "최종 결정: 승인·보류·부결" · 자료 4장(자료명·해석 한 줄·원문 상시 노출, 자료 ID 미표기). 쟁점 3칩·조건 미리보기 4칩·"체험용 사전 구성" 배지는 T52(2026-09-23)에서 제거 | 없음 |
 | 임원 의견 | 무대(말풍선) + "내 의견 말하기" + 회의록 패널 | 임원 4장 2×2(발언 + 근거 보기 토글) | 없음 |
 | 의견 작성 | 무대 + 입력창 3줄 + 조건 칩(한 줄) + [비서실장][의견 전달] | **비서실장 추천 문구 2×3**(클릭 시 입력창에 반영, 기존 testid 유지) + 근거 2×2 압축 + 임원 첫 의견 4줄 | 없음(비서실장 패널은 오른쪽 열 위에 겹치는 드로어) |
-| 반응 | 무대 + 내 발언 인용(2줄 클램프) + 빠른 답 3 ↔ 직접 답하기(**같은 자리 전환**: 열면 빠른 답 3개가 입력창·조건 칩으로 바뀌고, 닫으면 복귀) | CAIO 질문 + 임원 반응 2×2 답글 | 없음 |
+| 반응 | 무대 + 내 발언 인용(2줄 클램프) + 빠른 답 3 ↔ 직접 답하기(**같은 자리 전환**: 열면 빠른 답 3개가 입력창·조건 칩으로 바뀌고, 닫으면 복귀) | 후속 질문(`followUp.question`, 발화자는 시나리오 `followUp.memberId` — 안건 ② 사내 게시판 익명제에서는 CFO의 신고 처리 담당자 질문) + 임원 반응 2×2 답글 | 없음 |
 | 최종 안건 | 무대 + "이 안건으로 표결"(live는 후속 라운드 도착까지 비활성, 7절) + 회의록 패널 | 안건 카드 · 반영 조건 · 남은 과제 | 없음 |
 | 최종 투표 | 무대 + 찬성/보류/반대 3열 + 확정 + 회의록 패널(720은 최근 3건) | 안건 카드 · 조건 | 없음 |
 | 결과 | 무대(배지·도장) + 게이지 + 에필로그 + "체험 종료" | 결론 · 5석(3+2, live 근거 1줄/우려 1줄 클램프, 720 아바타 36px) · 이사회 한 장 요약(9절) + 남은 과제·AI가 도운 일 | AI가 도운 일 1개 |
@@ -219,7 +219,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
   2. 임원 첫 의견 4건 — scripted는 `scenario.initialOpinions`, live는 transcript의 OPINIONS 발언. live 미도착은 "판단 중…"(점 3개 + 스크린리더용 상태 문구), 실패는 "응답 없음"(roundLog 기준, 뒤 라운드가 roleStatus를 덮어도 남는다)
   3. 내 발언 — `opinions[0].originalText`
   4. 임원 반응 4건 — scripted는 `scenario.reactions`를 첫 의견의 확정 조건으로 고른 것(ReactionsScreen의 `reactionsFor` 규칙을 공용 함수로 뽑아 같이 쓴다. 해당 반응이 없는 임원은 "기존 의견 유지"), live는 REACTIONS 발언
-  5. CAIO 질문 — `followUp.question` (REACTIONS 이후)
+  5. 후속 질문 — 시나리오 `followUp.memberId`가 묻는 `followUp.question` (REACTIONS 이후, 안건 ②는 CFO)
   6. 내 답 — `opinions[1].originalText`, 유지를 골랐으면 "앞서 전달한 의견을 유지"
   7. 임원 후속 4건 — live에서 `opinions.length >= 2`일 때만. FOLLOWUP 발언 / "판단 중…" / "응답 없음"
   8. 의장 — "이 조건으로 안건을 고정합니다" (MOTION 이후)
@@ -259,7 +259,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 - 운영 메뉴 항목 추가(기존 새 체험·전체화면·닫기 유지): **모델 연결 확인**(`operator-probe`), **scripted로 새 체험**(`operator-restart-scripted`).
 - 모델 연결 확인 패널(`operator-probe-panel`): 누르면 서버 `POST /api/ops/probe`를 호출해 실제 제공자에 아주 짧은 호출 1회를 보낸다(응답 스키마 `{ ok: true }`, 8초 상한). 결과 줄: 성공 "연결됨 · {modelId} · {latencyMs}ms"(`operator-probe-ok`), 실패 "실패 · {error}"(`operator-probe-fail`) + 안내 "키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요". 아래에 서버 정보 한 줄 "provider {provider} · 모드 {mode} · 프롬프트 {promptVersion}"(`/api/health`에서). 확인 중에는 "확인 중…"(`operator-probe-pending`)과 버튼 비활성.
-- scripted로 새 체험: 확인 대화상자(`operator-confirm-restart-scripted`) 뒤 `/?mode=scripted`로 이동한다(세션 초기화 + 모드 고정, `mode.ts`의 기존 쿼리 규칙 재사용). live 도중 실패한 역할을 몰래 scripted로 바꾸지 않는다는 규칙은 그대로다 — 새 세션부터만 scripted.
+- scripted로 새 체험: 확인 대화상자(`operator-confirm-restart-scripted`) 뒤 **현재 `pathname`을 유지한 채** 쿼리만 `?mode=scripted`로 바꿔 이동한다(`scriptedRestartUrl(window.location.pathname)`, 세션 초기화 + 모드 고정, `mode.ts`의 기존 쿼리 규칙 재사용). 루트 고정 `/?mode=scripted`는 GitHub Pages(`/<repo>/` base, `pages.yml`)에서 앱을 벗어나 404로 가므로 쓰지 않는다(PR #10 Codex 9차 검토). live 도중 실패한 역할을 몰래 scripted로 바꾸지 않는다는 규칙은 그대로다 — 새 세션부터만 scripted.
 - 서버 `POST /api/ops/probe`: 접속 토큰 보호 대상(`isProtectedApiPath`에 `/api/ops/` 추가). 세션 상한·호출 상한을 소비하지 않는다. 남용 방지로 서버 전역 10초에 1회(초과 시 429 `probe_rate_limit`). 응답은 항상 200 JSON `{ ok, provider, modelId, latencyMs, error? }`(진단 결과이므로 실패도 200). mock 제공자는 즉시 ok.
 - 화면 문구는 운영자용이며 참가자 화면(대기·본문)에는 아무것도 추가하지 않는다. 720 운영 패널 폭 안에서 두 줄 이내.
 
