@@ -10,7 +10,7 @@ import type { ConflictPair, Scenario } from '../content/types';
 // 확인하지 않겠습니다."가 TRACE 키워드 '작성자를 확인'에 걸려 참가자가 거부한 추적
 // 조건이 자동 승인되던 문제(PR #10 Codex 12차 검토 P1) 뒤로 '-지 않-'·'없-'·'안 -'·
 // '못 하-'·'반대'를, 17차 뒤로 배제 표현('빼-'·'제외'·'아니'·'금지'·'-지 말-')을, 18차 뒤로 붙여 쓴
-// '안하-'·'안함'·'안되-'를, 20차 뒤로 '-지 마-'·'-지 맙-' 활용 전체를 본다. 부정어가 다른 조건을 향하는 겹문장에서는 앞의 긍정 언급까지
+// '안하-'·'안함'·'안되-'를, 20·21차 뒤로 '-지 마-'·'-지 맙-' 활용 전체(띄어쓰기 유무 무관)를 본다. 부정어가 다른 조건을 향하는 겹문장에서는 앞의 긍정 언급까지
 // 빠질 수 있지만, 제안은 확정이 아니고 추천 문구로 다시 넣을 수 있으므로 놓치는 쪽을
 // 택한다 — 거부한 조건을 몰래 넣는 것보다 낫다. 키워드 자체에 부정어가 포함된 경우(예:
 // ANON_FULL의 '추적할 수 없')는 그 부정어가 키워드 범위 안에 있어 창에 들어오지 않으므로
@@ -30,19 +30,21 @@ const NEGATION_MARKERS = [
   '제외',
   '아니',
   '금지',
-  // '-지 마-'(말고·말아·마세요·마십시오)와 축약 청유형 '-지 맙-'(맙시다) — "완전 익명으로 하지
-  // 맙시다."가 '지 말'에 걸리지 않아 ANON_FULL이 자동 승인됐다(PR #10 Codex 20차 검토 P1).
-  '지 말',
-  '지 마',
-  '지 맙',
 ];
+// '-지 마-'(말고·말아·마세요·마십시오)와 축약 청유형 '-지 맙-'(맙시다). 공백은 선택 — "하지맙시다"·
+// "하지마세요"처럼 붙여 쓴 형도 흔하다(PR #10 Codex 20·21차 검토 P1).
+const JI_MA_NEGATION = /지\s?[마말맙]/;
 // '안 -'·'안하-'·'안함'·'안되-'·'안돼-'는 어절 시작(앞이 한글 음절이 아닐 때)에서만 부정으로
 // 본다 — "검수 안하고"·"검수안하고"는 부정, "불안하면"의 '안하'는 아니다. 붙여 쓴 '안하고'가
 // '안 '에 걸리지 않아 SCREEN이 자동 승인됐다(PR #10 Codex 18차 검토 P1).
 const AN_NEGATION = /(?:^|[^가-힣])안(?:\s|하|함|되|돼|된|될)/;
 
 function hasNegationMarker(window: string): boolean {
-  return NEGATION_MARKERS.some((marker) => window.includes(marker)) || AN_NEGATION.test(window);
+  return (
+    NEGATION_MARKERS.some((marker) => window.includes(marker)) ||
+    AN_NEGATION.test(window) ||
+    JI_MA_NEGATION.test(window)
+  );
 }
 const NEGATION_WINDOW = 24;
 const CLAUSE_END = /[.!?,\n]/;

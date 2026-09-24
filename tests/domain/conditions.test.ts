@@ -151,8 +151,11 @@ describe('proposeFromText', () => {
 
   // "완전 익명으로 하지 맙시다."의 축약 청유형 '-지 맙-'이 '지 말'에 걸리지 않아 ANON_FULL이 자동
   // 승인됐다(PR #10 Codex 20차 검토 P1). '-지 마-'·'-지 맙-' 활용 전체가 부정이다.
-  it('"-지 맙시다"·"-지 마세요"·"-지 마십시오"도 부정이다', () => {
+  it('"-지 맙시다"·"-지 마세요"·"-지 마십시오"도 부정이다 — 붙여 써도 같다(21차)', () => {
     expect(proposeFromText(scenario, '완전 익명으로 하지 맙시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '완전 익명으로 하지맙시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '게시 전 검수는 하지마세요.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인할 수 있게 하지말아 주십시오.')).toEqual([]);
     expect(proposeFromText(scenario, '게시 전 검수는 하지 마세요.')).toEqual([]);
     expect(proposeFromText(scenario, '작성자를 확인할 수 있게 하지 마십시오.')).toEqual([]);
     expect(proposeFromText(scenario, '완전 익명은 하지 말고 시범만 합시다.')).toEqual(['PILOT']);
