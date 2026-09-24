@@ -135,6 +135,20 @@ describe('proposeFromText', () => {
     expect(proposeFromText(scenario, '작성자를 확인할 수 있게 하지 말아 주십시오.')).toEqual([]);
   });
 
+  // "게시 전 검수 안하고 시범만 합시다."의 붙여 쓴 '안하고'가 '안 '에 걸리지 않아 SCREEN이 자동
+  // 승인됐다(PR #10 Codex 18차 검토 P1). '안'은 어절 시작에서만 부정이다 — "불안하면"은 아니다.
+  it('붙여 쓴 "안하-"·"안함"·"안되-"도 부정이고, "불안하-"의 "안하"는 부정이 아니다', () => {
+    expect(proposeFromText(scenario, '게시 전 검수 안하고 시범만 합시다.')).toEqual(['PILOT']);
+    expect(proposeFromText(scenario, '게시 전 검수안하고 시범만 합시다.')).toEqual(['PILOT']);
+    expect(proposeFromText(scenario, '효과 측정은 안함. 바로 확대합시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인 안 해도 됩니다.')).toEqual([]);
+    expect(proposeFromText(scenario, '추적 가능 상태가 안되면 곤란합니다.')).toEqual([]);
+    expect(proposeFromText(scenario, '시범 운영이 불안하면 검수를 넣읍시다.')).toEqual([
+      'PILOT',
+      'SCREEN',
+    ]);
+  });
+
   it('부정 표지는 같은 절 안에서만 본다 — 쉼표·마침표 뒤의 부정어는 앞 언급을 지우지 않는다', () => {
     expect(
       proposeFromText(scenario, '작성자를 확인할 수 있게 합시다. 다만 완전 익명은 반대합니다.'),

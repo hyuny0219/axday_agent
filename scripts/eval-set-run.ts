@@ -23,7 +23,11 @@ import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/han
 import { handleProbe } from '../server/handlers/probe';
 import { createMockProvider } from '../server/providers/mock';
 import { createAnthropicProvider } from '../server/providers/anthropic';
-import type { ModelProvider } from '../server/providers/types';
+import type {
+  ModelCompleteRequest,
+  ModelCompleteResult,
+  ModelProvider,
+} from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
 import { systemClock, type Clock } from '../server/clock';
 
@@ -98,7 +102,78 @@ function toRoundRows(
   }));
 }
 
-function toVoteRows(results: VoteRoleResult[], evalCase: EvalCase): EvalRow[] {
+// --- provider.complete() 계측: handleVote()는 라운드 핸들러와 달리 latencyMs를 돌려주지 않아
+// VOTE 행이 전부 0으로 기록됐다(PR #10 Codex 18차 검토 P2). live-eval.ts와 같은 방식으로
+// 호출 봉투(kind·roleId)를 읽어 역할별 지연을 기록한다.
+export interface CallRecord {
+  kind: string;
+  roleId?: string;
+  latencyMs: number;
+  modelId: string;
+}
+
+function parseUserEnvelope(user: string): { kind?: string; roleId?: string } {
+  try {
+    const parsed: unknown = JSON.parse(user);
+    if (parsed && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>;
+      return {
+        kind: typeof obj.kind === 'string' ? obj.kind : undefined,
+        roleId: typeof obj.roleId === 'string' ? obj.roleId : undefined,
+      };
+    }
+  } catch {
+    // envelope가 아니면 무시한다.
+  }
+  return {};
+}
+
+function instrumentProvider(base: ModelProvider, clock: Clock, sink: CallRecord[]): ModelProvider {
+  return {
+    async complete(req: ModelCompleteRequest): Promise<ModelCompleteResult> {
+      const envelope = parseUserEnvelope(req.user);
+      const start = clock.now();
+      try {
+        const result = await base.complete(req);
+        sink.push({
+          kind: envelope.kind ?? 'unknown',
+          roleId: envelope.roleId,
+          latencyMs: clock.now() - start,
+          modelId: result.modelId,
+        });
+        return result;
+      } catch (err) {
+        sink.push({
+          kind: envelope.kind ?? 'unknown',
+          roleId: envelope.roleId,
+          latencyMs: clock.now() - start,
+          modelId: '',
+        });
+        throw err;
+      }
+    },
+  };
+}
+
+/** sink[fromIndex..] 가운데 역할별 마지막 호출 기록. */
+export function callRecordsByRole(sink: CallRecord[], fromIndex: number): Map<string, CallRecord> {
+  const byRole = new Map<string, CallRecord>();
+  for (let i = fromIndex; i < sink.length; i += 1) {
+    const record = sink[i];
+    if (record?.roleId) {
+      byRole.set(record.roleId, record);
+    }
+  }
+  return byRole;
+}
+
+function toVoteRows(
+  results: VoteRoleResult[],
+  evalCase: EvalCase,
+  sink: CallRecord[],
+  fromIndex: number,
+): EvalRow[] {
+  const calls = callRecordsByRole(sink, fromIndex);
   return results.map((result) => ({
     caseId: evalCase.id,
     pathId: evalCase.pathId,
@@ -111,8 +186,8 @@ function toVoteRows(results: VoteRoleResult[], evalCase: EvalCase): EvalRow[] {
     vote: result.ballot?.vote,
     reason: result.ballot?.reason,
     evidenceIds: result.ballot?.evidenceIds,
-    latencyMs: 0,
-    modelId: result.modelId,
+    latencyMs: calls.get(result.roleId)?.latencyMs ?? 0,
+    modelId: calls.get(result.roleId)?.modelId || result.modelId,
     promptVersion: result.promptVersion,
   }));
 }
@@ -184,8 +259,12 @@ async function runCase(
       executionMode: 'DEFAULT',
     },
   };
-  const voteResults = await handleVote(voteRequest, { provider });
-  const voteRows = toVoteRows(voteResults, evalCase);
+  const sink: CallRecord[] = [];
+  const voteFrom = sink.length;
+  const voteResults = await handleVote(voteRequest, {
+    provider: instrumentProvider(provider, clock, sink),
+  });
+  const voteRows = toVoteRows(voteResults, evalCase, sink, voteFrom);
 
   return [...opinionsRows, ...reactionsRows, ...voteRows];
 }

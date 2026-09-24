@@ -3,7 +3,12 @@
 // 규칙을 코드로 고정한다. 기존 기록 재집계(v1 187 · v2 1 · v3 0)는 이 규칙으로 변하지 않는다.
 
 import { describe, expect, it } from 'vitest';
-import { findStyleViolations, type EvalRow } from '../../scripts/eval-set-run';
+import {
+  callRecordsByRole,
+  findStyleViolations,
+  type CallRecord,
+  type EvalRow,
+} from '../../scripts/eval-set-run';
 
 function row(message: string, reason?: string): EvalRow {
   return {
@@ -86,5 +91,22 @@ describe('findStyleViolations — 존댓말 종결', () => {
     const found = findStyleViolations([row('검토합니다.', '조건 없음')]);
     expect(found).toHaveLength(1);
     expect(found[0]?.field).toBe('reason');
+  });
+});
+
+// VOTE 행의 latencyMs가 전부 0으로 기록되던 문제(PR #10 Codex 18차 검토 P2): handleVote()는
+// 지연을 돌려주지 않으므로 provider.complete() 호출을 역할별로 계측해 넣는다.
+describe('callRecordsByRole — 표결 호출 계측', () => {
+  it('fromIndex 이후 기록만 역할별로 모으고 같은 역할은 마지막 기록을 쓴다', () => {
+    const sink: CallRecord[] = [
+      { kind: 'round', roleId: 'CFO', latencyMs: 100, modelId: 'm' },
+      { kind: 'vote', roleId: 'CFO', latencyMs: 2100, modelId: 'm' },
+      { kind: 'vote', roleId: 'CISO', latencyMs: 1800, modelId: 'm' },
+      { kind: 'vote', roleId: 'CISO', latencyMs: 1900, modelId: 'm' },
+    ];
+    const byRole = callRecordsByRole(sink, 1);
+    expect(byRole.get('CFO')?.latencyMs).toBe(2100);
+    expect(byRole.get('CISO')?.latencyMs).toBe(1900);
+    expect(byRole.has('CEO')).toBe(false);
   });
 });

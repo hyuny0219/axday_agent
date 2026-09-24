@@ -9,7 +9,8 @@ import type { ConflictPair, Scenario } from '../content/types';
 // 그 언급은 제안하지 않는다(4장 명시 예 "없이·생략·말고"). 후속 직접 답변 "작성자를
 // 확인하지 않겠습니다."가 TRACE 키워드 '작성자를 확인'에 걸려 참가자가 거부한 추적
 // 조건이 자동 승인되던 문제(PR #10 Codex 12차 검토 P1) 뒤로 '-지 않-'·'없-'·'안 -'·
-// '못 하-'·'반대'를, 17차 뒤로 배제 표현('빼-'·'제외'·'아니'·'금지'·'-지 말-')도 본다. 부정어가 다른 조건을 향하는 겹문장에서는 앞의 긍정 언급까지
+// '못 하-'·'반대'를, 17차 뒤로 배제 표현('빼-'·'제외'·'아니'·'금지'·'-지 말-')을, 18차 뒤로 붙여 쓴
+// '안하-'·'안함'·'안되-'도 본다. 부정어가 다른 조건을 향하는 겹문장에서는 앞의 긍정 언급까지
 // 빠질 수 있지만, 제안은 확정이 아니고 추천 문구로 다시 넣을 수 있으므로 놓치는 쪽을
 // 택한다 — 거부한 조건을 몰래 넣는 것보다 낫다. 키워드 자체에 부정어가 포함된 경우(예:
 // ANON_FULL의 '추적할 수 없')는 그 부정어가 키워드 범위 안에 있어 창에 들어오지 않으므로
@@ -21,7 +22,6 @@ const NEGATION_MARKERS = [
   '생략',
   '말고',
   '않',
-  '안 ',
   '못하',
   '못 하',
   '반대',
@@ -32,6 +32,14 @@ const NEGATION_MARKERS = [
   '금지',
   '지 말',
 ];
+// '안 -'·'안하-'·'안함'·'안되-'·'안돼-'는 어절 시작(앞이 한글 음절이 아닐 때)에서만 부정으로
+// 본다 — "검수 안하고"·"검수안하고"는 부정, "불안하면"의 '안하'는 아니다. 붙여 쓴 '안하고'가
+// '안 '에 걸리지 않아 SCREEN이 자동 승인됐다(PR #10 Codex 18차 검토 P1).
+const AN_NEGATION = /(?:^|[^가-힣])안(?:\s|하|함|되|돼|된|될)/;
+
+function hasNegationMarker(window: string): boolean {
+  return NEGATION_MARKERS.some((marker) => window.includes(marker)) || AN_NEGATION.test(window);
+}
 const NEGATION_WINDOW = 24;
 const CLAUSE_END = /[.!?,\n]/;
 
@@ -40,7 +48,7 @@ function isNegatedAfter(text: string, index: number, keywordLength: number): boo
   const rest = text.slice(end, end + NEGATION_WINDOW);
   const cut = rest.search(CLAUSE_END);
   const window = cut === -1 ? rest : rest.slice(0, cut);
-  return NEGATION_MARKERS.some((marker) => window.includes(marker));
+  return hasNegationMarker(window);
 }
 
 // 한 조건의 키워드 중 하나라도 부정되면 그 조건은 제안하지 않는다 — 긍정 언급이 다른 키워드로
