@@ -149,6 +149,12 @@ describe('proposeFromText', () => {
     expect(proposeFromText(scenario, '효과 측정은 안했으면 합니다.')).toEqual([]);
     expect(proposeFromText(scenario, '추적 가능하게 안한다고 합시다.')).toEqual([]);
     expect(proposeFromText(scenario, '완전 익명은 안됐으면 합니다.')).toEqual([]);
+    // 조사와 '안'을 붙여 써도 부정이다(23차) — "검수는안할게요"·"측정은안했"·"확인도안하고"
+    expect(proposeFromText(scenario, '게시 전 검수는안할게요.')).toEqual([]);
+    expect(proposeFromText(scenario, '효과 측정은안했으면 합니다.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인도안하고 넘어갑시다.')).toEqual([]);
+    // 조사가 아닌 글자 뒤의 '안하'는 여전히 부정이 아니다
+    expect(proposeFromText(scenario, '게시 전 검수가 미안하지만 필요합니다.')).toEqual(['SCREEN']);
     expect(proposeFromText(scenario, '시범 운영이 불안하면 검수를 넣읍시다.')).toEqual([
       'PILOT',
       'SCREEN',
