@@ -11,9 +11,8 @@ function sessionAtReactions(now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
-  // BRIEFING: 자동 정리 카드가 렌더되면 세션당 한 번만 기록한다(지시서 5장). 중복은 무시.
-  session = reduce(session, { type: 'MARK_SUMMARY_SHOWN' }, now);
-  session = reduce(session, { type: 'MARK_SUMMARY_SHOWN' }, now);
+  // BRIEFING은 기록을 남기지 않는다 — 자동 정리 카드는 T52에서 제거됐고, 그 표시 기록
+  // MARK_SUMMARY_SHOWN도 PR #10 Codex 27차 검토(P2)에서 없앴다.
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(
@@ -59,7 +58,8 @@ describe('정상 완주', () => {
     expect(session.outcome).toBe('HOLD');
     expect(session.warnings).toEqual([]);
 
-    expect(session.assistantActions).toEqual(['SUMMARY_SHOWN']);
+    // AI 비서실장을 쓰지 않은 완주에는 어떤 AI 기록도 없다(보이지 않은 카드를 기록하지 않음).
+    expect(session.assistantActions).toEqual([]);
   });
 });
 

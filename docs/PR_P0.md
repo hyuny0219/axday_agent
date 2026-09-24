@@ -34,8 +34,8 @@
 - [x] AI timeout, 늦은 응답, 새 체험, 두 번 클릭에서 상태가 일관됨. (~~시간 만료~~ — T50에서 제거, "안건이 고정되지 않은 채 만료되면 원안을 자동 고정" 테스트도 함께 삭제됨)
   - 증빙: `tests/domain/session.test.ts` — "OPERATOR_RESET은 새 sessionId와 초기 상태를 돌려준다"; `e2e/operations.spec.ts` — "시계를 앞으로 돌려도 화면이 바뀌지 않는다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다", "세션 리셋 뒤 도착한 응답은 폐기하고 아무것도 반영하지 않는다"; `e2e/operations.spec.ts` — "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다", "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다", "새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다"
 
-- [x] 추가 AI 버튼을 전혀 누르지 않은 완주에서도 BRIEFING 요약 카드와 결과의 자동 정리 표시 기록이 있음. 자동 데모/추가 데모/실제 호출을 구분. 내 의견이 채택되지 않았는데 채택됐다고 쓰지 않음.
-  - 증빙: `e2e/assistant.spec.ts` — "패널을 열지 않고 완주해도 결과에는 자료 자동 정리 기록만 남는다", "AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사용 기록이 남는다", "live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다"; `tests/domain/assistantLog.test.ts` — "scripted 결과는 \"실제 AI 사용\"을 언급하지 않는다", "live 결과는 실제 호출임을 덧붙인다", "DRAFT_REFINE은 applied:true일 때만 한 줄을 만든다(미적용 요청은 조용히 무시)"
+- [x] AI 비서실장을 전혀 쓰지 않은 완주에서는 결과의 ‘AI가 도운 일’에 미사용 문구만 있고 표시하지 않은 자동 정리 기록이 없음(BRIEFING 요약 카드는 T52에서 제거, 그 표시 기록은 PR #10 Codex 27차에서 제거). 데모/실제 호출을 구분. 내 의견이 채택되지 않았는데 채택됐다고 쓰지 않음.
+  - 증빙: `e2e/assistant.spec.ts` — "패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 미사용 문구만 남는다", "AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사용 기록이 남는다", "live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다"; `tests/domain/assistantLog.test.ts` — "scripted 결과는 \"실제 AI 사용\"을 언급하지 않는다", "live 결과는 실제 호출임을 덧붙인다", "DRAFT_REFINE은 applied:true일 때만 한 줄을 만든다(미적용 요청은 조용히 무시)"
 
 - [ ] 현장 마우스·물리 키보드 한글 입력 및 오프라인 로컬 자산 검증을 완료하고 장비·OS·브라우저·미검증 항목을 기록.
   - 증빙(오프라인 로컬 자산 부분만): `bash scripts/offline-check.sh`(빌드 산출물을 `vite preview`로 기동해 외부 요청 차단 fixture로 scripted 스모크 실행, PASS)

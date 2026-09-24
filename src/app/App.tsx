@@ -333,7 +333,6 @@ function StageRouter() {
       return (
         <BriefingScreen
           scenario={scenario}
-          onSummaryShown={() => dispatch({ type: 'MARK_SUMMARY_SHOWN' })}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
         />
       );

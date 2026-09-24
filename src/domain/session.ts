@@ -49,7 +49,6 @@ export type SessionAction =
   | { type: 'SELECT_VOTE'; vote: PendingVote }
   | { type: 'CONFIRM_VOTE' }
   | { type: 'OPERATOR_RESET'; nextSessionId: string }
-  | { type: 'MARK_SUMMARY_SHOWN' }
   | { type: 'RECORD_ASSISTANT_ACTION'; entry: AssistantActionEvent }
   | { type: 'SET_MODE'; mode: SessionMode }
   | {
@@ -301,20 +300,6 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       // 새 sessionId는 액션에 실려 온다. 같은 (session, action, now)를 두 번 reduce해도 같은
       // 결과가 나오도록 reducer 안에서 난수를 만들지 않는다.
       return createInitialSession(now, action.nextSessionId);
-    }
-
-    case 'MARK_SUMMARY_SHOWN': {
-      // 지시서 5장: BRIEFING에서 자동 정리 카드가 실제 렌더되면 세션당 한 번 기록한다.
-      if (session.stage !== 'BRIEFING') {
-        return ignore(session, '자료 정리 표시 기록은 BRIEFING 단계에서만 가능합니다.');
-      }
-      if (session.assistantActions.includes('SUMMARY_SHOWN')) {
-        return ignore(session, '자료 정리 표시는 세션당 한 번만 기록합니다.');
-      }
-      return withNoWarnings({
-        ...session,
-        assistantActions: [...session.assistantActions, 'SUMMARY_SHOWN'],
-      });
     }
 
     case 'RECORD_ASSISTANT_ACTION': {

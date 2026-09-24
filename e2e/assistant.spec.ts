@@ -63,21 +63,23 @@ test('AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사
   await finishToResult(page);
 
   const aiHelp = page.getByTestId('result-ai-help');
-  await expect(aiHelp).toContainText('자료 4장 자동 정리 데모 표시');
   await expect(aiHelp).toContainText('내 발언 정리를 내 발언에 적용했습니다.');
   await expect(page.getByTestId('result-ai-help-none')).toHaveCount(0);
 });
 
-test('패널을 열지 않고 완주해도 결과에는 자료 자동 정리 기록만 남는다', async ({ page }) => {
+// BRIEFING의 자동 정리 카드는 T52에서 제거됐다. 그런데도 표시 기록이 남아 결과에
+// "자료 4장 자동 정리 데모 표시"가 항상 나오던 것을 PR #10 Codex 27차 검토(P2)에서 뺐다 —
+// 보이지 않은 것을 표시했다고 기록하지 않는다.
+test('패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 미사용 문구만 남는다', async ({ page }) => {
   await reachDiscuss(page);
 
   await page.getByTestId('phrase-card-P1').click();
   await finishToResult(page);
 
   const aiHelp = page.getByTestId('result-ai-help');
-  await expect(aiHelp).toContainText('자료 4장 자동 정리 데모 표시');
+  await expect(aiHelp).not.toContainText('자동 정리');
   await expect(page.getByTestId('result-ai-help-none')).toContainText(
-    '추가 AI 도움은 사용하지 않았습니다.',
+    'AI 비서실장 도움은 사용하지 않았습니다.',
   );
 });
 

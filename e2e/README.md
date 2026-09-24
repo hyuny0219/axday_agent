@@ -42,7 +42,7 @@ URL을 기록한다. 각 테스트가 끝나면 기록된 외부 요청이 0건�
   실패 메시지), scripted로 새 체험(URL·배지).
 - `live.spec.ts` — mock 서버로 live 완주, 임원 응답 실패 시 UNCAST·제한 안내, 서버 상태
   확인 실패 시 scripted 배지로 폴백.
-- `assistant.spec.ts` — AI 비서실장 적용 기록, 패널 미사용 시 자동 정리 기록만 남는지,
+- `assistant.spec.ts` — AI 비서실장 적용 기록, 패널 미사용 시 AI 기록 없이 미사용 문구만 남는지,
   live 실시간 호출 기록.
 - `a11y.spec.ts` — 키보드만으로 완주, prefers-reduced-motion, 200% 확대 상당 뷰포트.
 - `viewport-fit.spec.ts` — 화면 맞춤 축소(T51): 설계 크기(1200×700)보다 조금 작은 뷰포트
