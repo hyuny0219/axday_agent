@@ -15,8 +15,8 @@
 - [x] 최종 투표 이전에는 찬성/보류/반대 선택 버튼 없음. 토론에서 전달해도 ballot은 생성되지 않음.
   - 증빙: `e2e/flow-full.spec.ts`(DISCUSS 화면에서 `getByRole('button', { name: '찬성'|'보류'|'반대' })`가 0개임을 단언하는 구간); `tests/domain/session.test.ts` — SUBMIT_OPINION은 ballots를 만들지 않음(정상 완주 스펙)
 
-- [x] 5명 각 1표, CFO 1표, 고정된 동일 안건 ID. 표 선택 후 미확정 상태에서 만료 시 UNCAST.
-  - 증빙: `tests/domain/voting.test.ts` — "허용 조건 조합 전수 (24개 × 참가자 4표)", "문서 대표 경로표 — v0.6 (12행)"; `e2e/operations.spec.ts` — "표만 선택하고 확정하지 않은 채 240초가 지나면 내 표가 UNCAST로 집계된다"
+- [x] 5명 각 1표, CFO 1표, 고정된 동일 안건 ID. 참가자 표는 확정 버튼으로만 성립하고(라디오 선택만으로는 표가 아님), 임원 표는 8초 안에 도착·검증된 것만 집계하며 나머지는 UNCAST. (~~표 선택 후 미확정 상태에서 만료 시 UNCAST~~ — T50에서 만료 경로 제거)
+  - 증빙: `tests/domain/voting.test.ts` — "허용 조건 조합 전수 (24개 × 참가자 4표)", "문서 대표 경로표 — v0.6 (12행)"; `tests/domain/session.test.ts` — "두 번째 CONFIRM_VOTE는 무시한다", "이미 참가자 표가 있는 VOTE 단계에서 재확정을 명시적으로 차단한다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다"; `e2e/operations.spec.ts` — "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다"
 
 - [x] scripted의 가결·보류·부결·내 표 영향은 고정 테스트로 검증. live는 근거·역할·논거 반영·안건 동일성·응답 실패를 검수하며 고정 득표수를 요구하지 않음.
   - 증빙(scripted): `tests/domain/voting.test.ts`(대표 경로표 12행 전수)
@@ -31,8 +31,8 @@
 - [ ] 전체화면 거부 처리 확인.
   - 사유: `src/components/parts/OperatorMenu.tsx`에 거부(catch)·미지원(`fullscreenEnabled`) 분기가 구현되어 있으나, Fullscreen API는 사용자 제스처가 있어야 동작해 자동 테스트로 재현하지 못했다. 자동 테스트 없음 — 현장 리허설 항목(README "현장 미검증 목록")
 
-- [x] 시간 만료, AI timeout, 늦은 응답, 새 체험, 두 번 클릭에서 상태가 일관됨.
-  - 증빙: `tests/domain/session.test.ts` — "안건이 고정되지 않은 채 만료되면 원안을 자동 고정하고 참가자는 UNCAST다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다", "세션 리셋 뒤 도착한 응답은 폐기하고 아무것도 반영하지 않는다"; `e2e/operations.spec.ts` — "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다", "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다", "새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다"
+- [x] AI timeout, 늦은 응답, 새 체험, 두 번 클릭에서 상태가 일관됨. (~~시간 만료~~ — T50에서 제거, "안건이 고정되지 않은 채 만료되면 원안을 자동 고정" 테스트도 함께 삭제됨)
+  - 증빙: `tests/domain/session.test.ts` — "OPERATOR_RESET은 새 sessionId와 초기 상태를 돌려준다"; `e2e/operations.spec.ts` — "시계를 앞으로 돌려도 화면이 바뀌지 않는다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다", "세션 리셋 뒤 도착한 응답은 폐기하고 아무것도 반영하지 않는다"; `e2e/operations.spec.ts` — "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다", "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다", "새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다"
 
 - [x] 추가 AI 버튼을 전혀 누르지 않은 완주에서도 BRIEFING 요약 카드와 결과의 자동 정리 표시 기록이 있음. 자동 데모/추가 데모/실제 호출을 구분. 내 의견이 채택되지 않았는데 채택됐다고 쓰지 않음.
   - 증빙: `e2e/assistant.spec.ts` — "패널을 열지 않고 완주해도 결과에는 자료 자동 정리 기록만 남는다", "AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사용 기록이 남는다", "live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다"; `tests/domain/assistantLog.test.ts` — "scripted 결과는 \"실제 AI 사용\"을 언급하지 않는다", "live 결과는 실제 호출임을 덧붙인다", "DRAFT_REFINE은 applied:true일 때만 한 줄을 만든다(미적용 요청은 조용히 무시)"

@@ -6,9 +6,12 @@ import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
   findStyleViolations,
+  toVoteRows,
   type CallRecord,
+  type EvalCase,
   type EvalRow,
 } from '../../scripts/eval-set-run';
+import type { VoteRoleResult } from '../../server/handlers/vote';
 
 function row(message: string, reason?: string): EvalRow {
   return {
@@ -108,5 +111,28 @@ describe('callRecordsByRole — 표결 호출 계측', () => {
     expect(byRole.get('CFO')?.latencyMs).toBe(2100);
     expect(byRole.get('CISO')?.latencyMs).toBe(1900);
     expect(byRole.has('CEO')).toBe(false);
+  });
+});
+
+// 타임아웃으로 실패한 표결은 provider 호출 기록이 아직 없다(제공자가 AbortSignal을 무시하면
+// handleVote()의 withTimeout()이 먼저 끝난다). 그때 0이 아니라 핸들러가 관측한 대기 시간을
+// 기록해야 즉시 실패로 오인되지 않는다(PR #10 Codex 19차 검토 P2).
+describe('toVoteRows — 표결 지연 기록', () => {
+  const evalCase = {
+    id: 'c',
+    pathId: 'conflict',
+    pathLabel: '상충',
+    variant: 't',
+  } as unknown as EvalCase;
+  const results: VoteRoleResult[] = [
+    { roleId: 'CFO', status: 'answered', modelId: 'm', promptVersion: 'v', ballot: undefined },
+    { roleId: 'CISO', status: 'failed', failReason: 'timeout', modelId: 'm', promptVersion: 'v' },
+  ];
+
+  it('호출 기록이 있으면 그 지연을, 없으면 핸들러가 관측한 대기 시간을 쓴다', () => {
+    const sink: CallRecord[] = [{ kind: 'vote', roleId: 'CFO', latencyMs: 2100, modelId: 'm' }];
+    const rows = toVoteRows(results, evalCase, sink, 0, 8010);
+    expect(rows.find((r) => r.roleId === 'CFO')?.latencyMs).toBe(2100);
+    expect(rows.find((r) => r.roleId === 'CISO')?.latencyMs).toBe(8010);
   });
 });

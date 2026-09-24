@@ -34,7 +34,7 @@ import { systemClock, type Clock } from '../server/clock';
 const SCENARIO_ID = 'anon-board';
 const BUDGET_MS = 8000;
 
-interface EvalCase {
+export interface EvalCase {
   id: string;
   pathId: string;
   pathLabel: string;
@@ -167,11 +167,17 @@ export function callRecordsByRole(sink: CallRecord[], fromIndex: number): Map<st
   return byRole;
 }
 
-function toVoteRows(
+/**
+ * VOTE 행. 역할별 provider 호출 기록이 있으면 그 지연을, 없으면(제공자가 AbortSignal을 무시해
+ * handleVote()의 withTimeout()이 먼저 끝난 경우 등) 핸들러가 관측한 대기 시간(observedMs)을 쓴다 —
+ * 타임아웃 실패가 0ms로 남으면 즉시 실패로 오인된다(PR #10 Codex 19차 검토 P2).
+ */
+export function toVoteRows(
   results: VoteRoleResult[],
   evalCase: EvalCase,
   sink: CallRecord[],
   fromIndex: number,
+  observedMs: number,
 ): EvalRow[] {
   const calls = callRecordsByRole(sink, fromIndex);
   return results.map((result) => ({
@@ -186,7 +192,7 @@ function toVoteRows(
     vote: result.ballot?.vote,
     reason: result.ballot?.reason,
     evidenceIds: result.ballot?.evidenceIds,
-    latencyMs: calls.get(result.roleId)?.latencyMs ?? 0,
+    latencyMs: calls.get(result.roleId)?.latencyMs ?? observedMs,
     modelId: calls.get(result.roleId)?.modelId || result.modelId,
     promptVersion: result.promptVersion,
   }));
@@ -261,10 +267,12 @@ async function runCase(
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;
+  const voteStart = clock.now();
   const voteResults = await handleVote(voteRequest, {
     provider: instrumentProvider(provider, clock, sink),
   });
-  const voteRows = toVoteRows(voteResults, evalCase, sink, voteFrom);
+  const voteObservedMs = clock.now() - voteStart;
+  const voteRows = toVoteRows(voteResults, evalCase, sink, voteFrom, voteObservedMs);
 
   return [...opinionsRows, ...reactionsRows, ...voteRows];
 }
