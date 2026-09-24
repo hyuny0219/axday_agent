@@ -123,6 +123,18 @@ describe('proposeFromText', () => {
     ]);
   });
 
+  // "효과 측정은 빼고 바로 확대합시다."가 MEASURE로 자동 승인됐다(PR #10 Codex 17차 검토 P1).
+  // 조건을 명시적으로 배제하는 표현도 부정이다.
+  it('"빼고"·"제외"·"아니"·"금지"·"-지 말-"로 배제한 조건은 제안하지 않는다', () => {
+    expect(proposeFromText(scenario, '효과 측정은 빼고 바로 확대합시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '게시 전 검수는 제외하고 시범만 합시다.')).toEqual(['PILOT']);
+    expect(proposeFromText(scenario, '추적 가능은 아니고 완전 익명으로 합시다.')).toEqual([
+      'ANON_FULL',
+    ]);
+    expect(proposeFromText(scenario, '작성자를 확인하는 것은 금지합시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인할 수 있게 하지 말아 주십시오.')).toEqual([]);
+  });
+
   it('부정 표지는 같은 절 안에서만 본다 — 쉼표·마침표 뒤의 부정어는 앞 언급을 지우지 않는다', () => {
     expect(
       proposeFromText(scenario, '작성자를 확인할 수 있게 합시다. 다만 완전 익명은 반대합니다.'),

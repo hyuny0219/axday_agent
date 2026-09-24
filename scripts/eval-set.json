@@ -1,5 +1,5 @@
 {
-  "_comment": "T34 고정 평가 세트. AGENT_BOARDROOM_SPEC.md 7장 '세 안건별 상충·부정·조건 없음· 조건 보완 경로를 반복 평가'를 안건②(scenarioId 'anon-board', P0 범위)에 적용한다. 네 경로 × 참가자 발언 변형 3개 = 12케이스. scripts/live-eval.ts가 이 파일을 읽어 실행한다. 시나리오 규칙표(voteRules 등)는 여기 없다 — effectiveConditionIds는 표결 안건에 실릴 최종 조건 집합일 뿐, 임원이 그 결과를 알고 판단하는 게 아니다. 참가자 발언은 2026-09-23 안건 교체(T53)에 맞춰 사내 게시판 익명제 조건(PILOT·SCREEN·TRACE·MEASURE·ANON_FULL)을 말하도록 다시 썼다(PR #10 Codex 3차 검토 P1). v1~v3 기록(docs/eval/tuning-v*.jsonl)은 이전 안건의 발언으로 측정한 것이라 이 세트와 직접 비교할 수 없다. 화면에서 자료 ID를 뺐으므로(T52) 발언도 자료명으로 가리킨다.",
+  "_comment": "T34 고정 평가 세트. AGENT_BOARDROOM_SPEC.md 7장 '세 안건별 상충·부정·조건 없음· 조건 보완 경로를 반복 평가'를 안건②(scenarioId 'anon-board', P0 범위)에 적용한다. 네 경로 × 참가자 발언 변형 3개 = 12케이스. 실행기는 scripts/eval-set-run.ts(loadEvalSet)이며 `npx tsx scripts/eval-set-run.ts --out docs/eval/<이름>.jsonl`로 돌린다. `npm run eval:live`(scripts/live-eval.ts)는 이 파일을 읽지 않고 자체 고정 경로(EVAL_PATHS 4문장)를 쓴다. 시나리오 규칙표(voteRules 등)는 여기 없다 — effectiveConditionIds는 표결 안건에 실릴 최종 조건 집합일 뿐, 임원이 그 결과를 알고 판단하는 게 아니다. 참가자 발언은 2026-09-23 안건 교체(T53)에 맞춰 사내 게시판 익명제 조건(PILOT·SCREEN·TRACE·MEASURE·ANON_FULL)을 말하도록 다시 썼다(PR #10 Codex 3차 검토 P1). v1~v3 기록(docs/eval/tuning-v*.jsonl)은 이전 안건의 발언으로 측정한 것이라 이 세트와 직접 비교할 수 없다. 화면에서 자료 ID를 뺐으므로(T52) 발언도 자료명으로 가리킨다.",
   "scenarioId": "anon-board",
   "cases": [
     {
