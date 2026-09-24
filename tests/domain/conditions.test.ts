@@ -143,6 +143,12 @@ describe('proposeFromText', () => {
     expect(proposeFromText(scenario, '효과 측정은 안함. 바로 확대합시다.')).toEqual([]);
     expect(proposeFromText(scenario, '작성자를 확인 안 해도 됩니다.')).toEqual([]);
     expect(proposeFromText(scenario, '추적 가능 상태가 안되면 곤란합니다.')).toEqual([]);
+    // 활용형 안할·안해·안했·안한·안됐도 부정이다(22차)
+    expect(proposeFromText(scenario, '게시 전 검수는 안할게요.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인 안해요.')).toEqual([]);
+    expect(proposeFromText(scenario, '효과 측정은 안했으면 합니다.')).toEqual([]);
+    expect(proposeFromText(scenario, '추적 가능하게 안한다고 합시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '완전 익명은 안됐으면 합니다.')).toEqual([]);
     expect(proposeFromText(scenario, '시범 운영이 불안하면 검수를 넣읍시다.')).toEqual([
       'PILOT',
       'SCREEN',
