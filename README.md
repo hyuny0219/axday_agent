@@ -64,7 +64,7 @@ bash scripts/offline-check.sh
 
 mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공자)으로 검증한 live 흐름(E2E `e2e/live.spec.ts`, 단위 `tests/server/*.test.ts`·`tests/services/live.test.ts`·`tests/services/assistant-live.test.ts`).
 
-실제 Anthropic API 키 실측은 **2026-09-22에 처음 유효하게 실행했습니다**(`npm run eval:live -- --runs 3`, claude-sonnet-5, 144호출 전량 성공, 검증 실패 0·호출 실패 0, 지연 중앙값 3.53초·p95 5.78초·최대 7.27초로 8초 예산 초과 0건). 기록은 `docs/eval/live-2026-09-22.{md,jsonl}`, 절차와 예상 비용은 [docs/LIVE_EVAL.md](docs/LIVE_EVAL.md)에 있습니다. 이 실측을 근거로 역할 프롬프트를 v4까지 튜닝했습니다(`docs/eval/tuning-v2.md`·`tuning-v3.md`, T34). 같은 폴더의 2026-09-11 기록은 CLI 로그인을 키 대용으로 받던 하네스 결함으로 전량 `provider_error`라 유효한 실측이 아닙니다.
+실제 Anthropic API 키 실측은 **2026-09-22에 처음 유효하게 실행했습니다**(`npm run eval:live -- --runs 3`, claude-sonnet-5, 144호출 전량 성공, 검증 실패 0·호출 실패 0, 지연 중앙값 3.53초·p95 5.78초·최대 7.27초로 8초 예산 초과 0건). 기록은 `docs/eval/live-2026-09-22.{md,jsonl}`, 절차와 예상 비용은 [docs/LIVE_EVAL.md](docs/LIVE_EVAL.md)에 있습니다. 이 실측은 이전 안건(ai-assistant)·프롬프트 v1 기준이며, 그 기록으로 문체를 v3까지 튜닝했습니다(`docs/eval/tuning-v2.md`·`tuning-v3.md`, T34). 현재 활성 안건(anon-board, 2026-09-23)과 프롬프트 v4(안건 독립 문구)는 아직 실측 전이라 이전 기록과 직접 비교할 수 없고, T54에서 v4 기준선을 먼저 재측정합니다. 같은 폴더의 2026-09-11 기록은 CLI 로그인을 키 대용으로 받던 하네스 결함으로 전량 `provider_error`라 유효한 실측이 아닙니다.
 
 ## 완료 범위 (P0)
 
@@ -83,7 +83,7 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 
 - **P1** — 안건 ①·③ 데이터·정규화, ③의 실행 방식 표시와 제안 꼬리표, 관람 뷰(원문·AI 초안·미확정 표 미전송, 재접속·연결 끊김 처리), 서기 입력 확인 리허설. 카드: `docs/TASKS.md`의 T18~T22.
 - **P2** — 실제 모델 응답 비용·지연 튜닝(임원 에이전트 고도화 2차), 결과 출력(프린터) 선택 확장. 카드: T23·T24·T34·T35.
-- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. 남은 것은 T54(자료 인용 지시 변경, v4 before 실측 뒤 v5 비교)와 T35(비서실장 별도 평가)입니다.
+- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. 다만 그 실측은 이전 안건·v1 기준이라, 현재 안건(anon-board)·v4의 실측은 T54(v4 기준선 재측정 → 인용 지시 변경 v5 비교)에서 처음 합니다. T35(비서실장 별도 평가)도 남아 있습니다.
 
 ## 현장 미검증 목록
 

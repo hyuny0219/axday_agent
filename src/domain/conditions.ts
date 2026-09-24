@@ -26,6 +26,10 @@ function isNegatedAfter(text: string, index: number, keywordLength: number): boo
   return NEGATION_MARKERS.some((marker) => window.includes(marker));
 }
 
+// 한 조건의 키워드 중 하나라도 부정되면 그 조건은 제안하지 않는다 — 긍정 언급이 다른 키워드로
+// 남아 있어도 마찬가지다. "효과를 측정하지 않고 바로 확대합시다."는 '효과'·'측정'이 부정되지만
+// '확대'가 긍정으로 남아 MEASURE(운영 효과 측정 후 확대)가 자동 승인됐다(PR #10 Codex 16차 검토
+// P1). 조건 라벨은 키워드들의 결합("측정 후 확대")이므로 일부 부정은 조건 전체의 거부로 본다.
 function textMentionsConditionUnnegated(
   scenario: Scenario,
   text: string,
@@ -33,6 +37,7 @@ function textMentionsConditionUnnegated(
 ): boolean {
   const condition = scenario.conditions.find((c) => c.id === conditionId);
   const keywords = condition?.keywords ?? [];
+  let affirmed = false;
   for (const keyword of keywords) {
     let searchFrom = 0;
     for (;;) {
@@ -40,13 +45,14 @@ function textMentionsConditionUnnegated(
       if (index === -1) {
         break;
       }
-      if (!isNegatedAfter(text, index, keyword.length)) {
-        return true;
+      if (isNegatedAfter(text, index, keyword.length)) {
+        return false;
       }
+      affirmed = true;
       searchFrom = index + keyword.length;
     }
   }
-  return false;
+  return affirmed;
 }
 
 /** 선택된 추천 문구 ID에 연결된 조건 ID를 시나리오 순서대로 중복 없이 모은다. */
@@ -64,7 +70,8 @@ export function proposeFromPhrases(scenario: Scenario, phraseIds: string[]): str
 /**
  * 자유 입력 텍스트에서 조건별 명시 키워드(Condition.keywords)를 찾아 제안만 한다(확정 아님).
  * 키워드 뒤 같은 절에 "없이·생략·말고·-지 않-·안 -·못 하-·반대"가 나오면 부정문으로 보고
- * 제안하지 않는다.
+ * 제안하지 않는다. 한 조건의 키워드 중 하나라도 부정되면 다른 키워드가 긍정으로 남아 있어도
+ * 그 조건은 제안하지 않는다.
  */
 export function proposeFromText(scenario: Scenario, text: string): string[] {
   return scenario.conditions

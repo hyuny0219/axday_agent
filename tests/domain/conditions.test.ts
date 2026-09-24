@@ -107,6 +107,22 @@ describe('proposeFromText', () => {
     }
   });
 
+  // "효과를 측정하지 않고 바로 확대합시다."는 '효과'·'측정'이 부정돼도 '확대'가 긍정으로 남아
+  // MEASURE가 제안·자동 승인됐다(PR #10 Codex 16차 검토 P1). 한 조건의 키워드가 하나라도
+  // 부정되면 그 조건은 제안하지 않는다.
+  it('같은 조건의 키워드 하나가 부정되면 다른 키워드가 긍정이어도 제안하지 않는다', () => {
+    expect(proposeFromText(scenario, '효과를 측정하지 않고 바로 확대합시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '측정 없이 전사로 넓힙시다.')).toEqual([]);
+    // 쉼표로 절이 나뉘면 앞 절의 PILOT은 남고 뒤 절의 MEASURE만 빠진다
+    expect(
+      proposeFromText(scenario, '한 게시판에서 시범 운영하되, 효과 측정은 하지 않고 확대합시다.'),
+    ).toEqual(['PILOT']);
+    // 부정 없는 P4 문구는 그대로 MEASURE
+    expect(proposeFromText(scenario, '운영 효과를 측정한 뒤 전사로 넓힙시다.')).toEqual([
+      'MEASURE',
+    ]);
+  });
+
   it('부정 표지는 같은 절 안에서만 본다 — 쉼표·마침표 뒤의 부정어는 앞 언급을 지우지 않는다', () => {
     expect(
       proposeFromText(scenario, '작성자를 확인할 수 있게 합시다. 다만 완전 익명은 반대합니다.'),
