@@ -58,12 +58,10 @@ const AN_NEGATION =
 // 그대로 부정이다.
 const POSITIVE_PARALLEL = /뿐[만이은는도]{0,2}\s?아니[라고]/g;
 
-// 공백 묶음은 한 칸으로 접은 뒤 본다 — 직접 입력·붙여넣기에서 "뿐만  아니라"·"하지  맙시다"·
-// "못  하"처럼 두 칸 이상 벌어지면 `\s?`·' ' 표지가 빗나가 긍정 병렬은 부정으로, 부정은 긍정으로
-// 뒤집혔다(PR #10 Codex 34차 검토 P1). 표지 패턴을 하나씩 `\s*`로 바꾸는 대신 입구에서 한 번
-// 정규화한다.
+// 창(window)은 isNegatedAfter가 공백 묶음을 한 칸으로 접은 뒤 잘라 넘긴다 — 여기서는 긍정
+// 병렬만 지우고 표지를 본다.
 function hasNegationMarker(window: string): boolean {
-  const scanned = window.replace(/\s+/g, ' ').replace(POSITIVE_PARALLEL, ' ');
+  const scanned = window.replace(POSITIVE_PARALLEL, ' ');
   return (
     NEGATION_MARKERS.some((marker) => scanned.includes(marker)) ||
     AN_NEGATION.test(scanned) ||
@@ -75,7 +73,12 @@ const CLAUSE_END = /[.!?,\n]/;
 
 function isNegatedAfter(text: string, index: number, keywordLength: number): boolean {
   const end = index + keywordLength;
-  const rest = text.slice(end, end + NEGATION_WINDOW);
+  // 공백 묶음을 한 칸으로 접은 **뒤에** 창을 자른다. 직접 입력·붙여넣기에서 "뿐만  아니라"·
+  // "하지  맙시다"·"못  하"처럼 두 칸 이상 벌어지면 `\s?`·' ' 표지가 빗나가 긍정 병렬은 부정으로,
+  // 부정은 긍정으로 뒤집혔고(PR #10 Codex 34차 검토 P1), 접기를 창을 자른 뒤에 하면 키워드 뒤
+  // 공백이 24칸을 넘을 때 창이 공백으로만 차서 그 뒤의 "하지 맙시다"를 버렸다(35차 P1). 표지
+  // 패턴을 하나씩 `\s*`로 바꾸는 대신 이 한 곳에서 정규화한다.
+  const rest = text.slice(end).replace(/\s+/g, ' ').slice(0, NEGATION_WINDOW);
   const cut = rest.search(CLAUSE_END);
   const window = cut === -1 ? rest : rest.slice(0, cut);
   return hasNegationMarker(window);

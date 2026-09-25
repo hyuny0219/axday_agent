@@ -171,6 +171,10 @@ describe('proposeFromText', () => {
     // 같은 정규화로 부정 표지도 공백 개수와 무관하다.
     expect(proposeFromText(scenario, '완전 익명으로 하지  맙시다.')).toEqual([]);
     expect(proposeFromText(scenario, '작성자를 확인 못  하겠습니다.')).toEqual([]);
+    // 키워드 뒤 공백이 판정 창(24자)보다 길어도 같다 — 접은 뒤에 창을 자른다(35차 P1).
+    const gap = ' '.repeat(26);
+    expect(proposeFromText(scenario, `완전 익명${gap}하지 맙시다.`)).toEqual([]);
+    expect(proposeFromText(scenario, `게시 전 검수${gap}안하고 시범만 합시다.`)).toEqual(['PILOT']);
     // '뿐' 없는 "는 아니고"·"도 아니고"는 대조 부정이다.
     expect(proposeFromText(scenario, '게시 전 검수도 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수는 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
