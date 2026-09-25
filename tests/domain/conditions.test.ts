@@ -158,7 +158,15 @@ describe('proposeFromText', () => {
       'PILOT',
       'SCREEN',
     ]);
-    // '뿐' 없는 "는 아니고"는 대조 부정이다.
+    // 보조사 '도'와 조사 조합("뿐만도 아니라"·"뿐도 아니고")도 긍정 병렬이다(33차 P1) — 조사 자리를
+    // [만이은는도]{0,2}로 두어 종류에 기대지 않는다.
+    expect(proposeFromText(scenario, '효과 측정뿐만도 아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '게시 전 검수뿐도 아니고 시범 운영도 합시다.')).toEqual([
+      'PILOT',
+      'SCREEN',
+    ]);
+    // '뿐' 없는 "는 아니고"·"도 아니고"는 대조 부정이다.
+    expect(proposeFromText(scenario, '게시 전 검수도 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수는 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수가 아니라 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '추적 가능은 아니고 완전 익명으로 합시다.')).toEqual([
