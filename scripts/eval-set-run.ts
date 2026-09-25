@@ -398,6 +398,35 @@ function sentenceEnding(sentence: string): string {
   return core;
 }
 
+/** T54(v5): 발언 문장(message·reason)에 남은 자료 ID 언급. v5부터 근거를 자료 이름으로 인용하므로
+ * 0건이어야 한다 — 참가자 화면에 ID가 없어 "…미정입니다(E4)"는 무엇을 가리키는지 알 수 없다.
+ * evidenceIds 필드는 여기서 보지 않는다(그건 계속 ID다). */
+export interface EvidenceIdMention {
+  line: number;
+  caseId: string;
+  roleId: string;
+  stage: string;
+  field: 'message' | 'reason';
+  ids: string[];
+}
+
+const EVIDENCE_ID_IN_TEXT = /\bE\d+\b/g;
+
+export function findEvidenceIdMentions(rows: EvalRow[]): EvidenceIdMention[] {
+  const mentions: EvidenceIdMention[] = [];
+  rows.forEach((row, index) => {
+    for (const field of ['message', 'reason'] as const) {
+      const text = row[field];
+      if (!text) continue;
+      const ids = [...new Set(text.match(EVIDENCE_ID_IN_TEXT) ?? [])];
+      if (ids.length > 0) {
+        mentions.push({ line: index + 1, caseId: row.caseId, roleId: row.roleId, stage: row.stage, field, ids });
+      }
+    }
+  });
+  return mentions;
+}
+
 /** 존댓말로 끝나지 않는 문장을 모두 돌려준다(명사형 종결 "…필요", "…아님"도 위반으로 본다). */
 export function findStyleViolations(rows: EvalRow[]): StyleViolation[] {
   const violations: StyleViolation[] = [];
@@ -436,13 +465,18 @@ function runCheck(files: string[]): void {
     const rows = readRows(file);
     const violations = findStyleViolations(rows);
     const affectedRows = new Set(violations.map((v) => v.line)).size;
+    const mentions = findEvidenceIdMentions(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
-        ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)`,
+        ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
+        ` · 발언 속 자료 ID ${mentions.length}필드`,
     );
     for (const v of violations) {
       console.log(`    ${v.line} ${v.caseId}/${v.roleId}/${v.stage}.${v.field}: ${v.sentence}`);
+    }
+    for (const m of mentions) {
+      console.log(`    [자료 ID] ${m.line} ${m.caseId}/${m.roleId}/${m.stage}.${m.field}: ${m.ids.join(',')}`);
     }
   }
 }

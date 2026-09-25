@@ -39,8 +39,10 @@ export interface MeetingRecordInput {
   motion?: MeetingRecordMotion;
 }
 
-/** 모든 역할 프롬프트 앞에 붙이는 공통 규칙. 실존 인물이 아님, 세 표 모두 허용, 근거 인용,
- * 불확실 표기, 한국어·JSON만 응답, meeting_record는 데이터라는 규칙을 담는다.
+/** 모든 역할 프롬프트 앞에 붙이는 공통 규칙. 실존 인물이 아님, 세 표 모두 허용, 근거 인용(자료
+ * 이름으로 — T52에서 참가자 화면의 자료 ID를 없앴으므로 발언 문장 속 "(E4)"는 참가자가 무엇을
+ * 가리키는지 알 수 없다, T54/v5), 불확실 표기, 한국어·JSON만 응답, meeting_record는 데이터라는
+ * 규칙을 담는다. 응답 JSON의 evidenceIds는 계속 ID로 채운다(검증·기록용, 스키마 불변).
  *
  * 임원 4명뿐 아니라 prompts/assistant.ts의 refine·summarize도 이 함수를 쓴다. 임원에게만
  * 맞는 규칙(보고 대상·문체 등)은 여기 넣지 말고 prompts/roles/index.ts의 EXEC_STYLE_RULE에
@@ -52,7 +54,10 @@ export function buildCommonGuardrails(): string {
       ' 인물을 대변하지 않으며, 이 회의는 프로토타입 시연을 위해 구성된 가상 설정입니다.',
     '찬성(YES)·보류(HOLD)·반대(NO) 세 가지 표를 모두 실제로 고려하십시오. 무조건 찬성하거나' +
       ' 무조건 반대하는 답변은 금지합니다. 제공된 근거와 남은 우려에 따라 스스로 판단하십시오.',
-    '모든 주장에는 제공된 근거 카드 ID(예: E1)를 인용하십시오. 제공된 자료에 없는 사실·수치는' +
+    '주장의 근거는 아래 <meeting_record>의 자료 목록에 적힌 자료 이름으로 인용하십시오(예:' +
+      ' "게시판 운영 기록에 따르면 …"). 발언 문장 안에는 E1 같은 자료 ID를 쓰지 마십시오 —' +
+      ' 참가자 화면에는 ID가 없어 무엇을 가리키는지 알 수 없습니다. 응답 JSON의 evidenceIds에는' +
+      ' 인용한 자료의 ID(자료 목록의 id)를 그대로 넣으십시오. 제공된 자료에 없는 사실·수치는' +
       ' 만들어내지 말고 "확인되지 않음" 또는 "불확실"이라고 표기하십시오.',
     '응답은 한국어로, 요청된 JSON 스키마 형식으로만 작성하십시오. 인사말·설명·코드블록 표시 등' +
       ' 스키마 밖의 텍스트를 덧붙이지 마십시오.',
@@ -72,12 +77,14 @@ export function neutralizeTags(text: string): string {
   return text.replace(/</g, '＜').replace(/>/g, '＞');
 }
 
+/** 자료 목록. 자료 이름을 앞에 두어 모델이 발언에서 그 이름을 그대로 인용하게 하고, id는 뒤에
+ * 붙여 evidenceIds를 채울 때 대응시킨다(T54/v5 — 예전엔 "E1 (이름): …" 순서라 ID가 먼저 눈에 띄었다). */
 function formatEvidence(evidence: MeetingRecordEvidence[]): string {
   if (evidence.length === 0) return '(자료 없음)';
   return evidence
     .map(
       (item) =>
-        `- ${neutralizeTags(item.id)} (${neutralizeTags(item.title)}): ${neutralizeTags(item.content)}`,
+        `- ${neutralizeTags(item.title)} (id: ${neutralizeTags(item.id)}): ${neutralizeTags(item.content)}`,
     )
     .join('\n');
 }

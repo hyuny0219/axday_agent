@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
+  findEvidenceIdMentions,
   findStyleViolations,
   resolveEvalModel,
   toVoteRows,
@@ -150,5 +151,28 @@ describe('resolveEvalModel — mock 실행의 modelId', () => {
   it('실제 제공자는 MODEL_ID(공백 제거), 없으면 DEFAULT_MODEL_ID를 쓴다', () => {
     expect(resolveEvalModel({ MODEL_ID: ' my-model ' })).toEqual({ useMock: false, modelId: 'my-model' });
     expect(resolveEvalModel({})).toEqual({ useMock: false, modelId: DEFAULT_MODEL_ID });
+  });
+});
+
+// T54(v5): 발언 문장 속 자료 ID 언급 검사. v5부터 자료 이름으로 인용하므로 after 기록은 0건이어야 한다.
+describe('findEvidenceIdMentions — 발언 속 자료 ID', () => {
+  const base = { caseId: 'c', pathId: 'p', pathLabel: 'l', variant: 'v', roleId: 'CFO', status: 'answered', modelId: 'm', promptVersion: 'v5', latencyMs: 0 } as unknown as EvalRow;
+
+  it('message·reason에 남은 E1~E4를 필드별로 잡고 evidenceIds 필드는 보지 않는다', () => {
+    const rows: EvalRow[] = [
+      { ...base, stage: 'OPINIONS', message: '집계 기준이 다릅니다(E1, E2).', evidenceIds: ['E1', 'E2'] },
+      { ...base, stage: 'VOTE', reason: '담당자 미정으로 보류(E3).', message: undefined, evidenceIds: ['E3'] },
+      { ...base, stage: 'REACTIONS', message: '게시판 운영 기록에 따르면 기준이 다릅니다.', evidenceIds: ['E1'] },
+    ];
+    const mentions = findEvidenceIdMentions(rows);
+    expect(mentions.map((m) => [m.line, m.field, m.ids])).toEqual([
+      [1, 'message', ['E1', 'E2']],
+      [2, 'reason', ['E3']],
+    ]);
+  });
+
+  it('"E10"·소문자·한글 접두("SE1")는 자료 ID로 세지 않는다', () => {
+    const rows: EvalRow[] = [{ ...base, stage: 'OPINIONS', message: 'CASE1과 e2와 SE1은 무관합니다. E10은 잡습니다.' }];
+    expect(findEvidenceIdMentions(rows).map((m) => m.ids)).toEqual([['E10']]);
   });
 });
