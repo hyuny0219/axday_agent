@@ -152,6 +152,14 @@ describe('proposeFromText', () => {
       'SCREEN',
     ]);
     expect(proposeFromText(scenario, '효과 측정뿐만이아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    // 보조사 '은'이 붙은 형("뿐만은 아니라/아니고")도 긍정 병렬이다(32차 P1).
+    expect(proposeFromText(scenario, '효과 측정뿐만은 아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '게시 전 검수뿐만은 아니고 시범 운영도 합시다.')).toEqual([
+      'PILOT',
+      'SCREEN',
+    ]);
+    // '뿐' 없는 "는 아니고"는 대조 부정이다.
+    expect(proposeFromText(scenario, '게시 전 검수는 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수가 아니라 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '추적 가능은 아니고 완전 익명으로 합시다.')).toEqual([
       'ANON_FULL',
