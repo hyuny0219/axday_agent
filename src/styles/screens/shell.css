@@ -24,6 +24,72 @@
   }
 }
 
+/* 화면 맞춤 축소 래퍼(T51, DESIGN_SPEC.md v1.0 6절 보강). 설계 크기(1200×700)보다
+   조금 작은 뷰포트(노트북 창 모드 등)에서도 조종석 2열 배치를 유지하려고, App.tsx의
+   AppShell이 계산한 배율(--app-scale, src/app/viewportFit.ts)을 .app-scale-wrapper에
+   transform: scale()로 적용한다. 이 바깥 레이어(.app-scale-outer)는 절대 축소되지
+   않는다 — 조상에 transform이 걸리면 그 요소가 position:fixed 자손의 컨테이닝 블록이
+   되어 고정 배경(아래 ::before)이 함께 잘리기 때문에, 배경은 반드시 축소 wrapper
+   *바깥*에서 그린다. min-height만 두고 overflow를 제한하지 않는 것도 중요하다 —
+   reflow 모드(scale < 0.85, 기존 세로 1열 + 페이지 스크롤 경로)에서 문서 자체가
+   자라도록 이 레이어가 그 흐름을 가로막지 않아야 한다(e2e/a11y.spec.ts 960×540). */
+.app-scale-outer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 100dvh;
+  background-color: var(--bg);
+}
+
+/* scale 모드 전용: transform은 렌더링(시각) 크기만 줄일 뿐 .app-scale-wrapper의
+   레이아웃 상 크기(축소 전 700px)는 그대로라, 이 outer가 overflow를 막지 않으면
+   문서(document.scrollingElement)의 scrollHeight가 축소 전 700px 기준으로 계산돼
+   실제 뷰포트(예: 698px)보다 커져 버린다(실측: 1272×698에서 700 vs 698). outer 자체를
+   뷰포트 높이로 고정하고 overflow:hidden으로 막아, 축소 후 실제로는 보이지 않는 이
+   레이아웃상의 미세한 초과분이 페이지 스크롤을 만들지 않게 한다. */
+.app-scale-outer[data-fit='scale'] {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
+   background-attachment:fixed 없이도 스크롤과 무관하게 유지한다. */
+.app-scale-outer::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--bg-gradient);
+  pointer-events: none;
+}
+
+/* natural(뷰포트 ≥ 1200×700)·reflow(scale < 0.85) 모드는 wrapper에 크기·transform을
+   주지 않는다 — 유동적인 100% 너비로 안의 .app-shell(또는 미디어 쿼리로 풀린 문서
+   흐름)이 그대로 동작한다. scale 모드에서만 설계 크기(1200×700) 고정 박스를 만들고
+   transform-origin 상단 중앙으로 축소한다(1을 넘겨 확대하지 않음, viewportFit.ts가
+   이미 1로 clamp한다). */
+.app-scale-wrapper {
+  width: 100%;
+}
+
+.app-scale-wrapper[data-fit='scale'] {
+  flex-shrink: 0;
+  width: 1200px;
+  height: 700px;
+  transform: scale(var(--app-scale, 1));
+  transform-origin: top center;
+}
+
+/* scale 모드에서는 .app-shell이 실제 뷰포트(dvh)가 아니라 축소 wrapper의 설계
+   높이(700px)를 그대로 채워야 한다 — 100dvh를 쓰면 실측 뷰포트 높이(예: 698px)에 맞춰
+   레이아웃이 계산된 뒤 700px 박스 안에서 잘리거나 빈틈이 생겨 배율 계산과 어긋난다. */
+.app-scale-wrapper[data-fit='scale'] .app-shell {
+  height: 100%;
+}
+
 /* 게임 화면처럼 페이지 스크롤을 없앤다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와
    무스크롤 규칙", T45). 셸 자체를 뷰포트 높이에 고정하고 넘치는 내용은 문서가 아니라
    지정된 패널 하나만 안에서 스크롤한다(화면당 최대 1개). 잠금 해제(짧거나 좁은 뷰포트)는
@@ -34,17 +100,6 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-/* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
-   background-attachment:fixed 없이도 스크롤과 무관하게 유지한다. */
-.app-shell::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--bg-gradient);
-  pointer-events: none;
 }
 
 /* 헤더 유리 패널: backdrop-filter는 앱 전체에서 이 한 곳에만 쓴다(DESIGN_SPEC.md v1.0
@@ -189,6 +244,27 @@
   justify-content: flex-end;
 }
 
+/* 모델 연결 확인 결과 줄(T49, DESIGN_SPEC.md v1.0 10절). 패널 폭(220px) 안에서 두 줄
+   이내로 줄바꿈되도록 별도 폭 지정 없이 기존 .operator-menu__panel 흐름을 따른다. */
+.operator-probe__result {
+  margin: 0;
+  font-size: 14px;
+}
+
+.operator-probe__result--ok {
+  color: var(--accent);
+}
+
+.operator-probe__result--fail {
+  color: var(--vote-no);
+}
+
+.operator-probe__info {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .idle-notice {
   position: fixed;
   left: 50%;
@@ -246,7 +322,10 @@
   position: relative;
   display: grid;
   grid-template-columns: var(--stage-col-width) 1fr;
-  grid-template-rows: auto auto 1fr;
+  /* auto 행은 내용 높이를 그대로 요구해, 세로가 빠듯하면 줄어들지 않고 아래 행(회의록)을
+     화면 밖으로 밀어낸다(T56: VOTE에서 회의록 하단이 뷰포트를 890px까지 벗어났다).
+     minmax(0, …)로 세 행 모두 줄어들 수 있게 해 회의록이 항상 화면 안에 남게 한다. */
+  grid-template-rows: minmax(0, auto) minmax(0, auto) minmax(0, 1fr);
   grid-template-areas:
     'stage info'
     'actions info'
@@ -287,10 +366,14 @@
    넘지 않는다(e2e/noscroll.spec.ts가 두 해상도에서 단언). */
 .app-body__minutes {
   grid-area: minutes;
-  align-self: start;
+  /* align-self:start로 두면 행이 줄어들어도 패널이 원래 높이를 유지해 화면 밖으로
+     넘친다(T56: VOTE에서 회의록 하단이 890px까지 나갔다). 행 높이에 맞춰 늘어나고,
+     그 안에서 MinutesPanel이 보이는 건수를 줄인다. */
+  align-self: stretch;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* 오른쪽 열: 회의 정보(안건·근거·쟁점·임원 의견·반응·결과 기록). 화면당 내부 스크롤
@@ -305,6 +388,15 @@
   overflow: hidden;
 }
 
+/* 오른쪽 열은 flex 컬럼이라 공간이 모자라면 자식이 기본값(flex-shrink:1)으로 함께
+   줄어든다. 제목은 줄어들면 글자가 잘려 읽을 수 없으므로 고정하고, 줄어들 여지는
+   카드 목록이 갖게 한다(T56, 임원 의견·반응 화면에서 제목이 잘리던 원인). */
+.app-body__content > h2,
+.app-body__content > h3,
+.app-body__content > .screen-heading {
+  flex-shrink: 0;
+}
+
 /* 무스크롤 잠금은 검수 해상도(1920×1080·1280×720, 폭 ≥1200·높이 ≥700)에서만 적용한다.
    그보다 짧거나 좁은 뷰포트(PC 200% 확대 상당 960×540 등)에서는 셸을 문서 흐름으로
    되돌려 페이지 스크롤을 열고, 두 열을 세로 1열(무대 → 내 행동 → 회의 정보)로
@@ -313,19 +405,26 @@
    조건에서 함께 풀린다. 이 블록은 반드시 .app-main·.app-body·.app-body__content 기본
    규칙 뒤에 둔다 — 같은 특이성이라 앞에 두면 기본 규칙이 이겨 2열·overflow:hidden이
    그대로 남는다(PR #6 Codex 5차 검토). e2e/a11y.spec.ts 960×540 검사가 계산값으로
-   1열·overflow:visible을 단언한다. */
+   1열·overflow:visible을 단언한다.
+
+   T51: `.app-scale-wrapper[data-fit='scale']` 조상 가드를 모든 선택자 앞에 둔다.
+   화면 맞춤 축소(scale 0.85~1)가 걸린 뷰포트는 가로·세로 중 하나가 실제로 1199px·
+   699px 미만이어도(실측 사례 1272×698) 조종석 2열을 그대로 유지해야 하므로, 이
+   미디어 조건이 물리적으로 맞아도 이 1열 재배치 규칙 자체가 적용되지 않게 막는다
+   (viewportFit.ts가 scale >= 0.85일 때만 'scale' 모드를 준다 — 0.85 미만은 이 가드가
+   빠져 아래 규칙이 그대로 적용된다). */
 @media (max-height: 699px), (max-width: 1199px) {
-  .app-shell {
+  .app-scale-wrapper:not([data-fit='scale']) .app-shell {
     height: auto;
     min-height: 100dvh;
     overflow: visible;
   }
 
-  .app-main {
+  .app-scale-wrapper:not([data-fit='scale']) .app-main {
     overflow: visible;
   }
 
-  .app-body {
+  .app-scale-wrapper:not([data-fit='scale']) .app-body {
     grid-template-columns: 1fr;
     grid-template-areas:
       'stage'
@@ -335,7 +434,7 @@
     grid-template-rows: auto auto auto auto;
   }
 
-  .app-body__content {
+  .app-scale-wrapper:not([data-fit='scale']) .app-body__content {
     overflow: visible;
   }
 }

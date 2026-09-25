@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import type { ExecMemberId, Predicate } from '../../src/content/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 function collectHasIds(predicate: Predicate): string[] {
   if ('has' in predicate) return [predicate.has];
@@ -12,7 +12,7 @@ function collectHasIds(predicate: Predicate): string[] {
   return [];
 }
 
-describe('aiAssistantScenario', () => {
+describe('anonBoardScenario', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
@@ -30,6 +30,33 @@ describe('aiAssistantScenario', () => {
     }
   });
 
+  // 화면 문구에 자료 ID(E1~E4)를 쓰지 않는다(T52). 카드 접두만이 아니라 원문 속 언급
+  // ("집계 기간과 범위가 E1과 다르다")도 BRIEFING·DISCUSS에 그대로 렌더돼 참가자에게 ID를
+  // 노출했다(PR #10 Codex 29차 검토 P2). ID 필드(id·evidenceIds·relatedMemberIds 등 *Id/*Ids)
+  // 자체는 기록·검증용이라 제외하고, 그 밖의 모든 문자열을 훑는다.
+  it('ID 필드 밖의 어떤 문자열에도 자료 ID(E1~E4)가 없다', () => {
+    const EVIDENCE_ID_MENTION = /(?<![A-Za-z])E[1-4](?![0-9])/;
+    const offenders: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if (typeof value === 'string') {
+        if (EVIDENCE_ID_MENTION.test(value)) offenders.push(`${path}: ${value}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => walk(item, `${path}[${index}]`));
+        return;
+      }
+      if (value && typeof value === 'object') {
+        for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+          if (key === 'id' || /Ids?$/.test(key)) continue;
+          walk(child, `${path}.${key}`);
+        }
+      }
+    };
+    walk(scenario, 'scenario');
+    expect(offenders).toEqual([]);
+  });
+
   it('chairBriefing이 상황·결정 질문·역할 3문장을 모두 갖는다', () => {
     expect(scenario.chairBriefing.situation.length).toBeGreaterThan(0);
     expect(scenario.chairBriefing.question.length).toBeGreaterThan(0);
@@ -44,21 +71,14 @@ describe('aiAssistantScenario', () => {
     }
   });
 
-  it('핵심 쟁점이 3개이고 참조 자료 ID가 모두 존재한다', () => {
-    expect(scenario.briefingIssues).toHaveLength(3);
-    for (const issue of scenario.briefingIssues) {
-      for (const id of issue.evidenceIds) {
-        expect(evidenceIds.has(id)).toBe(true);
-      }
+  // T52: 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 표시용 필드. 새 사실을
+  // 만들지 않고 기존 원안 문장(subtitle)을 그대로 쪼갠 것인지 확인한다.
+  it('motionBreakdown의 제안과 미정 항목이 원안 문장 밖의 새 사실을 만들지 않는다', () => {
+    expect(scenario.motionBreakdown.proposal.length).toBeGreaterThan(0);
+    expect(scenario.motionBreakdown.undecidedItems.length).toBeGreaterThan(0);
+    for (const item of scenario.motionBreakdown.undecidedItems) {
+      expect(scenario.subtitle).toContain(item);
     }
-  });
-
-  it('previewConditionIds는 4개이며 모두 conditions에 존재하고 OPEN_ALL은 포함하지 않는다', () => {
-    expect(scenario.previewConditionIds).toHaveLength(4);
-    for (const id of scenario.previewConditionIds) {
-      expect(conditionIds.has(id)).toBe(true);
-    }
-    expect(scenario.previewConditionIds).not.toContain('OPEN_ALL');
   });
 
   it('initialOpinions가 참조하는 자료 ID가 모두 존재한다', () => {
@@ -162,8 +182,8 @@ describe('aiAssistantScenario', () => {
     expect(scenario.incident.headline).not.toMatch(UNGROUNDED_PATTERN);
     expect(scenario.incident.hook).not.toMatch(UNGROUNDED_PATTERN);
     // hook의 수치는 E1·E2 insight에 있는 값만 쓴다.
-    expect(scenario.incident.hook).toContain('120건');
-    expect(scenario.incident.hook).toContain('126건');
+    expect(scenario.incident.hook).toContain('320건');
+    expect(scenario.incident.hook).toContain('140건');
   });
 
   it('resultCopy.sixMonthsLater 4필드가 비어 있지 않고 수치 표현이 없다', () => {

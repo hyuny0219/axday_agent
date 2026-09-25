@@ -72,12 +72,8 @@ export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext 
                   <ul className="opinion-card__evidence">
                     {opinion.evidenceIds.map((id) => {
                       const card = scenario.evidence.find((item) => item.id === id);
-                      return (
-                        <li key={id}>
-                          <strong>{id}</strong>
-                          {card ? ` · ${card.title}: ${card.content}` : ''}
-                        </li>
-                      );
+                      // 화면에는 자료 ID(E1~E4)를 쓰지 않고 자료명만 보여준다(T52).
+                      return <li key={id}>{card ? `${card.title}: ${card.content}` : ''}</li>;
                     })}
                   </ul>
                 )}

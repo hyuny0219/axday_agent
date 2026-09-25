@@ -12,8 +12,13 @@ import type { Clock } from './clock';
 
 const WINDOW_MS = 60 * 60 * 1000;
 export const DEFAULT_MAX_SESSIONS_PER_HOUR = 30;
-/** 세션 수명. 체험 240초 + 결과 화면·무입력 복귀 여유. 이후 같은 sessionId는 거절한다. */
-export const DEFAULT_SESSION_TTL_MINUTES = 15;
+/**
+ * 세션 수명 — **마지막 요청 이후** 이 시간 동안 요청이 없으면 만료한다(슬라이딩). 체험이
+ * 시간으로 끝나지 않으므로(T50) 첫 요청 기준 절대 수명을 두면 오래 토론한 참가자의 반응·표결이
+ * 429 session_expired로 거절된다(PR #10 Codex 8차 검토 P2). 요청 사이 무응답 30분은 부스에서
+ * 정상 흐름이 아니므로 그때는 거절한다. 이후 같은 sessionId는 거절한다.
+ */
+export const DEFAULT_SESSION_TTL_MINUTES = 30;
 
 export type CallKind = 'round' | 'vote' | 'refine' | 'summarize';
 
@@ -48,12 +53,14 @@ export function loadSessionLimitConfig(env: NodeJS.ProcessEnv = process.env): Se
 
 interface SessionEntry {
   firstSeenAt: number;
+  /** 마지막으로 통과한 요청 시각. 수명은 여기서부터 잰다(슬라이딩). */
+  lastSeenAt: number;
   calls: Record<CallKind, number>;
 }
 
 /**
  * 최근 1시간 동안 새로 등록된 세션 수를 슬라이딩 윈도로 세고, 등록된 세션마다 첫 등록
- * 시각과 엔드포인트별 호출 횟수를 기억한다. Clock을 주입받아 시간 경과를 시계 값으로만
+ * 시각·마지막 통과 시각과 엔드포인트별 호출 횟수를 기억한다. Clock을 주입받아 시간 경과를 시계 값으로만
  * 판단하고, 호출 횟수나 setTimeout으로 셈하지 않는다.
  */
 export class SessionLimitRegistry {
@@ -79,18 +86,19 @@ export class SessionLimitRegistry {
     while (this.registeredAt.length > 0 && now - this.registeredAt[0]! >= WINDOW_MS) {
       this.registeredAt.shift();
     }
-    // 윈도 밖으로 나간 세션 항목도 지워 메모리를 제한한다(수명이 지난 뒤이므로 재사용 불가).
+    // 마지막 요청 뒤 1시간이 지난 세션 항목은 지워 메모리를 제한한다. 수명(≤1시간)이 먼저
+    // 지나므로 재사용은 이미 거절된 뒤다. 호출 횟수를 잃지 않도록 활성 세션은 남긴다.
     for (const [sessionId, entry] of this.sessions) {
-      if (now - entry.firstSeenAt >= WINDOW_MS) {
+      if (now - entry.lastSeenAt >= WINDOW_MS) {
         this.sessions.delete(sessionId);
       }
     }
   }
 
   /**
-   * 'ok'면 통과(호출 횟수를 1 올린다). 'session_limit'은 시간당 새 세션 상한 초과,
-   * 'session_expired'는 수명이 지난 세션의 재사용, 'call_limit'은 그 세션에서 해당 종류의
-   * 호출이 상한을 넘은 경우다.
+   * 'ok'면 통과(호출 횟수를 1 올리고 수명을 갱신한다). 'session_limit'은 시간당 새 세션 상한
+   * 초과, 'session_expired'는 마지막 요청 뒤 수명이 지난 세션의 재사용, 'call_limit'은 그
+   * 세션에서 해당 종류의 호출이 상한을 넘은 경우다.
    */
   allow(sessionId: string, kind: CallKind): SessionLimitVerdict {
     const now = this.clock.now();
@@ -101,10 +109,14 @@ export class SessionLimitRegistry {
       if (this.registeredAt.length >= this.config.maxPerHour) {
         return 'session_limit';
       }
-      entry = { firstSeenAt: now, calls: { round: 0, vote: 0, refine: 0, summarize: 0 } };
+      entry = {
+        firstSeenAt: now,
+        lastSeenAt: now,
+        calls: { round: 0, vote: 0, refine: 0, summarize: 0 },
+      };
       this.sessions.set(sessionId, entry);
       this.registeredAt.push(now);
-    } else if (now - entry.firstSeenAt >= this.config.sessionTtlMs) {
+    } else if (now - entry.lastSeenAt >= this.config.sessionTtlMs) {
       return 'session_expired';
     }
 
@@ -112,6 +124,7 @@ export class SessionLimitRegistry {
       return 'call_limit';
     }
     entry.calls[kind] += 1;
+    entry.lastSeenAt = now;
     return 'ok';
   }
 }

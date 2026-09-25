@@ -3,7 +3,7 @@
 // 알리고 각 행이 aria-atomic이어야 한다.
 
 import '@testing-library/jest-dom/vitest';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MinutesPanel } from '../../src/components/parts/MinutesPanel';
 import type { MinutesEntry } from '../../src/components/minutes';
@@ -61,5 +61,56 @@ describe('MinutesPanel 낭독', () => {
     expect(after).toHaveTextContent('작게 시작합시다.');
     expect(after).not.toHaveTextContent('판단 중');
     expect(after.querySelector('.minutes__dots')).toBeNull();
+  });
+});
+
+// T56 세로 예산 계산. 한 건도 못 담는 높이에서는 0건으로 접히고, 접힌 상태에서 max로
+// 되돌아가 "max → 0 → max"를 반복하지 않아야 한다(PR #10 Codex 3차 검토 P1). 다시 펴는
+// 것은 접을 때보다 가용 높이가 실제로 커졌을 때뿐이다.
+describe('MinutesPanel 세로 예산', () => {
+  let outerHeight = 0;
+  const original = Element.prototype.getBoundingClientRect;
+
+  beforeAll(() => {
+    // jsdom은 크기를 0으로 준다. 행 20px·머리글 10px·바깥 칸은 테스트가 정한 높이로 흉내 낸다.
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      const height = this.classList.contains('minutes__entry')
+        ? 20
+        : this.classList.contains('minutes__head')
+          ? 10
+          : this.classList.contains('minutes')
+            ? 0
+            : outerHeight;
+      return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: height, width: 0, height, toJSON: () => ({}) } as DOMRect;
+    };
+  });
+
+  afterAll(() => {
+    Element.prototype.getBoundingClientRect = original;
+  });
+
+  const entries: MinutesEntry[] = [
+    chair,
+    { id: 'op-CFO', speaker: 'CFO', text: '담당자부터 필요합니다.', kind: 'speech' },
+  ];
+
+  it('한 건도 못 담는 높이에서는 접힌 채로 머물고, 높이가 커져야 다시 편다', () => {
+    outerHeight = 15; // 머리글 10을 빼면 5px — 행 20px이 한 건도 들어가지 않는다
+    const { rerender } = render(<MinutesPanel entries={entries} stage="VOTE" />);
+    const panel = screen.getByTestId('minutes-panel');
+    expect(panel).toHaveClass('minutes--collapsed');
+    expect(panel.querySelectorAll('.minutes__entry:not(.minutes__entry--hidden)')).toHaveLength(0);
+
+    // 같은 높이에서 항목이 늘어도(effect 재실행) 접힘이 풀리지 않는다.
+    const more: MinutesEntry[] = [...entries, { id: 'op-CISO', speaker: 'CISO', text: '로그는 별개입니다.', kind: 'speech' }];
+    rerender(<MinutesPanel entries={more} stage="VOTE" />);
+    expect(screen.getByTestId('minutes-panel')).toHaveClass('minutes--collapsed');
+
+    // 가용 높이가 커지면(50 - 10 = 40px → 2건) 다시 편다.
+    outerHeight = 50;
+    rerender(<MinutesPanel entries={[...more, { id: 'op-CAIO', speaker: 'CAIO', text: '계정 체계와 연결해야 합니다.', kind: 'speech' }]} stage="VOTE" />);
+    const expanded = screen.getByTestId('minutes-panel');
+    expect(expanded).not.toHaveClass('minutes--collapsed');
+    expect(expanded.querySelectorAll('.minutes__entry:not(.minutes__entry--hidden)')).toHaveLength(2);
   });
 });

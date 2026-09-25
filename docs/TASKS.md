@@ -18,14 +18,14 @@
 | T14 | 완료 | M5 디자인 1. 수정 1라운드(클릭 영역). 스크린샷 8장. 시각 완성도는 T33에서 보강 |
 | T26 | 완료 | 도메인 확장(live 상태·모드·표 메타). 1라운드 PASS. 단위 122 |
 | T27~T30 | 완료 | M-L1 서버·프롬프트·오케스트레이터·화면 연결. T27~T29 1라운드 PASS, T30 수정 1라운드(허용 경로 밖 live.ts 편집 되돌림, 장애 주입은 e2e route로 대체·T36 분리). 단위 177·E2E 36. 실제 모델 호출은 미검증(키 없음) |
-| T31~T32 | 완료 | M-L2 비서실장 live·평가 하네스. T31 수정 1라운드(원문/초안 나란히·원문 유지 버튼), T32 1라운드 PASS. 단위 198·E2E 39. `npm run eval:live`는 mock으로만 실행됨. 실제 키로 `--runs 3` 실측은 미실행(절차: docs/LIVE_EVAL.md) |
+| T31~T32 | 완료 | M-L2 비서실장 live·평가 하네스. T31 수정 1라운드(원문/초안 나란히·원문 유지 버튼), T32 1라운드 PASS. 단위 198·E2E 39. `npm run eval:live` 실제 키 `--runs 3` 실측 완료(2026-09-22, claude-sonnet-5): 144호출 전량 성공·검증 실패 0·8초 초과 0건·휴리스틱 5개 PASS(`docs/eval/live-2026-09-22.md`). 실측 중 probe 스키마 400 결함 1건 발견·수정 |
 | T36 | 대기 | live 클라이언트 mock 장애 주입 배선(필요할 때만) |
 | T37 | 완료 | 무료 웹호스팅 배포 준비. 1라운드 PASS. 단위 229·E2E 54. 배포 자체는 사용자 계정에서(docs/DEPLOY.md) |
 | Codex 검토 1차 | 완료 | PR #1 리뷰 6건(P1 4·P2 2) 반영: 본문 64KiB 상한, meeting_record 꺾쇠 무력화, 세션 수명·호출 상한, 라운드 직렬화, 모델 응답이 무입력 시계를 연장하지 않음, 리셋 sessionId를 액션에 실어 reducer 순수성 유지. 2차 2건(최종표를 라운드 사슬 뒤에 연결, 만료 후 늦은 응답 폐기)도 반영. 단위 242·E2E 54 |
 | T15~T16 | 완료 | 모션·접근성, E2E 전체·외부 요청 차단. 모두 1라운드 PASS. T16이 찾은 후속 조건 해제 버그(이전 확정 조건이 합집합으로 되살아남)는 오케스트레이터가 수정. 단위 203·E2E 54. Playwright가 dist를 서빙하므로 webServer에 build를 포함 |
 | T17 | 완료 | 오프라인 검증(scripted)·README·PR 초안. 1라운드 PASS. `bash scripts/offline-check.sh` PASS(26 E2E). docs/PR_P0.md 13항목 중 11 체크·2 미체크(전체화면 거부, 현장 IME 리허설). 실제 Anthropic 키 실측은 여전히 미실행 |
 | T33·T38 | 완료 | 디자인 마감 1·2. T33 수정 1라운드(1280×720 고정 CTA 겹침), T38 1라운드 PASS(nit: 장식 칩 CSS 텍스트를 보조기기에서 숨김 처리). 스크린샷 8장 갱신. PR #2 Codex 검토 3건(720 높이 토글 가림, 장식 아이콘 보조기기 노출 2건) 반영. 단위 242·E2E 54 |
-| T34 | 대기 | 임원 에이전트 고도화 1차(T32 실측 후, PR 전). 키 없으면 T35로 |
+| T34 | 완료 | 임원 에이전트 고도화 1차. 2라운드(v2 문체 지시 추가 → v3 적용 범위 수정). 고정 평가 세트 12케이스(`scripts/eval-set.json`)와 문장 종결 검사(`--check`)를 코드로 남김. PROMPT_VERSION v1→v3. 비존댓말 종결 187건→0건, (1)(6) 0건·(2)(5) 악화 없음(`docs/eval/tuning-v2.md`·`tuning-v3.md`). PR #10 Codex 검토 4건 반영 — 1차 2건(비서실장 프롬프트 상속, (4) 집계 근거), 2차 2건(인용 괄호만 제거하도록 한정, 공백 없는 문장 경계 분리), 6차 1건(2026-09-23: 존댓말 판정이 합쇼체만 인정해 해요체·-합니까를 위반으로 오집계하던 것을 넓힘, 재집계 187/1/0 동일, 판정기 단위 테스트 `tests/scripts/eval-set-run.test.ts` 신설·스크립트 진입점 가드), 7차 1건(-니까 통째 허용이 반말 연결형 "없으니까."를 통과시키고 자모 ㄴ데요가 완성형 "인데요"와 안 맞던 것 → 합쇼체 의문형만 열거, "데요"로 판정, 재집계 187/1/0 동일), 8차 1건(-ㅂ니까 앞 음절 열거 불가 → 종성 ㅂ 유니코드 판정, "책임집니까/바꿉니까/압니까/씁니까" 통과). 허용 경로 밖 변경 1건 기록: `tests/server/round.test.ts`의 하드코딩 'v1' 단언을 PROMPT_VERSION 참조로 교체. 단위 309·E2E 82 Codex 13차 검토 1건 반영 — (P2) 해요체 판정이 앞 음절 열거라 축약 활용("맡겨요"·"알려요"·"둬요")을 위반으로 세던 것을 음절 구조(종성 없음 + 융합 중성) 판정으로 일반화. 테스트 추가, 재집계 187/1/0 동일. Codex 14차 검토 1건 반영 — (P2) 루트 `README.md`가 "실제 키 실측 미실행·docs/eval 비어 있음·T34 대기"로 남아 있던 것을 2026-09-22 실측 결과·T34 완료·남은 T54/T35로 갱신. Codex 15차 검토 1건 반영 — (P2) `AGENT_BOARDROOM_SPEC.md` 7장 "실제 모델 평가·현장 리허설은 아직 수행 전"을 실측 완료(2026-09-22)와 현장 리허설 미수행으로 분리해 갱신. Codex 16차 검토 1건 반영 — (P2) 15차 정정이 2026-09-22 실측(이전 안건·v1~v3)을 현재 안건·v4의 완료로 묶어 읽히게 했던 것을 `AGENT_BOARDROOM_SPEC.md` 7장·`README.md`에서 분리(현재 안건·v4는 미실측, T54에서 기준선 재측정). Codex 17차 검토 2건 반영 — (P2) `scripts/eval-set.json` 주석이 실행기를 live-eval.ts로 잘못 안내하던 것을 eval-set-run.ts와 실행 명령으로 정정, (P2) `docs/PR_P0.md` live 검수 항목의 실측 증빙을 이전 안건·v1 기준으로 명시하고 현재 안건·v4 미실측을 분리(같은 파일의 타이머 항목도 T50 제거 표시). Codex 18차 검토 1건 반영 — (P2) `scripts/eval-set-run.ts`가 VOTE 행 latencyMs를 항상 0으로 기록하던 것을 provider 호출 계측(역할별)으로 실제 값 기록. 단위 테스트 추가, mock 실행으로 0이 아님을 확인. Codex 19차 검토 1건 반영 — (P2) 타임아웃 실패한 VOTE 행(provider 기록 없음)이 다시 0ms로 남던 것을 핸들러가 관측한 대기 시간으로 기록. 단위 테스트 추가. Codex 30차 검토 1건 반영 — (P2) `MODEL_PROVIDER=mock` 실행에서 modelId가 `DEFAULT_MODEL_ID`(claude-sonnet-5)로 기록돼 산출물만으로 실제 평가와 구별할 수 없던 것을, 서버와 같이 mock은 항상 `mock-model`(`MOCK_MODEL_ID`, MODEL_ID 무시)을 쓰도록 `resolveEvalModel`로 수정(live-eval.ts도 동일). 단위 테스트 2건. |
 | T35 | 대기 | 임원 에이전트 고도화 2차(검수 1차·리허설 1 이후, 콘텐츠 동결 전) |
 | T39 | 완료 | P0.5 브리핑 이해도 패치(v0.9 A-1) — 의장 브리핑·자료 해석·핵심 쟁점·조건 미리보기·진행 스트립 |
 | T40 | 완료 | P0.5 후속 단순화(v0.9 A-2) — CAIO 질문 귀속·답글형 반응·직접 입력 접기·빠른 답만으로 완료. PR #4 Codex 검토 3건 반영(live 답글형·답변 전 조건 칩 숨김·입력 유지 시 칩 유지) |
@@ -33,12 +33,18 @@
 | T46 | 완료 | live 후속 라운드 대기 게이트(MOTION CTA, v1.0 7절). 1라운드 PASS. PR #7 Codex 검토 1건 반영(게이트를 세션 상태에서 동기 계산해 MOTION 첫 프레임부터 잠금) |
 | T47 | 완료 | 안건 사건화 문구·"6개월 뒤" 에필로그(v1.0 8절, 카피 보강). 1라운드 PASS. 다듬기: 회의록 패널 내용 높이·직함 숨김(아바타 이니셜로 대체), 선택 카드 머리줄 한 줄. 단위 282·E2E 74 |
 | T48 | 완료 | 이사회 한 장 요약(결과 화면 기록 영역 재배치, v1.0 9절). 1라운드 PASS(다듬기: 720 AI 도움 미사용 문구 12px). 단위 298·E2E 76 |
+| T49 | 완료 | 운영 메뉴: 모델 연결 확인·scripted로 새 체험(v1.0 10절). 2라운드(수정: e2e 재시도 시 메뉴 재열기). 허용 경로 밖 변경 1건 기록: `server/providers/mock.ts`가 probe 고정 호출(user:'ok')에 `{ok:true}`로 답하도록 분기 추가(mock 서버로 e2e·개장 전 확인을 돌리기 위해 필요). 단위 309·E2E 82. PR #10 Codex 9차 검토 2건 반영(2026-09-23) — (P2) probe·health fetch에 클라이언트 시간 상한(12초·5초, AbortController + 경주)이 없어 연결 블랙홀 시 닫기 비활성 패널이 영원히 남던 것 수정(error 'timeout'), (P2) scripted 재시작이 루트 절대 경로로 이동해 GitHub Pages `/<repo>/` 배포에서 앱을 벗어나던 것을 현재 pathname 유지로 수정. 10차 1건 — 상한이 fetch()에만 걸려 헤더 뒤 본문이 멈추면 res.json()이 무한 대기하던 것을 fetch+본문 해석 전체를 경주시키도록 수정 Codex 15차 검토 1건 반영 — (P2) `DESIGN_SPEC.md` v1.0 10절의 scripted 재시작이 `/?mode=scripted` 고정 이동으로 남아 있던 것을 현재 pathname 유지(`scriptedRestartUrl`, GitHub Pages base 보존)로 정정. |
 | T42 | 완료 | v1.0 애니메이션 프레임 스킨(토큰·타이포·카드·CTA·대기 화면). 1라운드 PASS |
 | T43 | 완료 | v1.0 무대 띠(StageBand)·결과 연출(순차 배지·도장·게이지). 1라운드 PASS. 단위 260·E2E 64 |
 | T45 | 완료 | v1.0 조종석 배치(왼쪽 나·오른쪽 회의)·무스크롤. 2라운드(검토 반영: 추천 문구 오른쪽·반응 입력 자리 전환). PR #6 Codex 검토 7건 반영(reduced-motion 지연·VOTE 무대 상태·live 답글 잘림·live 결과 근거 잘림·근거 카드 펼침 잘림·200% 확대 스크롤 경로·잠금 해제 미디어 블록 순서). E2E 72 |
 | T44 | 완료 | v1.0 무대 좌우 분할(인물 안 잘림, 접힘 제거, 본문 2열 대응). 1라운드 PASS. E2E 68. 1280×720 반응 화면은 스크롤 허용 |
+| T50 | 완료 | 타이머 제거(240초 만료·75/90초 무입력 복귀, 2026-09-22 사용자 결정). 세션 종료 경로는 결과 화면 "체험 종료"·운영 메뉴 "새 체험"·"scripted로 새 체험"만 남김. 주입형 Clock·systemClock·fakeClock은 유지(서버·orchestrator 지연 측정). UNCAST는 live 응답 실패 경로로 유지. **reviewer 미실행** — builder가 API 네트워크 오류로 중단돼 오케스트레이터가 변경분을 카드와 대조 검토하고 커밋함. 단위 296·E2E 82(T51과 함께 확인). PR #10 Codex 7차 검토 1건 반영 — (P2) 최우선 명세 `AGENT_BOARDROOM_SPEC.md` 6장·7장이 여전히 240초 deadline·무입력 복귀를 요구하던 것을 타이머 제거에 맞게 개정(개정 이력 머리말 추가), FACILITATOR_GUIDE 지표표의 만료·무입력 행과 DEV_PLAN 시계 단락 정정. Codex 8차 검토 1건 반영 — (P2) 서버 세션 수명(`server/sessionLimit.ts`)이 첫 요청 기준 절대 15분이라 오래 토론한 live 참가자의 반응·표결이 429 session_expired로 거절되던 것을 마지막 요청 기준 슬라이딩 30분으로 변경(거절된 요청은 갱신하지 않음, 호출 횟수 누적 유지) Codex 12차 검토 1건 반영 — (P2) `CLAUDE_IMPLEMENTATION.md` 3장 화면표·"시간 만료·리셋"·현장 운영 규칙·세션 필드(`deadline`·`lastActivityAt`)·검수 항목에 남아 있던 240초·무입력 타이머 요구를 "세션 종료·리셋"으로 개정. Codex 13차 검토 1건 반영 — (P2) `DESIGN_SPEC.md` 6장 검수 항목(무입력 75/90초)·7장 커서 이동 조건·v1.0 무대 애니메이션 무입력 조건·헤더 4분 시계 pill에 남아 있던 타이머 요구를 T50 제거로 정정. Codex 14차 검토 1건 반영 — (P2) 루트 `README.md`(오프라인 검사 범위·P0 완료 범위·2026-09-09 이력)와 `e2e/README.md`(operations 스펙 설명)에 남아 있던 240초 만료·무입력 복귀·만료 시 UNCAST를 현재 동작(운영자 초기화, 8초 임원 표 상한)으로 정정. Codex 19차 검토 1건 반영 — (P2) `docs/PR_P0.md` 활성 항목 두 곳(표 선택 후 만료 시 UNCAST, 시간 만료 상태 일관성)과 삭제된 테스트 증빙을 확정 버튼·8초 임원 표 상한·운영자 초기화 기준으로 갱신. |
+| T51 | 완료 | 화면 맞춤 축소(설계 크기 1200×700보다 작은 뷰포트에서 조종석 배치 유지, 노트북 창 모드 대응). 1라운드 PASS. `.app-scale-outer`/`.app-scale-wrapper`가 리사이즈마다 `viewportFit.ts`로 scale을 계산해 `--app-scale` CSS 변수로 반영(0.85 미만은 기존 1열 재배치로 폴백). 고정 배경은 축소 wrapper 밖(app-scale-outer)에서 그림. 구현 중 발견: transform은 시각 크기만 줄이고 레이아웃 크기는 그대로라 outer에 `overflow:hidden`을 추가로 둬야 문서 스크롤이 생기지 않음(실측 1272×698: scrollHeight 700 vs clientHeight 698). 단위 296·E2E 82(타이머 e2e 3건이 T50에서 빠지고 뷰포트 e2e 3건이 들어와 총계 유지). 로컬 검증은 이 환경의 Chromium 바이너리 다운로드가 걸려 있어 `playwright.config.ts`를 로컬에서만 `channel:'chrome'`로 임시 전환해 통과 확인 후 원복(커밋에는 미포함) |
+| T52 | 완료 | 브리핑 화면 정리 — 무대 명패 약칭(`CEO`·`CFO`·`CAIO`·`CISO`·`나`)으로 겹침 해소, 자료 카드에서 `E1~E4` 표기 제거하고 자료명·해석·원문을 클릭 없이 상시 표시(아코디언 제거), "이 자료가 말하는 것" 라벨·"체험용 사전 구성" 배지·핵심 쟁점 목록·조건 미리보기 제거, 오른쪽 열을 결정 질문(최대) → 현재 상황·제안·미정 → 특별 이사님이 할 일 + `최종 결정: 승인·보류·부결` → 자료 4장 순으로 재구성. **reviewer 미실행** — builder가 API 네트워크 오류로 중단돼 오케스트레이터가 남은 작업(라벨 제거·죽은 CSS 정리·낡은 testid 교체)을 마치고 검증·커밋함. 단위 295·E2E 84 Codex 12차 검토 1건 반영 — (P2) 11차 정정 때 진행 스트립까지 T52 제거 항목으로 잘못 적은 것을 바로잡음(`ProgressStrip`은 유지, `e2e/briefing.spec.ts`). `DESIGN_SPEC.md` 3장 브리핑 행도 같은 기준으로 정정. Codex 27차 검토 1건 반영 — (P2) 카드를 제거했는데도 BRIEFING 진입 시 `MARK_SUMMARY_SHOWN`이 기록되고 결과에 "자료 4장 자동 정리 데모 표시"가 항상 나오던 것을, 이벤트·리듀서 액션·`SUMMARY_SHOWN` 타입·결과 줄을 함께 제거하고 미사용 문구를 "AI 비서실장 도움은 사용하지 않았습니다"로 바꿔 수정(`BriefingScreen`·`App`·`session.ts`·`assistantLog.ts`·`ResultScreen`). 지시서 5장·PR_P0·최우선 명세 3장·FACILITATOR_GUIDE·README 정정, e2e 미사용 케이스 재작성. Codex 28차 검토 1건 반영 — (P2) 지시서 3장 RESULT 행과 `DESIGN_SPEC.md` 6장 결과 검수 항목이 여전히 자동 정리 표시 기록을 요구하던 것을 실제 동작(사용한 도움 또는 미사용 문구)으로 정정, 자산표의 브리핑 레퍼런스에 제거 표기. Codex 29차 검토 2건 반영 — (P2) E2 원문 "집계 기간과 범위가 E1과 다르다"가 BRIEFING·DISCUSS에 그대로 렌더돼 자료 ID를 노출하던 것을 자료명("게시판 운영 기록과 다르다")으로 교체(클라이언트·서버 사본·시나리오 문서), ID 필드 밖 모든 문자열에 E1~E4가 없는지 단위 테스트, e2e는 접두만이 아니라 `/E[1-4]/` 전체 검사. (P2) 상시 노출 원문(`variant='expanded'`)의 줄 클램프(1080 3줄·720 2줄)를 제거 — 펼칠 컨트롤이 없어 클램프가 뒷부분을 소리 없이 지울 수 있음(현재 원문 4장은 두 해상도 모두 클램프 유무로 높이가 같음을 실측). e2e가 각 원문의 마지막 글자 사각형이 카드·뷰포트 안에 있는지 단언. |
+| T53 | 완료 | 안건 ② 교체 — 사내 게시판 익명제(`anon-board`). 시나리오 문서 `docs/SCENARIO_ANON_BOARD.md`, 콘텐츠 `src/content/scenarios/anonBoard.ts`, 서버 사본·검증 조건 ID(`PILOT·SCREEN·TRACE·MEASURE·ANON_FULL`), 상충쌍 `TRACE↔ANON_FULL`. 이전 안건(aiAssistant.ts)은 파일로 남기고 레지스트리에서만 제외. **reviewer 미실행** — builder가 API 네트워크 오류로 중단돼 오케스트레이터가 전부 작성·검증·커밋함. 구현 중 발견 2건: (1) `TRACE` 키워드 `추적`이 "추적할 수 없는 완전 익명" 문장에도 걸려 상충 조건이 동시에 제안되던 것을 긍정형 표현으로 좁힘, (2) 후속 질문이 앞 단계에서 이미 확정한 조건을 다시 제안해 새 조건을 끌어내지 못하던 것을 E3(신고 처리 담당자 부재) 쟁점으로 재설계. 단위 295·E2E 84. PR #10 Codex 3차 검토 2건 반영 — (P1) 고정 평가 세트 12케이스와 `scripts/live-eval.ts` 고정 경로의 참가자 발언이 이전 안건 문구(권한·부서 자료 연결)였던 것을 새 조건(추적 가능·완전 익명·시범·검수·측정)을 말하도록 재작성(v1~v3 실측 기록과는 직접 비교 불가), (P2) CFO·CAIO·CISO 역할 프롬프트 4번째 줄에 이전 안건의 조건명(준비시간·수정량, 출처·기준일, 권한·공유 범위)이 남아 live 임원이 옛 쟁점에 편향되던 것을 안건 독립 문구로 교체하고 PROMPT_VERSION v3→v4(실측 전후 비교는 T54와 함께 v5에서). Codex 4차 검토 2건 반영 — CAIO 판단 기준·허용 동작의 "AI 활용"을 "기술·운영 활용"으로 확장(스펙 2장 역할표·AGENDA_CANDIDATES 4절 예정 항목 반영), 조건 보완 반론형 발언이 최종 조건 집합(4개)과 어긋나던 것을 네 조건을 다 제안하는 반론으로 수정. Codex 5차 검토 1건 반영 — (P1) TRACE 키워드 `신고가 들어온`이 조건 없는 후속 빠른 답 "신고가 들어온 뒤에 처리해도 충분합니다."에 걸려 추적 조건이 몰래 확정되던 것을 키워드 제거로 수정, 빠른 답 3문구가 각각 proposeConditionId와 같은 조건만 추출하는지 테스트로 고정. Codex 10차 검토 1건 반영 — (P2) FACILITATOR_GUIDE v0.9 이해도 검수 표가 이전 안건(AI 업무 비서·CAIO 숫자 불일치)을 기준으로 남아 있던 것을 새 안건(게시판 익명제·CFO 신고 처리 담당자 질문)으로 갱신하고 새 화면으로 재검수해야 함을 명시. Codex 11차 검토 1건 반영 — (P2) `CLAUDE_IMPLEMENTATION.md` P0.5 완료 기준(핵심 쟁점·조건 미리보기·CAIO 후속 질문·AI 업무 비서 이해도 검수)과 BRIEFING 화면표·타이머 완료 기준을 T50·T52·T53에 맞게 갱신. 같은 이유로 `DESIGN_SPEC.md` v1.0 6절 브리핑 행(쟁점 3칩·조건 미리보기)과 v0.9 반응 행("CAIO가 묻습니다")도 정정. Codex 6차 검토 1건 반영 — (P2) 조건 보완 구어체 발언이 "조건 다 넣어서"라고만 말해 ANON_FULL까지 포함한 집합으로 읽힐 수 있던 것을 네 조건을 명시하도록 수정 Codex 12차 검토 1건 반영 — (P1) 후속 직접 답변 "작성자를 확인하지 않겠습니다."가 TRACE 키워드에 걸려 거부한 조건이 자동 승인되던 것을 부정 표지 확장(`-지 않-`·`없-`·`안 -`·`못 하-`·`반대`, 같은 절 안)으로 수정하고 `ANON_FULL` 키워드 `누구도 확인`을 자기 부정되지 않는 형태로 조정. 단위 4건·e2e 1건 추가. Codex 15차 검토 1건 반영 — (P2) `DESIGN_SPEC.md` v1.0 6절 반응 행·7절 회의록 항목의 "CAIO 질문"을 시나리오 `followUp.askedBy`(안건 ②는 CFO)로 정정(15차 답글의 `memberId`는 오기, 16차에서 실제 필드명으로 바로잡음). Codex 16차 검토 1건 반영 — (P1) "효과를 측정하지 않고 바로 확대합시다."에서 '확대'가 긍정으로 남아 MEASURE가 자동 승인되던 것을, 한 조건의 키워드 하나라도 부정되면 조건 전체를 제안하지 않도록 수정(`src/domain/conditions.ts`). 단위 1그룹 추가. Codex 17차 검토 1건 반영 — (P1) "효과 측정은 빼고 바로 확대합시다."가 MEASURE로 자동 승인되던 것을 배제 표현('빼-'·'제외'·'아니'·'금지'·'-지 말-') 부정 표지 추가로 수정. 단위 1그룹 추가. Codex 18차 검토 1건 반영 — (P1) 붙여 쓴 '안하고'·'안함'·'안되-'가 '안 ' 표지에 걸리지 않아 "검수 안하고 시범만"에서 SCREEN이 자동 승인되던 것을 어절 시작 '안' 판정("불안하-"는 제외)으로 수정. 단위 1그룹 추가. Codex 20차 검토 1건 반영 — (P1) 축약 청유형 "-지 맙시다"가 '지 말' 표지에 걸리지 않아 "완전 익명으로 하지 맙시다"에서 ANON_FULL이 자동 승인되던 것을 '-지 마-'·'-지 맙-' 활용 전체 처리로 수정. 단위 1그룹 추가. Codex 21차 검토 1건 반영 — (P1) 붙여 쓴 "하지맙시다"·"하지마세요"가 공백 포함 표지에 걸리지 않던 것을 공백 선택 패턴(`지\s?[마말맙]`)으로 수정. 테스트 3문장 추가. Codex 22차 검토 1건 반영 — (P1) '안' 뒤 활용형(안할·안해·안했·안한·안됐)이 부정에서 빠져 "검수는 안할게요"에서 SCREEN이 자동 승인되던 것을 초성 ㅎ·되/돼 음절 범위 패턴으로 수정. 테스트 5문장 추가. Codex 23차 검토 1건 반영 — (P1) 조사와 '안'을 붙여 쓴 "검수는안할게요"가 어절 시작 조건에 걸리지 않던 것을 앞 글자가 조사(은·는·이·가·을·를·도·만·과·와·에·로)일 때도 부정으로 인정하도록 수정. 테스트 4문장 추가. Codex 24차 검토 1건 반영 — (P1) 조사 열거 방식이 '조차·마저·부터'를 놓치던 것을, '안'이 부정이 아닌 낱말(불안·미안·보안·편안·평안·동안·위안·치안)의 앞 글자만 제외하는 방식으로 뒤집음. 테스트 6문장 추가. Codex 25차 검토 1건 반영 — (P1) 24차의 앞 글자 제외 방식이 "검수를 제안합니다"의 '안합'을 부정으로 잡아 요청한 SCREEN을 지우던 것을, '안' 앞이 어절 경계이거나 조사(한·두 음절 전부 열거)일 때만 부정으로 보는 형태 경계 방식으로 확정. 테스트 3문장 추가. Codex 30차 검토 1건 반영 — (P1) 긍정 병렬 "측정뿐 아니라 확대도"가 '아니' 표지에 부분 문자열로 걸려 요청한 MEASURE가 사라지던 것을, '뿐(만) 아니라/아니고'를 표지 검사 전에 창에서 지우는 방식으로 수정(대조 부정 "가 아니라"는 유지). 테스트 5문장. Codex 31차 검토 1건 반영 — (P1) 조사 '이'가 붙은 "뿐만이 아니라"·"뿐이 아니라"가 그 패턴에 빠져 있던 것을 `뿐(만이?|이)?` 로 넓힘. 테스트 3문장. Codex 32차 검토 1건 반영 — (P1) 보조사 '은'이 붙은 "뿐만은 아니라"도 빠져 있어 조사 자리를 `뿐만?(이는|이|은|는)?`로 한 번에 열거. 테스트 3문장. Codex 33차 검토 1건 반영 — (P1) 보조사 '도'("뿐만도 아니라")가 또 빠져, 조사 종류에 기대지 않도록 `뿐[만이은는도]{0,2}`(조사 글자 0~2개)로 정리. 테스트 3문장. Codex 34차 검토 1건 반영 — (P1) `\s?`가 공백 한 칸만 허용해 "뿐만  아니라"(두 칸)가 빗나가던 것을, 창의 공백 묶음을 한 칸으로 접은 뒤 모든 표지를 보도록 입구에서 정규화("하지  맙시다"·"못  하" 같은 부정 표지도 함께). 테스트 4문장. Codex 35차 검토 1건 반영 — (P1) 접기를 창(24자)을 자른 뒤에 해서 키워드 뒤 공백이 24칸을 넘으면 창이 공백으로만 차 부정 표지를 버리던 것을, 접은 뒤에 창을 자르도록 순서 교정(`isNegatedAfter`). 테스트 2문장. Codex 36차 검토 1건 반영 — (P1) `\s+` 접기가 줄바꿈까지 지워 절 경계(`\n`)가 사라지고 둘째 줄의 부정이 첫 줄 조건을 삼키던 것을, 가로 공백(`[^\S\n]`)만 접도록 수정. 테스트 3문장. |
+| T56 | 완료 | 세로 예산 재점검 — 회의록·오른쪽 열 잘림. 원인 셋: (1) 회의록이 폭만 보고 고정 건수(6/4/3)를 써 남은 높이를 몰랐고, (2) 래퍼 `align-self: start` 때문에 행이 줄어도 패널이 원래 높이를 유지해 화면 밖(VOTE에서 하단 890px)으로 밀렸으며, (3) 오른쪽 열 제목이 flex-shrink로 함께 줄어 글자가 잘렸다. 남은 높이로 건수를 계산하고(ResizeObserver), 래퍼를 stretch로, 제목은 flex-shrink 0으로 바꿈. 한 건도 못 들어가면 패널을 시각적으로 접고 스크린리더에는 남긴다. **reviewer 미실행** — 오케스트레이터가 직접 작성·검증·커밋. 단위 295·E2E 86. PR #10 Codex 3차 검토 1건 반영 — (P1) 0건으로 접힌 뒤 보이는 행이 없다는 이유로 표시 수를 max로 되돌려 "max→0→max"가 반복되던 것을, 마지막으로 잰 행·머리글 높이를 기억해 접을 때보다 가용 높이가 커졌을 때만 다시 펴도록 수정(그리드 칸도 함께 관측). 단위 296 |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
-| T23~T24 | 대기 | P2, 네트워크·모델 확정 후 |
+| T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
 
@@ -340,7 +346,7 @@
 - 전제: 실제 키로 T32 하네스를 최소 3회 돌린 기록이 있을 것. 없으면 이 카드는 건너뛰고 T35로 미룬다.
 - 읽을 것: `docs/eval/live-*.md` 최신 요약, `server/prompts/`, docs/AGENT_BOARDROOM_SPEC.md 2·7장.
 - 만들 것: 고정 평가 세트(안건 ② 네 경로 × 참가자 발언 변형 3개 = 12케이스)를 `scripts/eval-set.json`으로 고정. 개선 대상은 순서대로 (1) 근거 인용 정확도(자료 밖 사실 0건), (2) 역할 일관성(CISO는 정보 조건, CFO는 비용·효과를 반드시 언급), (3) 동료 발언 인용·반론의 자연스러움, (4) 120·160자 안의 한국어 문장 품질(C레벨 대상 존댓말, 단정 대신 근거), (5) 표 분포(같은 조건에서 만장일치를 요구하지 않되 무조건 찬성·반대 없음), (6) 지연(8초 초과 0건). 라운드마다 `PROMPT_VERSION`을 올리고 평가 세트로 전후 비교표를 `docs/eval/tuning-<version>.md`에 남긴다. 최대 3라운드.
-- 허용 경로: `server/prompts/`, `scripts/`, `docs/eval/`.
+- 허용 경로: `server/prompts/`, `scripts/`, `docs/eval/`. (예외: `PROMPT_VERSION`을 올리면 `tests/server/round.test.ts`의 하드코딩된 `'v1'` 비교가 깨지므로, 해당 assertion을 `PROMPT_VERSION` import로 바꾸는 1줄 기계적 수정은 이 카드 범위에 포함한다. 그 외 테스트 로직 변경은 범위 밖.)
 - 하지 말 것: 검증 규칙·집계·클라이언트 변경. 시나리오 규칙표를 프롬프트에 넣기.
 - 완료 확인: 전후 비교표에서 (1)(6)이 0건이고 (2)(5)가 악화되지 않음.
 - 크기: M.
@@ -505,6 +511,22 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 해상도 noscroll 포함). 1080·720 결과 스크린샷에서 요약 패널 5행과 오른쪽 두 패널이 잘리지 않음.
 - 크기: M.
 
+## T49 운영 메뉴 — 모델 연결 확인과 scripted 재시작 (v1.0 10절)
+
+- 목표: 운영자가 부스 개장 전 실제 모델 연결을 화면에서 확인하고, 실패 시 scripted로 새 체험을 시작할 수 있게 한다. 참가자 화면은 바꾸지 않는다.
+- 읽을 것: docs/design/DESIGN_SPEC.md v1.0 10절(전부), docs/AGENT_BOARDROOM_SPEC.md 6장 마지막 문단, docs/DEPLOY.md Render 5번. `server/index.ts`(라우팅·`handleHealth`·`handleBoardEndpoint`), `server/auth.ts`(`isProtectedApiPath`), `server/providers/types.ts`·`mock.ts`, `server/handlers/timeout.ts`, `src/app/mode.ts`(`?mode=scripted` 규칙), `src/services/transport/accessToken.ts`(`accessHeaders`), `src/components/parts/OperatorMenu.tsx`, `src/styles/screens/shell.css`(`.operator-menu__*`), `tests/server/auth.test.ts`(서버 기동 방식), `e2e/operations.spec.ts`.
+- 만들 것:
+  1. `server/handlers/probe.ts`: `handleProbe({ provider, config, clock })` — `provider.complete({ system: '연결 확인. JSON {"ok": true}만 응답.', user: 'ok', schema: {type:'object',properties:{ok:{type:'boolean'}},required:['ok']}, maxTokens: 20, timeoutMs: 8000 })`을 `withTimeout`으로 감싸 성공이면 `{ ok: true, provider, modelId: result.modelId, latencyMs }`, 예외·타임아웃·`json.ok !== true`면 `{ ok: false, provider, modelId: config.modelId, latencyMs, error: <메시지 200자 이내> }`. 순수 함수(deps 주입).
+  2. `server/index.ts`: `POST /api/ops/probe` 라우트. 본문 없음. 전역 10초 1회 제한(마지막 호출 시각 모듈 변수, 초과 시 429 `{ error: 'probe_rate_limit' }`). 세션 상한 레지스트리를 거치지 않는다. `server/auth.ts` `isProtectedApiPath`에 `/api/ops/` 추가(주석·테스트 갱신).
+  3. `src/services/transport/probe.ts`: `probeModel(): Promise<ProbeResult>` — `fetch('/api/ops/probe', { method:'POST', headers: accessHeaders() })`, 429는 `{ ok:false, error:'probe_rate_limit' }`, 네트워크 예외는 `{ ok:false, error:'network' }`. `fetchHealth(): Promise<{ mode, provider, modelId, promptVersion } | null>`.
+  4. `OperatorMenu.tsx`: 메뉴에 "모델 연결 확인"(`operator-probe`)·"scripted로 새 체험"(`operator-restart-scripted`) 추가. 패널 상태 `probe`(`operator-probe-panel`: 확인 중 `operator-probe-pending` → 결과 `operator-probe-ok`/`operator-probe-fail` + 서버 정보 줄 `operator-probe-info` + 닫기)와 `confirmRestartScripted`(`operator-confirm-restart-scripted`, 예 → `window.location.assign('/?mode=scripted')`, 취소). 문구는 10절 그대로. `onRestartScripted?: () => void` prop으로 이동 함수를 주입 가능하게 해 테스트에서 가로챌 수 있게 한다(기본값은 location.assign).
+  5. CSS: 기존 `.operator-menu__panel` 안에서 결과 줄 색(성공 `--accent`, 실패 `--vote-no`), 720에서 두 줄 이내.
+  6. 테스트: `tests/server/probe.test.ts`(mock ok / 던지는 provider → ok:false+error / `{ok:false}` 응답 → ok:false / 타임아웃), `tests/server/auth.test.ts`에 `/api/ops/probe` 보호·429 rate limit 단언, `tests/components/OperatorMenu.test.tsx`(fetch mock: ok 결과 렌더, 실패 결과 렌더, scripted 재시작 확인 시 주입 함수 호출). E2E `e2e/operations.spec.ts`: mock 서버 기준 "모델 연결 확인" → `operator-probe-ok`에 "mock" 포함; `page.route('**/api/ops/probe')`로 `{ok:false,error:'anthropic_api_error 401: invalid x-api-key'}` 반환 → `operator-probe-fail`에 "401" 포함; "scripted로 새 체험" 확인 → URL에 `mode=scripted`, 헤더 배지 "사전 구성 시뮬레이션".
+- 허용 경로: `server/handlers/probe.ts`(신규), `server/index.ts`, `server/auth.ts`, `src/services/transport/`, `src/components/parts/OperatorMenu.tsx`, `src/styles/`, `tests/`, `e2e/`, `docs/DEPLOY.md`.
+- 하지 말 것: 라운드·표결 핸들러·프롬프트 변경. 세션 상한 로직 변경. 참가자 화면 문구·배지 변경. live 도중 자동 scripted 전환. 키를 코드·로그에 남기기.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. mock 서버에서 운영 메뉴 "모델 연결 확인"이 "연결됨 · mock-model"을 보인다.
+- 크기: M.
+
 ## T42 v1.0 애니메이션 프레임 스킨
 
 - 목표: 전체 UI 톤을 디즈니·픽사 애니메이션 프레임으로 바꾼다. 레이아웃·단계·testid·규칙은 그대로 두고 토큰·타이포·컴포넌트 스킨만 바꾼다.
@@ -570,3 +592,166 @@
 - 하지 말 것: reducer·조건·표결·타이머 규칙 변경. 서버 변경. testid·문구 삭제(이동은 허용). 56px 클릭 목표 위반(추천 문구 720 예외만). 내부 스크롤 패널을 화면당 2개 이상.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(noscroll 스펙 포함). 두 해상도 스크린샷 각 단계가 한 화면에 전부 보임.
 - 크기: L.
+
+## T50 타이머 제거 — 240초 만료와 75/90초 무입력 복귀
+
+- 목표: 체험에서 시간 제약을 없앤다. 240초 세션 만료(EXPIRE)와 75/90초 무입력 경고·복귀(IDLE_WARN·IDLE_RESET)를 모두 제거하고, 화면의 카운트다운 표시도 뺀다. 세션을 끝내는 경로는 결과 화면의 "체험 종료"와 운영 메뉴의 "새 체험"·"scripted로 새 체험"만 남는다(2026-09-22 사용자 결정).
+- 읽을 것: `src/domain/clock.ts`, `src/domain/session.ts`(EXPIRE·IDLE_RESET 케이스), `src/app/App.tsx`(tick 루프), `src/components/parts/Timer.tsx`, `src/components/parts/StageBand.tsx`(무대 안 시간 표시), `e2e/operations.spec.ts`.
+- 만들 것:
+  1. `domain/clock.ts`에서 `EXPERIENCE_MS`·`WARN_60`·`WARN_30`·`IDLE_WARN_MS`·`IDLE_RESET_MS`·`remaining()`·`idleState()`·`tick()`과 `ClockAction`을 제거한다. 주입형 `Clock`·`systemClock`·`fakeClock`은 **남긴다** — 서버 핸들러와 orchestrator가 지연 측정에 쓴다.
+  2. `domain/session.ts`에서 `EXPIRE`·`IDLE_RESET` 액션과 그 case, `deadline`·무입력 관련 세션 필드, `EXPIRE_REASON`으로 미확정 표를 채우던 `fillMissingBallots` 호출을 제거한다. **UNCAST 자체는 남긴다** — live에서 임원이 응답하지 못한 좌석은 여전히 미표결이다.
+  3. `App.tsx`의 시계 tick 루프와 그로 인한 dispatch를 제거한다. 사용자 활동(touch) 추적도 무입력 판정에만 쓰였으면 함께 제거한다.
+  4. 화면에서 시간 표시를 뺀다: 헤더 `Timer` 컴포넌트와 `StageBand`의 남은 시간 배지. 60초·30초 경고 문구도 제거한다.
+  5. `e2e/operations.spec.ts`에서 240초 만료·75초 안내·90초 복귀 테스트 3건을 제거하고, "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다"는 유지한다. 시계 조작 헬퍼(`advanceClock*`)가 다른 곳에서 안 쓰이면 함께 제거한다.
+  6. 단위 테스트 정리: `tests/domain/clock.test.ts`에서 만료·무입력 케이스를 제거(파일이 비면 삭제), `tests/domain/session.test.ts`·`liveMode.test.ts`·`services/orchestrator.test.ts`의 해당 케이스를 제거한다. 남은 테스트가 UNCAST를 만료 경로로 만들고 있으면 live 응답 실패 경로로 바꾼다.
+  7. 문서 갱신: `docs/FACILITATOR_GUIDE.md`(75/90/240초 안내 문단과 구간표의 시간 배분 → 권장 흐름으로 표기, 세션 종료는 요원이 새 체험으로만 한다는 점 명시), `docs/design/DESIGN_SPEC.md` 4장의 타이머 항목.
+- 허용 경로: `src/domain/`, `src/app/`, `src/components/parts/`, `e2e/`, `tests/`, `docs/FACILITATOR_GUIDE.md`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·조건 집계·프롬프트·서버 핸들러 변경. 부스명 "4분 이사회"와 기획서(`AX_Day_2026_Boardroom_Plan.md`) 수정(기획 문서는 사용자가 따로 정리한다). `Clock` 주입 구조 삭제.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 시계를 앞으로 돌려도 화면이 바뀌지 않음을 e2e 1건으로 단언(`advanceClock` 대체 없이 시간 경과만으로는 ATTRACT 복귀·결과 종료가 일어나지 않는다). 화면 어디에도 카운트다운이 없음.
+- 크기: M.
+
+## T51 화면 맞춤 축소 — 설계 크기보다 작은 뷰포트에서 한 화면 유지
+
+- 목표: 노트북 창 모드처럼 설계 크기(1200×700)보다 조금 작은 뷰포트에서도 조종석 배치를 그대로 유지한다. 지금은 `shell.css`의 `@media (max-height: 699px), (max-width: 1199px)`가 걸려 세로 1열·페이지 스크롤로 내려가고, 그 결과 임원 의견·의견 작성·반응·최종 안건·표결·결과가 모두 화면 밖으로 나간다. 실측(2026-09-22): 맥 `availHeight` 863px → Edge 창 모드 뷰포트 **698px**로 임계값에서 2px 모자람. 전체화면(1512×907)에서는 정상.
+- 읽을 것: `src/styles/screens/shell.css`(무스크롤 잠금·해제 블록, `.app-shell::before` 고정 배경), `docs/design/DESIGN_SPEC.md` v1.0 6절(세로 예산·무스크롤 규칙)·3장(200% 확대 규칙), `e2e/noscroll.spec.ts`, `e2e/a11y.spec.ts`.
+- 만들 것:
+  1. 셸을 감싸는 축소 래퍼를 둔다. 뷰포트가 설계 크기(1200×700)보다 작으면 `scale = min(vw/1200, vh/700)`로 `transform: scale()`(origin 상단 중앙)을 적용하고, 래퍼 자체는 설계 크기를 유지한다. **1을 넘겨 확대하지 않는다** — 1920×1080은 지금 그대로다.
+  2. 축소 하한을 둔다: `scale < 0.85`면 축소를 쓰지 않고 **기존 세로 1열 + 페이지 스크롤 대체 배치를 그대로 쓴다**. 200% 확대(960×540 → 0.8)는 반드시 기존 경로로 가야 한다(`e2e/a11y.spec.ts`가 1열·`overflow:visible`을 단언한다). 56px 클릭 목표가 0.85에서 약 48px로 줄어드는 것이 하한 근거다.
+  3. 고정 배경 레이어를 축소 대상 밖으로 뺀다. `.app-shell::before`는 `position: fixed`인데, 조상에 `transform`이 걸리면 그 요소가 컨테이닝 블록이 되어 배경이 함께 축소·잘린다. 배경은 축소되지 않는 바깥 레이어(body 또는 래퍼 상위)에서 그린다.
+  4. 축소 시 래퍼가 뷰포트보다 작으면 가로 가운데 정렬하고, 남는 영역은 배경색으로 채워 빈 흰 띠가 보이지 않게 한다.
+  5. 뷰포트 변화(리사이즈·전체화면 전환)에 반응해 scale을 다시 계산한다. 계산은 CSS만으로 되지 않으므로 셸에서 `resize` 관찰 후 CSS 변수(`--app-scale`)를 갱신하는 최소 코드만 둔다. 렌더 루프·타이머를 새로 만들지 않는다.
+- 허용 경로: `src/styles/screens/shell.css`, `src/styles/base.css`, `src/app/`(셸 컴포넌트와 scale 계산), `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 조종석 배치·세로 예산·타이포 스케일 변경. 내부 스크롤 패널 추가. 화면별 컴포넌트 수정. 200% 확대 경로(1열 재배치)를 없애기.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공.
+  - 새 e2e 케이스: 1272×698에서 페이지 스크롤 0이고, 각 단계의 주 CTA가 뷰포트 안에 보이며 클릭으로 다음 단계가 진행된다.
+  - 기존 1920×1080·1280×720 스냅샷·noscroll 스펙이 그대로 통과(축소 미적용, scale = 1).
+  - 960×540에서 기존 1열·스크롤 경로 유지(`e2e/a11y.spec.ts`).
+  - 축소 상태에서 운영 메뉴와 AI 비서실장 드로어가 화면 안에 정상 위치한다(드로어는 `position:absolute`라 축소 컨테이닝 블록의 영향을 받는다).
+- 크기: M.
+
+## T52 브리핑 화면 정리 — 명패 겹침, 자료 카드 상시 노출, 오른쪽 열 재구성
+
+- 목표: 브리핑(상황 파악) 화면에서 (a) 무대 명패 겹침, (b) 자료 카드의 E1~E4 ID가 보이지 않고 원문이 클릭해야 열리는 문제, (c) "읽어도 무슨 말인지 모르겠다"는 오른쪽 열 구조를 고친다(2026-09-23 사용자). 새 사실·수치는 만들지 않고 기존 문장을 재배치한다. **안건 콘텐츠 문구 자체는 T53에서 교체하므로 여기서는 구조만 바꾸고 기존 문장을 그대로 재배치한다.**
+- 읽을 것: `src/components/screens/BriefingScreen.tsx`, `src/components/parts/EvidenceGrid.tsx`, `src/components/parts/StageBand.tsx`, `src/components/memberLabels.ts`, `src/styles/screens/briefing.css`·`evidence.css`·`stage.css`, `src/content/types.ts`, `docs/design/DESIGN_SPEC.md` v1.0 6절, `e2e/briefing.spec.ts`·`noscroll.spec.ts`·`screenshots.spec.ts`·`viewport-fit.spec.ts`.
+- 만들 것:
+  1. **명패 겹침 수정**: 무대 명패는 약칭만 — `CEO`·`CFO`·`CAIO`·`CISO`·`나`. 역할별 색 구분 유지. 전체 직함은 임원 의견 카드에서 계속 보여준다(회의록은 T47에서 이미 아바타 이니셜). 원인은 `정보보호책임임원(CISO)` 같은 긴 라벨이 좌석 폭(22%)을 넘어 이웃을 덮는 것이다.
+  2. **자료 카드에서 E ID를 빼고 자료명을 상시 표시**: 지금은 `evidence.css`의 `@media (max-width: 1280px)`가 `.evidence-card__title`을 숨겨 1280px 이하에서 제목이 통째로 사라진다. 제목은 모든 해상도에서 보이되 **`E1 ·` 같은 ID 접두는 제거**하고 자료명만 쓴다(2026-09-23 사용자). 참가자 화면의 근거 칩(임원 의견 카드·회의록·결과 한 장 요약)도 같은 규칙으로 ID 대신 자료명만 보여준다. **데이터와 검증 스키마의 `evidenceIds`는 그대로 둔다** — 모델이 어떤 자료를 근거로 삼았는지 기록·검증하는 데 쓰인다. 화면에 ID를 쓰지 않으므로 자료명은 네 장이 서로 구별되게 짧고 분명해야 한다.
+  3. **자료 원문을 클릭 없이 표시**: `<details>` 아코디언(한 번에 한 장)을 없애고 네 장 모두 `ID · 자료명 / 해석 / 원문`을 항상 보여준다. 세로 예산은 4번에서 생기는 공간으로 확보하고, 넘치면 원문 클램프 줄 수를 줄여 맞춘다(해석 → 원문 순으로 우선순위). 관련 임원 아바타는 공간이 없으면 뺀다.
+  4. **오른쪽 열 블록 순서**를 아래로 바꾸고 세 블록을 제거한다.
+     1. 사건 라벨(작게) + **결정 질문(가장 큰 글씨)** — 원안 조문이 아니라 질문이 가장 크다
+     2. **현재 상황** 한 줄 → **제안** 한 줄 → **아직 정하지 않은 것**(항목 나열)
+     3. **특별 이사님이 할 일** — 의견·조건 제안·한 표. 바로 아래 `최종 결정: 승인 · 보류 · 부결`을 같은 크기·색으로 병기(어느 쪽도 유도하지 않는다)
+     4. **판단에 참고할 자료** 2×2 카드
+     제거: "체험용 사전 구성" 배지, 조건 미리보기 블록(문구+칩 4개), **핵심 쟁점 목록**(세 쟁점이 자료 카드 해석과 겹쳐 같은 말을 두 번 읽게 한다).
+  5. **표시용 필드**: 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 필드를 `Scenario`에 추가한다. `originalMotion.text`는 표결·프롬프트가 쓰므로 그대로 둔다. 값은 기존 원안 문장을 쪼개 채우고(T53에서 교체), 준비 중 안건도 채운다.
+  6. **죽은 데이터 정리**: 화면에서 빠진 `briefingIssues`·`previewConditionIds`가 다른 곳에서 쓰이지 않으면 타입·데이터·테스트에서 제거한다. 남긴다면 이유를 주석으로 적는다.
+  7. **테스트 갱신**: `briefing-issues`·`condition-preview` testid에 의존하는 e2e를 새 구조에 맞게 고친다.
+- 허용 경로: `src/components/`, `src/styles/screens/`, `src/content/`, `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·조건 집계·프롬프트·서버 변경. `originalMotion.text` 수정. 새 수치·사실 추가. 자료 ID 제거. 내부 스크롤 패널 추가.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 1920×1080·1280×720·1272×698에서 브리핑이 스크롤 없이 한 화면. **자료 4장의 자료명·해석·원문이 클릭 없이 모두 보이고, 화면 어디에도 `E1`~`E4` 표기가 남아 있지 않음**을 e2e로 단언(모델이 생성한 문장 속 인용은 T54 범위). 무대 명패 5개의 boundingBox가 서로 겹치지 않음을 e2e로 단언. 스크린샷 갱신.
+- 크기: M.
+- 참고: 재구성안은 Codex 교차 검토(2026-09-23)를 반영했다. v0.9 이해도 검수는 이 변경 뒤 다시 받아야 한다.
+
+## T53 안건 ② 교체 — 사내 게시판 익명제
+
+- 목표: 안건 ②의 콘텐츠를 "AI 업무 비서 도입"에서 **"사내 게시판을 익명제로 전환할까"**로 교체한다(2026-09-23 사용자 결정). 화면·엔진·표결 규칙 구조는 그대로 두고 콘텐츠만 바꾼다. 모든 자료·발언·수치는 체험용 가상 설정이며 삼성화재의 실제 현황이 아니다.
+- 읽을 것: `docs/SCENARIO_AI_ASSISTANT.md`(형식 기준), `src/content/scenarios/aiAssistant.ts`(264행, 데이터 형식 기준), `src/content/types.ts`, `server/scenario-data.ts`, `docs/AGENT_BOARDROOM_SPEC.md` 2·7장, `docs/AGENDA_CANDIDATES.md` 2-1절(이 안건의 설계 메모).
+- 만들 것:
+  1. **시나리오 문서** `docs/SCENARIO_ANON_BOARD.md` — 기존 시나리오 문서 형식(브리핑·자료·추천 문구·조건·상충·반응·표결 우선순위표·결과 문구·에필로그)을 그대로 따른다.
+  2. **콘텐츠 데이터** `src/content/scenarios/anonBoard.ts`와 `index.ts` 등록. 안건 ② 자리를 차지하고 `status: 'active'`. 기존 `aiAssistant.ts`는 남겨두되 레지스트리에서 뺀다(되돌릴 수 있게).
+  3. 내용 골격(아래 사실만 쓰고 새 수치를 만들지 않는다):
+     - 원안: 사내 게시판을 익명제로 전환한다. 작성자 추적 범위·게시 전 검수·임원 열람 범위는 미정이다.
+     - 사건 헤드라인: 익명 게시판 요구가 반복되지만 운영 기준이 없다는 상황
+     - 자료 4장: **E1** 게시글 월 320건(실명 기준 최근 3개월 평균) / **E2** 익명 시범 게시판 월 140건(집계 기간 다름, 직접 비교 불가) / **E3** 운영 회의록 — 신고 처리에 담당자 지정이 없음 / **E4** 정보보호 메모 — 로그 보관 기간과 추적 권한이 미설계
+     - 조건 6개: 시범 게시판부터 / 게시 전 검수 / 신고 3회 시 블라인드 / 임원 열람 제한 / 로그 보관 기간 명시 / 운영 효과 측정
+     - **상충 조건쌍**: "완전 익명 — 작성자 추적 불가" ↔ "문제 발생 시 관리자가 추적 가능"
+     - 역할별 쟁점: CEO 발언 문화와 조직 신뢰 / CFO 모니터링 인력·검토 공수(E1·E2 수치 상충) / CAIO 익명 처리·중복 계정 차단 구현과 계정 체계 연계 / CISO 익명성과 추적 가능성의 경계, 로그 보관
+     - 세 엔딩: 승인 → 글은 늘었으나 익명 뒤 비방도 늘었다 / 보류 → 한 게시판에서 시범 / 부결 → 실명 유지, 목소리는 여전히 밖으로
+     - 남은 과제: 신고 처리 담당자 지정 / 로그 보관 기간 확정 / 운영 효과 측정
+  4. **표결 규칙** `voteRules` 12행을 시나리오 문서의 대표 경로표와 1:1로 맞추고, 각 행에 `reason`(결과 화면 "판단 이유 한 줄")을 채운다. 조건 라벨을 그대로 인용하고 새 사실을 만들지 않는다.
+  5. **서버 콘텐츠** `server/scenario-data.ts`의 자료·원안·조건 목록을 같은 내용으로 교체한다(live 프롬프트가 읽는 사본).
+  6. **테스트**: 조건 조합 전수와 대표 경로표 12행을 `tests/domain/voting.test.ts` 형식으로 추가하고, 기존 안건 ② 테스트가 새 콘텐츠를 가리키게 고친다. e2e의 고정 문구 의존 부분을 갱신한다.
+- 허용 경로: `docs/SCENARIO_ANON_BOARD.md`, `src/content/`, `server/scenario-data.ts`, `tests/`, `e2e/`, `docs/TASKS.md`.
+- 하지 말 것: 화면 컴포넌트·레이아웃·프롬프트 구조 변경(T52 범위). 표결 엔진(`domain/voting.ts`) 수정. 실제 삼성화재 현황·정책을 단정하는 문구. 새 수치·비율 창작(위 골격의 수치만 쓴다).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. scripted 대표 경로 12행 전수 통과. 브리핑~결과까지 새 안건으로 완주(스크린샷 갱신). live 프롬프트가 새 자료 ID를 인용하는지 `MODEL_PROVIDER=mock`으로 확인.
+- 크기: L.
+
+## T54 프롬프트의 근거 인용을 자료명으로 교체
+
+- 목표: T52에서 참가자 화면의 `E1`~`E4` 표기를 없앴으므로, 임원 발언 문장 속 인용도 ID 대신 자료명을 쓰게 한다. 지금은 공통 가드레일이 "모든 주장에는 제공된 근거 카드 ID(예: E1)를 인용하십시오"라고 지시해 모델이 "…미정입니다(E4)"처럼 답하는데, 화면에 E4가 없어 참가자가 무엇을 가리키는지 알 수 없다.
+- 읽을 것: `server/prompts/common.ts`(가드레일·meeting_record 블록), `server/prompts/version.ts`, `server/validate.ts`(evidenceIds 스키마), `docs/eval/tuning-v3.md`, `scripts/eval-set-run.ts`.
+- 전제(2026-09-23 갱신): PR #10 Codex 3차 검토로 고정 평가 세트의 참가자 발언이 새 안건에 맞게 다시 쓰였고 역할 프롬프트가 v4가 됐다. 그래서 `tuning-v3-after.jsonl`은 before 기준으로 쓸 수 없다 — **v4로 before를 먼저 실측**한 뒤 인용 지시를 바꿔 v5 after와 비교한다.
+- 만들 것:
+  1. 가드레일의 인용 지시를 "자료 이름을 인용"으로 바꾸고, `<meeting_record>`의 자료 목록도 모델이 이름을 그대로 쓸 수 있게 제시한다. 응답 스키마의 `evidenceIds`는 그대로 두고 계속 ID로 채우게 한다(검증·기록용).
+  2. `PROMPT_VERSION`을 올린다(v4 → v5).
+  3. 고정 평가 세트로 전후를 비교해 `docs/eval/tuning-v<version>.md`에 남긴다. 확인 항목: 자료 밖 사실 0건 유지, 근거 미인용 0건 유지, **발언 문장에 `E\d` 패턴이 남지 않음**, 역할 키워드·지연·문장 길이 악화 없음.
+- 허용 경로: `server/prompts/`, `scripts/`, `docs/eval/`, `docs/TASKS.md`.
+- 하지 말 것: 검증 스키마에서 `evidenceIds` 제거. 화면·시나리오 데이터 변경. 시나리오 규칙표를 프롬프트에 넣기.
+- 완료 확인: `npm run check` 성공. 전후 비교표에서 위 네 항목 충족. T52 완료 후에 진행한다(화면이 먼저 바뀌어야 비교가 의미 있다).
+- 크기: S.
+
+## T55 의견 작성·반응 화면 재설계 — 비서실장 정리를 거쳐야 전달
+
+- 목표: 참가자 입력 단계(DISCUSS·REACTIONS)를 "추천 문구 선택 → AI 비서실장 발언 정리 → 의견 전달" 흐름으로 바꾼다(2026-09-23 사용자). 지금은 직접 타이핑이 주 경로이고 비서실장은 선택 사항이라, 입력창이 무대 이미지와 겹치고 버튼이 아래로 밀린다. 오른쪽 열도 추천 문구·자료·임원 의견이 구분 없이 이어져 읽기 어렵다.
+- 읽을 것: `src/components/screens/DiscussScreen.tsx`·`ReactionsScreen.tsx`, `src/components/parts/AssistantPanel*`, `src/services/assistant/`, `src/styles/screens/discuss.css`·`reactions.css`, `docs/design/DESIGN_SPEC.md` v1.0 6절, `docs/AGENT_BOARDROOM_SPEC.md` 4장(비서실장 호출 상한).
+- 만들 것:
+  1. **흐름 변경**: 추천 문구를 하나 이상 고르면 `AI 비서실장 정리` 버튼이 활성화되고, 정리 결과를 확인·적용해야 `의견 전달`이 활성화된다. 직접 타이핑은 "직접 고쳐 쓰기"로 남기되 기본 경로에서 접어 둔다(키보드 없이 완주 가능 원칙 유지).
+  2. **입력 영역과 무대 분리**: textarea·버튼이 무대 프레임과 겹치지 않게 왼쪽 열 세로 배치를 다시 잡는다. `AI 비서실장 정리`·`의견 전달` 버튼은 항상 화면 안에 보여야 한다.
+  3. **오른쪽 열 구획화**: 추천 문구 / 판단에 참고할 자료 / 임원 의견을 각각 제목과 경계가 있는 블록으로 나눈다. 지금처럼 이어 붙이지 않는다.
+  4. REACTIONS도 같은 규칙을 적용한다(빠른 답 선택 → 비서실장 정리 → 답변 전달). 오른쪽 열 제목이 상단에서 잘리지 않게 한다.
+  5. scripted 모드는 기존 규칙 기반 정리를 쓰고, live 모드는 `/api/assistant/refine`을 쓴다. 비서실장 호출 상한(세션당 2회)을 이 흐름에 맞게 다시 정하고 문서에 남긴다.
+- 허용 경로: `src/components/`, `src/styles/screens/`, `src/services/assistant/`, `docs/design/DESIGN_SPEC.md`, `docs/AGENT_BOARDROOM_SPEC.md`, `e2e/`, `tests/`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·조건 집계 변경. 조건이 최종안에 실리는 경로를 끊기. 서버 스키마 변경(호출 상한 값 조정은 허용).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도와 1272×698에서 입력 영역·버튼이 무대와 겹치지 않고 스크롤 없이 보임을 e2e로 단언. 추천 문구를 고르지 않으면 정리·전달이 모두 비활성인 것을 단언.
+- 크기: L.
+
+## T56 세로 예산 재점검 — 회의록·오른쪽 열 잘림
+
+- 목표: 여러 화면에서 아래가 잘리는 문제를 없앤다(2026-09-23 사용자). 확인된 곳: 상황 파악·최종 안건·최종 투표의 회의록 패널이 아래에서 잘리고, 임원 의견·반응 화면은 오른쪽 열 제목이 잘린다. 무스크롤 원칙(v1.0 6절)은 유지한다.
+- 읽을 것: `src/styles/screens/shell.css`(grid·세로 예산), `minutes.css`, `opinions.css`, `reactions.css`, `src/app/viewportFit.ts`, `e2e/noscroll.spec.ts`.
+- 만들 것:
+  1. 회의록 패널이 남은 공간에 맞춰 표시 건수를 줄이도록 고친다(지금은 고정 건수라 넘친다). 잘린 항목은 스크린리더에 남긴다(기존 sr-only 규칙 유지).
+  2. 임원 의견·반응 화면 오른쪽 열의 제목이 상단에서 잘리지 않게 한다.
+  3. `e2e/noscroll.spec.ts`에 **각 단계의 마지막 요소가 뷰포트 안에 있는지**를 단언하는 케이스를 더한다(지금은 문서 스크롤 없음만 본다 — 잘림은 잡지 못한다).
+- 허용 경로: `src/styles/screens/`, `src/components/parts/MinutesPanel*`, `src/app/`, `e2e/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 페이지 스크롤 허용. 타이포 스케일 축소로 때우기(먼저 표시 건수·여백을 조정한다).
+- 완료 확인: 1920×1080·1280×720·1272×698에서 모든 단계의 마지막 요소가 뷰포트 안. e2e 단언 추가.
+- 크기: M.
+
+## T57 최종 안건·표결 화면에 AI 요약 먼저
+
+- 목표: 최종 안건(MOTION)과 최종 투표(VOTE) 오른쪽 열에 **무엇으로 정리됐는지**를 먼저 보여준다(2026-09-23 사용자). 지금은 안건 원문·조건 칩·남은 과제만 있어 "내 의견이 어떻게 반영됐는지"가 안 보인다.
+- 만들 것:
+  1. 오른쪽 열 맨 위에 **한 문단 요약**(AI 비서실장 정리)을 둔다. 그 아래에 의견 주요 내용을 나열한다: 내가 낸 의견 → 확정 조건 → 임원들이 짚은 쟁점 → 남은 확인 사항.
+  2. VOTE 화면도 같은 요약을 보여준다(표결 직전에 무엇에 투표하는지 확인).
+  3. scripted는 규칙 기반 요약, live는 비서실장 요약 API를 쓴다. 새 사실·수치를 만들지 않는다.
+- 허용 경로: `src/components/screens/MotionScreen.tsx`·`VoteScreen.tsx`, `src/components/`, `src/services/assistant/`, `src/styles/screens/`, `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 규칙·집계 변경. 요약이 조건을 새로 추가하거나 빼기.
+- 완료 확인: `npm run check && npx playwright test` 성공. 두 해상도 무스크롤 유지. 요약이 확정 조건과 어긋나지 않는지 테스트.
+- 크기: M.
+
+## T58 결과 보고서 화면 신설
+
+- 목표: 표결 결과 뒤에 **결과 보고서 한 페이지**를 추가한다(2026-09-23 사용자). 지금은 결과 화면 하나에 게이지·5석·요약·에필로그가 모두 들어가 밀도가 높다. 보고서 화면은 이사회가 끝난 뒤 받아 보는 문서처럼 정리한다.
+- 만들 것:
+  1. RESULT 다음 단계로 `REPORT` 화면을 더한다. 결과 화면의 "체험 종료" 자리에 "결과 보고서 보기"를 두고, 보고서 화면에서 "체험 종료"로 끝낸다.
+  2. 보고서 구성: 안건과 결론 → 집계(찬성·보류·반대·미표결) → 내가 낸 의견과 확정 조건 → 임원별 판단 이유 → 남은 과제 → **6개월 뒤 예측**(기존 `resultCopy.sixMonthsLater`, "체험용 가상 전망" 배지 유지).
+  3. 스크롤 규칙: 보고서는 예외적으로 세로 스크롤을 허용할지, 한 화면에 맞출지 명세에 정한다(권장: 한 화면, 넘치면 보고서 패널 하나만 내부 스크롤).
+- 허용 경로: `src/components/screens/`, `src/domain/`(단계 추가), `src/styles/screens/`, `e2e/`, `tests/`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`.
+- 하지 말 것: 표결 집계·결론 계산 변경. 새 수치·예측 창작(에필로그 문구는 시나리오 데이터에서 읽는다).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. RESULT → REPORT → 종료 경로 e2e 추가. 두 해상도에서 보고서가 규칙대로 보임.
+- 크기: M.
+
+## T59 임원 문구를 실제 임원 말투로 — scripted 발언·표결 이유·live 문체 지시
+
+- 목표: 임원 4인의 화면 문구가 "AI가 쓴 정리문"처럼 읽힌다(2026-09-25 사용자). 실제 이사회에서 임원이 말하는 어투로 바꾼다 — 결론을 먼저, 자기 소관에서, 숫자·근거를 앞에 두고 짧게 말한다. 설명조·병렬 나열("~하고, ~하며")·"~해야 합니다"의 반복·상투 어구("~가 중요합니다", "~를 고려해야 합니다")를 줄인다. 뜻·근거·조건 ID·표결 규칙은 바꾸지 않는다.
+- 만들 것:
+  1. scripted 문구(`src/content/scenarios/anonBoard.ts`): 임원 첫 의견 4건(`initialOpinions`), 반응 6건(`reactions`), 후속 질문과 선택지(`followUp`), 표결 이유 15건(`voteRules[].reason`), 결과 문구(`resultCopy`·`sixMonthsLater`), 의장 브리핑(`chairBriefing`)을 역할별 말투로 다시 쓴다. 역할별 말투 기준을 `docs/SCENARIO_ANON_BOARD.md`에 한 문단씩 적는다 — CEO: 방향·조직 신뢰, 짧은 결론 먼저 / CFO: 숫자·공수·담당, "누가·얼마나"를 묻는다 / CAIO: 계정·시스템 연결, 구체 장치 / CISO: 로그·권한·대응, 위험을 먼저 말한다. 예: "글이 늘면 신고와 검토 공수도 늡니다. 처리 담당자부터 필요합니다." → "글이 늘면 신고도 늡니다. 지금은 신고가 올 때마다 담당을 새로 정합니다. 누가 맡을지부터 정해 주십시오."(운영 회의록 근거 그대로). 참가자 추천 문구(`phrases`)는 참가자의 말이므로 이 카드 밖이다.
+  2. 서버 사본 `server/scenario-data.ts`와 mock 제공자(`server/providers/mock.ts`)의 고정 발언도 같은 문구로 맞춘다(live 프롬프트에 들어가는 자료·동료 발언과 화면 문구가 같아야 한다).
+  3. live 문체 지시(`server/prompts/roles/index.ts`의 `EXEC_STYLE_RULE`·역할 프롬프트): 존댓말 규칙은 유지하고 "정리문 금지" 지시를 더한다 — 한 발언에 쟁점 하나, 결론을 먼저, 근거는 자료명으로, 병렬 나열과 상투 어구 금지, 동료 발언은 직함으로 부르며 짧게 받는다. `PROMPT_VERSION`을 올리고 T54의 기준선 재측정과 같은 평가 세트로 전후를 비교한다. 문체 판정기(`findStyleViolations`)는 그대로 두고, "AI 정리문 같음" 여부는 사람이 12케이스 발언을 읽어 `docs/eval/tuning-<version>.md`에 표로 남긴다(자동 판정 기준을 새로 만들지 않는다).
+  4. 문구 검수: 문구는 취향이 갈리므로 초안을 먼저 보여 사용자가 4인 문구를 읽고 확인한 뒤에 커밋한다(초안 → 확인 → 반영).
+- 허용 경로: `src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`, `server/providers/mock.ts`, `server/prompts/`, `docs/SCENARIO_ANON_BOARD.md`, `docs/eval/`, `tests/`, `e2e/`(문구 단언·스크린샷 갱신), `docs/TASKS.md`.
+- 하지 말 것: 조건 ID·키워드·표결 규칙·자료 수치 변경. 화면 문구에 자료 ID(E1~E4) 쓰기(T52, Codex 29차 불변식 테스트가 막는다). 새 사실·수치 창작. 반말체(`EXEC_STYLE_RULE`·판정기 유지).
+- 완료 확인: `npm run check && npx playwright test` 성공(문구 단언·스크린샷 갱신). 사용자가 4인 문구를 읽고 "임원 말 같다"고 확인. live는 mock 실행으로 프롬프트 반영을 확인하고, 실제 키가 있으면 T54와 함께 새 `PROMPT_VERSION` 전후 비교표.
+- 순서: PR #10 머지 뒤 T54 → T57 → T58 → T55 → T59(사용자 지시가 있으면 앞당긴다). 3의 live 문체 지시는 T54의 프롬프트 변경과 한 버전으로 묶으면 실측 비용을 아낀다.
+- 크기: M.

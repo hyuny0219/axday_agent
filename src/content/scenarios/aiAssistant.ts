@@ -59,12 +59,12 @@ export const aiAssistantScenario: Scenario = {
     question: '이 일을 AI 업무 비서에 맡길지 정합니다. 도입할까요? 한다면 어떤 조건을 붙일까요?',
     role: '특별 이사님은 조건을 붙여 의견을 내시고, 마지막에 한 표를 던지시면 됩니다.',
   },
-  briefingIssues: [
-    { text: '숫자가 자료마다 다릅니다.', evidenceIds: ['E1', 'E2'] },
-    { text: '초안을 검토할 담당자가 없습니다.', evidenceIds: ['E3'] },
-    { text: '권한과 공유 범위가 정해지지 않았습니다.', evidenceIds: ['E4'] },
-  ],
-  previewConditionIds: ['PILOT', 'REVIEW', 'ACCESS', 'MEASURE'],
+  // 원안 문장(subtitle과 동일)을 "제안"과 "아직 정하지 않은 것"으로 그대로 쪼갠 것이다
+  // (T52, 새 사실 없음).
+  motionBreakdown: {
+    proposal: '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다.',
+    undecidedItems: ['사용자별 권한', '검토 담당자', '확대 기준'],
+  },
   initialOpinions: [
     { memberId: 'CEO', text: '보고 준비를 줄이고 판단과 실행에 시간을 씁시다.', evidenceIds: ['E3'] },
     {

@@ -1,8 +1,9 @@
 // live 모드에서 임원 4명의 한 라운드(OPINIONS/REACTIONS/FOLLOWUP) 상태를 보여준다
 // (AGENT_BOARDROOM_SPEC.md 3장, docs/design/DESIGN_SPEC.md "v0.8 화면 추가 요구").
-// 역할별로 세 상태만 그린다: 아직 응답 전(판단 중) → 실제 발언 카드(근거 ID·인용한
+// 역할별로 세 상태만 그린다: 아직 응답 전(판단 중) → 실제 발언 카드(근거 자료명·인용한
 // 발언) → 실패(응답 지연·확인 필요). 원문 이외의 새 문구를 만들지 않고 서버가 돌려준
-// message·evidenceIds·referencedStatementIds만 그대로 보여준다.
+// message·evidenceIds·referencedStatementIds만 그대로 보여준다. 화면에는 evidenceIds의
+// E1~E4 표기 대신 자료명만 쓴다(T52).
 // variant='reply'(REACTIONS, T40)는 같은 카드를 4열 그리드 대신 내 발언 인용 카드 아래
 // 답글형(들여쓰기·연결선)으로 세로로 늘어놓는다. 발언이 온 임원은 시안 테두리로 강조하고
 // 아직 판단 중인 임원은 흐리게 둔다(scripted의 "기존 의견 유지"와 같은 위계). 상태 표시
@@ -26,9 +27,11 @@ export interface LiveStatementCardsProps {
   variant?: 'grid' | 'reply';
 }
 
+// 화면에는 자료 ID(E1~E4)를 쓰지 않고 자료명만 보여준다(T52). 일치하는 자료가 없으면
+// (서버가 미지의 ID를 보낸 경우) ID를 그대로 보여줘 디버깅 단서를 남긴다.
 function evidenceLabel(scenario: Scenario, id: string): string {
   const card = scenario.evidence.find((item) => item.id === id);
-  return card ? `${id} · ${card.title}` : id;
+  return card ? card.title : id;
 }
 
 function referencedLabel(statements: Statement[], id: string): string {

@@ -4,7 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequestRegistry } from '../../src/app/requests';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce, type SessionAction } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
@@ -27,7 +27,7 @@ function selectScenario(clock: FakeClock, mode: SessionMode): Session {
   session = reduce(session, { type: 'SET_MODE', mode }, clock.now());
   session = reduce(
     session,
-    { type: 'SELECT_SCENARIO', scenarioId: aiAssistantScenario.id },
+    { type: 'SELECT_SCENARIO', scenarioId: anonBoardScenario.id },
     clock.now(),
   );
   return session;
@@ -54,7 +54,7 @@ function toVoteStage(clock: FakeClock): Session {
   session = reduce(session, { type: 'KEEP_PREVIOUS' }, clock.now()); // REACTIONS -> MOTION
   session = reduce(
     session,
-    { type: 'FREEZE_MOTION', scenario: aiAssistantScenario, confirmedConditionIds: [] },
+    { type: 'FREEZE_MOTION', scenario: anonBoardScenario, confirmedConditionIds: [] },
     clock.now(),
   ); // MOTION -> VOTE (live: 임원표 비어 있고 roleStatus pending)
   return session;
@@ -77,7 +77,7 @@ function createStore(
 }
 
 function getScenario(id: string) {
-  return id === aiAssistantScenario.id ? aiAssistantScenario : undefined;
+  return id === anonBoardScenario.id ? anonBoardScenario : undefined;
 }
 
 function fakeAdapter(overrides: Partial<BoardAgentsAdapter>): BoardAgentsAdapter {
@@ -232,8 +232,8 @@ describe('runner.runRound', () => {
     });
 
     const roundPromise = orchestrator.runRound('OPINIONS');
-    // 어댑터가 아직 응답하기 전에 참가자 무입력으로 세션이 초기화된다.
-    store.dispatch({ type: 'IDLE_RESET', nextSessionId: 'reset-in-test' });
+    // 어댑터가 아직 응답하기 전에 운영자가 세션을 초기화한다.
+    store.dispatch({ type: 'OPERATOR_RESET', nextSessionId: 'reset-in-test' });
     pending.resolve(
       EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
         roleId,
@@ -304,9 +304,9 @@ describe('runner.runRound', () => {
     );
   });
 
-  it('라운드 진행 중 240초 만료로 RESULT가 되면 늦은 응답을 버리고 대기 중인 라운드는 시작하지 않는다', async () => {
+  it('라운드 진행 중 참가자가 표결까지 끝내 RESULT가 되면 늦은 응답을 버리고 대기 중인 라운드는 시작하지 않는다', async () => {
     const clock = fakeClock(0);
-    const store = createStore(toOpinionsStage(clock), clock);
+    const store = createStore(toOpinionsStage(clock, 'scripted'), clock);
     const opinionsPending = deferred<StatementOutcome[]>();
     let reactionsCalls = 0;
     const adapter = fakeAdapter({
@@ -326,8 +326,24 @@ describe('runner.runRound', () => {
 
     const opinionsRound = orchestrator.runRound('OPINIONS');
     const reactionsRound = orchestrator.runRound('REACTIONS');
-    // 응답이 오기 전에 체험 시간이 끝난다(sessionId·revision은 그대로인 채 RESULT로 간다).
-    store.dispatch({ type: 'EXPIRE', scenario: aiAssistantScenario });
+    // 응답이 오기 전에 참가자가 표결까지 끝낸다(sessionId·revision은 그대로인 채 RESULT로
+    // 간다 — scripted는 FREEZE_MOTION에서 임원표를 바로 채우므로 CONFIRM_VOTE로 즉시
+    // 집계된다).
+    store.dispatch({ type: 'NEXT_STAGE' }); // OPINIONS -> DISCUSS
+    store.dispatch({
+      type: 'SUBMIT_OPINION',
+      originalText: '작은 범위로 먼저 시작합시다.',
+      selectedPhraseIds: [],
+      confirmedConditionIds: [],
+    }); // DISCUSS -> REACTIONS
+    store.dispatch({ type: 'KEEP_PREVIOUS' }); // REACTIONS -> MOTION
+    store.dispatch({
+      type: 'FREEZE_MOTION',
+      scenario: anonBoardScenario,
+      confirmedConditionIds: [],
+    }); // MOTION -> VOTE
+    store.dispatch({ type: 'SELECT_VOTE', vote: 'YES' });
+    store.dispatch({ type: 'CONFIRM_VOTE' }); // VOTE -> RESULT
     expect(store.getSession().stage).toBe('RESULT');
 
     opinionsPending.resolve(
@@ -393,7 +409,7 @@ describe('runner.runRound', () => {
     await orchestrator.runRound('OPINIONS');
 
     const session = store.getSession();
-    expect(session.transcript.statements).toHaveLength(aiAssistantScenario.initialOpinions.length);
+    expect(session.transcript.statements).toHaveLength(anonBoardScenario.initialOpinions.length);
     expect(session.transcript.statements.every((s) => s.source === 'scripted')).toBe(true);
     expect(session.roleStatus.CEO).toBe('answered');
   });
@@ -502,7 +518,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     store.dispatch({ type: 'KEEP_PREVIOUS' });
     store.dispatch({
       type: 'FREEZE_MOTION',
-      scenario: aiAssistantScenario,
+      scenario: anonBoardScenario,
       confirmedConditionIds: [],
     });
     const frozen = store.getSession().finalMotion;

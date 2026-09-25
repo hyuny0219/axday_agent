@@ -3,14 +3,14 @@
 // "판단 근거 없음")을 읽으며 changed는 항상 false다.
 
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
 import { decideBoard } from '../../src/domain/voting';
 import { buildResultSummary } from '../../src/components/resultSummary';
 import type { Ballot, Motion, Session } from '../../src/domain/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 function buildMotion(conditionIds: string[]): Motion {
   const id = 'motion-under-test';
@@ -65,7 +65,7 @@ describe('buildResultSummary — scripted', () => {
 
     expect(summary.tally.outcome).toBe('PASS');
     expect(summary.tally.counts).toEqual({ YES: 3, NO: 2, HOLD: 0, UNCAST: 0 });
-    expect(summary.conditionLabels).toEqual(['작은 범위로 시작', '준비시간·수정량 확인 후 확대']);
+    expect(summary.conditionLabels).toEqual(['한 게시판에서 시범', '운영 효과 측정 후 확대']);
     expect(summary.execRows.map((r) => r.vote)).toEqual(['YES', 'YES', 'NO', 'NO']);
     expect(summary.execRows.map((r) => r.changed)).toEqual([false, true, false, false]);
     expect(summary.execRows.every((r) => r.reason.length > 0)).toBe(true);
@@ -104,7 +104,7 @@ describe('buildResultSummary — scripted', () => {
 
 describe('buildResultSummary — live', () => {
   it('live 임원 좌석은 ballot.reason을 읽고, UNCAST 좌석은 판단 근거 없음으로 대체하며 changed는 항상 false다', () => {
-    const motion = buildMotion(['REVIEW']);
+    const motion = buildMotion(['SCREEN']);
     const ballots: Ballot[] = [
       {
         memberId: 'CEO',
@@ -163,7 +163,7 @@ describe('buildResultSummary — live', () => {
           id: 'op1',
           originalText: '출처와 기준일을 표시하고 검토 후 공유합시다.',
           selectedPhraseIds: [],
-          confirmedConditionIds: ['REVIEW'],
+          confirmedConditionIds: ['SCREEN'],
           createdAt: 0,
         },
       ],
@@ -179,7 +179,7 @@ describe('buildResultSummary — live', () => {
       '응답 지연으로 시간 내 답하지 못했습니다.',
     );
     expect(summary.execRows.find((r) => r.memberId === 'CISO')?.reason).toBe('판단 근거 없음');
-    expect(summary.conditionLabels).toEqual(['출처·기준일 표시 후 담당자 검토']);
+    expect(summary.conditionLabels).toEqual(['게시 전 검수']);
     expect(summary.quote).toEqual(['출처와 기준일을 표시하고 검토 후 공유합시다.']);
   });
 });

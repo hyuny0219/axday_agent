@@ -10,11 +10,11 @@ export type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 export const REQUEST_ROLE_IDS = [...EXEC_ROLE_IDS, 'PARTICIPANT'] as const;
 
-/** 현재 시나리오(ai-assistant)의 근거 카드 ID. */
+/** 현재 시나리오(anon-board)의 근거 카드 ID. */
 export const EVIDENCE_IDS = ['E1', 'E2', 'E3', 'E4'] as const;
 
-/** 현재 시나리오(ai-assistant)의 조건 ID. */
-export const CONDITION_IDS = ['PILOT', 'REVIEW', 'ACCESS', 'MEASURE', 'OPEN_ALL'] as const;
+/** 현재 시나리오(anon-board)의 조건 ID. */
+export const CONDITION_IDS = ['PILOT', 'SCREEN', 'TRACE', 'MEASURE', 'ANON_FULL'] as const;
 
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;
 export const REQUEST_STAGES = [...STATEMENT_STAGES, 'VOTE', 'ASSISTANT'] as const;

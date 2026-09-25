@@ -15,24 +15,27 @@
 - [x] 최종 투표 이전에는 찬성/보류/반대 선택 버튼 없음. 토론에서 전달해도 ballot은 생성되지 않음.
   - 증빙: `e2e/flow-full.spec.ts`(DISCUSS 화면에서 `getByRole('button', { name: '찬성'|'보류'|'반대' })`가 0개임을 단언하는 구간); `tests/domain/session.test.ts` — SUBMIT_OPINION은 ballots를 만들지 않음(정상 완주 스펙)
 
-- [x] 5명 각 1표, CFO 1표, 고정된 동일 안건 ID. 표 선택 후 미확정 상태에서 만료 시 UNCAST.
-  - 증빙: `tests/domain/voting.test.ts` — "허용 조건 조합 전수 (24개 × 참가자 4표)", "문서 대표 경로표 — v0.6 (12행)"; `e2e/operations.spec.ts` — "표만 선택하고 확정하지 않은 채 240초가 지나면 내 표가 UNCAST로 집계된다"
+- [x] 5명 각 1표, CFO 1표, 고정된 동일 안건 ID. 참가자 표는 확정 버튼으로만 성립하고(라디오 선택만으로는 표가 아님), 임원 표는 8초 안에 도착·검증된 것만 집계하며 나머지는 UNCAST. (~~표 선택 후 미확정 상태에서 만료 시 UNCAST~~ — T50에서 만료 경로 제거)
+  - 증빙: `tests/domain/voting.test.ts` — "허용 조건 조합 전수 (24개 × 참가자 4표)", "문서 대표 경로표 — v0.6 (12행)"; `tests/domain/session.test.ts` — "두 번째 CONFIRM_VOTE는 무시한다", "이미 참가자 표가 있는 VOTE 단계에서 재확정을 명시적으로 차단한다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다"; `e2e/operations.spec.ts` — "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다"
 
 - [x] scripted의 가결·보류·부결·내 표 영향은 고정 테스트로 검증. live는 근거·역할·논거 반영·안건 동일성·응답 실패를 검수하며 고정 득표수를 요구하지 않음.
   - 증빙(scripted): `tests/domain/voting.test.ts`(대표 경로표 12행 전수)
   - 증빙(live, mock 제공자): `e2e/live.spec.ts` — "mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 근거를 보여준다", "한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다"; `tests/server/round.test.ts` — "참가자 발언의 지시 문구는 meeting_record 데이터 블록 안에 격리되고, 검증을 통과한 응답만 채택된다"; `tests/server/vote.test.ts` — "고정된 motionId/motionHash를 각 임원에게 전달하고 그대로 돌아오면 채택한다"
-  - 실제 Anthropic 키로의 득표·근거 실측은 **미실행**(docs/LIVE_EVAL.md, `docs/eval/`가 비어 있음)
+  - 실제 Anthropic 키 실측 **완료 — 단, 이전 안건(ai-assistant)·프롬프트 v1 기준**(2026-09-22, claude-sonnet-5, `--runs 3` 144호출): 검증 실패 0·호출 실패 0,
+    8초 초과 0건, 주입 저항 100%, CISO의 E4 인용 36/36, 자료 밖 근거 ID 0건 — `docs/eval/live-2026-09-22.md`. 문체 튜닝 v2·v3도 같은 안건 기준(`docs/eval/tuning-v3.md`).
+    **현재 활성 안건(anon-board, 2026-09-23 T53)과 프롬프트 v4는 아직 실측 전**이라 이 항목을 현재 안건의 live 검증 증빙으로 쓰지 않는다 — T54에서 v4 기준선을 먼저 재측정한다.
+    실측 중 발견한 probe 스키마 결함(실제 API가 `additionalProperties:false` 없는 object 스키마를 400으로 거부)은 수정함
 
-- [x] 무입력 75초 안내·90초 복귀, 계속 버튼, RESULT 진입 후 타이머 재시작, 240초와 동시 만료 우선순위, 운영 버튼 클릭·초기화 확인 메뉴 확인.
+- [x] ~~무입력 75초 안내·90초 복귀, 계속 버튼, RESULT 진입 후 타이머 재시작, 240초와 동시 만료 우선순위~~(T50, 2026-09-22 제거 — 아래 증빙은 당시 기록이며 현재 검수 대상이 아니다), 운영 버튼 클릭·초기화 확인 메뉴 확인.
   - 증빙: `e2e/operations.spec.ts` — "무입력 75초 안내에서 계속 체험을 누르면 세션이 유지된다", "무입력 90초가 지나면 대기 화면으로 복귀한다", "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다"; `tests/domain/clock.test.ts` — "RESULT에서도 무입력 90초가 지나면 다시 IDLE_RESET을 낸다", "같은 tick에 만료와 무입력이 동시에 성립하면 IDLE_RESET만 낸다"
 - [ ] 전체화면 거부 처리 확인.
   - 사유: `src/components/parts/OperatorMenu.tsx`에 거부(catch)·미지원(`fullscreenEnabled`) 분기가 구현되어 있으나, Fullscreen API는 사용자 제스처가 있어야 동작해 자동 테스트로 재현하지 못했다. 자동 테스트 없음 — 현장 리허설 항목(README "현장 미검증 목록")
 
-- [x] 시간 만료, AI timeout, 늦은 응답, 새 체험, 두 번 클릭에서 상태가 일관됨.
-  - 증빙: `tests/domain/session.test.ts` — "안건이 고정되지 않은 채 만료되면 원안을 자동 고정하고 참가자는 UNCAST다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다", "세션 리셋 뒤 도착한 응답은 폐기하고 아무것도 반영하지 않는다"; `e2e/operations.spec.ts` — "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다", "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다", "새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다"
+- [x] AI timeout, 늦은 응답, 새 체험, 두 번 클릭에서 상태가 일관됨. (~~시간 만료~~ — T50에서 제거, "안건이 고정되지 않은 채 만료되면 원안을 자동 고정" 테스트도 함께 삭제됨)
+  - 증빙: `tests/domain/session.test.ts` — "OPERATOR_RESET은 새 sessionId와 초기 상태를 돌려준다"; `e2e/operations.spec.ts` — "시계를 앞으로 돌려도 화면이 바뀌지 않는다"; `tests/services/orchestrator.test.ts` — "임원 표가 도착하지 않으면 8초 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다", "세션 리셋 뒤 도착한 응답은 폐기하고 아무것도 반영하지 않는다"; `e2e/operations.spec.ts` — "운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다", "최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다", "새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다"
 
-- [x] 추가 AI 버튼을 전혀 누르지 않은 완주에서도 BRIEFING 요약 카드와 결과의 자동 정리 표시 기록이 있음. 자동 데모/추가 데모/실제 호출을 구분. 내 의견이 채택되지 않았는데 채택됐다고 쓰지 않음.
-  - 증빙: `e2e/assistant.spec.ts` — "패널을 열지 않고 완주해도 결과에는 자료 자동 정리 기록만 남는다", "AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사용 기록이 남는다", "live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다"; `tests/domain/assistantLog.test.ts` — "scripted 결과는 \"실제 AI 사용\"을 언급하지 않는다", "live 결과는 실제 호출임을 덧붙인다", "DRAFT_REFINE은 applied:true일 때만 한 줄을 만든다(미적용 요청은 조용히 무시)"
+- [x] AI 비서실장을 전혀 쓰지 않은 완주에서는 결과의 ‘AI가 도운 일’에 미사용 문구만 있고 표시하지 않은 자동 정리 기록이 없음(BRIEFING 요약 카드는 T52에서 제거, 그 표시 기록은 PR #10 Codex 27차에서 제거). 데모/실제 호출을 구분. 내 의견이 채택되지 않았는데 채택됐다고 쓰지 않음.
+  - 증빙: `e2e/assistant.spec.ts` — "패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 미사용 문구만 남는다", "AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사용 기록이 남는다", "live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다"; `tests/domain/assistantLog.test.ts` — "scripted 결과는 \"실제 AI 사용\"을 언급하지 않는다", "live 결과는 실제 호출임을 덧붙인다", "DRAFT_REFINE은 applied:true일 때만 한 줄을 만든다(미적용 요청은 조용히 무시)"
 
 - [ ] 현장 마우스·물리 키보드 한글 입력 및 오프라인 로컬 자산 검증을 완료하고 장비·OS·브라우저·미검증 항목을 기록.
   - 증빙(오프라인 로컬 자산 부분만): `bash scripts/offline-check.sh`(빌드 산출물을 `vite preview`로 기동해 외부 요청 차단 fixture로 scripted 스모크 실행, PASS)

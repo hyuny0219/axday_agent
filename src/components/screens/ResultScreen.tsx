@@ -1,8 +1,10 @@
 // 결과 화면: 결론 → 동등한 5석 카드 → 내 원문·반영 조건 → 남은 과제 → AI가 도운 일
 // 순서로 보여준다(docs/SCENARIO_AI_ASSISTANT.md "결과와 AI 효율 체험"). '체험 종료'는
 // 운영자 새 체험(OPERATOR_RESET, 확인 절차 포함) 없이 바로 세션을 초기화하고
-// ATTRACT로 돌아간다. 'AI가 도운 일'은 항상 자료 자동 정리를 포함하고, 그 밖의 도움은
-// session.assistantActions(AssistantPanel이 남긴 레이블)이 있을 때만 보여준다(T12).
+// ATTRACT로 돌아간다. 'AI가 도운 일'은 session.assistantActions(AssistantPanel이 남긴
+// 레이블)이 있을 때만 줄을 보여주고 없으면 미사용 문구만 보여준다(T12). 예전의 고정 줄
+// "자료 4장 자동 정리 데모 표시"는 그 카드가 T52에서 제거된 뒤에도 남아 표시하지 않은
+// 것을 표시했다고 말했으므로 PR #10 Codex 27차 검토(P2)에서 뺐다.
 // T31: 그 레이블은 이제 mode·evidenceIds·applied를 담은 JSON(assistantLog.ts)이라, live
 // 호출은 "(실제 AI 호출)"을 붙이고 scripted는 붙이지 않는다 — describeAdditionalHelp가
 // 그 구분을 전담하므로 이 화면은 여전히 호출만 한다.
@@ -319,15 +321,15 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             <section className="result-screen__ai-help" data-testid="result-ai-help">
               <h3 className="result-screen__section-label">AI가 도운 일</h3>
               <div className="result-screen__ai-help-scroll">
-                <ul className="result-screen__ai-help-list">
-                  <li>자료 4장 자동 정리 데모 표시</li>
-                  {additionalHelp.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-                {additionalHelp.length === 0 && (
+                {additionalHelp.length > 0 ? (
+                  <ul className="result-screen__ai-help-list">
+                    {additionalHelp.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                ) : (
                   <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
-                    추가 AI 도움은 사용하지 않았습니다.
+                    AI 비서실장 도움은 사용하지 않았습니다.
                   </p>
                 )}
               </div>

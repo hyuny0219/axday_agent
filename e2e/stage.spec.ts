@@ -7,12 +7,12 @@
 
 import { test, expect, type Page } from './fixtures';
 
-const MY_OPINION_TEXT = '작은 범위로 시작해 결과를 확인한 뒤 확대합시다.';
+const MY_OPINION_TEXT = '한 게시판에서 시범해 결과를 확인한 뒤 확대합시다.';
 
 async function enterBriefing(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 }
 
@@ -53,7 +53,7 @@ test.describe('1920×1080에서 무대 열', () => {
     // SELECT는 무대 렌더 대상이 아니다(진입 전, DESIGN_SPEC.md v1.0 1절).
     await expect(page.getByTestId('stage-band')).toHaveCount(0);
 
-    await page.getByTestId('scenario-card-ai-assistant').click();
+    await page.getByTestId('scenario-card-anon-board').click();
     await page.getByRole('button', { name: '이사회 입장' }).click();
 
     const stageBand = page.getByTestId('stage-band');

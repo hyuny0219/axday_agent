@@ -11,7 +11,7 @@ function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
     sessionId: 'session-1',
     requestId: 'req-vote-default',
     mode: 'live',
-    scenarioId: 'ai-assistant',
+    scenarioId: 'anon-board',
     budgetMs: 8000,
     transcript: {
       revision: 1,

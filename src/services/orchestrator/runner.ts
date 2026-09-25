@@ -7,11 +7,14 @@
 // finalMotion.hash(안건이 바뀌었는지)가 호출 시작 시점과 다르면 결과를 조용히 버리고 dispatch하지
 // 않는다(자동 재시도 없음). Statement.createdAt·Ballot.confirmedAt은 여기서만 주입된 Clock으로
 // 채운다 — 어댑터는 placeholder만 돌려준다.
+//
+// T50(2026-09-22 사용자 결정)에서 240초 세션 만료를 없앴다. 라운드 시간 예산은 더 이상
+// session.deadline에 묶이지 않고 항상 MAX_ROUND_TIMEOUT_MS(boardAgents/live.ts, 8초)
+// 하나로만 정해진다 — budgetMs는 그 값을 절대 깎지 않도록 Infinity로 넘긴다.
 
 import type { Scenario } from '../../content/types';
 import type { RequestRegistry } from '../../app/requests';
 import type { Clock } from '../../domain/clock';
-import { remaining } from '../../domain/clock';
 import type { SessionAction } from '../../domain/session';
 import type { Session, Statement, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -22,7 +25,7 @@ import type {
   StatementOutcome,
 } from '../boardAgents/types';
 
-/** 최종표 대기 상한(AGENT_BOARDROOM_SPEC.md 6장 "8초 또는 deadline을 넘지 않는다"). */
+/** 최종표 대기 상한(AGENT_BOARDROOM_SPEC.md 6장 "8초를 넘지 않는다"). */
 export const FINAL_VOTE_WAIT_MS = 8000;
 
 export interface OrchestratorStore {
@@ -77,9 +80,7 @@ function failedBallotOutcomes(reason: string): BallotOutcome[] {
 
 /**
  * 라운드·표를 시작하거나 그 결과를 반영해도 되는 세션인가. ATTRACT·SELECT(아직 안건이 없음)와
- * RESULT(만료·확정으로 끝남)에서는 새 모델 호출을 시작하지 않고, 늦게 온 응답도 버린다.
- * 240초 EXPIRE는 sessionId와 revision을 그대로 둔 채 RESULT로 넘어가므로 그 두 값만으로는
- * 만료를 알 수 없다.
+ * RESULT(확정으로 끝남)에서는 새 모델 호출을 시작하지 않고, 늦게 온 응답도 버린다.
  */
 function isSessionOpen(session: Session): boolean {
   return session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && session.stage !== 'RESULT';
@@ -108,7 +109,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     const sessionId = session.sessionId;
     const baseRevision = session.transcript.revision;
     const scenario = session.scenarioId ? deps.getScenario(session.scenarioId) : undefined;
-    // 대기 중이던 라운드가 차례를 받았을 때 세션이 이미 만료·리셋됐으면 모델을 부르지 않는다.
+    // 대기 중이던 라운드가 차례를 받았을 때 세션이 이미 리셋·종료됐으면 모델을 부르지 않는다.
     if (!scenario || !isSessionOpen(session)) {
       return;
     }
@@ -123,7 +124,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       requestId: handle.requestId,
       session,
       scenario,
-      budgetMs: remaining(session, deps.clock.now()),
+      budgetMs: Number.POSITIVE_INFINITY,
       signal: handle.signal,
     };
 
@@ -137,7 +138,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     }
 
     // 늦은 응답 폐기: 그 사이 세션이 리셋됐거나, 다른 라운드가 먼저 revision을 올렸거나,
-    // 240초 만료로 RESULT에 들어갔으면 아무것도 dispatch하지 않는다.
+    // 이미 RESULT로 끝났으면 아무것도 dispatch하지 않는다.
     const current = deps.store.getSession();
     if (
       current.sessionId !== sessionId ||
@@ -183,7 +184,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     const session = deps.store.getSession();
     const sessionId = session.sessionId;
     const motion = session.finalMotion;
-    // 라운드를 기다리는 사이 만료·리셋됐으면(RESULT/ATTRACT) 표를 요청하지 않는다.
+    // 라운드를 기다리는 사이 리셋됐으면(RESULT/ATTRACT) 표를 요청하지 않는다.
     if (!motion || session.stage !== 'VOTE') {
       return;
     }
@@ -198,7 +199,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       requestId: handle.requestId,
       session,
       scenario,
-      budgetMs: remaining(session, deps.clock.now()),
+      budgetMs: Number.POSITIVE_INFINITY,
       signal: handle.signal,
     };
 
@@ -244,9 +245,8 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     if (session.stage !== 'VOTE') {
       return;
     }
-    const waitMs = Math.min(FINAL_VOTE_WAIT_MS, remaining(session, deps.clock.now()));
     const timeoutPromise = new Promise<void>((resolve) => {
-      setTimeout(resolve, waitMs);
+      setTimeout(resolve, FINAL_VOTE_WAIT_MS);
     });
     await Promise.race([finalVotesSettled, timeoutPromise]);
 

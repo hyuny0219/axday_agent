@@ -5,27 +5,26 @@
 //
 // T31: session.assistantActions는 여전히 string[]이지만(도메인 타입 변경 없이), 이제
 // AssistantAction을 JSON으로 인코딩한 문자열을 담아 mode·evidenceIds·applied까지 세션에
-// 실제로 남긴다(T12 nit "evidenceIds·mode 기록이 아직 세션에 연결되지 않음" 해소). BRIEFING의
-// 'SUMMARY_SHOWN'처럼 JSON이 아닌 평문 레이블은 decodeAssistantLogEntry가 조용히 무시한다.
+// 실제로 남긴다(T12 nit "evidenceIds·mode 기록이 아직 세션에 연결되지 않음" 해소). JSON이
+// 아닌 평문 레이블은 decodeAssistantLogEntry가 조용히 무시한다. BRIEFING 자동 정리 카드의
+// 'SUMMARY_SHOWN' 기록은 카드가 T52에서 제거되면서 함께 없앴다(PR #10 Codex 27차 검토 P2 —
+// 보이지 않는 카드를 표시된 것으로 기록했다).
 
 import type { AssistantMode } from '../services/assistant/types';
 
 export type { AssistantMode } from '../services/assistant/types';
 
 export type AssistantActionType =
-  | 'SUMMARY_SHOWN'
   | 'OPINION_SUMMARY'
   | 'CONDITION_COMPARE'
   | 'DRAFT_REFINE';
 
-/** AssistantPanel/BriefingScreen이 실제로 결과를 렌더했을 때만 만드는 기록 한 건.
- * shownAt은 버튼 조작 없이 상시 표시되는 카드(BRIEFING 자동 정리), requestedAt은
- * 참가자가 요청해 받은 결과(요약·비교·정리)에 쓴다. */
+/** AssistantPanel이 실제로 결과를 렌더했을 때만 만드는 기록 한 건. requestedAt은
+ * 참가자가 요청해 받은 결과(요약·비교·정리)의 시각이다. */
 export interface AssistantAction {
   type: AssistantActionType;
   mode: AssistantMode;
   evidenceIds: string[];
-  shownAt?: number;
   requestedAt?: number;
   /** '내 발언 정리'는 '내 발언에 적용'을 눌렀을 때만 true다. */
   applied?: boolean;
@@ -46,7 +45,6 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = [
-  'SUMMARY_SHOWN',
   'OPINION_SUMMARY',
   'CONDITION_COMPARE',
   'DRAFT_REFINE',
@@ -65,9 +63,9 @@ export function encodeAssistantLogEntry(event: AssistantActionEvent, requestedAt
   return JSON.stringify(entry);
 }
 
-/** encodeAssistantLogEntry가 만든 문자열만 AssistantAction으로 되돌린다. BRIEFING의
+/** encodeAssistantLogEntry가 만든 문자열만 AssistantAction으로 되돌린다. 과거 세션의
  * 'SUMMARY_SHOWN' 같은 JSON이 아닌 평문 레이블은 null을 돌려주어 호출부가 조용히
- * 건너뛰게 한다(과거 세션·다른 레이블을 실제 도움으로 오해하지 않도록). */
+ * 건너뛰게 한다(다른 레이블을 실제 도움으로 오해하지 않도록). */
 export function decodeAssistantLogEntry(label: string): AssistantAction | null {
   try {
     const parsed: unknown = JSON.parse(label);
@@ -104,7 +102,6 @@ function describeEntry(entry: AssistantAction): string | null {
         return '조건 비교하기를 확인했습니다.';
       case 'DRAFT_REFINE':
         return entry.applied ? '내 발언 정리를 내 발언에 적용했습니다.' : null;
-      case 'SUMMARY_SHOWN':
       default:
         return null;
     }
@@ -116,8 +113,8 @@ function describeEntry(entry: AssistantAction): string | null {
 }
 
 /**
- * session.assistantActions(문자열 배열)에서 '자료 자동 정리' 이외에 참가자가 실제로
- * 사용한 추가 도움만 한국어 문장으로 바꾼다. 같은 유형(type)이 여러 번 있어도 한 줄만
+ * session.assistantActions(문자열 배열)에서 참가자가 실제로 사용한 도움만 한국어
+ * 문장으로 바꾼다. 같은 유형(type)이 여러 번 있어도 한 줄만
  * 보여주되, 나중 기록이 applied:true면 먼저 있던 applied:false 기록 대신 그 줄을 쓴다
  * (미적용 요청 뒤에 실제로 적용한 경우 "미적용" 대신 "적용"으로 보여준다).
  * 디코딩할 수 없는 레이블(구조화되지 않은 값)은 조용히 무시해 실제로 없었던 도움을
@@ -150,7 +147,7 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
   return lines;
 }
 
-/** 추가 AI 도움을 하나라도 사용했는지. ResultScreen이 안내 문구 분기에 쓴다. */
+/** AI 비서실장 도움을 하나라도 사용했는지. ResultScreen이 안내 문구 분기에 쓴다. */
 export function hasAdditionalHelp(actionLabels: readonly string[]): boolean {
   return describeAdditionalHelp(actionLabels).length > 0;
 }

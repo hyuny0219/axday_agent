@@ -8,6 +8,28 @@
 
 import { test, expect, type Page, type Route } from './fixtures';
 
+/**
+ * 문서 스크롤이 없어도 패널 안에서 내용이 잘릴 수 있다(T56: 회의록 최신 항목이 아래로
+ * 넘쳐 잘리고, 오른쪽 열 제목이 flex-shrink로 줄어 글자가 잘렸다). 그래서 스크롤
+ * 여부와 별개로 "이 요소가 잘리지 않고 다 보이는가"를 함께 단언한다.
+ */
+async function expectFullyVisible(page: Page, testId: string, label: string) {
+  const box = await page.getByTestId(testId).boundingBox();
+  expect(box, `${label}: ${testId} 요소를 찾지 못했다`).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport, `${label}: viewport 크기를 알 수 없다`).not.toBeNull();
+  if (!box || !viewport) {
+    return;
+  }
+  expect(
+    box.y >= -1 && box.y + box.height <= viewport.height + 1,
+    `${label}: ${testId}가 뷰포트를 벗어났다(top=${box.y}, bottom=${box.y + box.height}, viewport=${viewport.height})`,
+  ).toBe(true);
+  // 패널 자체가 안에서 잘리는 경우(자식이 넘침)도 잡는다.
+  const clipped = await page.getByTestId(testId).evaluate((el) => el.scrollHeight - el.clientHeight);
+  expect(clipped <= 1, `${label}: ${testId} 내부 내용이 ${clipped}px 넘쳐 잘린다`).toBe(true);
+}
+
 async function expectNoPageScroll(page: Page, label: string) {
   const overflow = await page.evaluate(() => {
     const el = document.scrollingElement ?? document.documentElement;
@@ -27,34 +49,31 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
   await expect(
-    page.getByTestId('scenario-card-ai-assistant').locator('.scenario-card__title'),
+    page.getByTestId('scenario-card-anon-board').locator('.scenario-card__title'),
   ).toBeInViewport();
 
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
+  await expectFullyVisible(page, 'minutes-panel', 'BRIEFING');
   // 사건 표기 eyebrow(T47): 안건 제목 위 한 줄이 잘리지 않고 보인다.
   await expect(page.getByTestId('briefing-incident')).toBeInViewport();
   // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
   // (무대·행동·회의록)이 잘리지 않는다.
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
-  // 근거 카드를 펼쳐도 잘리지 않고, 한 번에 한 장만 펼쳐진다(PR #6 Codex 3차 검토).
-  await page.getByTestId('evidence-card-E1').locator('summary').click();
-  await expect(page.getByTestId('evidence-card-E1')).toHaveAttribute('open', '');
-  await expectNoPageScroll(page, 'BRIEFING(E1 펼침)');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(E1 펼침)');
-  await page.getByTestId('evidence-card-E2').locator('summary').click();
-  await expect(page.getByTestId('evidence-card-E2')).toHaveAttribute('open', '');
-  await expect(page.getByTestId('evidence-card-E1')).not.toHaveAttribute('open', '');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(E2 펼침)');
-  await expect(page.getByTestId('condition-preview')).toBeInViewport();
-  await page.getByTestId('evidence-card-E2').locator('summary').click();
+  // 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보이고 잘리지 않는다(T52).
+  for (const id of ['E1', 'E2', 'E3', 'E4']) {
+    await expect(page.getByTestId(`evidence-card-${id}`)).toBeVisible();
+  }
+  await expectNoPageScroll(page, 'BRIEFING(자료 4장)');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 4장)');
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
+  await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
 
@@ -86,7 +105,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   // 직접 답하기(가장 내용이 많은 경로)를 열고 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-open-editor').click();
-  await page.getByTestId('followup-textarea').fill('출처와 기준일 차이를 표시하고 공유 전 담당자 확인 절차를 정합니다.');
+  await page.getByTestId('followup-textarea').fill('신고가 들어온 글에 한해 담당자가 확인할 수 있게 절차를 정합니다.');
   await expectNoPageScroll(page, 'REACTIONS(직접 답하기 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
@@ -100,12 +119,14 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'MOTION');
+  await expectFullyVisible(page, 'minutes-panel', 'MOTION');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'MOTION');
 
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE');
+  await expectFullyVisible(page, 'minutes-panel', 'VOTE');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
 
@@ -127,7 +148,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 // 가로채 최대 길이로 채우고, 페이지 스크롤과 오른쪽 열 내부 잘림이 모두 없는지 본다.
 const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 const LONG_STATEMENT =
-  '출처와 기준일을 표시하고 담당자가 확인한 뒤에만 공유해야 합니다. 권한이 확인되지 않은 부서 자료는 파일럿 범위에서 제외하고 준비시간과 수정량을 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
+  '게시 전 검수를 거친 뒤에만 공개해야 합니다. 신고가 들어온 글은 담당자가 확인할 수 있게 하고 게시 건수와 신고 처리 결과를 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
 
 const LONG_REASON =
   '출처·기준일 표시와 담당자 검토, 권한 확인이 조건으로 들어갔으므로 찬성합니다. 다만 파일럿 기간의 준비시간과 수정량 기록이 실제로 쌓이는지, 확대 판단 전에 이사회가 그 수치를 직접 확인하는지가 남은 관건입니다. 그 절차가 빠지면 재검토가 필요합니다.';
@@ -190,7 +211,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-ai-assistant').click();
+  await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });

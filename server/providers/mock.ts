@@ -46,8 +46,8 @@ const ROLE_EVIDENCE: Record<string, string> = {
 const ROLE_CONDITION: Record<string, string> = {
   CEO: 'PILOT',
   CFO: 'MEASURE',
-  CAIO: 'REVIEW',
-  CISO: 'ACCESS',
+  CAIO: 'SCREEN',
+  CISO: 'TRACE',
 };
 
 const ROLE_VOTE: Record<string, 'YES' | 'HOLD' | 'NO'> = {
@@ -140,9 +140,20 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** 항상 결정적으로 응답하는 mock 제공자. 실제 모델 호출을 대신해 테스트·오프라인 개발에 쓴다. */
-export function createMockProvider(modelId = 'mock-model'): ModelProvider {
+/** mock 제공자의 고정 modelId. 서버(server/index.ts)와 평가 스크립트가 같은 값을 써서 산출물만
+ * 보고도 실제 모델 결과와 구별할 수 있게 한다(PR #10 Codex 30차 검토 P2). */
+export const MOCK_MODEL_ID = 'mock-model';
+
+export function createMockProvider(modelId = MOCK_MODEL_ID): ModelProvider {
   return {
     async complete(req: ModelCompleteRequest): Promise<ModelCompleteResult> {
+      // 운영 메뉴 "모델 연결 확인"(T49, server/handlers/probe.ts)의 고정 호출은 라운드·표·
+      // 비서 envelope과 달리 그냥 user:'ok'를 보낸다 — round/vote/assistant 4종 kind
+      // 안에는 { ok:true } 계약을 만족하는 분기가 없으므로 여기서 먼저 처리한다.
+      if (req.user === 'ok') {
+        return { json: { ok: true }, modelId };
+      }
+
       const envelope = parseEnvelope(req.user);
       const fault = envelope.mock;
 

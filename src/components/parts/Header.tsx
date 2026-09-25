@@ -1,14 +1,12 @@
-// 상단 공통 바: BOARDROOM 2026 · 단계명 · 남은 시간 · 운영 메뉴
-// (DESIGN_SPEC.md 3장 "공통" 문단, CLAUDE_IMPLEMENTATION.md 3장 "현장 운영").
-// T30에서 진행 방식 배지(LIVE / 사전 구성 시뮬레이션)를 더했다(AGENT_BOARDROOM_SPEC.md
-// 6장 "세션 시작 전에 live/scripted 모드를 고정하고 화면에 표시한다").
+// 상단 공통 바: BOARDROOM 2026 · 단계명 · 운영 메뉴
+// (DESIGN_SPEC.md 3장 "공통" 문단). T30에서 진행 방식 배지(LIVE / 사전 구성 시뮬레이션)를
+// 더했다(AGENT_BOARDROOM_SPEC.md 6장 "세션 시작 전에 live/scripted 모드를 고정하고
+// 화면에 표시한다"). T50(2026-09-22 사용자 결정)에서 240초 카운트다운 표시를 없앴다.
 
-import type { Clock } from '../../domain/clock';
 import type { Session, SessionStage } from '../../domain/types';
 import '../../styles/screens/shell.css';
 import { Nameplate } from './Nameplate';
 import { OperatorMenu } from './OperatorMenu';
-import { Timer } from './Timer';
 
 const MODE_BADGE_TEXT: Record<Session['mode'], string> = {
   live: 'LIVE',
@@ -29,11 +27,10 @@ const STAGE_LABELS: Record<SessionStage, string> = {
 
 export interface HeaderProps {
   session: Session;
-  clock: Clock;
   onOperatorReset: () => void;
 }
 
-export function Header({ session, clock, onOperatorReset }: HeaderProps) {
+export function Header({ session, onOperatorReset }: HeaderProps) {
   return (
     <header className="app-header">
       <div className="app-header__left">
@@ -50,7 +47,6 @@ export function Header({ session, clock, onOperatorReset }: HeaderProps) {
         >
           {MODE_BADGE_TEXT[session.mode]}
         </span>
-        <Timer session={session} clock={clock} />
         <OperatorMenu onNewSession={onOperatorReset} />
       </div>
     </header>

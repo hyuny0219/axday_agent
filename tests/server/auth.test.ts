@@ -43,6 +43,7 @@ describe('isProtectedApiPath', () => {
     expect(isProtectedApiPath('/api/board/vote')).toBe(true);
     expect(isProtectedApiPath('/api/assistant/refine')).toBe(true);
     expect(isProtectedApiPath('/api/assistant/summarize')).toBe(true);
+    expect(isProtectedApiPath('/api/ops/probe')).toBe(true);
     expect(isProtectedApiPath('/api/health')).toBe(false);
     expect(isProtectedApiPath('/')).toBe(false);
     expect(isProtectedApiPath('/index.html')).toBe(false);
@@ -148,6 +149,33 @@ describe('createBoardServer + ACCESS_TOKEN 통합', () => {
       expect(rightHeader.status).toBe(200);
       expect(rightBody.mode).toBe('live');
       expect(rightBody.authRequired).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+
+  it('/api/ops/probe는 board·assistant처럼 토큰 없이 401로 거절된다', async () => {
+    const { url, close } = await startServer({ ACCESS_TOKEN: 'secret-token' });
+    try {
+      const probe = await fetch(url('/api/ops/probe'), { method: 'POST' });
+      expect(probe.status).toBe(401);
+      expect(await probe.json()).toEqual({ error: 'unauthorized' });
+    } finally {
+      await close();
+    }
+  });
+
+  it('/api/ops/probe는 전역 10초에 1회만 허용하고 초과 호출은 429 probe_rate_limit이다', async () => {
+    const { url, close } = await startServer({ ACCESS_TOKEN: '' });
+    try {
+      const first = await fetch(url('/api/ops/probe'), { method: 'POST' });
+      expect(first.status).toBe(200);
+      const firstBody = (await first.json()) as { ok: boolean };
+      expect(firstBody.ok).toBe(true);
+
+      const second = await fetch(url('/api/ops/probe'), { method: 'POST' });
+      expect(second.status).toBe(429);
+      expect(await second.json()).toEqual({ error: 'probe_rate_limit' });
     } finally {
       await close();
     }

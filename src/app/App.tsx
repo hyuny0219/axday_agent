@@ -1,6 +1,9 @@
-// 앱 골격: SessionProvider(useReducer + appClock + useTicker)와 stage별 화면 라우팅.
+// 앱 골격: SessionProvider(useReducer + appClock)와 stage별 화면 라우팅.
 // ATTRACT~RESULT의 아홉 화면 모두 여기서 StageRouter로 연결한다(T09·T10). T11에서
-// 타이머 표시, 무입력 안내·복귀, 운영 메뉴, 활동 감지, 요청 레지스트리를 붙였다.
+// 운영 메뉴, 요청 레지스트리를 붙였다. T50(2026-09-22 사용자 결정)에서 240초 만료·
+// 75/90초 무입력 복귀와 그에 딸린 타이머 표시·활동 감지를 모두 제거했다 — 세션을
+// 끝내는 경로는 결과 화면의 "체험 종료"와 운영 메뉴의 "새 체험"·"scripted로 새
+// 체험"(OPERATOR_RESET)뿐이다.
 // T12에서 DISCUSS·REACTIONS에 sessionId와 RECORD_ASSISTANT_ACTION dispatch를 얇게
 // 연결해 AssistantPanel(src/components/parts)이 쓰도록 했다(AI 비서실장 사용 기록).
 // T30에서 live/scripted 모드 감지(mode.ts)와 orchestrator(runRound/startFinalVotes/
@@ -19,18 +22,17 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
-import { touch } from '../domain/clock';
+import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
 import type { Session } from '../domain/types';
 import { scenarios } from '../content/scenarios';
 import type { Scenario } from '../content/types';
-import { useTicker } from './useTicker';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
+import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
   createOrchestrator,
   type Orchestrator,
@@ -43,7 +45,6 @@ import { liveAssistantAdapter } from '../services/assistant/live';
 import { scriptedAssistantAdapter } from '../services/assistant/scripted';
 import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
-import { IdleNotice } from '../components/parts/IdleNotice';
 import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
@@ -71,14 +72,9 @@ function getScenarioById(scenarioId: string): Scenario | undefined {
   return scenarios.find((item) => item.id === scenarioId);
 }
 
-/** 세션 상태 전이용 액션에 순수 UI 활동(TOUCH)을 더한 내부 전용 액션. TOUCH는
- * lastActivityAt만 갱신하며 session.ts의 reduce로 넘기지 않는다(deadline 불변). */
-type InternalAction = SessionAction | { type: 'TOUCH' };
-
 interface SessionContextValue {
   session: Session;
   dispatch: (action: SessionAction) => void;
-  touchActivity: () => void;
   /** live에서 후속 답 제출 뒤 runRound('FOLLOWUP')이 settle되기 전인가(T46, DESIGN_SPEC.md
    * v1.0 7절 "후속 대기 게이트"). MOTION 화면이 "이 안건으로 표결" CTA를 잠그는 데 쓴다. */
   followUpPending: boolean;
@@ -100,19 +96,14 @@ function useSession(): SessionContextValue {
 }
 
 /**
- * useReducer + appClock + useTicker로 세션을 관리하고 하위 트리에 제공한다.
- * 만료·무입력 판정 자체는 domain/clock.ts의 tick이 결정하며, 여기서는 그 결과 action을
- * session.ts가 이해하는 SessionAction으로 옮기기만 한다(EXPIRE에 scenario 채우기).
- * 리셋 액션(IDLE_RESET·OPERATOR_RESET)에서는 requestRegistry.abortAll()도 함께 호출한다.
+ * useReducer + appClock으로 세션을 관리하고 하위 트리에 제공한다. 리셋 액션
+ * (OPERATOR_RESET)에서는 requestRegistry.abortAll()도 함께 호출한다.
  */
 function SessionProvider({ children }: { children: ReactNode }) {
   const [session, rawDispatch] = useReducer(
-    (state: Session, action: InternalAction): Session => {
+    (state: Session, action: SessionAction): Session => {
       const now = appClock.now();
-      if (action.type === 'TOUCH') {
-        return touch(state, now);
-      }
-      if (action.type === 'IDLE_RESET' || action.type === 'OPERATOR_RESET') {
+      if (action.type === 'OPERATOR_RESET') {
         requestRegistry.abortAll();
       }
       return reduce(state, action, now);
@@ -134,7 +125,6 @@ function SessionProvider({ children }: { children: ReactNode }) {
       setRoundLog((previous) => upsertRoundLogEntry(previous, { stage, roleId, status }));
     }
   }, []);
-  const touchActivity = useCallback(() => rawDispatch({ type: 'TOUCH' }), []);
 
   // sessionId가 바뀌면(리셋 포함) 이전 세션의 라운드 기록을 지운다.
   useEffect(() => {
@@ -269,8 +259,8 @@ function SessionProvider({ children }: { children: ReactNode }) {
     void orchestrator.startFinalVotes();
   }, [session.mode, session.finalMotion, orchestrator]);
 
-  // 참가자가 최종 표를 확정한 뒤에만 8초(또는 남은 시간) 대기를 시작한다(스펙 6장
-  // "참가자 확정과 함께 기다리되 8초 또는 deadline을 넘지 않는다").
+  // 참가자가 최종 표를 확정한 뒤에만 8초 대기를 시작한다(스펙 6장
+  // "참가자 확정과 함께 기다리되 8초를 넘지 않는다").
   const awaitResultRef = useRef<string | null>(null);
   useEffect(() => {
     if (session.mode !== 'live' || session.stage !== 'VOTE' || !session.finalMotion) {
@@ -287,46 +277,31 @@ function SessionProvider({ children }: { children: ReactNode }) {
     void orchestrator.awaitResult();
   }, [session.mode, session.stage, session.finalMotion, session.ballots, orchestrator]);
 
-  useTicker({
-    session,
-    clock: appClock,
-    dispatch: (clockAction) => {
-      if (clockAction === 'IDLE_RESET') {
-        dispatch({ type: 'IDLE_RESET', nextSessionId: newSessionId() });
-        return;
-      }
-      const scenario = scenarios.find((item) => item.id === session.scenarioId);
-      if (!scenario) {
-        return;
-      }
-      dispatch({ type: 'EXPIRE', scenario });
-    },
-  });
-
-  // 클릭·키 입력·실제 스크롤(wheel/scroll)만 활동으로 센다. 커서 이동(mousemove)은
-  // 제외한다(CLAUDE_IMPLEMENTATION.md 3장 "현장 운영").
-  useEffect(() => {
-    function handleActivity() {
-      touchActivity();
-    }
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('wheel', handleActivity, { passive: true });
-    window.addEventListener('scroll', handleActivity, { passive: true, capture: true });
-    return () => {
-      window.removeEventListener('click', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('wheel', handleActivity);
-      window.removeEventListener('scroll', handleActivity, true);
-    };
-  }, [touchActivity]);
-
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, touchActivity, followUpPending, roundLog }),
-    [session, dispatch, touchActivity, followUpPending, roundLog],
+    () => ({ session, dispatch, followUpPending, roundLog }),
+    [session, dispatch, followUpPending, roundLog],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+}
+
+/** 화면 맞춤 축소(T51, src/app/viewportFit.ts): 뷰포트 리사이즈·전체화면 전환에 반응해
+ * scale을 다시 계산한다. 렌더 루프·타이머는 두지 않고 resize 이벤트에만 반응한다. 초기값도
+ * 첫 렌더에서 바로 실제 창 크기로 계산해(useState lazy init) 뒤늦게 튀는 현상을 없앤다. */
+function useViewportFit(): ViewportFit {
+  const [fit, setFit] = useState<ViewportFit>(() =>
+    computeViewportFit(window.innerWidth, window.innerHeight),
+  );
+
+  useEffect(() => {
+    function handleResize() {
+      setFit(computeViewportFit(window.innerWidth, window.innerHeight));
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return fit;
 }
 
 /** stage별 화면 라우팅. */
@@ -358,7 +333,6 @@ function StageRouter() {
       return (
         <BriefingScreen
           scenario={scenario}
-          onSummaryShown={() => dispatch({ type: 'MARK_SUMMARY_SHOWN' })}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
         />
       );
@@ -451,7 +425,7 @@ function StageRouter() {
         <ResultScreen
           scenario={scenario}
           session={session}
-          onReset={() => dispatch({ type: 'IDLE_RESET', nextSessionId: newSessionId() })}
+          onReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
         />
       );
 
@@ -503,62 +477,66 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
  * ResultScreen과 공유하는 순수 함수).
  */
 function AppShell() {
-  const { session, dispatch, touchActivity, roundLog } = useSession();
+  const { session, dispatch, roundLog } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
   const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
+  const fit = useViewportFit();
+  const wrapperStyle: CSSProperties | undefined =
+    fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;
 
   const content = <StageRouter />;
 
   return (
-    <div className="app-shell">
-      <Header
-        session={session}
-        clock={appClock}
-        onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
-      />
-      {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
-        <ProgressStrip stage={session.stage} />
-      )}
-      {hasStageBand && scenario ? (
-        // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
-        // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
-        // 컴포넌트는 각각 .app-body__actions·.app-body__content 두 wrapper div를
-        // Fragment로 돌려주고(renderSplit 규칙), React Fragment는 DOM에 별도
-        // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
-        // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
-        <main className="app-main app-main--stage">
-          <div className="app-body">
-            <div className="app-body__stage">
-              <StageBand
-                stage={session.stage}
-                mode={session.mode}
-                roleStatus={session.roleStatus}
-                statements={session.transcript.statements}
-                opinions={session.opinions}
-                scenario={scenario}
-                ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-                chairLine={chairLineFor(session.stage, scenario)}
-                deadline={session.deadline}
-                clock={appClock}
-                resultStamp={resultStamp}
-              />
-            </div>
-            {content}
-            {showMinutes && scenario && (
-              <div className="app-body__minutes">
-                <MinutesPanel entries={buildMinutes(session, scenario, roundLog)} stage={session.stage} />
+    <div className="app-scale-outer" data-fit={fit.mode}>
+      <div className="app-scale-wrapper" data-fit={fit.mode} style={wrapperStyle}>
+        <div className="app-shell">
+          <Header
+            session={session}
+            onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
+          />
+          {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
+            <ProgressStrip stage={session.stage} />
+          )}
+          {hasStageBand && scenario ? (
+            // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
+            // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
+            // 컴포넌트는 각각 .app-body__actions·.app-body__content 두 wrapper div를
+            // Fragment로 돌려주고(renderSplit 규칙), React Fragment는 DOM에 별도
+            // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
+            // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
+            <main className="app-main app-main--stage">
+              <div className="app-body">
+                <div className="app-body__stage">
+                  <StageBand
+                    stage={session.stage}
+                    mode={session.mode}
+                    roleStatus={session.roleStatus}
+                    statements={session.transcript.statements}
+                    opinions={session.opinions}
+                    scenario={scenario}
+                    ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+                    chairLine={chairLineFor(session.stage, scenario)}
+                    resultStamp={resultStamp}
+                  />
+                </div>
+                {content}
+                {showMinutes && scenario && (
+                  <div className="app-body__minutes">
+                    <MinutesPanel
+                      entries={buildMinutes(session, scenario, roundLog)}
+                      stage={session.stage}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </main>
-      ) : (
-        <>
-          <main className="app-main">{content}</main>
-        </>
-      )}
-      <IdleNotice session={session} clock={appClock} onContinue={touchActivity} />
+            </main>
+          ) : (
+            <main className="app-main">{content}</main>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

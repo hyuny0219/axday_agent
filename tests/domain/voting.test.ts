@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { computeMotionHash } from '../../src/domain/motion';
 import {
   EXEC_MEMBER_ORDER,
@@ -14,7 +14,7 @@ import {
 import type { Ballot, Motion } from '../../src/domain/types';
 import type { ExecMemberId, Vote } from '../../src/content/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const allConditionIds = scenario.conditions.map((c) => c.id);
 
 function isAllowedCombo(ids: readonly string[]): boolean {
@@ -66,7 +66,7 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
     expect(allowedCombos.length).toBe(24);
   });
 
-  it('규칙 총괄성·5석·OPEN_ALL 부결·세 결론 도달·임원별 YES 존재', () => {
+  it('규칙 총괄성·5석·ANON_FULL 부결·세 결론 도달·임원별 YES 존재', () => {
     const outcomesSeen = new Set<TallyResult['outcome']>();
     const yesSeenByMember: Record<ExecMemberId, boolean> = {
       CEO: false,
@@ -95,7 +95,7 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
         const totalSeats =
           result.counts.YES + result.counts.NO + result.counts.HOLD + result.counts.UNCAST;
         expect(totalSeats).toBe(5);
-        if (combo.includes('OPEN_ALL')) {
+        if (combo.includes('ANON_FULL')) {
           expect(result.outcome).toBe('REJECT');
         }
       }
@@ -120,32 +120,32 @@ interface RepresentativePathRow {
 // docs/SCENARIO_AI_ASSISTANT.md "대표 경로 — v0.6" 표를 그대로 옮긴다.
 const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
   {
-    label: 'PILOT,REVIEW,ACCESS,MEASURE / YES,YES,YES,YES / 참가자 YES',
-    conditionIds: ['PILOT', 'REVIEW', 'ACCESS', 'MEASURE'],
+    label: 'PILOT,SCREEN,TRACE,MEASURE / YES,YES,YES,YES / 참가자 YES',
+    conditionIds: ['PILOT', 'SCREEN', 'TRACE', 'MEASURE'],
     execVotes: ['YES', 'YES', 'YES', 'YES'],
     participantVote: 'YES',
     outcome: 'PASS',
     counts: { YES: 5, NO: 0, HOLD: 0, UNCAST: 0 },
   },
   {
-    label: 'PILOT,REVIEW,ACCESS,MEASURE / YES,YES,YES,YES / 참가자 NO',
-    conditionIds: ['PILOT', 'REVIEW', 'ACCESS', 'MEASURE'],
+    label: 'PILOT,SCREEN,TRACE,MEASURE / YES,YES,YES,YES / 참가자 NO',
+    conditionIds: ['PILOT', 'SCREEN', 'TRACE', 'MEASURE'],
     execVotes: ['YES', 'YES', 'YES', 'YES'],
     participantVote: 'NO',
     outcome: 'PASS',
     counts: { YES: 4, NO: 1, HOLD: 0, UNCAST: 0 },
   },
   {
-    label: 'REVIEW,ACCESS / YES,HOLD,YES,YES / 참가자 YES',
-    conditionIds: ['REVIEW', 'ACCESS'],
+    label: 'SCREEN,TRACE / YES,HOLD,YES,YES / 참가자 YES',
+    conditionIds: ['SCREEN', 'TRACE'],
     execVotes: ['YES', 'HOLD', 'YES', 'YES'],
     participantVote: 'YES',
     outcome: 'PASS',
     counts: { YES: 4, NO: 0, HOLD: 1, UNCAST: 0 },
   },
   {
-    label: 'REVIEW,ACCESS / YES,HOLD,YES,YES / 참가자 HOLD',
-    conditionIds: ['REVIEW', 'ACCESS'],
+    label: 'SCREEN,TRACE / YES,HOLD,YES,YES / 참가자 HOLD',
+    conditionIds: ['SCREEN', 'TRACE'],
     execVotes: ['YES', 'HOLD', 'YES', 'YES'],
     participantVote: 'HOLD',
     outcome: 'PASS',
@@ -168,8 +168,8 @@ const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
     counts: { YES: 2, NO: 2, HOLD: 1, UNCAST: 0 },
   },
   {
-    label: 'OPEN_ALL / HOLD,NO,NO,NO / 참가자 YES',
-    conditionIds: ['OPEN_ALL'],
+    label: 'ANON_FULL / HOLD,NO,NO,NO / 참가자 YES',
+    conditionIds: ['ANON_FULL'],
     execVotes: ['HOLD', 'NO', 'NO', 'NO'],
     participantVote: 'YES',
     outcome: 'REJECT',
@@ -251,13 +251,13 @@ describe('countVotesChangedByConditions — 내 조건이 바꾼 표 게이지(T
     expect(countVotesChangedByConditions(scenario, motion)).toBe(1);
   });
 
-  it('REVIEW,ACCESS는 문서 표 기준 CAIO·CISO 2명이 바뀐다(NO→YES)', () => {
-    const motion = buildMotion(['REVIEW', 'ACCESS']);
+  it('SCREEN,TRACE는 문서 표 기준 CAIO·CISO 2명이 바뀐다(NO→YES)', () => {
+    const motion = buildMotion(['SCREEN', 'TRACE']);
     expect(countVotesChangedByConditions(scenario, motion)).toBe(2);
   });
 
-  it('PILOT,REVIEW,ACCESS,MEASURE는 문서 표 기준 CFO·CAIO·CISO 3명이 바뀐다', () => {
-    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+  it('PILOT,SCREEN,TRACE,MEASURE는 문서 표 기준 CFO·CAIO·CISO 3명이 바뀐다', () => {
+    const motion = buildMotion(['PILOT', 'SCREEN', 'TRACE', 'MEASURE']);
     expect(countVotesChangedByConditions(scenario, motion)).toBe(3);
   });
 
@@ -270,14 +270,14 @@ describe('countVotesChangedByConditions — 내 조건이 바꾼 표 게이지(T
 });
 
 describe('explainBoard — 이사회 한 장 요약의 임원별 이유·바뀐 표(T48)', () => {
-  it('4조건(PILOT,REVIEW,ACCESS,MEASURE): 임원 표는 전원 YES, CFO·CAIO·CISO만 바뀐다', () => {
-    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+  it('4조건(PILOT,SCREEN,TRACE,MEASURE): 임원 표는 전원 YES, CFO·CAIO·CISO만 바뀐다', () => {
+    const motion = buildMotion(['PILOT', 'SCREEN', 'TRACE', 'MEASURE']);
     const rows = explainBoard(scenario, motion);
     expect(rows.map((r) => r.vote)).toEqual(['YES', 'YES', 'YES', 'YES']);
     expect(rows.map((r) => r.changed)).toEqual([false, true, true, true]);
     expect(rows.every((r) => typeof r.reason === 'string' && r.reason!.length > 0)).toBe(true);
     expect(rows.find((r) => r.memberId === 'CFO')?.reason).toBe(
-      '작은 범위로 시작하고 준비시간·수정량을 확인하는 조건이 있어 찬성',
+      '한 게시판에서 시범과 운영 효과 측정 후 확대 조건이 있어 찬성',
     );
   });
 
@@ -295,12 +295,12 @@ describe('explainBoard — 이사회 한 장 요약의 임원별 이유·바뀐 
     expect(rows.every((r) => !r.changed)).toBe(true);
   });
 
-  it('OPEN_ALL: CEO·CFO가 바뀌고 CAIO·CISO는 원안과 같은 NO라 바뀌지 않는다', () => {
-    const motion = buildMotion(['OPEN_ALL']);
+  it('ANON_FULL: CEO·CFO가 바뀌고 CAIO·CISO는 원안과 같은 NO라 바뀌지 않는다', () => {
+    const motion = buildMotion(['ANON_FULL']);
     const rows = explainBoard(scenario, motion);
     expect(rows.map((r) => r.vote)).toEqual(['HOLD', 'NO', 'NO', 'NO']);
     expect(rows.map((r) => r.changed)).toEqual([true, true, false, false]);
-    expect(rows.every((r) => r.reason?.includes('권한 검토 없이 전체 연결'))).toBe(true);
+    expect(rows.every((r) => r.reason?.includes('완전 익명 — 추적 불가'))).toBe(true);
   });
 });
 
@@ -313,7 +313,7 @@ describe('participantDecisive — 내 표의 결정력(T48)', () => {
   });
 
   it('4조건 + 참가자 NO: 임원만으로 이미 가결이라 결정적이지 않다', () => {
-    const motion = buildMotion(['PILOT', 'REVIEW', 'ACCESS', 'MEASURE']);
+    const motion = buildMotion(['PILOT', 'SCREEN', 'TRACE', 'MEASURE']);
     const boardBallots = decideBoard(scenario, motion);
     const ballots = withParticipant(boardBallots, motion, 'NO');
     expect(participantDecisive(ballots)).toBe(false);

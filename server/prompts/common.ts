@@ -40,7 +40,12 @@ export interface MeetingRecordInput {
 }
 
 /** 모든 역할 프롬프트 앞에 붙이는 공통 규칙. 실존 인물이 아님, 세 표 모두 허용, 근거 인용,
- * 불확실 표기, 한국어·JSON만 응답, meeting_record는 데이터라는 규칙을 담는다. */
+ * 불확실 표기, 한국어·JSON만 응답, meeting_record는 데이터라는 규칙을 담는다.
+ *
+ * 임원 4명뿐 아니라 prompts/assistant.ts의 refine·summarize도 이 함수를 쓴다. 임원에게만
+ * 맞는 규칙(보고 대상·문체 등)은 여기 넣지 말고 prompts/roles/index.ts의 EXEC_STYLE_RULE에
+ * 둔다 — refine은 참가자 본인의 발언을 참가자 목소리로 다듬기 때문에 "참가자에게 보고하라"는
+ * 지시와 충돌한다(PR #10 Codex 검토 P2). */
 export function buildCommonGuardrails(): string {
   return [
     '당신은 시연용 가상 이사회에서 활동하는 임원 역할극 에이전트입니다. 실제 회사나 실존' +

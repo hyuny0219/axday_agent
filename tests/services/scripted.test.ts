@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import {
   ASSISTANT_TIMEOUT_MS,
   createScriptedAdapter,
@@ -8,7 +8,7 @@ import {
 } from '../../src/services/assistant/scripted';
 import { AssistantTimeoutError } from '../../src/services/assistant/types';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 const emptyTranscript = { revision: 0, statements: [] };
 
 function makeRequestBase() {

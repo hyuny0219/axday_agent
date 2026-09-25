@@ -29,7 +29,7 @@ describe('encodeAssistantLogEntry / decodeAssistantLogEntry', () => {
     expect(decodeAssistantLogEntry(label)?.applied).toBe(false);
   });
 
-  it('JSON이 아닌 평문 레이블(BRIEFING의 SUMMARY_SHOWN 등)은 null을 돌려준다', () => {
+  it('JSON이 아닌 평문 레이블(과거 세션의 SUMMARY_SHOWN 등)은 null을 돌려준다', () => {
     expect(decodeAssistantLogEntry('SUMMARY_SHOWN')).toBeNull();
     expect(decodeAssistantLogEntry('')).toBeNull();
   });
@@ -77,7 +77,7 @@ describe('describeAdditionalHelp', () => {
     expect(describeAdditionalHelp(labels)).toHaveLength(1);
   });
 
-  it('BRIEFING의 SUMMARY_SHOWN(평문)은 추가 도움 목록에 나타나지 않는다', () => {
+  it('과거 세션의 SUMMARY_SHOWN(평문)은 도움 목록에 나타나지 않는다', () => {
     expect(describeAdditionalHelp(['SUMMARY_SHOWN'])).toEqual([]);
     expect(hasAdditionalHelp(['SUMMARY_SHOWN'])).toBe(false);
   });

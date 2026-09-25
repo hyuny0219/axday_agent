@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aiAssistantScenario } from '../../src/content/scenarios/aiAssistant';
+import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import {
   DRAFT_MAX_LENGTH,
   EMPTY_DRAFT_STATE,
@@ -10,7 +10,7 @@ import {
   togglePhrase,
 } from '../../src/domain/draft';
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 describe('togglePhrase', () => {
   it('dirty가 아니면 체크 변경으로 draftText를 즉시 재구성한다', () => {

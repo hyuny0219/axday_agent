@@ -40,8 +40,12 @@
   padding: 0;
   display: flex;
   flex-direction: column;
+  /* 남은 높이가 계산보다 더 빠듯해 그래도 넘칠 때를 대비해 아래쪽(최신)을 붙여 둔다.
+     그러면 잘려 나가는 쪽이 가장 오래된 항목이 된다(T56). */
+  justify-content: flex-end;
   gap: 4px;
   min-height: 0;
+  flex: 1 1 auto;
 }
 
 .minutes__entry {
@@ -152,4 +156,19 @@
   .minutes__text {
     font-size: 12px;
   }
+}
+
+/* 세로가 너무 빠듯해 한 건도 들어가지 않는 경우(T56: VOTE에서 회의록 행이 14.8px까지
+   줄어든다). 억지로 그리면 머리글부터 잘리므로 화면에서는 감추고, 목록 전체는
+   스크린리더에 남긴다(.minutes__entry--hidden과 같은 규칙). */
+.minutes--collapsed {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }

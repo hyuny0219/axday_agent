@@ -46,8 +46,13 @@ export function isAuthorized(config: AccessTokenConfig, headerValue: string | st
   return timingSafeEqualStrings(headerValue, config.token);
 }
 
-/** 접속 토큰 검사 대상 경로인지(=board·assistant API인지) 본다. /api/health는 대상이
- * 아니다 — 호스팅 헬스체크는 토큰 없이도 항상 200을 받아야 하기 때문이다. */
+/** 접속 토큰 검사 대상 경로인지(=board·assistant·ops API인지) 본다. /api/health는 대상이
+ * 아니다 — 호스팅 헬스체크는 토큰 없이도 항상 200을 받아야 하기 때문이다. /api/ops/(운영
+ * 메뉴의 모델 연결 확인, T49)는 실제 제공자를 호출하므로 board·assistant와 같이 보호한다. */
 export function isProtectedApiPath(pathname: string): boolean {
-  return pathname.startsWith('/api/board/') || pathname.startsWith('/api/assistant/');
+  return (
+    pathname.startsWith('/api/board/') ||
+    pathname.startsWith('/api/assistant/') ||
+    pathname.startsWith('/api/ops/')
+  );
 }

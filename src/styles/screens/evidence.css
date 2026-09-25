@@ -44,12 +44,6 @@
   overflow: hidden;
 }
 
-.evidence-card__insight-label {
-  margin: var(--space-1) 0 0;
-  color: var(--accent);
-  font-size: var(--fs-meta);
-  font-weight: 700;
-}
 
 .evidence-card__insight {
   margin: 0;
@@ -64,16 +58,12 @@
   margin-top: var(--space-1);
 }
 
-/* 720에서는 제목을 숨기고 해석 한 줄만 남긴다(DESIGN_SPEC.md v1.0 6절 표
-   "근거 2×2(제목+해석 한 줄, 720은 해석만)"). 카드 폭이 더 좁아 원문까지
-   한 화면에 담으려면 요약을 더 줄여야 한다. */
+/* 720에서도 제목(자료명)은 항상 보인다(T52 — 예전에는 이 미디어 쿼리가 제목을 통째로
+   숨겨 "자료명이 안 보인다"는 참가자 피드백을 낳았다). 카드 폭이 더 좁아 원문까지
+   한 화면에 담으려면 나머지 요약을 줄인다. */
 @media (max-width: 1280px) {
   .evidence-card {
     padding: var(--space-1);
-  }
-
-  .evidence-card__title {
-    display: none;
   }
 
   .evidence-card__content {
@@ -86,7 +76,20 @@
     display: none;
   }
 
-  .evidence-card__insight-label {
-    margin-top: 0;
-  }
+}
+
+/* variant='expanded'(BriefingScreen, T52): <details> 아코디언 대신 <article>로 네 장
+   모두 항상 펼쳐서 보여준다. 아바타 행이 없어 카드가 더 낮다. 원문은 클램프하지 않는다 —
+   "클릭 없이 원문 상시 노출"이 이 화면의 핵심 동작인데 펼칠 컨트롤이 없는 카드에서 줄
+   클램프는 뒷부분을 소리 없이 지운다(PR #10 Codex 29차 검토 P2). 현재 안건 원문 4장은
+   1280×720에서도 2줄 안에 들어가 클램프 유무로 높이가 달라지지 않으며(실측), 원문이
+   길어져 넘치는 회귀는 e2e/briefing.spec.ts가 마지막 글자까지 보이는지로 잡는다. */
+.evidence-card--expanded {
+  display: block;
+}
+
+.evidence-card__content--expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }

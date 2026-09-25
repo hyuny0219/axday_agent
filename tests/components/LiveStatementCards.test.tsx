@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { LiveStatementCards } from '../../src/components/parts/LiveStatementCards';
-import { aiAssistantScenario } from '../../src/content/scenarios';
+import { anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Statement } from '../../src/domain/types';
 
@@ -10,7 +10,7 @@ afterEach(() => {
   cleanup();
 });
 
-const scenario = aiAssistantScenario;
+const scenario = anonBoardScenario;
 
 const roleStatus: Record<ExecMemberId, RoleStatus> = {
   CEO: 'answered',

@@ -13,10 +13,6 @@
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Ballot, MemberId, Opinion, RoleStatus, SessionMode, SessionStage, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
-import type { Clock } from '../../domain/clock';
-import { EXPERIENCE_MS } from '../../domain/clock';
-import { useClockNow } from '../../app/useClockNow';
-import { MEMBER_LABELS } from '../memberLabels';
 import { firstSentenceClipped } from '../stageText';
 import type { ResultStamp } from '../resultStamp';
 import { STAMP_DELAY_SECONDS } from '../resultStamp';
@@ -35,9 +31,6 @@ export interface StageBandProps {
   ballots?: Ballot[];
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
   chairLine?: string;
-  /** 무대 우상단 벽시계 pill에 쓸 남은 시간 계산용(장식, v1.0 2·5절). */
-  deadline: number | null;
-  clock: Clock;
   /** RESULT 단계에서만 넘긴다. 있으면 무대 우하단에 결론 도장을 겹쳐 찍는다(v1.0 5절). */
   resultStamp?: ResultStamp | null;
 }
@@ -173,23 +166,6 @@ function VoteBadge({ memberId, ballots }: { memberId: MemberId; ballots: Ballot[
   );
 }
 
-/** mm:ss로 남은 시간을 보여주는 벽시계 pill(Header의 Timer와 같은 clock, v1.0 2·5절
- * "4분 시계는 무대 띠 우상단 벽시계 pill로 복제 표시"). Timer.tsx의 형식과 같은 자리수
- * 규칙을 그대로 쓰되, 경고 문구·색 강조 없이 순수 장식으로만 둔다(부모가 이미
- * aria-hidden). */
-function StageClock({ deadline, clock }: { deadline: number | null; clock: Clock }) {
-  const now = useClockNow(clock);
-  const remainingMs = deadline === null ? EXPERIENCE_MS : Math.max(0, deadline - now);
-  const totalSeconds = Math.ceil(remainingMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return (
-    <span className="stage-band__clock" data-testid="stage-clock">
-      {minutes}:{String(seconds).padStart(2, '0')}
-    </span>
-  );
-}
-
 export function StageBand({
   stage,
   mode,
@@ -199,8 +175,6 @@ export function StageBand({
   scenario,
   ballots,
   chairLine,
-  deadline,
-  clock,
   resultStamp,
 }: StageBandProps) {
   const participant = participantSeatOverlay(stage, opinions);
@@ -212,7 +186,6 @@ export function StageBand({
         <img src={stageRender} alt="" className="stage-band__bg" />
         <div className="stage-band__vignette stage-band__vignette--top" />
         <div className="stage-band__vignette stage-band__vignette--bottom" />
-        <StageClock deadline={deadline} clock={clock} />
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,
@@ -248,8 +221,11 @@ export function StageBand({
                 </span>
               )}
               <div className="stage-band__seat-foot">
+                {/* 무대 명패는 약칭만 쓴다(T52) — 전체 직함(MEMBER_LABELS)은 좌석 폭(22%)을
+                    넘어 이웃 명패를 덮었다. 전체 직함은 임원 의견 카드 등 본문에서 계속
+                    보여준다. memberId 자체가 이미 약칭(CEO/CFO/CAIO/CISO)이다. */}
                 <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
-                  {MEMBER_LABELS[memberId]}
+                  {memberId}
                 </span>
                 {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
                 <span
@@ -274,7 +250,9 @@ export function StageBand({
             </span>
           )}
           <div className="stage-band__seat-foot">
-            <span className="stage-band__nameplate stage-band__nameplate--participant">나 · 특별 이사</span>
+            {/* 약칭만 쓴다(T52) — 전체 표기 "나 · 특별 이사"는 무대 안 좌상단 pill
+                (Nameplate.tsx)이 화면 전환과 무관하게 항상 보여준다. */}
+            <span className="stage-band__nameplate stage-band__nameplate--participant">나</span>
             {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
             <span
               className={`stage-band__silhouette stage-band__silhouette--participant${
