@@ -741,3 +741,17 @@
 - 하지 말 것: 표결 집계·결론 계산 변경. 새 수치·예측 창작(에필로그 문구는 시나리오 데이터에서 읽는다).
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. RESULT → REPORT → 종료 경로 e2e 추가. 두 해상도에서 보고서가 규칙대로 보임.
 - 크기: M.
+
+## T59 임원 문구를 실제 임원 말투로 — scripted 발언·표결 이유·live 문체 지시
+
+- 목표: 임원 4인의 화면 문구가 "AI가 쓴 정리문"처럼 읽힌다(2026-09-25 사용자). 실제 이사회에서 임원이 말하는 어투로 바꾼다 — 결론을 먼저, 자기 소관에서, 숫자·근거를 앞에 두고 짧게 말한다. 설명조·병렬 나열("~하고, ~하며")·"~해야 합니다"의 반복·상투 어구("~가 중요합니다", "~를 고려해야 합니다")를 줄인다. 뜻·근거·조건 ID·표결 규칙은 바꾸지 않는다.
+- 만들 것:
+  1. scripted 문구(`src/content/scenarios/anonBoard.ts`): 임원 첫 의견 4건(`initialOpinions`), 반응 6건(`reactions`), 후속 질문과 선택지(`followUp`), 표결 이유 15건(`voteRules[].reason`), 결과 문구(`resultCopy`·`sixMonthsLater`), 의장 브리핑(`chairBriefing`)을 역할별 말투로 다시 쓴다. 역할별 말투 기준을 `docs/SCENARIO_ANON_BOARD.md`에 한 문단씩 적는다 — CEO: 방향·조직 신뢰, 짧은 결론 먼저 / CFO: 숫자·공수·담당, "누가·얼마나"를 묻는다 / CAIO: 계정·시스템 연결, 구체 장치 / CISO: 로그·권한·대응, 위험을 먼저 말한다. 예: "글이 늘면 신고와 검토 공수도 늡니다. 처리 담당자부터 필요합니다." → "글이 늘면 신고도 늡니다. 지금은 신고가 올 때마다 담당을 새로 정합니다. 누가 맡을지부터 정해 주십시오."(운영 회의록 근거 그대로). 참가자 추천 문구(`phrases`)는 참가자의 말이므로 이 카드 밖이다.
+  2. 서버 사본 `server/scenario-data.ts`와 mock 제공자(`server/providers/mock.ts`)의 고정 발언도 같은 문구로 맞춘다(live 프롬프트에 들어가는 자료·동료 발언과 화면 문구가 같아야 한다).
+  3. live 문체 지시(`server/prompts/roles/index.ts`의 `EXEC_STYLE_RULE`·역할 프롬프트): 존댓말 규칙은 유지하고 "정리문 금지" 지시를 더한다 — 한 발언에 쟁점 하나, 결론을 먼저, 근거는 자료명으로, 병렬 나열과 상투 어구 금지, 동료 발언은 직함으로 부르며 짧게 받는다. `PROMPT_VERSION`을 올리고 T54의 기준선 재측정과 같은 평가 세트로 전후를 비교한다. 문체 판정기(`findStyleViolations`)는 그대로 두고, "AI 정리문 같음" 여부는 사람이 12케이스 발언을 읽어 `docs/eval/tuning-<version>.md`에 표로 남긴다(자동 판정 기준을 새로 만들지 않는다).
+  4. 문구 검수: 문구는 취향이 갈리므로 초안을 먼저 보여 사용자가 4인 문구를 읽고 확인한 뒤에 커밋한다(초안 → 확인 → 반영).
+- 허용 경로: `src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`, `server/providers/mock.ts`, `server/prompts/`, `docs/SCENARIO_ANON_BOARD.md`, `docs/eval/`, `tests/`, `e2e/`(문구 단언·스크린샷 갱신), `docs/TASKS.md`.
+- 하지 말 것: 조건 ID·키워드·표결 규칙·자료 수치 변경. 화면 문구에 자료 ID(E1~E4) 쓰기(T52, Codex 29차 불변식 테스트가 막는다). 새 사실·수치 창작. 반말체(`EXEC_STYLE_RULE`·판정기 유지).
+- 완료 확인: `npm run check && npx playwright test` 성공(문구 단언·스크린샷 갱신). 사용자가 4인 문구를 읽고 "임원 말 같다"고 확인. live는 mock 실행으로 프롬프트 반영을 확인하고, 실제 키가 있으면 T54와 함께 새 `PROMPT_VERSION` 전후 비교표.
+- 순서: PR #10 머지 뒤 T54 → T57 → T58 → T55 → T59(사용자 지시가 있으면 앞당긴다). 3의 live 문체 지시는 T54의 프롬프트 변경과 한 버전으로 묶으면 실측 비용을 아낀다.
+- 크기: M.
