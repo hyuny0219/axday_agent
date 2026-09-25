@@ -145,6 +145,13 @@ describe('proposeFromText', () => {
       'SCREEN',
     ]);
     expect(proposeFromText(scenario, '효과 측정뿐아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    // 조사 '이'가 붙은 형("뿐만이 아니라"·"뿐이 아니라")도 긍정 병렬이다(31차 P1).
+    expect(proposeFromText(scenario, '효과 측정뿐만이 아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '게시 전 검수뿐이 아니라 시범 운영도 합시다.')).toEqual([
+      'PILOT',
+      'SCREEN',
+    ]);
+    expect(proposeFromText(scenario, '효과 측정뿐만이아니라 확대도 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수가 아니라 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '추적 가능은 아니고 완전 익명으로 합시다.')).toEqual([
       'ANON_FULL',
