@@ -79,18 +79,17 @@
 }
 
 /* variant='expanded'(BriefingScreen, T52): <details> 아코디언 대신 <article>로 네 장
-   모두 항상 펼쳐서 보여준다. 아바타 행이 없어 카드가 더 낮고, 원문은 접힌 카드보다
-   넉넉한 3줄까지 클램프한다(1280 이하는 세로 예산이 더 빠듯해 2줄로 줄인다). */
+   모두 항상 펼쳐서 보여준다. 아바타 행이 없어 카드가 더 낮다. 원문은 클램프하지 않는다 —
+   "클릭 없이 원문 상시 노출"이 이 화면의 핵심 동작인데 펼칠 컨트롤이 없는 카드에서 줄
+   클램프는 뒷부분을 소리 없이 지운다(PR #10 Codex 29차 검토 P2). 현재 안건 원문 4장은
+   1280×720에서도 2줄 안에 들어가 클램프 유무로 높이가 달라지지 않으며(실측), 원문이
+   길어져 넘치는 회귀는 e2e/briefing.spec.ts가 마지막 글자까지 보이는지로 잡는다. */
 .evidence-card--expanded {
   display: block;
 }
 
 .evidence-card__content--expanded {
-  -webkit-line-clamp: 3;
-}
-
-@media (max-width: 1280px) {
-  .evidence-card__content--expanded {
-    -webkit-line-clamp: 2;
-  }
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }

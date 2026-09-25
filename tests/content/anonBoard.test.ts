@@ -30,6 +30,33 @@ describe('anonBoardScenario', () => {
     }
   });
 
+  // 화면 문구에 자료 ID(E1~E4)를 쓰지 않는다(T52). 카드 접두만이 아니라 원문 속 언급
+  // ("집계 기간과 범위가 E1과 다르다")도 BRIEFING·DISCUSS에 그대로 렌더돼 참가자에게 ID를
+  // 노출했다(PR #10 Codex 29차 검토 P2). ID 필드(id·evidenceIds·relatedMemberIds 등 *Id/*Ids)
+  // 자체는 기록·검증용이라 제외하고, 그 밖의 모든 문자열을 훑는다.
+  it('ID 필드 밖의 어떤 문자열에도 자료 ID(E1~E4)가 없다', () => {
+    const EVIDENCE_ID_MENTION = /(?<![A-Za-z])E[1-4](?![0-9])/;
+    const offenders: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if (typeof value === 'string') {
+        if (EVIDENCE_ID_MENTION.test(value)) offenders.push(`${path}: ${value}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((item, index) => walk(item, `${path}[${index}]`));
+        return;
+      }
+      if (value && typeof value === 'object') {
+        for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+          if (key === 'id' || /Ids?$/.test(key)) continue;
+          walk(child, `${path}.${key}`);
+        }
+      }
+    };
+    walk(scenario, 'scenario');
+    expect(offenders).toEqual([]);
+  });
+
   it('chairBriefing이 상황·결정 질문·역할 3문장을 모두 갖는다', () => {
     expect(scenario.chairBriefing.situation.length).toBeGreaterThan(0);
     expect(scenario.chairBriefing.question.length).toBeGreaterThan(0);
