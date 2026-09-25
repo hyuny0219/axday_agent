@@ -165,6 +165,12 @@ describe('proposeFromText', () => {
       'PILOT',
       'SCREEN',
     ]);
+    // 공백이 두 칸 이상·탭이어도 같다(34차 P1) — 창의 공백 묶음을 한 칸으로 접은 뒤 본다.
+    expect(proposeFromText(scenario, '효과 측정뿐만  아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '효과 측정뿐만\t아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    // 같은 정규화로 부정 표지도 공백 개수와 무관하다.
+    expect(proposeFromText(scenario, '완전 익명으로 하지  맙시다.')).toEqual([]);
+    expect(proposeFromText(scenario, '작성자를 확인 못  하겠습니다.')).toEqual([]);
     // '뿐' 없는 "는 아니고"·"도 아니고"는 대조 부정이다.
     expect(proposeFromText(scenario, '게시 전 검수도 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수는 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);

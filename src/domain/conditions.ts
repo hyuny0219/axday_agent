@@ -58,8 +58,12 @@ const AN_NEGATION =
 // 그대로 부정이다.
 const POSITIVE_PARALLEL = /뿐[만이은는도]{0,2}\s?아니[라고]/g;
 
+// 공백 묶음은 한 칸으로 접은 뒤 본다 — 직접 입력·붙여넣기에서 "뿐만  아니라"·"하지  맙시다"·
+// "못  하"처럼 두 칸 이상 벌어지면 `\s?`·' ' 표지가 빗나가 긍정 병렬은 부정으로, 부정은 긍정으로
+// 뒤집혔다(PR #10 Codex 34차 검토 P1). 표지 패턴을 하나씩 `\s*`로 바꾸는 대신 입구에서 한 번
+// 정규화한다.
 function hasNegationMarker(window: string): boolean {
-  const scanned = window.replace(POSITIVE_PARALLEL, ' ');
+  const scanned = window.replace(/\s+/g, ' ').replace(POSITIVE_PARALLEL, ' ');
   return (
     NEGATION_MARKERS.some((marker) => scanned.includes(marker)) ||
     AN_NEGATION.test(scanned) ||
