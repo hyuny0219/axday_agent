@@ -77,8 +77,10 @@ function isNegatedAfter(text: string, index: number, keywordLength: number): boo
   // "하지  맙시다"·"못  하"처럼 두 칸 이상 벌어지면 `\s?`·' ' 표지가 빗나가 긍정 병렬은 부정으로,
   // 부정은 긍정으로 뒤집혔고(PR #10 Codex 34차 검토 P1), 접기를 창을 자른 뒤에 하면 키워드 뒤
   // 공백이 24칸을 넘을 때 창이 공백으로만 차서 그 뒤의 "하지 맙시다"를 버렸다(35차 P1). 표지
-  // 패턴을 하나씩 `\s*`로 바꾸는 대신 이 한 곳에서 정규화한다.
-  const rest = text.slice(end).replace(/\s+/g, ' ').slice(0, NEGATION_WINDOW);
+  // 패턴을 하나씩 `\s*`로 바꾸는 대신 이 한 곳에서 정규화한다. 단, 줄바꿈은 절 경계(CLAUSE_END)
+  // 라서 접지 않는다 — `\s+`로 접으면 "검수\n완전 익명으로 하지 맙시다"의 둘째 줄 부정이 첫 줄
+  // 검수까지 삼켰다(36차 P1). 가로 공백([^\S\n], 탭·\r 포함)만 한 칸으로 접는다.
+  const rest = text.slice(end).replace(/[^\S\n]+/g, ' ').slice(0, NEGATION_WINDOW);
   const cut = rest.search(CLAUSE_END);
   const window = cut === -1 ? rest : rest.slice(0, cut);
   return hasNegationMarker(window);

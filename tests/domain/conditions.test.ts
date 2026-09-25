@@ -175,6 +175,10 @@ describe('proposeFromText', () => {
     const gap = ' '.repeat(26);
     expect(proposeFromText(scenario, `완전 익명${gap}하지 맙시다.`)).toEqual([]);
     expect(proposeFromText(scenario, `게시 전 검수${gap}안하고 시범만 합시다.`)).toEqual(['PILOT']);
+    // 줄바꿈은 절 경계라 접지 않는다 — 둘째 줄의 부정이 첫 줄의 조건을 삼키지 않는다(36차 P1).
+    expect(proposeFromText(scenario, '게시 전 검수\n완전 익명으로 하지 맙시다.')).toEqual(['SCREEN']);
+    expect(proposeFromText(scenario, '게시 전 검수\r\n완전 익명으로 하지 맙시다.')).toEqual(['SCREEN']);
+    expect(proposeFromText(scenario, '게시 전 검수   \n   완전 익명으로 하지 맙시다.')).toEqual(['SCREEN']);
     // '뿐' 없는 "는 아니고"·"도 아니고"는 대조 부정이다.
     expect(proposeFromText(scenario, '게시 전 검수도 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
     expect(proposeFromText(scenario, '게시 전 검수는 아니고 효과 측정을 합시다.')).toEqual(['MEASURE']);
