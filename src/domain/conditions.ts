@@ -49,11 +49,18 @@ const JI_MA_NEGATION = /지\s?[마말맙]/;
 const AN_NEGATION =
   /(?<=^|[^가-힣]|[은는이가을를도만과와에로서나야든랑께뿐]|조차|마저|부터|까지|밖에|처럼|보다|이나|든지)안(?:\s|[하-힣]|[되-됳돼-됗])/;
 
+// '뿐 아니라'·'뿐만 아니라'(띄어쓰기 무관, '뿐 아니고' 포함)는 배제가 아니라 긍정 병렬이다 —
+// "효과 측정뿐 아니라 확대도 합시다."가 '아니' 표지에 부분 문자열로 걸려 참가자가 요청한
+// MEASURE가 사라졌다(PR #10 Codex 30차 검토 P1). 표지를 보기 전에 창에서 지운다. "검수가
+// 아니라 측정을 합시다"의 대조 부정('가/은/는 아니라')은 그대로 부정이다.
+const POSITIVE_PARALLEL = /뿐만?\s?아니[라고]/g;
+
 function hasNegationMarker(window: string): boolean {
+  const scanned = window.replace(POSITIVE_PARALLEL, ' ');
   return (
-    NEGATION_MARKERS.some((marker) => window.includes(marker)) ||
-    AN_NEGATION.test(window) ||
-    JI_MA_NEGATION.test(window)
+    NEGATION_MARKERS.some((marker) => scanned.includes(marker)) ||
+    AN_NEGATION.test(scanned) ||
+    JI_MA_NEGATION.test(scanned)
   );
 }
 const NEGATION_WINDOW = 24;

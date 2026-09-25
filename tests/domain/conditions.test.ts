@@ -135,6 +135,22 @@ describe('proposeFromText', () => {
     expect(proposeFromText(scenario, '작성자를 확인할 수 있게 하지 말아 주십시오.')).toEqual([]);
   });
 
+  // '뿐 아니라'는 배제가 아니라 긍정 병렬인데 '아니' 표지가 부분 문자열로 걸려 "효과 측정뿐 아니라
+  // 확대도 합시다."에서 MEASURE가 사라졌다(PR #10 Codex 30차 검토 P1). 대조 부정("가 아니라")은
+  // 그대로 부정이다.
+  it('"뿐 아니라"·"뿐만 아니라"의 긍정 병렬은 부정이 아니고, "가 아니라"의 대조 부정은 그대로다', () => {
+    expect(proposeFromText(scenario, '효과 측정뿐 아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '게시 전 검수뿐만 아니라 시범 운영도 합시다.')).toEqual([
+      'PILOT',
+      'SCREEN',
+    ]);
+    expect(proposeFromText(scenario, '효과 측정뿐아니라 확대도 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '게시 전 검수가 아니라 효과 측정을 합시다.')).toEqual(['MEASURE']);
+    expect(proposeFromText(scenario, '추적 가능은 아니고 완전 익명으로 합시다.')).toEqual([
+      'ANON_FULL',
+    ]);
+  });
+
   // "게시 전 검수 안하고 시범만 합시다."의 붙여 쓴 '안하고'가 '안 '에 걸리지 않아 SCREEN이 자동
   // 승인됐다(PR #10 Codex 18차 검토 P1). '안'은 어절 시작에서만 부정이다 — "불안하면"은 아니다.
   it('붙여 쓴 "안하-"·"안함"·"안되-"도 부정이고, "불안하-"의 "안하"는 부정이 아니다', () => {

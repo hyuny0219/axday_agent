@@ -5,7 +5,8 @@
 // 문서화하고 있어서다. 이 스크립트는 별도 산출물이다.
 //
 // 실행: `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v1-before.jsonl`
-//   - MODEL_PROVIDER=mock 이면 mock으로 실행한다.
+//   - MODEL_PROVIDER=mock 이면 mock으로 실행한다(modelId는 서버와 같이 항상 'mock-model' —
+//     MODEL_ID는 무시. 산출물 행의 modelId만으로 실제 평가와 구별하기 위해서다).
 //   - 그 외에는 실제 모델(anthropic) 평가를 시도하고, 키가 없으면 안내 후 종료 코드 0으로
 //     스킵한다(scripts/live-eval.ts와 동일한 정책).
 
@@ -21,7 +22,7 @@ import { getScenarioMaterials } from '../server/scenario-data';
 import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
 import { handleProbe } from '../server/handlers/probe';
-import { createMockProvider } from '../server/providers/mock';
+import { MOCK_MODEL_ID, createMockProvider } from '../server/providers/mock';
 import { createAnthropicProvider } from '../server/providers/anthropic';
 import type {
   ModelCompleteRequest,
@@ -29,6 +30,15 @@ import type {
   ModelProvider,
 } from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
+
+/** 평가 실행에 쓸 제공자·modelId. mock이면 서버(server/index.ts)와 같이 MODEL_ID와 무관하게 항상
+ * MOCK_MODEL_ID다 — 예전에는 MODEL_ID 기본값(claude-sonnet-5)을 mock에도 넘겨 mock 실행의 모든
+ * JSONL 행이 실제 모델 ID를 달고 나왔고, EvalRow에 provider 필드가 없어 산출물만으로는 실제
+ * 평가와 구별할 수 없었다(PR #10 Codex 30차 검토 P2). */
+export function resolveEvalModel(env: NodeJS.ProcessEnv): { useMock: boolean; modelId: string } {
+  const useMock = env.MODEL_PROVIDER === 'mock';
+  return { useMock, modelId: useMock ? MOCK_MODEL_ID : env.MODEL_ID?.trim() || DEFAULT_MODEL_ID };
+}
 import { systemClock, type Clock } from '../server/clock';
 
 const SCENARIO_ID = 'anon-board';
@@ -473,7 +483,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const modelId = process.env.MODEL_ID?.trim() || DEFAULT_MODEL_ID;
+  const { modelId } = resolveEvalModel(process.env);
   const providerName = useMock ? 'mock' : 'anthropic';
   const provider = useMock ? createMockProvider(modelId) : createAnthropicProvider({ modelId });
 

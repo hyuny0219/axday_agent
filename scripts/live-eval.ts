@@ -25,7 +25,7 @@ import { getScenarioMaterials } from '../server/scenario-data';
 import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
 import { handleProbe } from '../server/handlers/probe';
-import { createMockProvider } from '../server/providers/mock';
+import { MOCK_MODEL_ID, createMockProvider } from '../server/providers/mock';
 import { createAnthropicProvider } from '../server/providers/anthropic';
 import type {
   ModelCompleteRequest,
@@ -591,7 +591,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  const modelId = process.env.MODEL_ID?.trim() || DEFAULT_MODEL_ID;
+  // mock은 서버와 같이 항상 'mock-model'(MODEL_ID 무시) — 기록 행의 modelId만으로 실제 평가와
+  // 구별하기 위해서다(PR #10 Codex 30차 검토 P2, scripts/eval-set-run.ts resolveEvalModel과 동일).
+  const modelId = useMock ? MOCK_MODEL_ID : process.env.MODEL_ID?.trim() || DEFAULT_MODEL_ID;
   const providerName = useMock ? 'mock' : 'anthropic';
   const baseProvider = useMock ? createMockProvider(modelId) : createAnthropicProvider({ modelId });
 

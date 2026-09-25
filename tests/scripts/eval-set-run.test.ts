@@ -6,12 +6,14 @@ import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
   findStyleViolations,
+  resolveEvalModel,
   toVoteRows,
   type CallRecord,
   type EvalCase,
   type EvalRow,
 } from '../../scripts/eval-set-run';
 import type { VoteRoleResult } from '../../server/handlers/vote';
+import { DEFAULT_MODEL_ID } from '../../server/config';
 
 function row(message: string, reason?: string): EvalRow {
   return {
@@ -134,5 +136,19 @@ describe('toVoteRows — 표결 지연 기록', () => {
     const rows = toVoteRows(results, evalCase, sink, 0, 8010);
     expect(rows.find((r) => r.roleId === 'CFO')?.latencyMs).toBe(2100);
     expect(rows.find((r) => r.roleId === 'CISO')?.latencyMs).toBe(8010);
+  });
+});
+
+// mock 실행(MODEL_PROVIDER=mock)의 기록 행이 실제 모델 ID(claude-sonnet-5)를 달고 나와 산출물만으로
+// 실제 평가와 구별할 수 없었다(PR #10 Codex 30차 검토 P2). 서버와 같이 mock은 항상 mock-model이다.
+describe('resolveEvalModel — mock 실행의 modelId', () => {
+  it('mock이면 MODEL_ID와 무관하게 mock-model을 쓴다(서버 server/index.ts와 동일)', () => {
+    expect(resolveEvalModel({ MODEL_PROVIDER: 'mock' })).toEqual({ useMock: true, modelId: 'mock-model' });
+    expect(resolveEvalModel({ MODEL_PROVIDER: 'mock', MODEL_ID: 'claude-sonnet-5' }).modelId).toBe('mock-model');
+  });
+
+  it('실제 제공자는 MODEL_ID(공백 제거), 없으면 DEFAULT_MODEL_ID를 쓴다', () => {
+    expect(resolveEvalModel({ MODEL_ID: ' my-model ' })).toEqual({ useMock: false, modelId: 'my-model' });
+    expect(resolveEvalModel({})).toEqual({ useMock: false, modelId: DEFAULT_MODEL_ID });
   });
 });

@@ -140,7 +140,11 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** 항상 결정적으로 응답하는 mock 제공자. 실제 모델 호출을 대신해 테스트·오프라인 개발에 쓴다. */
-export function createMockProvider(modelId = 'mock-model'): ModelProvider {
+/** mock 제공자의 고정 modelId. 서버(server/index.ts)와 평가 스크립트가 같은 값을 써서 산출물만
+ * 보고도 실제 모델 결과와 구별할 수 있게 한다(PR #10 Codex 30차 검토 P2). */
+export const MOCK_MODEL_ID = 'mock-model';
+
+export function createMockProvider(modelId = MOCK_MODEL_ID): ModelProvider {
   return {
     async complete(req: ModelCompleteRequest): Promise<ModelCompleteResult> {
       // 운영 메뉴 "모델 연결 확인"(T49, server/handlers/probe.ts)의 고정 호출은 라운드·표·
