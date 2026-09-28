@@ -116,6 +116,20 @@ echo "[booth] 5/6 빌드"
 npm run build
 
 echo "[booth] 6/6 기동·확인"
+# 같은 포트에 이전 실행의 고아 서버나 다른 서비스가 떠 있으면 새 서버는 바인딩에 실패하는데,
+# 아래 폴링은 옛 서버의 응답을 받아 준비 완료로 오인한다(PR #11 Codex 9차). 기동 전에 점유를
+# 거부한다. lsof가 없으면 /dev/tcp 연결 시도로 대신 본다.
+port_in_use() {
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${PORT}" -sTCP:LISTEN >/dev/null 2>&1
+  else
+    (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null
+  fi
+}
+if port_in_use; then
+  echo "[booth] 포트 ${PORT}가 이미 사용 중이라 기동하지 않는다. 이전 실행이 남았는지 확인: lsof -nP -iTCP:${PORT} -sTCP:LISTEN" >&2
+  exit 1
+fi
 # npm이 실제 서버 프로세스(tsx server/index.ts)를 자식으로 fork하므로, 종료 시 npm의
 # PID만 죽이면 서버가 고아로 남는다. `set -m`으로 백그라운드 잡을 별도 프로세스 그룹으로
 # 두고, 그룹 전체(음수 PID)에 신호를 보내 정리한다(offline-check.sh와 같은 원칙 — 종료 시
@@ -160,6 +174,11 @@ fi
 
 READY=""
 for _ in $(seq 1 20); do
+  # 새 자식이 이미 죽었으면(포트 경합·크래시) 옛 서버의 응답을 기다리지 않고 바로 실패한다.
+  if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+    echo "[booth] 서버 프로세스가 기동 중 종료됐다(위 로그 참고)" >&2
+    exit 1
+  fi
   if curl -fsS -o /dev/null "${READY_URL}" 2>/dev/null; then
     READY=1
     break
