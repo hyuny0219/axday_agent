@@ -171,6 +171,18 @@
   animation: stage-bubble-in 200ms ease-out both;
 }
 
+/* 말풍선 본문은 글자 수가 아니라 줄 수로 자른다(2026-09-28 사용자). 말풍선 폭이 좌석
+   폭(22%)에 묶여 있어 같은 40자도 1920에서는 3줄, 1280에서는 5줄이 돼 얼굴을 가렸다.
+   하늘 여백(상단 28%) 안에 드는 줄 수를 실측해 1920은 3줄, ≤1280은 2줄에서 말줄임표를
+   붙인다. overflow:hidden은 이 내부 span에만 걸어 꼬리(::after)가 잘리지 않게 한다. */
+.stage-band__bubble-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
 /* 말풍선 꼬리: 캐릭터 머리를 향해 아래로. */
 .stage-band__bubble::after {
   content: '';
@@ -355,6 +367,11 @@
   .stage-band__bubble {
     font-size: 11px;
     padding: 5px 8px;
+  }
+
+  .stage-band__bubble-text {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .stage-band__nameplate {

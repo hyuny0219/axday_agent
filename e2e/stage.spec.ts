@@ -78,6 +78,17 @@ test.describe('1920×1080에서 무대 열', () => {
     await expect(page.getByTestId('nameplate')).toBeInViewport();
   });
 
+  test('BRIEFING 의장 말풍선이 무대 상단 28%(하늘 여백) 안에서 끝난다', async ({ page }) => {
+    await enterBriefing(page);
+    const stage = await page.getByTestId('stage-band-full').boundingBox();
+    const bubble = await page.getByTestId('stage-bubble-CEO').boundingBox();
+    expect(stage).not.toBeNull();
+    expect(bubble).not.toBeNull();
+    // 줄 수 자르기(stage.css .stage-band__bubble-text)가 없으면 40자 문장이 1920에서 4줄,
+    // 1280에서 5줄이 돼 이 선을 넘는다(2026-09-28 실측).
+    expect(bubble!.y + bubble!.height).toBeLessThanOrEqual(stage!.y + stage!.height * 0.28 + 1);
+  });
+
   test('REACTIONS에서 내 말풍선 텍스트가 내 발언 첫 문장과 일치한다', async ({ page }) => {
     await enterReactions(page);
     // 본문 인용문(읽어야 할 정보)이 실제 제출한 전문이다.
@@ -137,6 +148,17 @@ test.describe('1280×720에서 무대 열', () => {
     await expect(cta).toBeInViewport();
     await expect(stage).toBeInViewport();
     await expectNoPageScroll(page);
+  });
+
+  test('BRIEFING 의장 말풍선이 무대 상단 28%(하늘 여백) 안에서 끝난다', async ({ page }) => {
+    await enterBriefing(page);
+    const stage = await page.getByTestId('stage-band-full').boundingBox();
+    const bubble = await page.getByTestId('stage-bubble-CEO').boundingBox();
+    expect(stage).not.toBeNull();
+    expect(bubble).not.toBeNull();
+    // 줄 수 자르기(stage.css .stage-band__bubble-text)가 없으면 40자 문장이 1920에서 4줄,
+    // 1280에서 5줄이 돼 이 선을 넘는다(2026-09-28 실측).
+    expect(bubble!.y + bubble!.height).toBeLessThanOrEqual(stage!.y + stage!.height * 0.28 + 1);
   });
 
   test('REACTIONS·VOTE·RESULT의 CTA와 비서실장 토글이 스크롤 없이 보인다', async ({ page }) => {

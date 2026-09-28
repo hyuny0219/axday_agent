@@ -216,7 +216,7 @@ export function StageBand({
                       <span />
                     </span>
                   ) : (
-                    overlay.bubbleText
+                    <span className="stage-band__bubble-text">{overlay.bubbleText}</span>
                   )}
                 </span>
               )}
@@ -246,7 +246,7 @@ export function StageBand({
               className="stage-band__bubble stage-band__bubble--speech stage-band__bubble--participant"
               data-testid="stage-bubble-PARTICIPANT"
             >
-              {participant.bubbleText}
+              <span className="stage-band__bubble-text">{participant.bubbleText}</span>
             </span>
           )}
           <div className="stage-band__seat-foot">
