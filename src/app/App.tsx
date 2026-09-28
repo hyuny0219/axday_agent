@@ -82,6 +82,9 @@ interface SessionContextValue {
    * 임원 응답 기록(v1.0 7절 "회의록 패널", T41). AppShell이 buildMinutes에 넘긴다.
    * 공개 payload에는 포함하지 않는다(화면 쪽 상태일 뿐이다). */
   roundLog: RoundLogEntry[];
+  /** 서버 가용성 확인(live/scripted 판정)이 아직 끝나지 않았는가. 첫 마운트와 리셋 직후
+   * true이며, AttractScreen이 "체험 시작"을 잠그는 데 쓴다(PR #11 Codex 7차). */
+  modeCheckPending: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -180,11 +183,18 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 세션이 시작된 뒤 응답이 와도 reducer가 조용히 무시한다. 첫 마운트뿐 아니라 리셋으로
   // sessionId가 바뀔 때마다 다시 확인한다 — reducer가 리셋 시 mode를 유지하므로 화면은
   // 즉시 이전 모드로 시작하고, 그 사이 서버가 죽었으면 여기서 scripted로 내려간다.
+  // 확인이 끝나기 전에는 "체험 시작"을 잠근다. 리셋 직후 서버가 죽어 1.5초 타임아웃을
+  // 기다리는 동안 ATTRACT·SELECT를 빠르게 지나가면 늦게 온 SET_MODE(scripted)가 무시돼
+  // 죽은 서버를 향해 live로 고정된 세션이 생긴다(PR #11 Codex 7차). 정상이면 수십 ms라
+  // 체감되지 않는다.
+  const [modeCheckPending, setModeCheckPending] = useState(true);
   useEffect(() => {
     let cancelled = false;
+    setModeCheckPending(true);
     detectInitialMode().then((action) => {
       if (!cancelled) {
         dispatch(action);
+        setModeCheckPending(false);
       }
     });
     return () => {
@@ -280,8 +290,8 @@ function SessionProvider({ children }: { children: ReactNode }) {
   }, [session.mode, session.stage, session.finalMotion, session.ballots, orchestrator]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, followUpPending, roundLog }),
-    [session, dispatch, followUpPending, roundLog],
+    () => ({ session, dispatch, followUpPending, roundLog, modeCheckPending }),
+    [session, dispatch, followUpPending, roundLog, modeCheckPending],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -308,7 +318,7 @@ function useViewportFit(): ViewportFit {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch, followUpPending } = useSession();
+  const { session, dispatch, followUpPending, modeCheckPending } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -318,7 +328,13 @@ function StageRouter() {
 
   switch (session.stage) {
     case 'ATTRACT':
-      return <AttractScreen mode={session.mode} onStart={() => dispatch({ type: 'START' })} />;
+      return (
+        <AttractScreen
+          mode={session.mode}
+          onStart={() => dispatch({ type: 'START' })}
+          startDisabled={modeCheckPending}
+        />
+      );
 
     case 'SELECT':
       return (
@@ -526,10 +542,7 @@ function AppShell() {
                 {content}
                 {showMinutes && scenario && (
                   <div className="app-body__minutes">
-                    <MinutesPanel
-                      entries={buildMinutes(session, scenario, roundLog)}
-                      stage={session.stage}
-                    />
+                    <MinutesPanel entries={buildMinutes(session, scenario, roundLog)} />
                   </div>
                 )}
               </div>

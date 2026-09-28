@@ -137,7 +137,13 @@ process.stdin.on('end',()=>{
 }
 
 if [ -n "${HAS_KEY}" ]; then
-  MODEL_PROVIDER="${MODEL_PROVIDER:-anthropic}" npm start &
+  # 셸이나 .env에 MODEL_PROVIDER=mock이 남아 있어도 키가 있는 부스 경로는 실제 모델이어야
+  # 한다 — mock이면 probe가 항상 성공해 키를 검증하지 못한 채 참가자에게 mock 응답이 나간다
+  # (PR #11 Codex 7차). 다른 값은 무시하고 anthropic을 강제하되, 무시했다는 사실은 알린다.
+  if [ -n "${MODEL_PROVIDER:-}" ] && [ "${MODEL_PROVIDER}" != "anthropic" ]; then
+    echo "[booth] MODEL_PROVIDER=${MODEL_PROVIDER}는 부스 기동에서 무시하고 anthropic을 쓴다"
+  fi
+  MODEL_PROVIDER=anthropic npm start &
   SERVER_PID=$!
   READY_URL="${BASE_URL}/api/health"
 else

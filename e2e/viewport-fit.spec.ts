@@ -150,27 +150,39 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
 
   async function expectMinutesNotClipped(label: string) {
     const panel = page.getByTestId('minutes-panel');
-    // 세로가 한 건도 못 담을 만큼 빠듯하면 패널을 통째로 감춘다(sr-only). 그때는
-    // 잘릴 글자가 없으므로 검사 대상이 아니다(T56).
-    const collapsed = await panel.evaluate((el) => el.classList.contains('minutes--collapsed'));
-    if (collapsed) {
+    // 세로가 목록 한 줄도 못 담을 만큼 빠듯하면 패널을 통째로 감춘다(sr-only). 그때는
+    // 잘릴 글자가 없으므로 검사 대상이 아니다. 접힘 판단(ResizeObserver)과 목록의
+    // 바닥 붙이기는 화면 전환 뒤 레이아웃이 잡히며 늦게 끝나므로, 접힘 여부와 최신
+    // 항목 위치를 **한 번에** 읽어 폴링한다(따로 읽으면 그 사이에 상태가 바뀐다).
+    const measure = () =>
+      panel.evaluate((el) => {
+        if (el.classList.contains('minutes--collapsed')) {
+          return { collapsed: true, lastEntryClipped: 0 };
+        }
+        const list = el.querySelector('.minutes__list');
+        const entries = el.querySelectorAll('.minutes__entry');
+        const last = entries[entries.length - 1];
+        if (!list || !last) {
+          return { collapsed: false, lastEntryClipped: 0 };
+        }
+        // 목록은 내부 스크롤 영역이다(2026-09-28). 최신 항목이 목록 상자 안에 있어야 한다.
+        return {
+          collapsed: false,
+          lastEntryClipped: Math.round(
+            last.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom,
+          ),
+        };
+      });
+    await expect
+      .poll(async () => {
+        const m = await measure();
+        return m.collapsed || m.lastEntryClipped <= 1;
+      }, { message: `${label}: 회의록 최신 항목이 패널 밖으로 밀렸다`, timeout: 3000 })
+      .toBe(true);
+    if ((await measure()).collapsed) {
       return;
     }
     await expect(panel).toBeVisible();
-    // 창 고정 패널이라 오래된 항목은 잘려도 된다. 지켜야 할 것은 **가장 최근 항목이
-    // 온전히 보이는가**다 — 참가자가 방금 한 말이 반쯤 잘리면 안 된다(T56).
-    const lastEntryClipped = await panel.evaluate((el) => {
-      const entries = el.querySelectorAll('.minutes__entry:not(.minutes__entry--hidden)');
-      const last = entries[entries.length - 1];
-      if (!last) {
-        return 0;
-      }
-      return Math.round(last.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom);
-    });
-    expect(
-      lastEntryClipped <= 1,
-      `${label}: 회의록 최신 항목이 패널 밖으로 ${lastEntryClipped}px 밀렸다`,
-    ).toBe(true);
     const box = await panel.boundingBox();
     expect(box, `${label}: 회의록 패널이 없다`).not.toBeNull();
     if (box) {

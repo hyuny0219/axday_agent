@@ -10,6 +10,8 @@ import '../../styles/screens/attract.css';
 export interface AttractScreenProps {
   mode: SessionMode;
   onStart: () => void;
+  /** 서버 가용성 확인(live/scripted 판정)이 끝나기 전에는 시작을 막는다(App.tsx). */
+  startDisabled?: boolean;
 }
 
 const MODE_BADGE_TEXT: Record<SessionMode, string> = {
@@ -17,7 +19,7 @@ const MODE_BADGE_TEXT: Record<SessionMode, string> = {
   scripted: '사전 구성 시뮬레이션',
 };
 
-export function AttractScreen({ mode, onStart }: AttractScreenProps) {
+export function AttractScreen({ mode, onStart, startDisabled = false }: AttractScreenProps) {
   return (
     <section className="screen attract-screen">
       <img src={stageRender} alt="" className="attract-screen__bg" />
@@ -27,7 +29,14 @@ export function AttractScreen({ mode, onStart }: AttractScreenProps) {
       </p>
       <h1 className="attract-screen__title">BOARDROOM 2026</h1>
       <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
-      <button type="button" className="cta" onClick={onStart}>
+      <button
+        type="button"
+        className="cta"
+        onClick={onStart}
+        disabled={startDisabled}
+        aria-busy={startDisabled || undefined}
+        data-testid="attract-start"
+      >
         체험 시작
       </button>
     </section>
