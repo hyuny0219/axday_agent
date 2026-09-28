@@ -185,7 +185,10 @@ fi
 # ACCESS_TOKEN이 설정돼 있으면 참가자 URL에 ?key=<토큰>이 있어야 live로 열린다(docs/DEPLOY.md).
 # 토큰은 참가자에게 건네는 값이므로 URL에 그대로 보여주되, 값 자체는 따로 찍지 않는다.
 if [ -n "${HAS_KEY}" ] && [ -n "${ACCESS_TOKEN:-}" ]; then
-  echo "[booth] 참가자 화면: ${BASE_URL}/?key=${ACCESS_TOKEN}  (ACCESS_TOKEN 설정됨 — 이 주소로만 live)"
+  # 토큰에 + & # 같은 쿼리 예약 문자가 있으면 브라우저가 다르게 해석하므로 percent-encode한다
+  # (PR #11 Codex 3차). 클라이언트는 URLSearchParams.get('key')로 디코딩해 원문을 쓴다.
+  TOKEN_ENC="$(ACCESS_TOKEN="${ACCESS_TOKEN}" node -e 'process.stdout.write(encodeURIComponent(process.env.ACCESS_TOKEN))')"
+  echo "[booth] 참가자 화면: ${BASE_URL}/?key=${TOKEN_ENC}  (ACCESS_TOKEN 설정됨 — 이 주소로만 live)"
 else
   echo "[booth] 참가자 화면: ${BASE_URL}/"
 fi
