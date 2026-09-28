@@ -45,11 +45,16 @@ load_env_file() {
     if [[ "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
       key="${BASH_REMATCH[1]}"
       value="${BASH_REMATCH[2]}"
-      # 양끝 공백과 따옴표 한 겹을 걷어낸다(`KEY= 값`이 " 값"으로 들어오지 않게).
+      # 앞 공백을 걷어낸 뒤: 따옴표로 시작하면 짝이 맞는 따옴표까지만 값이고 그 뒤는 버린다
+      # (따옴표 안의 #은 보존). 따옴표가 없으면 공백 뒤 #부터를 인라인 주석으로 보고 잘라낸
+      # 뒤 뒤 공백을 걷어낸다(`PORT=9000 # booth`, `KEY=sk-... # local`, PR #11 Codex 2차).
       value="${value#"${value%%[![:space:]]*}"}"
-      value="${value%"${value##*[![:space:]]}"}"
-      if [[ "${value}" =~ ^\"(.*)\"$ ]] || [[ "${value}" =~ ^\'(.*)\'$ ]]; then
+      if [[ "${value}" =~ ^\"([^\"]*)\" ]] || [[ "${value}" =~ ^\'([^\']*)\' ]]; then
         value="${BASH_REMATCH[1]}"
+      else
+        value="${value%%[[:space:]]#*}"
+        if [[ "${value}" == '#'* ]]; then value=""; fi
+        value="${value%"${value##*[![:space:]]}"}"
       fi
       export "${key}=${value}"
     else
@@ -157,7 +162,13 @@ fi
 if [ -n "${HAS_KEY}" ]; then
   # /api/health의 mode는 모델 키를 검증하지 않는다. 실제 모델에 짧은 호출 1회(운영 메뉴
   # "모델 연결 확인"과 같은 probe)를 보내 인증까지 확인한 뒤에만 LIVE라고 안내한다.
-  PROBE_BODY="$(curl -sS -X POST -H 'content-type: application/json' -d '{}' "${BASE_URL}/api/ops/probe" 2>/dev/null || true)"
+  # ACCESS_TOKEN이 설정된 운영 환경이면 /api/ops/*도 토큰을 요구한다(server/auth.ts) — probe에
+  # 같은 헤더를 싣는다(PR #11 Codex 2차). 토큰 값은 로그에 찍지 않는다.
+  PROBE_AUTH=()
+  if [ -n "${ACCESS_TOKEN:-}" ]; then
+    PROBE_AUTH=(-H "x-access-token: ${ACCESS_TOKEN}")
+  fi
+  PROBE_BODY="$(curl -sS -X POST -H 'content-type: application/json' "${PROBE_AUTH[@]}" -d '{}' "${BASE_URL}/api/ops/probe" 2>/dev/null || true)"
   PROBE_OK="$(printf '%s' "${PROBE_BODY}" | json_field ok)"
   if [ "${PROBE_OK}" = "true" ]; then
     echo "[booth] LIVE · $(printf '%s' "${PROBE_BODY}" | json_field modelId) · $(printf '%s' "${PROBE_BODY}" | json_field latencyMs)ms"
@@ -171,7 +182,13 @@ else
   echo "[booth] SCRIPTED(사전 구성) · 정적 서버 · 모델 호출 없음"
 fi
 
-echo "[booth] 참가자 화면: ${BASE_URL}/"
+# ACCESS_TOKEN이 설정돼 있으면 참가자 URL에 ?key=<토큰>이 있어야 live로 열린다(docs/DEPLOY.md).
+# 토큰은 참가자에게 건네는 값이므로 URL에 그대로 보여주되, 값 자체는 따로 찍지 않는다.
+if [ -n "${HAS_KEY}" ] && [ -n "${ACCESS_TOKEN:-}" ]; then
+  echo "[booth] 참가자 화면: ${BASE_URL}/?key=${ACCESS_TOKEN}  (ACCESS_TOKEN 설정됨 — 이 주소로만 live)"
+else
+  echo "[booth] 참가자 화면: ${BASE_URL}/"
+fi
 if [ -n "${HAS_KEY}" ]; then
   echo "[booth] 개장 전 운영 메뉴 → 모델 연결 확인을 한 번 더 누른다"
 fi
