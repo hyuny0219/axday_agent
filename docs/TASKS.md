@@ -778,3 +778,19 @@
 - 완료 확인: `bash -n scripts/booth-update.sh` 통과, `shellcheck`가 설치돼 있으면 경고 0건. 실제 실행 두 가지 — (1) `MODEL_PROVIDER=mock npm run booth -- --skip-pull`로 빌드 후 health가 `live`로 응답해 "LIVE · mock…" 줄이 나오고 Ctrl-C로 자식 프로세스 없이 종료됨(`pgrep -f "server/index.ts"` 0건), (2) 작업 트리에 임시 파일을 하나 만든 상태에서 실행하면 1단계에서 파일명을 보여주고 중단함. `npm run check` 성공(기존 테스트 무변경). 로그 출력에 키 값이 없음을 `npm run booth 2>&1 | grep -c "$ANTHROPIC_API_KEY"`가 0으로 확인.
 - 순서: T54 다음 아무 때나(다른 카드와 독립). 리허설 1 전에 끝내 진행 요원 가이드에 반영한다.
 - 크기: S.
+
+## T61 안건 ② 재정의 — "게시판을 익명제로 전환"이 아니라 "사내 익명 게시판을 새로 여는 것"의 찬반
+
+- 목표: 안건의 뜻을 바꾼다(2026-09-28 사용자). 지금은 "사내 게시판을 익명제로 바꿀까요?"(기존 실명 게시판을 익명으로 전환)인데, 실제 결정 질문은 **"기존 게시판은 그대로 두고, 사내에 익명 게시판을 따로 열까요?"**(신설 찬반)다. 화면·데이터·문서·평가 세트의 문구를 이 뜻에 맞춘다. 조건 ID·키워드·상충쌍·표결 규칙·자료 수치는 바꾸지 않는다 — E1(실명 게시판 운영 기록)·E2(익명 시범 게시판 집계)는 "별도 익명 게시판"의 근거로 그대로 맞는다.
+- 읽을 것: `src/content/scenarios/anonBoard.ts` 전체, `docs/SCENARIO_ANON_BOARD.md`, `server/scenario-data.ts`, `server/providers/mock.ts`(고정 발언), `scripts/eval-set.json`(참가자 발언 12건), `e2e/*.spec.ts`의 문구 단언(`grep -rn "익명제" e2e tests`), `docs/design/DESIGN_SPEC.md` 6절 표(브리핑 열 문구).
+- 만들 것:
+  1. **콘텐츠** `anonBoard.ts`: `subtitle`·`incident`·`originalMotion`·`briefingSummary`·`chairBriefing`(situation·question·role)·`motionBreakdown`(proposal "사내에 익명 게시판을 새로 연다", undecidedItems 유지)·`initialOpinions`·`reactions`·`followUp`·`voteRules[].reason`·`resultCopy`(가결·보류·부결 문구, `sixMonthsLater`)·`remainingTasks`를 "신설" 뜻으로 고친다. "전환"·"익명제로"·"바꾸다"를 "익명 게시판을 연다/열지 않는다"로. 추천 문구(`phrases`)는 조건 뜻이 그대로면 유지하되 "전환"이 든 것만 손본다. `ANON_FULL` 라벨 "완전 익명 — 추적 불가"는 유지(신설 게시판의 운영 방식이라 뜻이 맞다).
+  2. **서버 사본** `server/scenario-data.ts`와 mock 고정 발언을 같은 문구로 맞춘다(live 프롬프트에 들어가는 자료·동료 발언과 화면이 같아야 한다).
+  3. **문서** `docs/SCENARIO_ANON_BOARD.md` 제목·브리핑·임원별 관점·표결 우선순위·결과 절을 같은 뜻으로. `DESIGN_SPEC.md` 6절 표의 브리핑 문구 예시.
+  4. **평가 세트** `scripts/eval-set.json`의 참가자 발언 중 "전환합시다"류를 "열자"류로 바꾼다(케이스 수·경로·ID는 유지). 프롬프트 코드는 바뀌지 않으므로 `PROMPT_VERSION`은 올리지 않는다. 다음 실측(T59 v6)의 기준선은 이 문구로 다시 잰다.
+  5. **테스트** `tests/content/*.test.ts`·e2e 문구 단언 갱신, 스크린샷 갱신(`UPDATE_SCREENSHOTS=1`).
+- 허용 경로: `src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`, `server/providers/mock.ts`, `scripts/eval-set.json`, `docs/SCENARIO_ANON_BOARD.md`, `docs/design/DESIGN_SPEC.md`, `docs/FACILITATOR_GUIDE.md`, `tests/`, `e2e/`, `docs/screenshots/`, `docs/TASKS.md`.
+- 하지 말 것: 조건 ID·키워드·상충쌍·표결 규칙·집계·자료 수치(320건·140건·기간) 변경. 임원 말투 손질(T59 범위). 화면 문구에 자료 ID(E1~E4) 쓰기. 프롬프트 코드(`server/prompts/`) 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `grep -rn "익명제로\|익명 전환\|익명으로 전환\|익명제 전환" src server docs/SCENARIO_ANON_BOARD.md scripts e2e tests`가 0건(TASKS·eval 기록 제외). 바뀐 문구 목록을 보고서에 실어 사용자가 읽고 확인.
+- 순서: T59 앞(T59가 같은 문구를 말투로 다시 손보므로 뜻을 먼저 고정한다). T57·T58과는 독립.
+- 크기: M.
