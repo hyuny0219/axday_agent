@@ -755,3 +755,23 @@
 - 완료 확인: `npm run check && npx playwright test` 성공(문구 단언·스크린샷 갱신). 사용자가 4인 문구를 읽고 "임원 말 같다"고 확인. live는 mock 실행으로 프롬프트 반영을 확인하고, 실제 키가 있으면 T54와 함께 새 `PROMPT_VERSION` 전후 비교표.
 - 순서: PR #10 머지 뒤 T54 → T57 → T58 → T55 → T59(사용자 지시가 있으면 앞당긴다). 3의 live 문체 지시는 T54의 프롬프트 변경과 한 버전으로 묶으면 실측 비용을 아낀다.
 - 크기: M.
+
+## T60 부스 PC 갱신·기동 스크립트 — booth-update.sh
+
+- 목표: 행사 당일 운영은 로컬 서버(docs/DEPLOY.md 첫 문단)로 하기로 확정했다(2026-09-28 사용자). main에 새 PR이 병합될 때마다 부스 PC에서 `git pull → npm ci → npm run build → npm start → 모델 연결 확인`을 손으로 반복해야 하는데, 이 순서를 스크립트 하나로 묶어 누가 실행해도 같은 결과가 나오게 한다. 현재 서버는 `.env`를 읽지 않으므로(`server/config.ts`는 `process.env`만 보고, dotenv 의존이 없다) 키를 셸에 직접 export하는 단계도 스크립트가 맡는다.
+- 읽을 것: `scripts/offline-check.sh`(셸 스크립트 관례·프로세스 정리 방식), `server/config.ts`(`PORT`·`MODEL_PROVIDER`·`MODEL_ID` 기본값), `server/index.ts`의 `GET /api/health` 응답과 정적 서빙(`dist/`), README "개발"·"빌드"·"오프라인 실행 확인" 절, docs/FACILITATOR_GUIDE.md "개장 전 확인" 절, docs/DEPLOY.md 첫 문단.
+- 만들 것:
+  1. `scripts/booth-update.sh`(bash, `set -euo pipefail`). 단계와 각 단계의 한 줄 로그 `[booth] n/6 …`:
+     1) **작업 트리 검사** — `git status --porcelain`이 비어 있지 않으면 어떤 파일인지 보여주고 중단한다(현장 PC에서 손댄 파일을 덮어쓰지 않기 위해). `git stash`·`reset --hard`를 대신 실행하지 않는다.
+     2) **갱신** — `git pull --ff-only origin main`. `--skip-pull` 옵션이면 건너뛴다(부스 회선이 없을 때 이미 받아 둔 코드로 기동).
+     3) **의존성** — `package-lock.json`이 직전 pull에서 바뀌었거나 `node_modules`가 없을 때만 `npm ci`. 그 외에는 건너뛰고 로그에 이유를 남긴다.
+     4) **빌드** — `npm run build`.
+     5) **키 로드** — 저장소 루트 `.env`가 있으면 `set -a; source .env; set +a`로 읽는다. 읽은 뒤 `ANTHROPIC_API_KEY`가 비어 있으면 "키 없음 → 서버는 켜지지만 화면은 scripted로 시작한다"를 경고로 출력하고 계속한다. **키 값은 어떤 로그에도 찍지 않는다**(존재 여부와 앞 4자만).
+     6) **기동·확인** — `MODEL_PROVIDER=${MODEL_PROVIDER:-anthropic} npm start`를 백그라운드로 띄우고 `http://localhost:${PORT:-8787}/api/health`를 최대 20초 폴링한다. 응답 본문의 `mode`가 `live`면 "LIVE · <modelId>"를, `scripted`면 "SCRIPTED(키 없음 또는 인증 실패)"를 출력하고, 참가자 화면 주소 `http://localhost:<PORT>/`와 "개장 전 운영 메뉴 → 모델 연결 확인을 한 번 누른다"를 안내한다. 20초 안에 응답이 없으면 서버 프로세스를 죽이고 비0으로 종료한다. 정상이면 서버를 전경으로 넘겨(`wait`) Ctrl-C로 끝낼 수 있게 하고, `trap`으로 종료 시 자식 프로세스를 정리한다(offline-check.sh와 같은 방식).
+  2. `package.json` scripts에 `"booth": "bash scripts/booth-update.sh"`를 추가한다(다른 scripts는 건드리지 않는다).
+  3. 문서: README "오프라인 실행 확인" 절 앞에 "부스 운영(로컬 서버)" 절을 두고 `npm run booth`·`--skip-pull`·`.env` 위치·기대 출력 세 줄을 적는다. docs/FACILITATOR_GUIDE.md "개장 전 확인" 절 첫 줄에 "부스 PC 갱신은 `npm run booth` 한 번"을 추가한다. docs/DEPLOY.md 첫 문단의 "로컬 서버(`npm run server` 또는 `npm start`)"를 `npm run booth`로 연결한다.
+- 허용 경로: `scripts/booth-update.sh`, `package.json`(scripts 항목 한 줄), `README.md`, `docs/FACILITATOR_GUIDE.md`, `docs/DEPLOY.md`, `docs/TASKS.md`.
+- 하지 말 것: 서버·클라이언트 코드 변경(dotenv 추가 포함). `.env` 파일이나 키 값을 저장소에 넣기. 작업 트리를 자동으로 되돌리거나 stash하기. 브라우저 자동 실행·전체화면 진입(진행 요원이 손으로 한다).
+- 완료 확인: `bash -n scripts/booth-update.sh` 통과, `shellcheck`가 설치돼 있으면 경고 0건. 실제 실행 두 가지 — (1) `MODEL_PROVIDER=mock npm run booth -- --skip-pull`로 빌드 후 health가 `live`로 응답해 "LIVE · mock…" 줄이 나오고 Ctrl-C로 자식 프로세스 없이 종료됨(`pgrep -f "server/index.ts"` 0건), (2) 작업 트리에 임시 파일을 하나 만든 상태에서 실행하면 1단계에서 파일명을 보여주고 중단함. `npm run check` 성공(기존 테스트 무변경). 로그 출력에 키 값이 없음을 `npm run booth 2>&1 | grep -c "$ANTHROPIC_API_KEY"`가 0으로 확인.
+- 순서: T54 다음 아무 때나(다른 카드와 독립). 리허설 1 전에 끝내 진행 요원 가이드에 반영한다.
+- 크기: S.
