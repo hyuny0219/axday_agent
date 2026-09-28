@@ -250,9 +250,10 @@ export function StageBand({
             </span>
           )}
           <div className="stage-band__seat-foot">
-            {/* 약칭만 쓴다(T52) — 전체 표기 "나 · 특별 이사"는 무대 안 좌상단 pill
-                (Nameplate.tsx)이 화면 전환과 무관하게 항상 보여준다. */}
-            <span className="stage-band__nameplate stage-band__nameplate--participant">나</span>
+            {/* 참가자 좌석에는 명패를 두지 않는다(2026-09-28 사용자). 헤더 pill
+                (Nameplate.tsx)이 "나 · 특별 이사"를 항상 보여주고, 임원 4석 사이에
+                참가자 표기가 끼면 임원이 다섯으로 읽힌다. 이 좌석은 글로우(DISCUSS)·
+                말풍선(REACTIONS)·표 배지(RESULT)만 맡는다. */}
             {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
             <span
               className={`stage-band__silhouette stage-band__silhouette--participant${

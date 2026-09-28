@@ -71,13 +71,18 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   await expect(page.getByTestId('progress-step-3')).toHaveAttribute('aria-current', 'step');
 });
 
-test('무대 명패 5개가 서로 겹치지 않는다', async ({ page }) => {
+test('무대 명패 4개가 서로 겹치지 않고 참가자 좌석에는 명패가 없다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
-  const seatIds = ['CEO', 'CFO', 'CAIO', 'CISO', 'PARTICIPANT'];
+  // 참가자 좌석은 명패 없이 글로우·말풍선·표 배지만 둔다(2026-09-28 사용자).
+  await expect(
+    page.getByTestId('stage-seat-PARTICIPANT').locator('.stage-band__nameplate'),
+  ).toHaveCount(0);
+
+  const seatIds = ['CEO', 'CFO', 'CAIO', 'CISO'];
   const boxes = [];
   for (const seatId of seatIds) {
     const nameplate = page.getByTestId(`stage-seat-${seatId}`).locator('.stage-band__nameplate');
