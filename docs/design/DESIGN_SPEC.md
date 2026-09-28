@@ -213,6 +213,8 @@ BRIEFING~REACTIONS를 한 개의 스크롤 타임라인으로 그린다. 상단 
 
 v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정의한다. 회의록은 "지금까지 누가 무엇을 말했는가"를 한 줄씩 쌓는 **창 고정 패널**이고, 페이지·패널 스크롤은 없다.
 
+> **2026-09-28 개정(사용자):** 이 패널은 전문 기록이 아니라 한 줄 색인이므로 화면 제목·aria-label을 **"발언 흐름"**으로 바꾼다("회의록"은 전문을 약속하는 이름이라 기대와 어긋났다). 회의록 **전문**은 결과 보고서 화면(T58)의 "회의록 전문" 절이 맡는다. 아래 본문의 "회의록 패널"은 이 패널을 가리키는 설계 용어로 그대로 둔다.
+
 - 위치: 왼쪽 열 무대·행동(CTA) 아래 네 번째 grid area(`'stage info' / 'actions info' / 'minutes info'`, rows `auto auto 1fr`). AppShell이 **BRIEFING·OPINIONS·MOTION·VOTE**에서만 렌더한다. DISCUSS·REACTIONS는 입력이 왼쪽 열을 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. 각 Screen 컴포넌트는 바꾸지 않는다.
 - 항목(시간순, 순수 함수 `buildMinutes(session, scenario, roundLog)`가 세션 상태에서 매번 계산):
   1. 의장 브리핑 — CEO · `chairBriefing.situation`
@@ -223,7 +225,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
   6. 내 답 — `opinions[1].originalText`, 유지를 골랐으면 "앞서 전달한 의견을 유지"
   7. 임원 후속 4건 — live에서 `opinions.length >= 2`일 때만. FOLLOWUP 발언 / "판단 중…" / "응답 없음"
   8. 의장 — "이 조건으로 안건을 고정합니다" (MOTION 이후)
-- 한 항목 = 아바타(sm, 이니셜이 역할을 보여준다) + 발화자 직함(스크린리더용, 화면에서는 숨김) + 첫 문장 1줄 클램프(무대 말풍선과 같은 `firstSentenceClipped` 규칙). 내 항목은 참가자 색(시안 왼쪽 선). 패널은 내용 높이만 차지한다(1건뿐인 BRIEFING에서 빈 틀이 아래까지 늘어나지 않음, T47 다듬기).
+- 한 항목 = 아바타(sm, 이니셜이 역할을 보여준다) + 발화자 직함(스크린리더용, 화면에서는 숨김) + 전문을 한 줄에 넣고 넘치는 만큼만 CSS 말줄임(2026-09-28: 40자 JS 자르기 `firstSentenceClipped`를 이 패널에서는 없앴다 — 1920은 한 줄에 50자쯤 들어가 더 보이고 스크린리더는 전문을 읽는다). 내 항목은 참가자 색(시안 왼쪽 선). 패널은 내용 높이만 차지한다(1건뿐인 BRIEFING에서 빈 틀이 아래까지 늘어나지 않음, T47 다듬기).
 - 창 고정: 1080은 최근 6건, 720은 최근 4건(VOTE는 3건)만 보이고 더 오래된 항목은 시각적으로만 숨긴다(sr-only — 스크린리더에는 전체가 남는다). 머리글 "회의록"과 총 건수 배지. 페이지·패널 스크롤 금지(6절 예산 규칙 유지, `e2e/noscroll.spec.ts`가 두 해상도에서 단언).
 - 접근성: `<section aria-label="회의록">` + `<ol aria-live="polite" aria-relevant="additions text">`, 각 행 `<li aria-atomic="true">`. 새 항목이 도착하거나 live의 "판단 중" 행이 같은 행 안에서 응답으로 바뀔 때 발화자와 첫 문장을 한 덩어리로 읽어 준다(PR #7 Codex 1차 검토). 포커스는 옮기지 않는다(입력 블록이 없다).
 - 라운드별 기록(roundLog): `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage`를 더하고 runner가 채운다(reducer는 읽지 않음, 동작 불변). App이 stage가 있는 SET_ROLE_STATUS만 `{stage, roleId, status}`로 upsert해 보관하고 sessionId가 바뀌면 비운다. 공개 payload에는 넣지 않는다.

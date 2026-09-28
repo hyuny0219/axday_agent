@@ -10,7 +10,6 @@ import type { MinutesEntry } from '../minutes';
 import { visibleWindow } from '../minutes';
 import type { MemberId, SessionStage } from '../../domain/types';
 import { MEMBER_LABELS } from '../memberLabels';
-import { firstSentenceClipped } from '../stageText';
 import { Avatar } from './Avatar';
 import '../../styles/screens/minutes.css';
 
@@ -159,11 +158,11 @@ export function MinutesPanel({ entries, stage }: MinutesPanelProps) {
   return (
     <section
       className={`minutes${visibleCount === 0 ? ' minutes--collapsed' : ''}`}
-      aria-label="회의록"
+      aria-label="발언 흐름"
       data-testid="minutes-panel"
     >
       <header className="minutes__head">
-        <h2 className="minutes__title">회의록</h2>
+        <h2 className="minutes__title">발언 흐름</h2>
         <span className="minutes__count" data-testid="minutes-count">
           {entries.length}건
         </span>
@@ -196,7 +195,11 @@ export function MinutesPanel({ entries, stage }: MinutesPanelProps) {
                 <span className="minutes__sr-only">판단 중…</span>
               </>
             ) : (
-              <span className="minutes__text">{firstSentenceClipped(entry.text)}</span>
+              // 전문을 그대로 넣고 넘치는 만큼만 CSS 말줄임으로 자른다(2026-09-28 사용자).
+              // 40자 JS 자르기는 없앴다 — 1920에서는 한 줄에 50자가 들어가 더 보이고,
+              // 스크린리더는 전문을 읽는다. 이 패널은 "누가 무엇을 말했는지" 한 줄 색인이고
+              // 회의록 전문은 결과 보고서(T58)가 맡는다.
+              <span className="minutes__text">{entry.text}</span>
             )}
           </li>
         ))}
