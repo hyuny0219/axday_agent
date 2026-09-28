@@ -168,7 +168,8 @@ if [ -n "${HAS_KEY}" ]; then
   if [ -n "${ACCESS_TOKEN:-}" ]; then
     PROBE_AUTH=(-H "x-access-token: ${ACCESS_TOKEN}")
   fi
-  PROBE_BODY="$(curl -sS -X POST -H 'content-type: application/json' "${PROBE_AUTH[@]}" -d '{}' "${BASE_URL}/api/ops/probe" 2>/dev/null || true)"
+  # 빈 배열을 "${arr[@]}"로 펼치면 bash 4.4 미만(macOS 기본 3.2)에서 set -u에 걸린다 — ${arr[@]+"${arr[@]}"} 꼴로 쓴다.
+  PROBE_BODY="$(curl -sS -X POST -H 'content-type: application/json' ${PROBE_AUTH[@]+"${PROBE_AUTH[@]}"} -d '{}' "${BASE_URL}/api/ops/probe" 2>/dev/null || true)"
   PROBE_OK="$(printf '%s' "${PROBE_BODY}" | json_field ok)"
   if [ "${PROBE_OK}" = "true" ]; then
     echo "[booth] LIVE · $(printf '%s' "${PROBE_BODY}" | json_field modelId) · $(printf '%s' "${PROBE_BODY}" | json_field latencyMs)ms"
