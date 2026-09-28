@@ -48,15 +48,15 @@ npm run booth                # git pull → npm ci(필요할 때만) → build �
 npm run booth -- --skip-pull # 부스 회선이 없을 때: git pull 생략하고 있는 코드로 기동
 ```
 
-저장소 루트에 `.env`가 있으면 `ANTHROPIC_API_KEY`를 셸에 자동으로 export한 뒤 서버를 켠다(서버 코드는 `.env`를 읽지 않는다). 기대 출력 세 줄:
+저장소 루트에 `.env`가 있으면 `KEY=VALUE` 줄만 읽어 `ANTHROPIC_API_KEY`(와 `PORT` 등)를 셸에 export한 뒤 서버를 켠다(서버 코드는 `.env`를 읽지 않는다. `.env`를 source하지 않으므로 잘못된 줄이 있어도 값이 오류 메시지로 새지 않는다). 키가 있으면 live 서버를 띄우고 **실제 모델 probe로 인증까지 확인한 뒤에만** LIVE라고 안내한다. 기대 출력:
 
 ```
-[booth] LIVE · claude-sonnet-5
+[booth] LIVE · claude-sonnet-5 · 1953ms
 [booth] 참가자 화면: http://localhost:8787/
-[booth] 개장 전 운영 메뉴 → 모델 연결 확인을 한 번 누른다
+[booth] 개장 전 운영 메뉴 → 모델 연결 확인을 한 번 더 누른다
 ```
 
-키가 없거나 잘못됐으면 첫 줄이 `[booth] SCRIPTED(키 없음 또는 인증 실패)`로 나온다. Ctrl-C로 서버를 끝낼 수 있다.
+키가 잘못됐으면 `[booth] 모델 인증 실패: …`를 찍고 서버를 내린 채 종료한다(1). 키가 없으면 API 없는 정적 서버(`vite preview`)만 띄워 `[booth] SCRIPTED(사전 구성) · 정적 서버 · 모델 호출 없음`으로 안내하고, 화면은 자동으로 사전 구성 시뮬레이션으로 시작한다(mock 제공자가 LIVE 배지를 달고 답하는 일은 없다). Ctrl-C로 서버를 끝낼 수 있다.
 
 ## 오프라인 실행 확인
 
