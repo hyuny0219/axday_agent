@@ -96,6 +96,9 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   // 짧은 뷰포트에서는 문서 스크롤이 열려 있어야 한다(DESIGN_SPEC.md 3장·v1.0 6절).
   async function wheelUntilVisible(testId: string) {
     const target = page.getByTestId(testId);
+    // 휠은 포인터 아래 요소부터 스크롤한다. 직전 클릭 위치가 내부 스크롤 목록(발언 흐름
+    // 패널) 위면 목록이 먼저 소비하므로, 스크롤 영역이 아닌 헤더 쪽으로 포인터를 옮겨 둔다.
+    await page.mouse.move(8, 8);
     for (let i = 0; i < 12; i += 1) {
       if (await target.isVisible()) {
         const box = await target.boundingBox();

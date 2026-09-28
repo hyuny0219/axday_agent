@@ -43,9 +43,10 @@
   gap: 6px;
   min-height: 0;
   flex: 1 1 auto;
-  /* 목록만 스크롤한다. 새 항목이 오면 컴포넌트가 맨 아래(최신)로 내린다. */
+  /* 목록만 스크롤한다. 새 항목이 오면 컴포넌트가 맨 아래(최신)로 내린다. overscroll-behavior는
+     기본값(auto)으로 둔다 — contain으로 막으면 200% 확대 상당(960×540, 문서 스크롤 허용)에서
+     휠이 목록 위에 걸린 채 페이지로 넘어가지 못해 CTA에 닿을 수 없다(e2e/a11y.spec.ts). */
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding-right: 4px;
 }

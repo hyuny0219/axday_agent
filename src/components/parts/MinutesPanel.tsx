@@ -72,10 +72,19 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
     }
     const MIN_LIST_HEIGHT = 44; // 13px 글자 두 줄 남짓 — 이보다 작으면 읽을 수 없다.
     const decide = () => {
-      const head = list.parentElement?.querySelector<HTMLElement>('.minutes__head');
+      // 칸 높이에서 목록이 실제로 쓸 수 없는 것(머리글, 패널 padding·border, 패널 gap)을
+      // 모두 뺀 값으로 판단한다. 머리글만 빼면 여백만큼 과대평가돼 두 줄도 못 담는데 펼쳐진
+      // 채 잘린 한 줄이 남는다(PR #11 Codex 8차).
+      const panel = list.parentElement;
+      const head = panel?.querySelector<HTMLElement>('.minutes__head');
       const headHeight = head?.getBoundingClientRect().height ?? 0;
+      const ps = panel ? getComputedStyle(panel) : null;
+      const px = (v: string | undefined) => Number.parseFloat(v ?? '') || 0;
+      const overhead = ps
+        ? px(ps.paddingTop) + px(ps.paddingBottom) + px(ps.borderTopWidth) + px(ps.borderBottomWidth) + px(ps.rowGap)
+        : 0;
       const cellHeight = cell.getBoundingClientRect().height;
-      setCollapsed(cellHeight - headHeight < MIN_LIST_HEIGHT);
+      setCollapsed(cellHeight - headHeight - overhead < MIN_LIST_HEIGHT);
     };
     decide();
     const observer = new ResizeObserver(decide);
@@ -114,7 +123,9 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
         className="minutes__list"
         aria-live="polite"
         aria-relevant="additions text"
-        tabIndex={0}
+        // 접힌 동안(1px sr-only)에는 보이지 않는 스크롤 영역에 포커스가 가지 않게 탭 순서에서
+        // 뺀다. 스크린리더는 포커스 없이도 목록을 탐색한다(PR #11 Codex 8차).
+        tabIndex={collapsed ? -1 : 0}
         data-testid="minutes-list"
         onScroll={handleScroll}
       >

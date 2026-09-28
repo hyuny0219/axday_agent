@@ -187,14 +187,18 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 기다리는 동안 ATTRACT·SELECT를 빠르게 지나가면 늦게 온 SET_MODE(scripted)가 무시돼
   // 죽은 서버를 향해 live로 고정된 세션이 생긴다(PR #11 Codex 7차). 정상이면 수십 ms라
   // 체감되지 않는다.
-  const [modeCheckPending, setModeCheckPending] = useState(true);
+  // "확인이 끝난 sessionId"를 들고 현재 sessionId와 동기적으로 비교한다. 리셋 직후 새
+  // ATTRACT가 커밋되는 첫 프레임부터 잠겨야 하므로, effect 안에서 뒤늦게 올리는 플래그로는
+  // 부족하다(PR #11 Codex 8차 — effect 전에 들어온 클릭이 SELECT로 새어 나간다).
+  const [modeCheckedSessionId, setModeCheckedSessionId] = useState<string | null>(null);
+  const modeCheckPending = modeCheckedSessionId !== session.sessionId;
   useEffect(() => {
     let cancelled = false;
-    setModeCheckPending(true);
+    const sessionId = session.sessionId;
     detectInitialMode().then((action) => {
       if (!cancelled) {
         dispatch(action);
-        setModeCheckPending(false);
+        setModeCheckedSessionId(sessionId);
       }
     });
     return () => {
