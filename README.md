@@ -41,6 +41,23 @@ npm run build && npx playwright test   # e2e(1920×1080·1280×720 두 해상도
 
 단위 테스트 203개(도메인 규칙·표결 평가·조건·시계·서버 검증·live 어댑터), E2E 54개(27개 spec × 2 해상도). `e2e/fixtures.ts`가 모든 spec에 외부 요청 차단 fixture를 자동 적용해 `localhost` 밖으로 나간 요청이 있으면 테스트가 실패합니다.
 
+## 부스 운영(로컬 서버)
+
+```
+npm run booth                # git pull → npm ci(필요할 때만) → build → start → 모델 연결 확인
+npm run booth -- --skip-pull # 부스 회선이 없을 때: git pull 생략하고 있는 코드로 기동
+```
+
+저장소 루트에 `.env`가 있으면 `ANTHROPIC_API_KEY`를 셸에 자동으로 export한 뒤 서버를 켠다(서버 코드는 `.env`를 읽지 않는다). 기대 출력 세 줄:
+
+```
+[booth] LIVE · claude-sonnet-5
+[booth] 참가자 화면: http://localhost:8787/
+[booth] 개장 전 운영 메뉴 → 모델 연결 확인을 한 번 누른다
+```
+
+키가 없거나 잘못됐으면 첫 줄이 `[booth] SCRIPTED(키 없음 또는 인증 실패)`로 나온다. Ctrl-C로 서버를 끝낼 수 있다.
+
 ## 오프라인 실행 확인
 
 ```

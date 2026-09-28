@@ -18,6 +18,7 @@
     "server": "tsx server/index.ts",
     "start": "tsx server/index.ts",
     "eval:live": "tsx scripts/live-eval.ts",
+    "booth": "bash scripts/booth-update.sh",
     "check": "npm run lint && npm run typecheck && npm run typecheck:server && npm run test"
   },
   "dependencies": {
