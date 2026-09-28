@@ -105,6 +105,12 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // 임원 4명 모두 응답했으므로 판단 근거가 4개 모두 보인다.
   await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
   await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
+
+  // "체험 종료"로 재시작해도 live가 꺼지지 않는다(2026-09-28 시연 중 발견: 리셋이 mode를
+  // 초기값 scripted로 되돌리고 서버 확인은 첫 마운트에만 돌아 이후 세션이 전부 scripted였다).
+  await page.getByRole('button', { name: '체험 종료' }).click();
+  await expect(page.getByTestId('attract-mode-badge')).toContainText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 });
 
 test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드 도착 후 열린다(T46)', async ({ page }) => {

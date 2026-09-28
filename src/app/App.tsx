@@ -175,9 +175,11 @@ function SessionProvider({ children }: { children: ReactNode }) {
     [dynamicAdapter, orchestratorStore],
   );
 
-  // 세션 시작 전(ATTRACT·SELECT)에 한 번만 서버 가용성을 확인해 모드를 고정한다
-  // (mode.ts, AGENT_BOARDROOM_SPEC.md 6장). SET_MODE는 ATTRACT·SELECT 단계에서만
-  // 반영되므로 이미 세션이 시작된 뒤 응답이 와도 reducer가 조용히 무시한다.
+  // 세션 시작 전(ATTRACT·SELECT)에 서버 가용성을 확인해 모드를 고정한다(mode.ts,
+  // AGENT_BOARDROOM_SPEC.md 6장). SET_MODE는 ATTRACT·SELECT 단계에서만 반영되므로 이미
+  // 세션이 시작된 뒤 응답이 와도 reducer가 조용히 무시한다. 첫 마운트뿐 아니라 리셋으로
+  // sessionId가 바뀔 때마다 다시 확인한다 — reducer가 리셋 시 mode를 유지하므로 화면은
+  // 즉시 이전 모드로 시작하고, 그 사이 서버가 죽었으면 여기서 scripted로 내려간다.
   useEffect(() => {
     let cancelled = false;
     detectInitialMode().then((action) => {
@@ -188,7 +190,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [dispatch]);
+  }, [dispatch, session.sessionId]);
 
   // live 모드에서만 라운드를 자동으로 돌린다: OPINIONS 진입 시 초기 의견, 참가자 의견
   // 전달 후 REACTIONS, 후속 보완 제출 후 FOLLOWUP(최대 1회 — opinions가 2건이 되는

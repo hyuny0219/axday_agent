@@ -299,7 +299,10 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     case 'OPERATOR_RESET': {
       // 새 sessionId는 액션에 실려 온다. 같은 (session, action, now)를 두 번 reduce해도 같은
       // 결과가 나오도록 reducer 안에서 난수를 만들지 않는다.
-      return createInitialSession(now, action.nextSessionId);
+      // mode는 세션이 아니라 배포(서버 가용성)의 속성이므로 리셋해도 유지한다 — 초기값
+      // 'scripted'로 돌아가면 "체험 종료"·"새 체험" 뒤 live가 꺼진다(2026-09-28 시연 중 발견).
+      // App은 sessionId가 바뀔 때마다 서버를 다시 확인해 서버가 죽었으면 scripted로 내린다.
+      return { ...createInitialSession(now, action.nextSessionId), mode: session.mode };
     }
 
     case 'RECORD_ASSISTANT_ACTION': {
