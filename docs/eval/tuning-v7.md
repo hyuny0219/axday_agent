@@ -55,23 +55,22 @@
 
 이동 자체는 임원 판단·품질을 바꾸지 않았다. 비서실장 경로는 이 평가 세트가 재지 않으므로(round·vote만), 분리 효과는 구조로 보장한다.
 
-## after3 — "첫 의견부터 방향을 밝히라"로 stance 지시 수정(전수 재측정, 크레딧 충전 뒤)
+## after3 — "첫 의견부터 방향을 밝히라"로 stance 지시 수정(전수 재측정 144행, 실패 0)
 
-OPINIONS stance가 after·after2에서 48건 중 43~44건 UNDECIDED라, live에서 임원 의견 단계의 표정 배지가 거의 전부 "생각 중"으로 나올 상황이었다(T63의 취지 — 조건을 붙이기 전에 누가 반대인지 보이게 — 가 살지 않는다). `EXEC_DECISION_RULE`의 stance 문장을 "첫 의견부터 방향을 밝히고, 우려가 남아도 지금 표결한다면 어느 쪽인지 정하라. UNDECIDED는 자료로 어느 쪽도 말할 수 없을 때만 쓰고 그때는 무엇이 확인돼야 하는지 적으라"로 고쳤다. 첫 시도는 Anthropic 크레딧 소진으로 60/144행에서 멈췄고(잔액 부족 400), 충전 뒤 같은 명령으로 전수 재측정했다(`tuning-v7-after3.jsonl`, 144행).
+OPINIONS stance가 after·after2에서 48건 중 43~44건 UNDECIDED라, live에서 임원 의견 단계의 표정 배지가 거의 전부 "생각 중"으로 나올 상황이었다(T63의 취지 — 조건을 붙이기 전에 누가 반대인지 보이게 — 가 살지 않는다). `EXEC_DECISION_RULE`의 stance 문장을 "첫 의견부터 방향을 밝히고, 우려가 남아도 지금 표결한다면 어느 쪽인지 정하라. UNDECIDED는 자료로 어느 쪽도 말할 수 없을 때만 쓰고 그때는 무엇이 확인돼야 하는지 적으라"로 고쳤다. 첫 실행은 크레딧 소진으로 중단됐고, 두 번째 실행은 응답 실패 5행(provider_error 4·invalid_response 1)이 있어 "검증 실패 0"에 어긋났다(PR #11 Codex 11차 P2). 같은 최종 문구로 세 번째 실행해 **144행 전부 응답, 실패 0**을 확보했다(`tuning-v7-after3.jsonl`은 이 세 번째 기록이다).
 
-| 항목 | after2 | after3 |
+| 항목 | after2 | after3(최종 문구, 실패 0) |
 | --- | --- | --- |
-| 응답 실패 | 0 | **5**(provider_error 4 — `condition_supplement-2` VOTE 4역할, 일시 제공자 오류 / invalid_response 1 — `no_condition-2` REACTIONS CFO, 스키마 검증 실패) |
-| stance 누락(answered 기준) / `E\d` 잔존 / 존댓말 위반 | 0 / 0 / 0 | 0 / 0 / 0 |
-| VOTE 분포(answered 44건) | YES 12 · NO 36 | 조건 보완 YES 8/8(4건 provider_error) · 상충 12 NO · 부정 12 NO · 조건 없음 12 NO — 경로별 판단 동일 |
-| **OPINIONS stance(48건)** | UNDECIDED 43 · AGAINST 5 · FOR 0 | **FOR 13 · AGAINST 19 · UNDECIDED 16** — 방향 표명 5/48(10%) → 32/48(67%) |
-| 역할별 OPINIONS | — | CEO FOR 12/12, CISO AGAINST 12/12, CFO AGAINST 6·UNDECIDED 6, CAIO UNDECIDED 10·FOR 1·AGAINST 1 |
-| REACTIONS stance(47건) | UNDECIDED 22 · AGAINST 14 · FOR 12 | AGAINST 29 · FOR 18 · **UNDECIDED 0** |
-| OPINIONS stance–최종 표 일치(비교 가능 쌍) | — | 17/30 |
-| 문장 길이 최대 / 지연 중앙값·최대 / 8초 초과 | 98·119자 / 3971·5053ms / 0 | 95·106자 / 4044·6224ms / 0 |
+| 응답 실패 / stance 누락 / `E\d` 잔존 / 존댓말 위반 | 0 / 0 / 0 / 0 | **0 / 0 / 0 / 0** |
+| VOTE 분포(48건) | YES 12 · NO 36 | YES 12 · NO 36 — 조건 보완 12/12 YES, 상충·부정·조건 없음 36/36 NO(경로별 판단 동일) |
+| **OPINIONS stance(48건)** | UNDECIDED 43 · AGAINST 5 · FOR 0 | **FOR 13 · AGAINST 20 · UNDECIDED 15** — 방향 표명 5/48(10%) → 33/48(69%) |
+| 역할별 OPINIONS | — | CEO FOR 12·AGAINST 0·UNDECIDED 0 / CFO FOR 1·AGAINST 4·UNDECIDED 7 / CAIO FOR 0·AGAINST 4·UNDECIDED 8 / CISO FOR 0·AGAINST 12·UNDECIDED 0 |
+| REACTIONS stance(48건) | UNDECIDED 22 · AGAINST 14 · FOR 12 | AGAINST 31 · FOR 17 · **UNDECIDED 0** |
+| OPINIONS stance–최종 표 일치(비교 가능 쌍) | — | 20/33 |
+| 문장 길이 최대 / 지연 중앙값·최대 / 8초 초과 | 98·119자 / 3971·5053ms / 0 | 102·113자 / 4113·5060ms / 0 |
 
-읽기: 첫 의견 단계에서 CEO는 방향 쪽, CISO는 위험 쪽으로 즉시 기울고 CFO는 반, CAIO는 대부분 유보한다 — 무대에서 "누가 반대인지"가 처음부터 보이고, 참가자 의견이 들어온 뒤(REACTIONS)에는 넷 다 방향을 밝힌다. CAIO의 유보(10/12)는 자료에 기술 구현 판단 근거가 적은 이 안건의 성격으로 보이며, 안건이 바뀌면 다시 본다. OPINIONS stance와 최종 표의 일치 17/30은 "처음 입장이 조건에 따라 바뀐다"는 체험 구조와 어긋나지 않는 관측값이다(기준 없음). 실패 5행 중 provider_error 4는 같은 케이스의 VOTE 4건이 동시에 난 일시 오류이고, invalid_response 1건은 검증 실패라 완료 기준 "검증 실패 0"에서 1건 어긋난다 — 재실측을 한 번 더 돌리면 잔액을 다시 쓰므로 그대로 기록하고, 다음 프롬프트 라운드(T59)의 측정에서 재확인한다.
+읽기: 첫 의견 단계에서 CEO는 방향 쪽, CISO는 위험 쪽으로 기울고 CFO·CAIO는 절반쯤 유보한다 — 무대에서 "누가 반대인지"가 처음부터 보이고, 참가자 의견이 들어온 뒤(REACTIONS)에는 넷 다 방향을 밝힌다. OPINIONS stance와 최종 표의 일치 20/33은 "처음 입장이 조건에 따라 바뀐다"는 체험 구조와 어긋나지 않는 관측값이다(기준 없음). 앞선 실행의 invalid_response 1건은 재현되지 않았다.
 
 ## 처리
 
-(after 기준) 완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. after2(규칙 이동)도 동일하게 충족. after3(stance 문구, 전수 재측정)는 stance 누락·`E\d`·존댓말 0 유지, VOTE 판단 동일, OPINIONS 방향 표명 10%→67%. 단 invalid_response 1건(139/144 응답)이 있어 "검증 실패 0"은 1건 어긋남 — 기록으로 남기고 T59 측정에서 재확인. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.
+(after 기준) 완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. after2(규칙 이동)도 동일하게 충족. after3(최종 stance 문구, 전수 재측정 144행)는 **실패 0**·stance 누락 0·`E\d` 0·존댓말 0, VOTE 판단 동일, OPINIONS 방향 표명 10%→69%. 완료 기준 네 항목 모두 최종 문구 기준으로 충족. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.

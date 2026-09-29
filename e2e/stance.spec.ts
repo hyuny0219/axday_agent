@@ -4,7 +4,8 @@
 // 실제 표 집계(같은 표 3석 이상)와 일치하는지 단언한다. live는 mock 서버(8787)의 고정
 // stance로 무대·본문 표정이 채워지는지만 확인한다 — 라운드 응답이 배열 하나로
 // 한꺼번에 오므로(server/handlers/round.ts, Promise.allSettled 뒤 단일 응답) 실제
-// 네트워크 도착이 임원별로 갈라지지 않는다. "도착 순서대로 하나씩"은 라운드가 바뀔
+// 네트워크 도착이 임원별로 갈라지지 않는다(라운드 계약: /api/board/round가 4명 응답을 한 번에
+// 돌려준다 — DESIGN_SPEC v1.0 5절 표정 배지 항목, Codex 11차 P2로 명세를 이 구조에 맞춤). 갱신 단위는 라운드이며 아래는 라운드가 바뀔
 // 때마다(OPINIONS → REACTIONS) 값이 갱신되는 것으로 확인한다.
 
 import { test, expect, type Page } from './fixtures';
