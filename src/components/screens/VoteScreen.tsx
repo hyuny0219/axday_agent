@@ -7,6 +7,9 @@
 // T45(조종석 배치): 왼쪽 열은 찬성/반대 2열 + 확정 CTA, 오른쪽 열은 안건 카드·
 // 조건을 담는다(DESIGN_SPEC.md v1.0 6절 표). T62: 보류를 없애 2열로 줄였다.
 
+import { ExecStanceList } from '../parts/ExecStanceList';
+import type { ExecMemberId } from '../../content/types';
+import type { Stance } from '../../domain/types';
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
@@ -19,6 +22,8 @@ export interface VoteScreenProps {
   pendingVote: PendingVote | null;
   mode: SessionMode;
   execBallotsPending: boolean;
+  /** 무대 표정 배지의 접근 가능한 텍스트(sr-only, PR #11 Codex 13차). */
+  stances: Record<ExecMemberId, Stance>;
   onSelectVote: (vote: PendingVote) => void;
   onConfirmVote: () => void;
 }
@@ -32,6 +37,7 @@ const VOTE_LABELS: Record<PendingVote, string> = {
 
 export function VoteScreen({
   scenario,
+  stances,
   motion,
   pendingVote,
   mode,
@@ -98,6 +104,7 @@ export function VoteScreen({
       </div>
       <div className="app-body__content screen vote-screen__info">
         <h2 className="vote-screen__title">최종 투표</h2>
+        <ExecStanceList stances={stances} />
         <article className="vote-screen__motion-card" data-testid="vote-motion-card">
           <p className="vote-screen__original">{scenario.originalMotion.text}</p>
           {motion.effectiveConditionIds.length > 0 ? (

@@ -65,9 +65,10 @@ load_env_file() {
 if [ -f .env ]; then
   load_env_file .env
 fi
-# 서버(server/config.ts parsePort)와 같은 규칙: 양의 정수가 아니면 8787로 본다. 스크립트만
+# 1..65535 범위의 정수가 아니면 8787로 본다(서버 parsePort는 양수만 보지만 Node listen()은 65535 초과를
+# ERR_SOCKET_BAD_PORT로 거부한다 — PR #11 Codex 13차). 스크립트만
 # 원문을 쓰면 서버는 8787에서 뜨는데 확인 주소가 어긋나 20초 뒤 종료된다(PR #11 Codex 8차).
-if [ -n "${PORT:-}" ] && ! { [[ "${PORT}" =~ ^[0-9]+$ ]] && [ "${PORT}" -gt 0 ]; }; then
+if [ -n "${PORT:-}" ] && ! { [[ "${PORT}" =~ ^[0-9]+$ ]] && [ "${PORT}" -ge 1 ] && [ "${PORT}" -le 65535 ]; }; then
   echo "[booth] PORT=${PORT}는 유효한 포트가 아니라 8787로 본다(서버도 같은 규칙)"
   PORT=""
 fi

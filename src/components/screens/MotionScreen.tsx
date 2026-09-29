@@ -4,6 +4,9 @@
 // T45(조종석 배치): 왼쪽 열은 "이 안건으로 표결" CTA만, 오른쪽 열은 안건 카드·반영
 // 조건·남은 과제를 담는다(DESIGN_SPEC.md v1.0 6절 표).
 
+import { ExecStanceList } from '../parts/ExecStanceList';
+import type { ExecMemberId } from '../../content/types';
+import type { Stance } from '../../domain/types';
 import { useMemo } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
@@ -17,11 +20,14 @@ export interface MotionScreenProps {
    * DESIGN_SPEC.md v1.0 7절 "후속 대기 게이트"). scripted와 '의견 유지'(후속 라운드
    * 없음) 경로는 항상 undefined/false로 넘어와 CTA가 그대로 활성이다. */
   freezeDisabled?: boolean;
+  /** 무대 표정 배지의 접근 가능한 텍스트(sr-only, PR #11 Codex 13차). */
+  stances: Record<ExecMemberId, Stance>;
   onFreeze: (confirmedConditionIds: string[]) => void;
 }
 
 export function MotionScreen({
   scenario,
+  stances,
   opinions,
   freezeDisabled = false,
   onFreeze,
@@ -52,6 +58,7 @@ export function MotionScreen({
       </div>
       <div className="app-body__content screen motion-screen__info">
         <h2 className="motion-screen__title">최종 안건</h2>
+        <ExecStanceList stances={stances} />
         <article className="motion-screen__card" data-testid="motion-card">
           <p className="motion-screen__original">{scenario.originalMotion.text}</p>
           <h3 className="motion-screen__section-label">확정 조건</h3>

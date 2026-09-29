@@ -424,6 +424,7 @@ function StageRouter() {
       return (
         <MotionScreen
           scenario={scenario}
+          stances={stancesFor(session, scenario)}
           opinions={session.opinions}
           freezeDisabled={session.mode === 'live' && followUpPending}
           onFreeze={(confirmedConditionIds) =>
@@ -439,6 +440,7 @@ function StageRouter() {
       return (
         <VoteScreen
           scenario={scenario}
+          stances={stancesFor(session, scenario)}
           motion={session.finalMotion}
           pendingVote={session.pendingVote}
           mode={session.mode}

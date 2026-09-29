@@ -117,6 +117,28 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
   });
 });
 
+test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남는다(sr-only)', async ({ page }) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('followup-option-2').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차).
+  for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|미정/);
+  }
+  await page.getByTestId('freeze-motion').click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|미정/);
+  }
+});
+
 test.describe('live mock: 무대 표정', () => {
   test('라운드가 도착하면 표정 배지가 채워지고 RESULT까지 고정되며 표 집계와 도장 여부가 일치한다', async ({
     page,
