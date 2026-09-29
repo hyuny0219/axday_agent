@@ -794,3 +794,20 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `grep -rn "익명제로\|익명 전환\|익명으로 전환\|익명제 전환" src server docs/SCENARIO_ANON_BOARD.md scripts e2e tests`가 0건(TASKS·eval 기록 제외). 바뀐 문구 목록을 보고서에 실어 사용자가 읽고 확인.
 - 순서: T59 앞(T59가 같은 문구를 말투로 다시 손보므로 뜻을 먼저 고정한다). T57·T58과는 독립.
 - 크기: M.
+
+## T62 표결을 찬성·반대 두 가지로 — 보류(HOLD) 제거
+
+- 목표: 표결 선택지에서 보류를 없애고 **찬성·반대**만 둔다(2026-09-29 사용자: "보류가 애매하다"). 안건이 가벼운 개인 딜레마로 바뀔 예정(사용자가 목록을 따로 준다)이라 세 갈래 엔딩이 어울리지 않는다. 결과도 **가결·부결** 두 가지다.
+- 읽을 것: `src/domain/voting.ts`(tally·decideMember·participantDecisive·fillMissingBallots), `src/domain/types.ts`·`src/content/types.ts`(Vote·PendingVote·SessionOutcome), `server/validate.ts`(VOTE_VALUES), `server/prompts/common.ts`(표 세 가지 고려 지시)·`server/prompts/roles/ceo.ts`, `server/providers/mock.ts`, `src/content/scenarios/anonBoard.ts`(voteRules·resultCopy)·`aiAssistant.ts`, `src/components/screens/VoteScreen.tsx`·`ResultScreen.tsx`·`BriefingScreen.tsx`, `src/components/resultStamp.ts`·`resultEpilogue.ts`, `src/components/parts/StageBand.tsx`(VoteBadge), `src/styles/screens/vote.css`·`result.css`·`stage.css`(--vote-hold), `scripts/live-eval.ts`·`scripts/eval-set-run.ts`(표 분포 집계), `docs/AGENT_BOARDROOM_SPEC.md`(표결 규칙), `docs/design/DESIGN_SPEC.md` 4장 "최종 투표 radio"·3장 결과 행, `docs/SCENARIO_ANON_BOARD.md` "표결 우선순위"·"결과", `docs/AGENDA_CANDIDATES.md` 1절 관문 "구조", `docs/FACILITATOR_GUIDE.md`, README.
+- 만들 것:
+  1. **도메인**: `Vote`를 `'YES' | 'NO' | 'UNCAST'`로, `PendingVote`를 `'YES' | 'NO'`로, `SessionOutcome`을 `'PASS' | 'REJECT' | null`로. `tally`: **YES ≥ 3이면 PASS, 아니면 REJECT**(5석 과반; UNCAST로 과반에 못 미치면 부결이며 `limitedByUnavailable` 안내는 그대로). `counts`에서 HOLD 제거. `participantDecisive`의 대안 표 목록에서 HOLD 제거. 일치하는 규칙이 없을 때의 예외는 유지.
+  2. **시나리오 데이터**: `voteRules`의 `vote: 'HOLD'` 규칙(anonBoard 3건, aiAssistant 해당분)을 NO로 옮기고 이유 문구를 "조건이 갖춰지기 전에는 찬성할 수 없다"는 뜻으로 다듬는다(규칙 총괄성 유지). `resultCopy`에서 보류 엔딩 제거, `sixMonthsLater`도 가결·부결 두 갈래만. 서버 사본 `server/scenario-data.ts`·mock 고정 표(`server/providers/mock.ts`)도 같이.
+  3. **서버·프롬프트**: `VOTE_VALUES`를 `['YES','NO']`로, 스키마·검증 갱신. 가드레일의 "찬성·보류·반대 세 가지를 모두 고려" 지시를 "찬성·반대 중 하나를 실제 근거로 고르되, 조건이 부족하면 반대하고 그 이유를 적으라"로. `PROMPT_VERSION` v5 → v6(스키마가 바뀌므로). 고정 평가 세트로 전후 비교(`docs/eval/tuning-v6.md`): 검증 실패 0, 무조건 찬성·반대만 내는 역할 없음(이제 두 표뿐이므로 "역할별로 YES·NO가 모두 나타나는가"로 기준을 다시 적는다), `E\d` 잔존 0, 존댓말 위반 0. tuning-v5.md의 T59 후속 항목은 그대로 T59에 남긴다.
+  4. **화면**: VoteScreen radio를 2열(찬성 ✓ / 반대 ✕), 확정 CTA 규칙 유지. 결과 배너·도장·5석 카드·무대 VoteBadge에서 보류 색·아이콘 제거, `--vote-hold` 토큰은 다른 사용처가 없으면 삭제. 결과 "이사회 한 장 요약"의 표 서술과 에필로그 두 갈래. 브리핑 "최종 결정: 승인·보류·부결" 문구를 "최종 결정: 찬성·반대"로. 회의록(발언 흐름)은 표를 싣지 않으므로 변경 없음.
+  5. **문서**: AGENT_BOARDROOM_SPEC 표결 규칙(과반·부결 규칙), DESIGN_SPEC 4장 radio 2열·3장 결과 두 엔딩(같은 크기), SCENARIO_ANON_BOARD 표결 우선순위·결과, AGENDA_CANDIDATES 관문 "구조"를 "상충 조건쌍이 있고 가결·부결 두 엔딩이 모두 납득되는가"로, FACILITATOR_GUIDE·README의 "찬성/보류/반대" 표기.
+  6. **테스트**: 단위(voting·session·liveMode·publicPayload·resultSummary·resultEpilogue·server vote)와 e2e(`vote-radio-HOLD` 단언, flow-full·briefing·live·screenshots) 갱신, 스크린샷 갱신.
+- 허용 경로: `src/`, `server/`, `scripts/`, `tests/`, `e2e/`, `docs/`(TASKS·eval 포함).
+- 하지 말 것: UNCAST(응답 실패) 경로 제거. 조건·상충쌍·후속 질문 구조 변경. 안건 내용 교체(별도 카드). 동수 규칙을 새로 발명하기 — 5석 과반(YES ≥ 3) 하나로 통일한다.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `grep -rn "HOLD\|'hold'" src server scripts e2e tests`가 0건(문서·eval 기록 제외). 실제 키로 `tuning-v6` 전후 비교표. 두 해상도 스크린샷에서 radio 2열·결과 두 엔딩 확인.
+- 순서: 지금(안건 교체·T59보다 먼저 — 표결 구조가 콘텐츠 형식을 정한다). T57·T58의 요약·보고서는 이 카드 뒤 두 엔딩 기준으로 만든다.
+- 크기: L.
