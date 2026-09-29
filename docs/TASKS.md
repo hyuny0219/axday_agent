@@ -811,3 +811,30 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `grep -rn "HOLD\|'hold'" src server scripts e2e tests`가 0건(문서·eval 기록 제외). 실제 키로 `tuning-v6` 전후 비교표. 두 해상도 스크린샷에서 radio 2열·결과 두 엔딩 확인.
 - 순서: 지금(안건 교체·T59보다 먼저 — 표결 구조가 콘텐츠 형식을 정한다). T57·T58의 요약·보고서는 이 카드 뒤 두 엔딩 기준으로 만든다.
 - 크기: L.
+
+## T63 임원 입장 표정을 단계마다 상시 표시 + "설득 도장"(내 표가 과반이면 추가 도장)
+
+- 목표: (1) 임원 4명이 안건에 대해 지금 기울어 있는 쪽을 **표정**으로 명패 옆에 항상 보여주고, 단계가 넘어갈 때(또는 live 응답이 올 때) 갱신한다. (2) 결과 화면에서 **내 표와 같은 표가 나를 포함해 3석 이상(5석 과반)**이면 가결·부결 도장 옆에 두 번째 도장을 찍는다(2026-09-29 사용자: "AI 임원들이 안건을 보고 느낀 감정을 항상 표시하고, 마지막에 설득되어 내가 선택한 표가 과반수 이상이면"). 도장은 하나, 규칙도 하나다. T62(찬성·반대 두 표) 뒤에 진행한다.
+- 읽을 것: `src/domain/voting.ts`(decideMember·decideBoard·tally — T62 반영본), `src/content/types.ts`(VoteRule·VoteContext), `src/components/parts/StageBand.tsx`·`src/styles/screens/stage.css`(명패·VoteBadge·순차 공개), `src/components/resultStamp.ts`·`ResultScreen.tsx`·`result.css`(도장·순차 연출·한 장 요약), `server/validate.ts`·`server/prompts/common.ts`·`server/prompts/roles/*.ts`·`server/providers/mock.ts`(라운드 응답 스키마), `src/services/boardAgents/live.ts`·`src/domain/types.ts`(Statement), `docs/design/DESIGN_SPEC.md` v1.0 1·5절(무대 오버레이)·9절(한 장 요약), `docs/AGENT_BOARDROOM_SPEC.md` 4장(응답 계약), `docs/FACILITATOR_GUIDE.md`.
+- 만들 것:
+  1. **도메인** `src/domain/stance.ts`(순수 함수): `Stance = 'FOR' | 'AGAINST' | 'UNDECIDED'`. `scriptedStances(scenario, session)`: 단계별로 아래 표대로 계산. OPINIONS 이후는 **그 시점에 확정된 조건**(`opinions[*].confirmedConditionIds` 병합)으로 `decideMember(voteRules, ctx)`를 미리 돌려 YES→FOR, NO→AGAINST. BRIEFING(과 그 이전)은 넷 다 UNDECIDED. MOTION·VOTE는 마지막 확정 집합으로 고정. `liveStances(session)`: transcript의 각 임원 **가장 최근 발언**의 `stance` 필드(아래 3), 발언 전이면 UNDECIDED, 응답 실패면 직전 값 유지. `persuasionStamp(ballots, participantVote)`: `counts[participantVote] >= 3`이면 `{ earned: true, sameVoteSeats }`, 아니면 `{ earned: false, sameVoteSeats }`(참가자 표 포함해 센다. UNCAST는 세지 않는다).
+
+     | 단계 | 표정 | 갱신 계기 |
+     | --- | --- | --- |
+     | BRIEFING | 넷 다 생각 중 | — |
+     | OPINIONS | 첫 입장 | scripted: 단계 진입 즉시 넷 함께 / live: 응답 도착 순서대로 하나씩 |
+     | DISCUSS | 유지 | — |
+     | REACTIONS | 확정 조건 반영해 갱신, 바뀐 임원은 1회 강조 | 의견 전달 직후(반응 라운드), 후속 답 직후(후속 라운드) |
+     | MOTION·VOTE | 고정 | — |
+     | RESULT | 표정 대신 실제 표 배지(기존 VoteBadge) | — |
+
+  2. **무대 표시** `StageBand.tsx`·`stage.css`: 명패 옆 지름 18px 표정 배지(`stage-band__mood stage-band__mood--for|against|undecided`, `data-testid="stage-mood-<memberId>"`). **CSS/inline SVG 세 가지**(밝은 얼굴·굳은 얼굴·생각 중), 이모지 금지(부스 PC OS마다 다르게 그려진다). 색은 `--vote-yes`(찬성 쪽)·`--vote-no`(반대 쪽)·`--text-muted`(미정)와 동일 계열로 하되 아이콘 모양으로도 구분(색만으로 구분 금지). 값이 바뀐 임원은 배지에 200ms 스케일 1회(`prefers-reduced-motion`이면 없음). 무대는 `aria-hidden`이므로 접근 가능한 텍스트는 본문 카드(임원 카드의 상태 칩 옆 "찬성 쪽/반대 쪽/미정")에 둔다. RESULT에서는 표정 배지를 그리지 않는다(표 배지가 대신).
+  3. **live 응답 계약**: 라운드 응답 스키마에 `stance: 'FOR' | 'AGAINST' | 'UNDECIDED'` 필수 필드 추가(`server/validate.ts`), 역할 프롬프트 공통 지시 "발언 끝에 지금 기울어 있는 쪽을 stance로 적으십시오. 조건이 갖춰지지 않아 유보하면 UNDECIDED"를 추가. `Statement`에 `stance` 실어 transcript에 기록, mock 제공자 고정값. `PROMPT_VERSION` v6 → v7. 고정 평가 세트 전후 비교(`docs/eval/tuning-v7.md`): 검증 실패 0(stance 누락 0), `E\d` 잔존 0, 존댓말 위반 0, 그리고 **OPINIONS stance와 최종 표의 일치율**(FOR→YES, AGAINST→NO)을 기록한다 — 기준을 새로 못 박지 않고 관측값으로만 남긴다(T59에서 판단).
+  4. **결과 도장** `resultStamp.ts`·`ResultScreen.tsx`·`result.css`: 기존 도장(가결·부결) 0.4초 뒤 두 번째 도장 `result-stamp--persuasion`("설득 성공" 문구, `data-testid="persuasion-stamp"`) — `earned`일 때만. 이사회 한 장 요약에 근거 한 줄(`persuasion-summary`): 획득 시 "이사님 표 찬성 · 같은 표 4석 → 추가 도장", 미획득 시 "이사님 표 찬성 · 같은 표 2석 · 추가 도장은 3석부터". 두 해상도 무스크롤 유지.
+  5. **문서**: DESIGN_SPEC 5절 오버레이에 표정 배지, 9절에 설득 도장 규칙·문구, AGENT_BOARDROOM_SPEC 4장 응답 계약에 stance, FACILITATOR_GUIDE에 "추가 도장이 화면에 찍히면 실물 도장을 준다(진행 요원 판단 기준은 한 장 요약의 근거 줄)". 시나리오 문서에 "표정은 표결 규칙표에서 미리 계산한 값"임을 한 줄.
+  6. **테스트**: `tests/domain/stance.test.ts`(단계별 표, 조건 확정 후 FOR/AGAINST 전환, UNCAST 제외, 과반 판정 경계 2·3석), 서버 스키마 테스트(stance 누락 → 검증 실패), e2e `e2e/stance.spec.ts`(scripted: OPINIONS 표정 4개 표시 → 조건 확정 후 REACTIONS에서 바뀐 임원 배지 값 변화 → RESULT에서 표정 없음·도장 여부가 표 집계와 일치; live mock: 응답 도착 순서로 배지가 하나씩 바뀜), 스크린샷 갱신.
+- 허용 경로: `src/domain/stance.ts`(신규), `src/components/`, `src/styles/screens/`, `src/services/boardAgents/`, `src/domain/types.ts`(Statement 필드), `server/validate.ts`, `server/prompts/`, `server/providers/mock.ts`, `scripts/`, `docs/`, `tests/`, `e2e/`.
+- 하지 말 것: 표결 집계·결론 계산 변경(T62 규칙 그대로). 도장 종류 추가(하나뿐). 표정을 색만으로 구분. 이모지 사용. 표정 값을 무대 이미지(정적 아트) 교체로 구현하기 — 오버레이 배지만.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. scripted 완주에서 조건 없이 갈 때와 조건 붙일 때 표정 전환이 다르게 보이고, 결과의 도장 여부가 `tally`와 일치함을 e2e로 단언. 실제 키로 tuning-v7 전후 비교표(검증 실패 0). 두 해상도 스크린샷.
+- 순서: T62 뒤 바로. T59(말투)의 프롬프트 변경과 한 버전(v7)으로 묶어 실측을 아낄 수 있으면 묶는다.
+- 크기: M.
