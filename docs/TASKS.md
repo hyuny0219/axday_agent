@@ -844,3 +844,22 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. scripted 완주에서 조건 없이 갈 때와 조건 붙일 때 표정 전환이 다르게 보이고, 결과의 도장 여부가 `tally`와 일치함을 e2e로 단언. 실제 키로 tuning-v7 전후 비교표(검증 실패 0). 두 해상도 스크린샷.
 - 순서: T62 뒤 바로. T59(말투)의 프롬프트 변경과 한 버전(v7)으로 묶어 실측을 아낄 수 있으면 묶는다.
 - 크기: M.
+
+## T64 게임형 디자인 스킨 — "기밀 작전실"(C안): 왼쪽 무대는 HUD, 본문은 서류철
+
+- 목표: 시안 캔버스 "BOARDROOM 2026 게임형 디자인 시안"(claude.ai/artifact/3rYVBnDUBiKZFSMoCXoVRA)의 C안을 코드에 옮긴다(2026-09-29 사용자 확정). 미래 지휘소에서 요원들이 회의하는 느낌 — **왼쪽 무대는 A안(시안 HUD)**, **오른쪽 열·CTA·발언 흐름은 B안(종이 서류철·타자기 라벨·붉은 스탬프·앰버 CTA)**, 명패는 코드네임 없이 직함. 레이아웃·흐름·동작·문구는 바꾸지 않는다(스킨 교체). 참고 A·B 보드는 캔버스 아래 줄에 남아 있다.
+- 읽을 것: 시안 캔버스의 `Main.dc.html`(상황 파악)·`C_Result.dc.html`(가결)·`C_Result_Reject.dc.html`(부결) 원본과 오른쪽 요약 메모, `src/styles/tokens.css`, `src/styles/screens/shell.css`·`stage.css`·`minutes.css`·`briefing.css`·`opinions.css`·`vote.css`·`result.css`, `src/components/parts/Header.tsx`·`ProgressStrip.tsx`·`StageBand.tsx`·`MinutesPanel.tsx`, `src/components/screens/ResultScreen.tsx`·`resultStamp.ts`, `docs/design/DESIGN_SPEC.md` 2·4·5·6·9절.
+- 만들 것:
+  1. **토큰 2계열** `tokens.css`: 무대(HUD) 계열 — `--hud-bg #050b14`, `--hud-line #28d9f0`(브래킷·판독 라벨), `--hud-warn #ffb457`; 본문(서류) 계열 — `--bg #0b0d10`, `--paper #ece7dc`, `--paper-2 #fbf8f1`, `--ink #1b1a17`, `--ink-muted #5c5850`, `--label #6b4a1f`(타자기 라벨), `--amber #e0a34a`(CTA), `--stamp-red #b23b3b`, `--stamp-amber #b8781f`, 표 색 `--vote-yes #1f8f5f`(종이 위)·`#7ce0b3`(어두운 바탕), `--vote-no #b23b3b`·`#e06b6b`. 배경에 앰버 40px 격자(5% 알파)와 좌상단 앰버 라디얼. 서체: `--font-label 'Special Elite'`(라벨·칩·로그 발화자), `--font-hud 'Share Tech Mono'`(무대 판독·명패), 본문·제목은 기존 Noto Sans KR·Black Han Sans. Google Fonts 링크는 **오프라인 부스**를 위해 `public/fonts/`에 woff2로 내려받아 `@font-face`로 싣는다(런타임 외부 요청 금지, `e2e/fixtures.ts` 외부 차단 유지).
+  2. **헤더·진행 스트립** `Header.tsx`·`ProgressStrip.tsx`·CSS: 로고 옆 "CASE FILE No. 02 · SESSION <sessionId 앞 4자>" 라벨(타자기), 단계 탭 "01 상황 파악 … 05 표결"을 각진 박스(현재 단계 = 종이색 채움, 나머지 = 회색 테두리)로, LIVE 배지는 붉은 테두리 기울인 스탬프 칩(scripted는 "SIM" 칩), 운영 버튼은 타자기 라벨. 문구·testid 유지.
+  3. **무대(HUD)** `stage.css`·`StageBand.tsx`: 프레임 시안 1px 테두리 + 네 귀퉁이 22px 브래킷, 스캔라인(2px/5px repeating) + 상하 네이비 비네트, 상단 좌 "CAM 01 · 회의실 A · REC ●" 판독 라벨·상단 우 "CLASSIFIED" 앰버 칩(장식, aria-hidden 유지). 명패: 어두운 바탕(rgba(5,11,20,.9))에 역할색 테두리(CEO 시안·CFO 파랑·CAIO 민트·CISO 앰버) + HUD 서체 대문자 직함, 아래 작은 회색 "방향 · 찬성 쪽" 식 역할·기울기 캡션(T63 표정 배지는 명패 안 왼쪽에 유지). 말풍선은 어두운 판 + 시안 테두리, 발화자 라벨 "의장 · CEO". 줄 수 자르기 규칙 불변. 참가자 좌석 글로우·표 배지 규칙 불변.
+  4. **CTA** 앰버 채움·검정 글자·굵은 그림자(6px 6px 0 #3a2a12)·모서리 14px 깎기(clip-path). 보조 CTA(회의록 전문 보기 등)는 앰버 테두리만. focus-visible 테두리 유지.
+  5. **발언 흐름** `minutes.css`: 패널 어두운 판(#15171b, 회색 테두리), 머리글 "TRANSCRIPT · 발언 흐름"(타자기 앰버) + "n ENTRIES", 행 앞에 `[mm:ss] CEO` 타임스탬프·직함(타자기 앰버). 타임스탬프는 세션 시작 기준 경과 시간(`Statement`/roundLog에 도착 시각이 없으면 항목 순서 기준 표시는 하지 않고 직함만). 전문·내부 스크롤·바닥 따라가기 규칙 불변.
+  6. **오른쪽 열(서류철)**: 종이색 패널(8px 8px 0 #1f2126 그림자), 우상단 "CONFIDENTIAL" 붉은 기울인 스탬프(장식), "CASE 02" 칩 + 사건 한 줄, 결정 질문 Black Han Sans 34px 잉크색, SITREP·PROPOSAL·UNKNOWN 라벨(타자기)로 현재 상황·제안·미정, "YOUR ORDERS · 특별 이사" 점선 상자 + "FINAL CALL: 찬성 / 반대", 자료 카드 "EXHIBIT A~D · 자료명"(2열, 종이-2 바탕). 임원 의견·반응·표결·결과 화면의 오른쪽 열도 같은 종이 패널·라벨 체계로(표결 radio 2열은 종이 위 카드).
+  7. **결과 화면** `result.css`·`ResultScreen.tsx`·`resultStamp.ts`: 무대에는 표 배지만. 오른쪽 종이 보고서("DEBRIEF 02 · 이사회 한 장 요약") 위쪽을 두 열로 — 왼쪽 제목·YOUR CONDITIONS·YOUR WORDS, **오른쪽 200px 도장 칸**. 도장은 잉크(붉은 원형 "가결/부결 · APPROVED/REJECTED · n:m", multiply), 설득 도장(앰버, T63)은 0.4초 뒤 도장 칸 왼쪽 아래에 겹침. 미획득이면 점선 한 줄 "BONUS 미획득 · 같은 표 n석 · 3석부터". 아래 VERDICTS(임원별 판단) 전체 폭, 맨 아래 "+6 MONTHS" 한 줄. 왼쪽 열 TALLY 패널(어두운 판, 5칸 막대) + "체험 종료"(앰버) + "회의록 전문 보기"(보조, T58). **무대 우하단 도장 규칙(DESIGN_SPEC 6절)은 폐기.**
+  8. **문서·스크린샷**: DESIGN_SPEC에 v1.1 "게임형 스킨" 절(토큰 2계열·라벨 체계·도장 위치·폐기 규칙), FACILITATOR_GUIDE 화면 안내 문구, `docs/screenshots` 갱신, 시안 캔버스 링크 기록.
+- 허용 경로: `src/styles/`, `src/components/`, `public/fonts/`(신규), `index.html`(폰트 preload), `docs/`, `e2e/`(스크린샷·스타일 단언), `tests/`.
+- 하지 말 것: 도메인·서버·프롬프트 변경. 문구·testid·흐름 변경. 이모지 아이콘. 색만으로 상태 구분(아이콘·글자 병기 유지). 런타임 외부 폰트 요청. 200% 확대(960×540) 스크롤 경로·reduced-motion·키보드 경로 깨뜨리기. 코드네임 사용.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(외부 요청 0건 fixture 포함). 두 해상도 스크린샷을 시안과 나란히 놓고 사용자가 확인. 1272×698 축소 경로에서 종이 패널 그림자·스탬프가 잘리지 않음.
+- 순서: 시연(2026-09-29 15:00) 뒤 시작. T58(전문 패널)은 이 카드에 흡수하거나 직후에.
+- 크기: L.
