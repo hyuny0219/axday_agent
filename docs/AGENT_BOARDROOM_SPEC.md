@@ -49,7 +49,7 @@ DISCUSS에서 ‘내 발언 정리’를 누르면 현재 draftText, 자료 본�
 
 각 요청에는 sessionId/requestId/roleId/mode/stage/transcriptRevision을 넣고 발언 정리에는 draftRevision, 최종표에는 motionId/motionHash를 추가한다. 임원별 같은 회의 snapshot을 사용하며 다른 세션의 기록을 공유하지 않는다.
 
-- 발언 응답: roleId, message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds. 토론 응답에 ballot을 허용하지 않는다.
+- 발언 응답: roleId, message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds, stance(FOR/AGAINST/UNDECIDED — 지금 기울어 있는 쪽, T63). 토론 응답에 ballot을 허용하지 않는다.
 - 최종 표 응답: roleId, motionId, motionHash, vote(YES/NO), reason, evidenceIds, remainingConcerns.
 - 비서 응답: draftRevision, draftText, evidenceIds, suggestedConditionIds. 조건은 참가자 확인 전까지 제안이다.
 - 저장할 Ballot에는 source(live/scripted/unavailable), modelId, promptVersion, requestId, motionHash와 confirmedAt을 추가한다. 모델 공급자 원문 로그 대신 필요한 짧은 근거와 버전 정보를 보관한다. 참가자 원문·AI 초안을 관람 payload에 넣지 않는다.
