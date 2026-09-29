@@ -264,17 +264,21 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 최종안이 고정되는 즉시(finalMotion이 채워지는 즉시) 임원 최종표를 병렬로 요청한다
   // (스펙 6장 "최종안 고정 후 바로 병렬 요청"). MOTION 화면의 표결 버튼은 FREEZE_MOTION만
   // dispatch하며, 이 효과가 그 결과(finalMotion 반영)를 보고 startFinalVotes를 잇는다.
+  // 가드 키는 sessionId + hash다. 최종안 hash는 조건 조합에서 결정적으로 나오므로, 리셋 뒤 새
+  // 참가자가 같은 조건을 고르면 이전 세션과 hash가 같아 hash만 기억하면 표결 요청을 건너뛰고
+  // VOTE에 영구히 머문다(PR #11 Codex 12차 P1 — 리셋이 mode를 유지하면서 드러난 경합).
   const finalVotesRef = useRef<string | null>(null);
   useEffect(() => {
     if (session.mode !== 'live' || !session.finalMotion) {
       return;
     }
-    if (finalVotesRef.current === session.finalMotion.hash) {
+    const key = `${session.sessionId}:${session.finalMotion.hash}`;
+    if (finalVotesRef.current === key) {
       return;
     }
-    finalVotesRef.current = session.finalMotion.hash;
+    finalVotesRef.current = key;
     void orchestrator.startFinalVotes();
-  }, [session.mode, session.finalMotion, orchestrator]);
+  }, [session.mode, session.sessionId, session.finalMotion, orchestrator]);
 
   // 참가자가 최종 표를 확정한 뒤에만 8초 대기를 시작한다(스펙 6장
   // "참가자 확정과 함께 기다리되 8초를 넘지 않는다").
@@ -287,12 +291,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
     if (!participantVoted) {
       return;
     }
-    if (awaitResultRef.current === session.finalMotion.hash) {
+    const key = `${session.sessionId}:${session.finalMotion.hash}`;
+    if (awaitResultRef.current === key) {
       return;
     }
-    awaitResultRef.current = session.finalMotion.hash;
+    awaitResultRef.current = key;
     void orchestrator.awaitResult();
-  }, [session.mode, session.stage, session.finalMotion, session.ballots, orchestrator]);
+  }, [session.mode, session.stage, session.sessionId, session.finalMotion, session.ballots, orchestrator]);
 
   const value = useMemo<SessionContextValue>(
     () => ({ session, dispatch, followUpPending, roundLog, modeCheckPending }),
