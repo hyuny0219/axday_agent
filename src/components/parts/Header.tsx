@@ -35,6 +35,12 @@ export function Header({ session, onOperatorReset }: HeaderProps) {
     <header className="app-header">
       <div className="app-header__left">
         <span className="app-header__brand">BOARDROOM 2026</span>
+        {/* "기밀 작전실" 타자기 라벨(T64, Main.html "CASE FILE No. 02 · SESSION 0042").
+            안건마다 바뀌는 케이스 번호가 없어 고정 "02"를 쓰고, sessionId 앞 4자로
+            세션을 구분한다 — 장식용 코드라 sessionId 전체를 노출하지 않는다. */}
+        <span className="app-header__case-file" aria-hidden="true">
+          CASE FILE No. 02 · SESSION {session.sessionId.slice(0, 4).toUpperCase()}
+        </span>
         {/* 참가자 명패는 헤더 좌측에 상시 둔다(v1.0 6절 개정: 무대 좌상단 pill은
             의장 말풍선과 겹쳐 헤더로 옮겼다). ATTRACT에서는 아직 좌석이 없으므로 숨긴다. */}
         {session.stage !== 'ATTRACT' && <Nameplate className="nameplate--header" />}

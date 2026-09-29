@@ -1,14 +1,18 @@
 // 무대 열(StageBand, T44 좌우 분할): App.tsx의 왼쪽 고정 무대 열 안에서 렌더 배경의
 // 무대를 16:9 원본 비율 그대로 보여주고, 세션 상태를 오버레이(명패·글로우·판단 중
-// 점·말풍선·표결 배지·결론 도장)로만 그리는 순수 표시 컴포넌트다
-// (docs/design/DESIGN_SPEC.md v1.0 1·5절). 장식이므로 컨테이너에 aria-hidden="true"를
-// 둔다 — 읽어야 할 정보(발언 전문·표결 결과 등)는 이미 각 화면 본문에 그대로 있고
-// 여기서는 중복해 새 정보를 만들지 않는다.
+// 점·말풍선·표결 배지)로만 그리는 순수 표시 컴포넌트다(docs/design/DESIGN_SPEC.md
+// v1.0 1·5절). 장식이므로 컨테이너에 aria-hidden="true"를 둔다 — 읽어야 할 정보(발언
+// 전문·표결 결과 등)는 이미 각 화면 본문에 그대로 있고 여기서는 중복해 새 정보를 만들지
+// 않는다.
 // 화면별 말풍선 문구는 scripted면 시나리오 데이터(initialOpinions·reactions)에서,
 // live면 session.transcript.statements에서 가져온다. 말풍선 텍스트 자르기는
 // stageText.ts(순수 함수)에 위임한다.
 // T44에서 1280px 이하의 56px 좌석 띠·"무대 펼치기" 토글을 없앴다 — 왼쪽 무대 열은
 // 폭만 줄어들 뿐(clamp(420px,42vw,860px)) 두 해상도 모두 항상 전체 무대로 보인다.
+// T64("기밀 작전실" 게임형 스킨): 프레임에 브래킷·스캔라인·CAM 판독 라벨·CLASSIFIED
+// 칩(모두 장식)을 더하고, 결론 도장은 오른쪽 종이 보고서로 옮겨 이 컴포넌트는 더는
+// 그리지 않는다(docs/design/mockups/README.md "도장은 결과 화면 오른쪽 종이 보고서
+// 우상단에"). 명패 아래 역할·기울기 캡션(예: "방향 · 찬성 쪽")도 이 카드에서 더했다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type {
@@ -23,9 +27,7 @@ import type {
 } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { firstSentenceClipped } from '../stageText';
-import type { ResultPersuasion, ResultStamp } from '../resultStamp';
-import { PERSUASION_STAMP_DELAY_SECONDS, STAMP_DELAY_SECONDS } from '../resultStamp';
-import { useResultStampSkip } from '../useResultStampSkip';
+import { STANCE_LABEL } from '../moodLabel';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
 
@@ -43,10 +45,6 @@ export interface StageBandProps {
   ballots?: Ballot[];
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
   chairLine?: string;
-  /** RESULT 단계에서만 넘긴다. 있으면 무대 우하단에 결론 도장을 겹쳐 찍는다(v1.0 5절). */
-  resultStamp?: ResultStamp | null;
-  /** RESULT 단계에서만 넘긴다. earned면 결론 도장 0.4초 뒤 "설득 도장"을 겹쳐 찍는다(T63). */
-  persuasion?: ResultPersuasion | null;
 }
 
 /** 배경 이미지 기준 좌석 가로 위치(DESIGN_SPEC.md v1.0 1절). */
@@ -55,6 +53,15 @@ const SEAT_LEFT_PERCENT: Record<ExecMemberId, number> = {
   CFO: 39.5,
   CAIO: 63,
   CISO: 87.5,
+};
+
+/** 역할·기울기 캡션의 관심사 한 단어(T64, Main.html "방향 · 찬성 쪽"/"비용 · 미정" 등).
+ * STANCE_LABEL(찬성 쪽/반대 쪽/미정)과 합쳐 명패 아래에 보여준다. */
+const ROLE_INTEREST_WORD: Record<ExecMemberId, string> = {
+  CEO: '방향',
+  CFO: '비용',
+  CAIO: '시스템',
+  CISO: '보안',
 };
 
 type BubbleKind = 'speech' | 'pending' | 'none';
@@ -237,18 +244,25 @@ export function StageBand({
   stances,
   ballots,
   chairLine,
-  resultStamp,
-  persuasion,
 }: StageBandProps) {
   const participant = participantSeatOverlay(stage, opinions);
-  const stampSkip = useResultStampSkip(stage === 'RESULT' && Boolean(resultStamp));
 
   return (
     <div className="stage-band" aria-hidden="true" data-testid="stage-band">
       <div className="stage-band__stage" data-testid="stage-band-full">
         <img src={stageRender} alt="" className="stage-band__bg" />
+        <div className="stage-band__scanlines" />
         <div className="stage-band__vignette stage-band__vignette--top" />
         <div className="stage-band__vignette stage-band__vignette--bottom" />
+        <div className="stage-band__bracket stage-band__bracket--tl" />
+        <div className="stage-band__bracket stage-band__bracket--tr" />
+        <div className="stage-band__bracket stage-band__bracket--bl" />
+        <div className="stage-band__bracket stage-band__bracket--br" />
+        <div className="stage-band__readout">
+          <span>CAM 01 · 회의실 A</span>
+          <span>REC ●</span>
+        </div>
+        <div className="stage-band__classified">CLASSIFIED</div>
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,
@@ -279,7 +293,14 @@ export function StageBand({
                       <span />
                     </span>
                   ) : (
-                    <span className="stage-band__bubble-text">{overlay.bubbleText}</span>
+                    <>
+                      {/* 발화자 라벨(T64, Main.html "의장 · CEO"). CEO는 항상 의장이라
+                          접두어를 붙이고, 다른 임원은 직함 코드만 보여준다. */}
+                      <span className="stage-band__bubble-label">
+                        {memberId === 'CEO' ? '의장 · CEO' : memberId}
+                      </span>
+                      <span className="stage-band__bubble-text">{overlay.bubbleText}</span>
+                    </>
                   )}
                 </span>
               )}
@@ -294,6 +315,13 @@ export function StageBand({
                   <VoteBadge memberId={memberId} ballots={ballots} />
                 ) : (
                   <MoodBadge memberId={memberId} stance={stances[memberId]} />
+                )}
+                {/* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"). RESULT는 표 배지가
+                    이미 결과를 보여주므로 캡션을 겹쳐 보여주지 않는다. */}
+                {stage !== 'RESULT' && (
+                  <span className="stage-band__caption">
+                    {ROLE_INTEREST_WORD[memberId]} · {STANCE_LABEL[stances[memberId]]}
+                  </span>
                 )}
                 <span
                   className={`stage-band__silhouette stage-band__silhouette--${memberId.toLowerCase()}${
@@ -329,30 +357,6 @@ export function StageBand({
             />
           </div>
         </div>
-        {resultStamp && (
-          <div
-            className={`stage-band__stamp result-stamp result-stamp--${(resultStamp.outcome ?? 'reject').toLowerCase()}`}
-            data-testid="result-stamp"
-            style={{
-              animationDelay: stampSkip ? '0.01ms' : `${STAMP_DELAY_SECONDS}s`,
-              animationDuration: stampSkip ? '0.01ms' : undefined,
-            }}
-          >
-            {resultStamp.text}
-          </div>
-        )}
-        {resultStamp && persuasion?.earned && (
-          <div
-            className="stage-band__stamp stage-band__stamp--persuasion result-stamp result-stamp--persuasion"
-            data-testid="persuasion-stamp"
-            style={{
-              animationDelay: stampSkip ? '0.01ms' : `${PERSUASION_STAMP_DELAY_SECONDS}s`,
-              animationDuration: stampSkip ? '0.01ms' : undefined,
-            }}
-          >
-            설득 성공
-          </div>
-        )}
       </div>
     </div>
   );

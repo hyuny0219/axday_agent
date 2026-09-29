@@ -1,5 +1,6 @@
 /* Base document styles built on top of tokens.css. */
 @import './tokens.css';
+@import './fonts.css';
 
 * {
   box-sizing: border-box;
@@ -11,9 +12,14 @@ body,
   height: 100%;
 }
 
+/* 게임형 스킨 배경(T64, Main.html 루트 div): 짙은 배경 위 앰버 40px 격자 + 좌상단
+   앰버 라디얼. --bg는 다른 화면(ATTRACT·SELECT 등 무대가 없는 화면)이 여전히 참조하는
+   v1.0 토큰이라 그대로 두고, 문서 배경만 새 스킨 토큰으로 바꾼다. */
 body {
   margin: 0;
-  background-color: var(--bg);
+  background-color: var(--skin-bg);
+  background-image: var(--skin-bg-image);
+  background-size: var(--skin-bg-size);
   color: var(--text);
   font-family: var(--font-ui);
   line-height: 1.4;

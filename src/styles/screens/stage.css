@@ -12,14 +12,112 @@
   width: 100%;
 }
 
+/* T64(Main.html 무대 프레임): 시안 1px 테두리 + 안쪽 시안 글로우. 카드 모서리 둥글림은
+   HUD 프레임에는 쓰지 않는다(각진 브래킷과 어울리지 않는다). */
 .stage-band__stage {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border-radius: 0;
+  border: 1px solid rgba(40, 217, 240, 0.55);
+  box-shadow:
+    0 0 0 1px var(--hud-bg),
+    0 0 28px rgba(40, 217, 240, 0.18) inset;
+}
+
+/* 네 귀퉁이 브래킷(Main.html): 시안 프레임 안쪽에 22px 꺾쇠 4개. 장식이라 .stage-band
+   자체가 이미 aria-hidden이다. */
+.stage-band__bracket {
+  position: absolute;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.stage-band__bracket--tl {
+  top: 8px;
+  left: 8px;
+  border-top: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.stage-band__bracket--tr {
+  top: 8px;
+  right: 8px;
+  border-top: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+.stage-band__bracket--bl {
+  bottom: 8px;
+  left: 8px;
+  border-bottom: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.stage-band__bracket--br {
+  bottom: 8px;
+  right: 8px;
+  border-bottom: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+/* 스캔라인(Main.html): 2px/5px 반복 가로줄 + 상하 네이비 비네트를 한 레이어로 겹친다.
+   기존 위·아래 비네트(.stage-band__vignette)는 그대로 두고, 이 레이어는 가로줄만 더한다. */
+.stage-band__scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.18) 0px,
+    rgba(0, 0, 0, 0.18) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+/* 판독 라벨(Main.html "CAM 01 · 회의실 A · REC ●")·"CLASSIFIED" 칩: 장식용 HUD 문구. */
+.stage-band__readout {
+  position: absolute;
+  top: var(--space-1);
+  left: 40px;
+  z-index: 2;
+  display: flex;
+  gap: 10px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--hud-line);
+  pointer-events: none;
+}
+
+.stage-band__readout span:nth-child(2) {
+  color: #9fb6cc;
+}
+
+.stage-band__classified {
+  position: absolute;
+  top: var(--space-1);
+  right: 40px;
+  z-index: 2;
+  padding: 4px 10px;
+  border: 1px solid var(--hud-warn);
+  color: var(--hud-warn);
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .stage-band__readout,
+  .stage-band__classified {
+    display: none;
+  }
 }
 
 .stage-band__bg {
@@ -99,20 +197,24 @@
   bottom: 4px;
 }
 
+/* T64(Main.html 좌석 배지): 어두운 판 + 역할색 테두리 + HUD 서체 대문자. 알약(999px)
+   대신 각진 모서리로 브래킷·스캔라인과 톤을 맞춘다. */
 .stage-band__nameplate {
-  padding: 2px 10px;
-  border-radius: 999px;
-  background-color: rgba(6, 20, 36, 0.8);
+  padding: 4px 10px;
+  border-radius: 0;
+  background-color: rgba(5, 11, 20, 0.9);
   border: 1px solid var(--border);
   color: var(--text);
+  font-family: var(--font-hud);
   font-size: 12px;
-  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
 .stage-band__nameplate--ceo {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--hud-line);
+  border-color: var(--hud-line);
 }
 
 .stage-band__nameplate--cfo {
@@ -126,8 +228,23 @@
 }
 
 .stage-band__nameplate--ciso {
-  color: var(--vote-hold);
-  border-color: var(--vote-hold);
+  color: var(--hud-warn);
+  border-color: var(--hud-warn);
+}
+
+/* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"): 명패 아래 작은 회색 한 줄.
+   StageBand.tsx가 역할별 관심사 단어(방향/비용/시스템/보안) + STANCE_LABEL을 합쳐 넣는다. */
+.stage-band__caption {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: #9fb6cc;
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .stage-band__caption {
+    display: none;
+  }
 }
 
 /* 임원 표정 배지(T63): 명패 아래 지름 18px 원. RESULT에서는 표 배지(stage-band__vote-badge)가
@@ -191,8 +308,9 @@
   opacity: 0.35;
 }
 
-/* 말풍선: 캐릭터 머리 위 하늘 여백(상단 0~28%)에만 띄운다(v1.0 5절). '나' 말풍선만
-   테이블 위 중앙(상단58%~) 한 곳을 허용한다. */
+/* 말풍선(T64, Main.html 의장 말풍선): 어두운 판 + 시안 테두리. 캐릭터 머리 위 하늘
+   여백(상단 0~28%)에만 띄운다(v1.0 5절). '나' 말풍선만 테이블 위 중앙(상단58%~) 한
+   곳을 허용한다. */
 .stage-band__bubble {
   position: absolute;
   top: 8%;
@@ -200,17 +318,29 @@
   transform: translateX(-50%);
   width: max-content;
   max-width: 100%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  background-color: var(--text);
-  border: 0;
-  color: #071a2b;
+  padding: 10px 12px;
+  border-radius: 0;
+  background-color: rgba(5, 11, 20, 0.85);
+  border: 1px solid var(--hud-line);
+  color: #eaf4ff;
   font-size: 13px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   text-align: left;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
   animation: stage-bubble-in 200ms ease-out both;
+}
+
+/* 발화자 라벨(T64, Main.html "의장 · CEO"): 말풍선 첫 줄, HUD 서체 소문자 크기. 본문
+   줄 수 클램프(아래 .stage-band__bubble-text)와는 별개 줄이라 3줄 규칙에 포함되지
+   않는다. */
+.stage-band__bubble-label {
+  display: block;
+  font-family: var(--font-hud);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--hud-line);
+  margin-bottom: 4px;
 }
 
 /* 말풍선 본문은 글자 수가 아니라 줄 수로 자른다(2026-09-28 사용자). 말풍선 폭이 좌석
@@ -233,18 +363,15 @@
   left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: var(--text);
+  border-top-color: var(--hud-line);
   border-bottom: 0;
 }
 
 .stage-band__bubble--participant {
   top: 60%;
-  background-color: var(--accent);
-  color: #03101f;
-}
-
-.stage-band__bubble--participant::after {
-  border-top-color: var(--accent);
+  background-color: rgba(5, 11, 20, 0.85);
+  border-color: var(--hud-line);
+  color: #eaf4ff;
 }
 
 @keyframes stage-bubble-in {
@@ -350,76 +477,9 @@
   color: var(--bg);
 }
 
-/* 결론 도장(T44, DESIGN_SPEC.md v1.0 3·5절): 무대 열 우하단에 겹쳐 찍는다. 디스플레이
-   서체, 회전 -9°, 결과색. 렌더 배경 위에 얹히므로 반투명 배경을 더해 대비를 확보한다.
-   배지가 모두 나온 직후(STAMP_DELAY_SECONDS) 등장해 총 1초 안에 끝난다. 클릭·키
-   입력으로 건너뛰면(useResultStampSkip) StageBand가 animation-delay/-duration을
-   0.01ms로 직접 낮춘다(CSS data-skip 선택자 대신 inline style, 도장이 result-screen
-   바깥에 있어서다). */
-.stage-band__stamp {
-  position: absolute;
-  right: var(--space-2);
-  bottom: var(--space-2);
-  z-index: 3;
-}
-
-.result-stamp {
-  padding: var(--space-1) var(--space-3);
-  border: 4px solid currentColor;
-  border-radius: var(--radius-control);
-  background-color: rgba(6, 20, 36, 0.6);
-  font-family: var(--font-display);
-  font-size: 28px;
-  letter-spacing: 0.04em;
-  transform: rotate(-9deg) scale(0.6);
-  opacity: 0;
-  animation: result-stamp-in 220ms ease-out both;
-}
-
-@keyframes result-stamp-in {
-  from {
-    opacity: 0;
-    transform: rotate(-9deg) scale(0.5);
-  }
-
-  to {
-    opacity: 1;
-    transform: rotate(-9deg) scale(1);
-  }
-}
-
-.result-stamp--pass {
-  color: var(--accent);
-}
-
-.result-stamp--reject {
-  color: var(--vote-no);
-}
-
-/* "설득 도장"(T63): 가결·부결 도장 바로 위에 겹쳐 찍는다(같은 우하단 모서리, 다른 색·
-   회전으로 구분). --warm(v1.0 노을 강조 토큰)을 써서 가결·부결 도장(--accent/--vote-no)과
-   섞이지 않게 한다. */
-.stage-band__stamp--persuasion {
-  bottom: calc(var(--space-2) + 64px);
-}
-
-.result-stamp--persuasion {
-  color: var(--warm);
-  transform: rotate(8deg) scale(0.6);
-  animation-name: result-stamp-in-persuasion;
-}
-
-@keyframes result-stamp-in-persuasion {
-  from {
-    opacity: 0;
-    transform: rotate(8deg) scale(0.5);
-  }
-
-  to {
-    opacity: 1;
-    transform: rotate(8deg) scale(1);
-  }
-}
+/* 결론 도장·설득 도장(T44/T63)은 T64에서 무대 열 우하단 겹침 규칙을 폐기하고 오른쪽
+   종이 보고서의 전용 칸으로 옮겼다(docs/design/mockups/README.md C안 "도장은 결과 화면
+   오른쪽 종이 보고서 우상단에"). .result-stamp 스타일은 result.css로 옮겼다. */
 
 @media (max-width: 1280px) {
   .stage-band__bubble {
@@ -434,10 +494,5 @@
 
   .stage-band__nameplate {
     font-size: 11px;
-  }
-
-  .result-stamp {
-    padding: 6px var(--space-2);
-    font-size: 20px;
   }
 }

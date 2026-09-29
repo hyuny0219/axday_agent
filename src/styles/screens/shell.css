@@ -40,7 +40,7 @@
   align-items: flex-start;
   width: 100%;
   min-height: 100dvh;
-  background-color: var(--bg);
+  background-color: var(--skin-bg);
 }
 
 /* scale 모드 전용: transform은 렌더링(시각) 크기만 줄일 뿐 .app-scale-wrapper의
@@ -57,12 +57,15 @@
 
 /* 배경 조명감(DESIGN_SPEC.md 2장). body에 직접 그리지 않고 고정 위치 레이어로 깔아
    background-attachment:fixed 없이도 스크롤과 무관하게 유지한다. */
+/* T64: 옛 네이비 조명감(--bg-gradient) 대신 "기밀 작전실" 앰버 격자 + 좌상단 라디얼로
+   바꾼다(Main.html 루트 배경, tokens.css --skin-bg-image). */
 .app-scale-outer::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: var(--bg-gradient);
+  background-image: var(--skin-bg-image);
+  background-size: var(--skin-bg-size);
   pointer-events: none;
 }
 
@@ -106,7 +109,10 @@
    2절 "헤더: 유리 패널(backdrop-filter: blur(8px))"). backdrop-filter는 새 쌓임 맥락을
    만들기 때문에, 명시적 position+z-index 없이 두면 뒤 화면(app-main)의 기본 쌓임 순서가
    문서 순서상 헤더를 덮어버려 운영자 메뉴·확인 대화상자가 클릭을 가로채지 못한다.
-   position:relative + z-index로 헤더(와 그 안의 드롭다운)가 항상 본문 위에 오게 한다. */
+   position:relative + z-index로 헤더(와 그 안의 드롭다운)가 항상 본문 위에 오게 한다.
+   T64: 배경을 시안 유리(짙은 네이비)에서 "기밀 작전실" 짙은 헤더(Main.html 헤더바,
+   rgba(11,13,16,.9))로 바꾼다 — 헤더는 무대·서류철 어느 쪽도 아닌 공통 바라 스킨 배경과
+   같은 계열을 쓴다. */
 .app-header {
   position: relative;
   z-index: 10;
@@ -117,16 +123,33 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
   padding: var(--space-2) var(--space-4);
-  background-color: var(--panel-glass);
+  background-color: rgba(11, 13, 16, 0.9);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(40, 217, 240, 0.15);
+  border-bottom: 1px solid #2a2d33;
+  box-shadow: none;
 }
 
 .app-header__brand {
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: 900;
   letter-spacing: 0.06em;
+}
+
+/* "CASE FILE No. 02 · SESSION xxxx" 타자기 라벨(T64, Main.html). 장식용 세션 코드라
+   aria-hidden이고, 실제 세션 식별은 다른 곳(운영 메뉴 등)에서 이뤄진다. */
+.app-header__case-file {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .app-header__case-file {
+    display: none;
+  }
 }
 
 .app-header__stage {
@@ -151,23 +174,28 @@
 }
 
 /* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30). 세션 시작 전 고정된 값을 그대로
-   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). */
+   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). T64: LIVE는 Main.html의
+   기울인 붉은 스탬프 칩으로 그린다(문구는 바꾸지 않는다 — e2e가 정확한 텍스트를 단언한다).
+   scripted는 칩 모양만 유지하고 회색 테두리로 눌러, LIVE 스탬프의 긴박함과 구분한다. */
 .mode-badge {
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-control);
-  border: 1px solid var(--border);
+  padding: 4px var(--space-1);
+  border-radius: 0;
+  border: 2px solid var(--border);
+  font-family: var(--font-label);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.1em;
   white-space: nowrap;
 }
 
 .mode-badge--live {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--stamp-red);
+  color: #e06b6b;
+  transform: rotate(-3deg);
 }
 
 .mode-badge--scripted {
+  border-color: var(--border);
   color: var(--text-muted);
 }
 
@@ -190,16 +218,18 @@
   position: relative;
 }
 
+/* 타자기 라벨 버튼(T64, Main.html "운영" 버튼). 문구는 그대로 "운영"만 유지한다. */
 .operator-menu__trigger {
   min-height: 40px;
   min-width: 56px;
   padding: 0 var(--space-2);
-  border-radius: var(--radius-control);
+  border-radius: 0;
   border: 1px solid var(--border);
   background-color: transparent;
   color: var(--text);
   cursor: pointer;
-  font-size: 14px;
+  font-family: var(--font-label);
+  font-size: 13px;
 }
 
 .operator-menu__trigger:hover {
@@ -534,20 +564,26 @@
   }
 }
 
-/* 주 CTA: 알약 + 시안→하늘 그라데이션, hover2px 떠오름, active 눌림(DESIGN_SPEC.md
-   v1.0 2절). 64px 높이·56px 최소 클릭 영역은 그대로 유지한다. */
+/* 주 CTA(T64, Main.html 의견 듣기 버튼): 앰버 채움 + 검정 글자 + 굵은 그림자
+   (6px 6px 0 #3a2a12) + 모서리 14px 깎기. 64px 높이·56px 최소 클릭 영역은 그대로
+   유지한다. focus-visible은 base.css 전역 규칙을 그대로 쓴다. */
 .cta {
   align-self: flex-start;
   min-height: var(--cta-height);
   min-width: var(--touch-min);
   padding: 0 var(--space-4);
-  border-radius: 999px;
+  border-radius: 0;
   border: none;
-  background-image: linear-gradient(135deg, var(--accent), var(--sky));
-  color: var(--bg);
-  font-weight: 700;
+  background-color: var(--amber);
+  background-image: none;
+  color: #0b0d10;
+  font-family: var(--font-display);
+  font-weight: 900;
   font-size: 18px;
+  letter-spacing: 0.02em;
   cursor: pointer;
+  box-shadow: 6px 6px 0 #3a2a12;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
   transition:
     box-shadow var(--transition-fast) ease,
     transform var(--transition-fast) ease;
@@ -555,7 +591,9 @@
 
 .cta:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: var(--glow-accent);
+  box-shadow:
+    6px 6px 0 #3a2a12,
+    0 0 24px rgba(224, 163, 74, 0.35);
 }
 
 .cta:active:not(:disabled) {
@@ -563,9 +601,9 @@
 }
 
 .cta:disabled {
-  background-image: none;
   background-color: var(--panel-active);
   color: var(--text-muted);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -600,31 +638,35 @@
   z-index: 0;
 }
 
+/* T64(Main.html 단계 탭): 알약 대신 각진 박스, 타자기 서체. 현재 단계는 종이색
+   채움(짙은 글자), 나머지는 회색 테두리 — 시안 강조색 대신 서류철 톤을 쓴다. */
 .progress-strip__step {
   position: relative;
   z-index: 1;
-  padding: 2px var(--space-2);
-  border-radius: 999px;
-  border: 2px solid var(--border);
-  background-color: var(--bg);
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
+  padding: 6px var(--space-2);
+  border-radius: 0;
+  border: 1px solid #4a4d55;
+  background-color: transparent;
+  color: #8f8a80;
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
-/* 현재 단계: 시안 채움(칩 배경을 시안으로 채우고 짙은 네이비 글자). */
+/* 현재 단계: 종이색 채움 + 잉크 글자(Main.html "01 상황 파악" 활성 탭). */
 .progress-strip__step[aria-current='step'] {
-  border-color: var(--accent);
-  background-color: var(--accent);
-  color: var(--bg);
+  border-color: var(--paper);
+  background-color: var(--paper);
+  color: var(--ink);
   font-weight: 700;
 }
 
 /* 지난 단계: 체크 표시(data-done="true", App.tsx가 렌더 여부를 결정하는 aria-current와
    별개로 ProgressStrip이 현재 단계보다 앞선 단계에 붙인다). */
 .progress-strip__step[data-done='true'] {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--amber);
+  color: var(--amber);
 }
 
 .progress-strip__step[data-done='true']::before {

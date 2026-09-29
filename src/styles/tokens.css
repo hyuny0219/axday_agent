@@ -63,6 +63,45 @@
   --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --glow-accent: 0 0 0 1px var(--accent), 0 0 24px rgba(40, 217, 240, 0.35);
   --panel-glass: rgba(15, 42, 72, 0.85);
+
+  /* 게임형 스킨 "기밀 작전실"(T64, docs/design/mockups/README.md C안) — 토큰 2계열.
+     ① 무대(HUD) 계열: 왼쪽 무대 열의 브래킷·스캔라인·판독 라벨·명패에 쓴다(stage.css).
+     ② 본문(서류) 계열: 오른쪽 열·헤더·CTA·발언 흐름 패널에 쓴다(shell.css·minutes.css·
+     각 화면 CSS). 기존 --bg·--panel 등 v1.0 토큰은 그대로 남겨 두고(다른 카드가 참조할 수
+     있어 바로 지우지 않는다), 이 카드가 손대는 화면 CSS만 아래 새 토큰으로 옮겨 쓴다. */
+  --hud-bg: #050b14;
+  --hud-line: #28d9f0;
+  --hud-warn: #ffb457;
+
+  --paper: #ece7dc;
+  --paper-2: #fbf8f1;
+  --paper-border: #c9c2b4;
+  --ink: #1b1a17;
+  --ink-muted: #5c5850;
+  --label: #6b4a1f;
+  --amber: #e0a34a;
+  --amber-soft: #f0c27a;
+  --stamp-red: #b23b3b;
+  --stamp-amber: #b8781f;
+  --paper-vote-yes: #1f8f5f;
+  --dark-vote-yes: #7ce0b3;
+  --paper-vote-no: #b23b3b;
+  --dark-vote-no: #e06b6b;
+
+  /* 배경 앰버 40px 격자(5% 알파) + 좌상단 앰버 라디얼(Main.html 루트 div 배경). */
+  --skin-bg: #0b0d10;
+  --skin-bg-image: radial-gradient(900px circle at 20% 10%, rgba(224, 163, 74, 0.08), transparent 55%),
+    linear-gradient(rgba(224, 163, 74, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(224, 163, 74, 0.05) 1px, transparent 1px);
+  --skin-bg-size:
+    auto,
+    40px 40px,
+    40px 40px;
+
+  /* 타자기 라벨(칩·로그 발화자)과 무대 판독(HUD 판독·명패) 서체(fonts.css가 woff2를
+     로컬로 싣는다). 본문·제목은 기존 --font-ui·--font-display를 그대로 쓴다. */
+  --font-label: 'Special Elite', monospace;
+  --font-hud: 'Share Tech Mono', monospace;
 }
 
 @media (max-width: 1280px) {
