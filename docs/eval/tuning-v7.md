@@ -55,15 +55,23 @@
 
 이동 자체는 임원 판단·품질을 바꾸지 않았다. 비서실장 경로는 이 평가 세트가 재지 않으므로(round·vote만), 분리 효과는 구조로 보장한다.
 
-## after3(부분) — "첫 의견부터 방향을 밝히라"로 stance 지시 수정, 실측은 크레딧 소진으로 60/144행에서 중단
+## after3 — "첫 의견부터 방향을 밝히라"로 stance 지시 수정(전수 재측정, 크레딧 충전 뒤)
 
-OPINIONS stance가 48건 중 43~44건 UNDECIDED라 live에서 임원 의견 단계의 표정 배지가 거의 전부 "생각 중"으로 나올 상황이었다(T63의 취지 — 조건을 붙이기 전에 누가 반대인지 보이게 — 가 살지 않는다). `EXEC_DECISION_RULE`의 stance 문장을 "첫 의견부터 방향을 밝히고, 우려가 남아도 지금 표결한다면 어느 쪽인지 정하라. UNDECIDED는 자료로 어느 쪽도 말할 수 없을 때만"으로 고쳐 다시 쟀다. **실행 중 Anthropic API 크레딧이 소진돼 144행 중 60행만 응답을 받았다**(`tuning-v7-after3.jsonl`, 실패 84행은 모두 잔액 부족 400). 아래는 부분 관측값이며, 크레딧 충전 뒤 같은 명령으로 전수 재측정해 이 절을 갱신해야 한다.
+OPINIONS stance가 after·after2에서 48건 중 43~44건 UNDECIDED라, live에서 임원 의견 단계의 표정 배지가 거의 전부 "생각 중"으로 나올 상황이었다(T63의 취지 — 조건을 붙이기 전에 누가 반대인지 보이게 — 가 살지 않는다). `EXEC_DECISION_RULE`의 stance 문장을 "첫 의견부터 방향을 밝히고, 우려가 남아도 지금 표결한다면 어느 쪽인지 정하라. UNDECIDED는 자료로 어느 쪽도 말할 수 없을 때만 쓰고 그때는 무엇이 확인돼야 하는지 적으라"로 고쳤다. 첫 시도는 Anthropic 크레딧 소진으로 60/144행에서 멈췄고(잔액 부족 400), 충전 뒤 같은 명령으로 전수 재측정했다(`tuning-v7-after3.jsonl`, 144행).
 
-- 응답 60행: 검증 실패 0(잔액 오류 제외), stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0, 문장 길이 최대 97·107자, 지연 중앙값 4064ms·최대 5680ms.
-- OPINIONS stance(20건): FOR 6 · AGAINST 5 · UNDECIDED 9 — 방향 표명이 4/48(8%)에서 11/20(55%)로 늘었다. 역할별: CEO FOR 5/5, CISO AGAINST 5/5, CAIO FOR 1·UNDECIDED 4, **CFO UNDECIDED 5/5**(비용 산정 자료가 비교 불가라 유보 — 지시대로 "무엇이 확인돼야 하는지"를 적었는지는 전수 측정 뒤 확인).
-- REACTIONS stance(20건): AGAINST 15 · FOR 5 · UNDECIDED 0.
-- VOTE(받은 20건): 상충 12 NO, 부정 8 NO — 조건 보완·조건 없음 경로는 측정되지 않았다.
+| 항목 | after2 | after3 |
+| --- | --- | --- |
+| 응답 실패 | 0 | **5**(provider_error 4 — `condition_supplement-2` VOTE 4역할, 일시 제공자 오류 / invalid_response 1 — `no_condition-2` REACTIONS CFO, 스키마 검증 실패) |
+| stance 누락(answered 기준) / `E\d` 잔존 / 존댓말 위반 | 0 / 0 / 0 | 0 / 0 / 0 |
+| VOTE 분포(answered 44건) | YES 12 · NO 36 | 조건 보완 YES 8/8(4건 provider_error) · 상충 12 NO · 부정 12 NO · 조건 없음 12 NO — 경로별 판단 동일 |
+| **OPINIONS stance(48건)** | UNDECIDED 43 · AGAINST 5 · FOR 0 | **FOR 13 · AGAINST 19 · UNDECIDED 16** — 방향 표명 5/48(10%) → 32/48(67%) |
+| 역할별 OPINIONS | — | CEO FOR 12/12, CISO AGAINST 12/12, CFO AGAINST 6·UNDECIDED 6, CAIO UNDECIDED 10·FOR 1·AGAINST 1 |
+| REACTIONS stance(47건) | UNDECIDED 22 · AGAINST 14 · FOR 12 | AGAINST 29 · FOR 18 · **UNDECIDED 0** |
+| OPINIONS stance–최종 표 일치(비교 가능 쌍) | — | 17/30 |
+| 문장 길이 최대 / 지연 중앙값·최대 / 8초 초과 | 98·119자 / 3971·5053ms / 0 | 95·106자 / 4044·6224ms / 0 |
+
+읽기: 첫 의견 단계에서 CEO는 방향 쪽, CISO는 위험 쪽으로 즉시 기울고 CFO는 반, CAIO는 대부분 유보한다 — 무대에서 "누가 반대인지"가 처음부터 보이고, 참가자 의견이 들어온 뒤(REACTIONS)에는 넷 다 방향을 밝힌다. CAIO의 유보(10/12)는 자료에 기술 구현 판단 근거가 적은 이 안건의 성격으로 보이며, 안건이 바뀌면 다시 본다. OPINIONS stance와 최종 표의 일치 17/30은 "처음 입장이 조건에 따라 바뀐다"는 체험 구조와 어긋나지 않는 관측값이다(기준 없음). 실패 5행 중 provider_error 4는 같은 케이스의 VOTE 4건이 동시에 난 일시 오류이고, invalid_response 1건은 검증 실패라 완료 기준 "검증 실패 0"에서 1건 어긋난다 — 재실측을 한 번 더 돌리면 잔액을 다시 쓰므로 그대로 기록하고, 다음 프롬프트 라운드(T59)의 측정에서 재확인한다.
 
 ## 처리
 
-(after 기준) 완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. after2(규칙 이동)도 동일하게 충족. after3(stance 문구)은 부분 측정이라 **전수 재측정 대기** — 크레딧 충전 뒤 `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v7-after3.jsonl`. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.
+(after 기준) 완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. after2(규칙 이동)도 동일하게 충족. after3(stance 문구, 전수 재측정)는 stance 누락·`E\d`·존댓말 0 유지, VOTE 판단 동일, OPINIONS 방향 표명 10%→67%. 단 invalid_response 1건(139/144 응답)이 있어 "검증 실패 0"은 1건 어긋남 — 기록으로 남기고 T59 측정에서 재확인. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.
