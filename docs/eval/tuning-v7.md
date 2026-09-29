@@ -41,6 +41,29 @@
 - **비교 가능 쌍(OPINIONS stance가 FOR/AGAINST인 경우만):** 4건 중 2건 일치(AGAINST→NO), 2건 불일치(AGAINST인데 최종 YES) — `runCheck` 출력 그대로 "OPINIONS stance-최종 표 일치 2/4".
 - **해석(관측, 결론 아님):** 이번 평가 세트 참가자 발언은 아직 조건 논의가 없는 첫 의견 단계라 임원 대부분이 "판단을 유보"(UNDECIDED)로 답했다. stance가 FOR/AGAINST로 나온 4건 중 절반만 최종 표와 맞았다는 점에서, OPINIONS 시점의 stance를 "이 임원이 이미 마음을 정했다"는 신호로 쓰기는 이르다. T59(말투·판단 기준 튜닝)에서 이 값을 더 쌓아 판단할 문제로 남긴다.
 
+## after2 — 표결·stance 지시를 공통 가드레일에서 임원 전용 규칙으로 이동(PR #11 Codex 10차 P2)
+
+공통 가드레일(`buildCommonGuardrails`)은 비서실장 refine·summarize에도 들어가므로, "찬성·반대 중 하나를 고르라"·"stance를 적으라" 지시가 참가자 원문 정리·회의 요약에까지 전달되던 것을 `server/prompts/roles/index.ts`의 `EXEC_DECISION_RULE`로 옮겼다(round·vote 임원 호출에만 붙는다). 같은 v7로 다시 쟀다(`tuning-v7-after2.jsonl`, 144행, 실패 0).
+
+| 항목 | after(v7) | after2(이동 후) |
+| --- | --- | --- |
+| 검증 실패 / stance 누락 / `E\d` 잔존 / 존댓말 위반 | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
+| VOTE 분포 | YES 12 · NO 36 | YES 12 · NO 36(경로별 동일) |
+| OPINIONS stance | UNDECIDED 44 · AGAINST 4 · FOR 0 | UNDECIDED 43 · AGAINST 5 · FOR 0 |
+| REACTIONS stance | UNDECIDED 20 · AGAINST 23 · FOR 5 | UNDECIDED 22 · AGAINST 14 · FOR 12 |
+| 문장 길이 최대 / 지연 중앙값·최대 / 8초 초과 | 94·110자 / — / 0 | 98·119자 / 3971·5053ms / 0 |
+
+이동 자체는 임원 판단·품질을 바꾸지 않았다. 비서실장 경로는 이 평가 세트가 재지 않으므로(round·vote만), 분리 효과는 구조로 보장한다.
+
+## after3(부분) — "첫 의견부터 방향을 밝히라"로 stance 지시 수정, 실측은 크레딧 소진으로 60/144행에서 중단
+
+OPINIONS stance가 48건 중 43~44건 UNDECIDED라 live에서 임원 의견 단계의 표정 배지가 거의 전부 "생각 중"으로 나올 상황이었다(T63의 취지 — 조건을 붙이기 전에 누가 반대인지 보이게 — 가 살지 않는다). `EXEC_DECISION_RULE`의 stance 문장을 "첫 의견부터 방향을 밝히고, 우려가 남아도 지금 표결한다면 어느 쪽인지 정하라. UNDECIDED는 자료로 어느 쪽도 말할 수 없을 때만"으로 고쳐 다시 쟀다. **실행 중 Anthropic API 크레딧이 소진돼 144행 중 60행만 응답을 받았다**(`tuning-v7-after3.jsonl`, 실패 84행은 모두 잔액 부족 400). 아래는 부분 관측값이며, 크레딧 충전 뒤 같은 명령으로 전수 재측정해 이 절을 갱신해야 한다.
+
+- 응답 60행: 검증 실패 0(잔액 오류 제외), stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0, 문장 길이 최대 97·107자, 지연 중앙값 4064ms·최대 5680ms.
+- OPINIONS stance(20건): FOR 6 · AGAINST 5 · UNDECIDED 9 — 방향 표명이 4/48(8%)에서 11/20(55%)로 늘었다. 역할별: CEO FOR 5/5, CISO AGAINST 5/5, CAIO FOR 1·UNDECIDED 4, **CFO UNDECIDED 5/5**(비용 산정 자료가 비교 불가라 유보 — 지시대로 "무엇이 확인돼야 하는지"를 적었는지는 전수 측정 뒤 확인).
+- REACTIONS stance(20건): AGAINST 15 · FOR 5 · UNDECIDED 0.
+- VOTE(받은 20건): 상충 12 NO, 부정 8 NO — 조건 보완·조건 없음 경로는 측정되지 않았다.
+
 ## 처리
 
-완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.
+(after 기준) 완료 기준 네 항목(검증 실패 0, stance 누락 0, `E\d` 잔존 0, 존댓말 위반 0) 모두 충족. after2(규칙 이동)도 동일하게 충족. after3(stance 문구)은 부분 측정이라 **전수 재측정 대기** — 크레딧 충전 뒤 `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v7-after3.jsonl`. stance는 필드 추가일 뿐 표결 판단 로직을 바꾸지 않아 VOTE 분포·문장 품질 지표가 v6과 동일하게 유지됐다. "OPINIONS stance와 최종 표의 일치율"은 카드 지시대로 기준을 세우지 않고 위 관측값만 남긴다.

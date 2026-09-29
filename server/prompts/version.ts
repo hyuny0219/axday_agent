@@ -12,7 +12,9 @@
 // 있는지로 판단해 찬성·반대 중 하나를 고르라"로 바꿨다(1차 문구 "조건이 부족하면 반대"는
 // 48/48 반대가 나와 폐기). 전후 비교는 docs/eval/tuning-v6.md.
 // v7(2026-09-29, T63): 발언(토론) 응답 스키마에 stance(FOR/AGAINST/UNDECIDED) 필수 필드를
-// 더해 무대 표정·"설득 도장"이 쓰는 값을 임원이 직접 밝히게 했다. 가드레일에 "발언 끝에
-// stance를 적으라"는 지시를 추가했다(응답 스키마가 바뀌므로 버전을 올린다). 전후 비교는
-// docs/eval/tuning-v7.md.
+// 더해 무대 표정·"설득 도장"이 쓰는 값을 임원이 직접 밝히게 했다(응답 스키마가 바뀌므로 버전을
+// 올린다). 표결 판단·stance 지시는 공통 가드레일이 아니라 임원 전용 EXEC_DECISION_RULE
+// (prompts/roles/index.ts)에 둔다 — 비서실장 refine·summarize에 새지 않게(PR #11 Codex 10차).
+// stance는 "첫 의견부터 방향을 밝히라"로 한 번 더 손봤다(after3, 크레딧 소진으로 부분 측정).
+// 전후 비교는 docs/eval/tuning-v7.md.
 export const PROMPT_VERSION = 'v7';
