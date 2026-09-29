@@ -56,7 +56,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
         <div className="briefing-screen__role" data-testid="briefing-role">
           <h3 className="briefing-screen__role-heading">특별 이사님이 할 일</h3>
           <p className="briefing-screen__role-text">{scenario.chairBriefing.role}</p>
-          <p className="briefing-screen__final-decision">최종 결정: 승인 · 보류 · 부결</p>
+          <p className="briefing-screen__final-decision">최종 결정: 찬성 · 반대</p>
         </div>
         <div className="briefing-screen__body">
           <h3 className="briefing-screen__evidence-heading">판단에 참고할 자료</h3>

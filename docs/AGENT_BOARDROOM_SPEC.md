@@ -50,7 +50,7 @@ DISCUSS에서 ‘내 발언 정리’를 누르면 현재 draftText, 자료 본�
 각 요청에는 sessionId/requestId/roleId/mode/stage/transcriptRevision을 넣고 발언 정리에는 draftRevision, 최종표에는 motionId/motionHash를 추가한다. 임원별 같은 회의 snapshot을 사용하며 다른 세션의 기록을 공유하지 않는다.
 
 - 발언 응답: roleId, message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds. 토론 응답에 ballot을 허용하지 않는다.
-- 최종 표 응답: roleId, motionId, motionHash, vote(YES/HOLD/NO), reason, evidenceIds, remainingConcerns.
+- 최종 표 응답: roleId, motionId, motionHash, vote(YES/NO), reason, evidenceIds, remainingConcerns.
 - 비서 응답: draftRevision, draftText, evidenceIds, suggestedConditionIds. 조건은 참가자 확인 전까지 제안이다.
 - 저장할 Ballot에는 source(live/scripted/unavailable), modelId, promptVersion, requestId, motionHash와 confirmedAt을 추가한다. 모델 공급자 원문 로그 대신 필요한 짧은 근거와 버전 정보를 보관한다. 참가자 원문·AI 초안을 관람 payload에 넣지 않는다.
 
@@ -62,11 +62,11 @@ DISCUSS에서 ‘내 발언 정리’를 누르면 현재 draftText, 자료 본�
 
 세션은 시간으로 끝나지 않는다(2026-09-22 사용자 결정, T50). 240초 세션 deadline과 무입력 75초 안내/90초 초기화는 제거했고, 세션을 끝내는 경로는 결과 화면의 "체험 종료"와 운영 메뉴의 "새 체험"·"scripted로 새 체험"뿐이다. 임원 라운드별 최대 8초이며 각 임원 호출은 병렬, 자동 재시도는 기본 0회다. 목표 흐름은 브리핑/초기 의견 70초, 토론/비서 100초, 최종안/표결 50초, 여유 20초(약 4분)로 잡되 화면이 강제하지 않는다 — 진행 요원이 안내하고 현장 측정으로 조정한다(FACILITATOR_GUIDE).
 
-응답하지 못한 임원은 토론에서 ‘응답 지연/확인 필요’, 표결에서 UNCAST(미표결, 사유 표시)로 기록한다. HOLD나 사전 표로 대체하지 않는다. 최종표는 최종안 고정 후 바로 병렬 요청하고 참가자 확정과 함께 기다리되 8초를 넘지 않는다. 이후 도착한 표는 결과를 바꾸지 못한다.
+응답하지 못한 임원은 토론에서 ‘응답 지연/확인 필요’, 표결에서 UNCAST(미표결, 사유 표시)로 기록한다. 임의로 YES·NO나 사전 표로 대체하지 않는다. 최종표는 최종안 고정 후 바로 병렬 요청하고 참가자 확정과 함께 기다리되 8초를 넘지 않는다. 이후 도착한 표는 결과를 바꾸지 못한다.
 
 최종안은 참가자가 "이 안건으로 표결"을 눌러 고정한다. 시간 만료로 원안을 자동 고정하는 경로는 없다. 해당 고정안에 대해 이미 검증·확정된 표만 집계하고 나머지는 UNCAST다. 다른 motionHash의 표는 재사용하지 않는다. 운영자가 "새 체험"으로 초기화하면 진행 중인 호출은 폐기하고 표결 결과를 만들지 않는다.
 
-찬성3표 이상 가결, 반대3표 이상 부결, 그 외 보류. UNCAST는 HOLD와 별도 집계, 전체 의석5개 유지. 응답 장애로 생긴 보류에는 ‘일부 임원 미표결로 판단이 제한되었습니다’를 표시한다. 사업의 미래 성공·실패를 예측하는 결과가 아니다.
+표는 찬성(YES)·반대(NO) 두 가지뿐이다(T62, 2026-09-29 — 보류는 애매하다는 사용자 판단으로 없앴다). 5석 과반, 즉 찬성3표 이상이면 가결이고 그 외(UNCAST로 과반에 못 미친 경우 포함)는 부결이다. UNCAST는 별도 집계하되 전체 의석5개 유지. 응답 장애로 판단이 제한됐으면 ‘일부 임원 미표결로 판단이 제한되었습니다’를 표시한다. 사업의 미래 성공·실패를 예측하는 결과가 아니다.
 
 세션 시작 전에 live/scripted 모드를 고정하고 화면에 표시한다. live 도중 실패한 역할을 몰래 scripted 표로 바꾸지 않는다. 장애 시 운영자가 별도 확인 후 세션을 초기화하고 scripted 모드로 새로 시작할 수 있다. live는 서버 모델 연결이 필요하며 오프라인은 scripted 모드만 가능하다.
 

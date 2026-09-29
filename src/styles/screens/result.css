@@ -166,14 +166,6 @@
   color: var(--accent);
 }
 
-.result-seat--hold::before {
-  background-color: var(--vote-hold);
-}
-
-.result-seat--hold .result-seat__vote {
-  color: var(--vote-hold);
-}
-
 .result-seat--no::before {
   background-color: var(--vote-no);
 }
@@ -332,10 +324,6 @@
 
 .result-summary__vote--yes {
   color: var(--accent);
-}
-
-.result-summary__vote--hold {
-  color: var(--vote-hold);
 }
 
 .result-summary__vote--no {

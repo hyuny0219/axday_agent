@@ -1,7 +1,7 @@
 // 결과 연출 도장 문구(DESIGN_SPEC.md v1.0 3절): PASS이고 반영 조건이 있으면 "조건부
-// 가결", PASS는 "가결", HOLD는 "보류", REJECT는 "부결". T44에서 도장을 무대 열
-// 우하단으로 옮기며 App.tsx(StageBand에 넘길 값 계산)와 ResultScreen이 함께 쓰는
-// 순수 함수로 뽑아냈다 — 표결 판정 자체(domain/voting.ts)는 손대지 않는다.
+// 가결", PASS는 "가결", REJECT는 "부결"(T62: 보류 제거로 두 갈래만 남았다). T44에서
+// 도장을 무대 열 우하단으로 옮기며 App.tsx(StageBand에 넘길 값 계산)와 ResultScreen이
+// 함께 쓰는 순수 함수로 뽑아냈다 — 표결 판정 자체(domain/voting.ts)는 손대지 않는다.
 
 import type { Session } from '../domain/types';
 import { collectConfirmedConditionIds } from './opinionConditions';
@@ -17,9 +17,6 @@ export const STAMP_DELAY_SECONDS = 0.8;
 export function stampText(outcome: Session['outcome'], hasReflectedConditions: boolean): string {
   if (outcome === 'PASS') {
     return hasReflectedConditions ? '조건부 가결' : '가결';
-  }
-  if (outcome === 'HOLD') {
-    return '보류';
   }
   if (outcome === 'REJECT') {
     return '부결';

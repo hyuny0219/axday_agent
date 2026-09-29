@@ -54,8 +54,8 @@ describe('정상 완주', () => {
     expect(session.stage).toBe('RESULT');
     expect(session.pendingVote).toBeNull();
     expect(session.ballots).toHaveLength(5);
-    // 대표 경로표: 없음(원안) / YES,HOLD,NO,NO / 참가자 YES → HOLD.
-    expect(session.outcome).toBe('HOLD');
+    // 대표 경로표: 없음(원안) / YES,NO,NO,NO / 참가자 YES → REJECT.
+    expect(session.outcome).toBe('REJECT');
     expect(session.warnings).toEqual([]);
 
     // AI 비서실장을 쓰지 않은 완주에는 어떤 AI 기록도 없다(보이지 않은 카드를 기록하지 않음).

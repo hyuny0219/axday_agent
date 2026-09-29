@@ -19,7 +19,7 @@ export const CONDITION_IDS = ['PILOT', 'SCREEN', 'TRACE', 'MEASURE', 'ANON_FULL'
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;
 export const REQUEST_STAGES = [...STATEMENT_STAGES, 'VOTE', 'ASSISTANT'] as const;
 
-export const VOTE_VALUES = ['YES', 'HOLD', 'NO'] as const;
+export const VOTE_VALUES = ['YES', 'NO'] as const;
 
 const evidenceIdSchema = z.enum(EVIDENCE_IDS);
 const conditionIdSchema = z.enum(CONDITION_IDS);

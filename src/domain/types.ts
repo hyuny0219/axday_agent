@@ -95,7 +95,7 @@ export type SessionStage =
   | 'VOTE'
   | 'RESULT';
 
-export type SessionOutcome = 'PASS' | 'HOLD' | 'REJECT' | null;
+export type SessionOutcome = 'PASS' | 'REJECT' | null;
 
 /** 참가자가 아직 확정하지 않고 라디오만 선택한 값. 확정 전에는 표로 집계하지 않는다. */
 export type PendingVote = Exclude<Vote, 'UNCAST'>;

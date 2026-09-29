@@ -38,7 +38,7 @@ describe('handleVote with the mock provider', () => {
       expect(result.status).toBe('answered');
       expect(result.ballot?.motionId).toBe(input.motion.id);
       expect(result.ballot?.motionHash).toBe(input.motion.hash);
-      expect(['YES', 'HOLD', 'NO']).toContain(result.ballot?.vote);
+      expect(['YES', 'NO']).toContain(result.ballot?.vote);
     }
   });
 
@@ -100,7 +100,7 @@ describe('handleVote with the mock provider', () => {
             roleId: envelope.roleId,
             motionId: envelope.motionId,
             motionHash: envelope.motionHash,
-            vote: 'HOLD',
+            vote: 'NO',
             reason: '추가 확인이 필요합니다.',
             evidenceIds: ['E1'],
             remainingConcerns: ['권한 검증'],
@@ -120,11 +120,11 @@ describe('handleVote with the mock provider', () => {
     expect(calls).toHaveLength(4);
     for (const call of calls) {
       // transcript 발언에는 roleId·message만 있고 vote 값이 없으므로, 실제 표 데이터
-      // (YES/HOLD/NO)는 오직 이 역할 자신에게 요청하는 지시문에만 등장해야 한다.
-      expect(call.system).not.toMatch(/참가자[^\n]*(YES|HOLD|NO)/);
+      // (YES/NO)는 오직 이 역할 자신에게 요청하는 지시문에만 등장해야 한다.
+      expect(call.system).not.toMatch(/참가자[^\n]*(YES|NO)/);
       expect(call.system).not.toMatch(/participantVote/i);
       expect(call.user).not.toMatch(/participantVote/i);
-      expect(call.user).not.toMatch(/YES|HOLD|NO/);
+      expect(call.user).not.toMatch(/YES|NO/);
     }
   });
 

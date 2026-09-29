@@ -298,11 +298,6 @@
   color: var(--bg);
 }
 
-.stage-band__vote-badge--hold {
-  background-color: var(--vote-hold);
-  color: var(--bg);
-}
-
 .stage-band__vote-badge--no {
   background-color: var(--vote-no);
   color: var(--bg);
@@ -353,10 +348,6 @@
 
 .result-stamp--pass {
   color: var(--accent);
-}
-
-.result-stamp--hold {
-  color: var(--vote-hold);
 }
 
 .result-stamp--reject {

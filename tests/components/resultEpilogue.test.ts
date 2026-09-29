@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { epilogueText } from '../../src/components/resultEpilogue';
 
-const copy = { pass: '조건 있는 가결', passOriginal: '원안 가결', hold: '보류', reject: '부결' };
+const copy = { pass: '조건 있는 가결', passOriginal: '원안 가결', reject: '부결' };
 
 describe('epilogueText', () => {
   it('반영 조건이 있는 가결은 pass', () => {
@@ -15,8 +15,8 @@ describe('epilogueText', () => {
     expect(epilogueText('PASS', false, copy)).toBe('원안 가결');
   });
 
-  it('보류·부결은 조건 유무와 무관하다', () => {
-    expect(epilogueText('HOLD', true, copy)).toBe('보류');
+  it('부결은 조건 유무와 무관하다', () => {
+    expect(epilogueText('REJECT', true, copy)).toBe('부결');
     expect(epilogueText('REJECT', false, copy)).toBe('부결');
   });
 

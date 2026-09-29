@@ -10,9 +10,8 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
-  // DISCUSS 화면에는 찬성/보류/반대 버튼이 없어야 한다.
+  // DISCUSS 화면에는 찬성/반대 버튼이 없어야 한다.
   await expect(page.getByRole('button', { name: '찬성' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '보류' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '반대' })).toHaveCount(0);
 
   await page.getByTestId('phrase-card-P1').click();
@@ -134,12 +133,12 @@ test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await confirmVote.click();
 
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
-  // PILOT+MEASURE만 있으면 임원 표는 YES/YES/NO/NO라 참가자 표에 따라 가결/부결/보류가
-  // 갈린다(SCENARIO_AI_ASSISTANT.md "대표 경로") — 내 한 표가 결과를 정한다.
+  // PILOT+MEASURE만 있으면 임원 표는 YES/YES/NO/NO라 참가자 표에 따라 가결/부결이
+  // 갈린다(SCENARIO_ANON_BOARD.md "표결 우선순위") — 내 한 표가 결과를 정한다.
   await expect(page.getByTestId('result-summary-decisive')).toContainText(
     '이사님의 한 표가 결과를 정했습니다',
   );
-  // 조건 없는 baseline 대비 CFO만 표가 바뀐다(HOLD→YES).
+  // 조건 없는 baseline 대비 CFO만 표가 바뀐다(NO→YES).
   await expect(
     page.getByTestId('result-summary-row-CFO').getByTestId('result-summary-changed'),
   ).toBeVisible();

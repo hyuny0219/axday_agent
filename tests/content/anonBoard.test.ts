@@ -186,9 +186,9 @@ describe('anonBoardScenario', () => {
     expect(scenario.incident.hook).toContain('140건');
   });
 
-  it('resultCopy.sixMonthsLater 4필드가 비어 있지 않고 수치 표현이 없다', () => {
-    const { pass, passOriginal, hold, reject } = scenario.resultCopy.sixMonthsLater;
-    for (const text of [pass, passOriginal, hold, reject]) {
+  it('resultCopy.sixMonthsLater 3필드가 비어 있지 않고 수치 표현이 없다', () => {
+    const { pass, passOriginal, reject } = scenario.resultCopy.sixMonthsLater;
+    for (const text of [pass, passOriginal, reject]) {
       expect(text.length).toBeGreaterThan(0);
       expect(text).not.toMatch(NUMERIC_COPY_PATTERN);
     }

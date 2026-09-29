@@ -142,7 +142,6 @@ function participantSeatOverlay(stage: SessionStage, opinions: Opinion[]): Parti
 
 const VOTE_BADGE_ICON: Record<Ballot['vote'], string> = {
   YES: '✓',
-  HOLD: '॥',
   NO: '✕',
   UNCAST: '–',
 };
@@ -264,7 +263,7 @@ export function StageBand({
         </div>
         {resultStamp && (
           <div
-            className={`stage-band__stamp result-stamp result-stamp--${(resultStamp.outcome ?? 'hold').toLowerCase()}`}
+            className={`stage-band__stamp result-stamp result-stamp--${(resultStamp.outcome ?? 'reject').toLowerCase()}`}
             data-testid="result-stamp"
             style={{
               animationDelay: stampSkip ? '0.01ms' : `${STAMP_DELAY_SECONDS}s`,

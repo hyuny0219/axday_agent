@@ -35,7 +35,7 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 function isVote(value: unknown): value is Vote {
-  return value === 'YES' || value === 'HOLD' || value === 'NO';
+  return value === 'YES' || value === 'NO';
 }
 
 function allFailed(reason: string): Array<{ roleId: ExecMemberId; status: 'failed'; failReason: string }> {

@@ -204,8 +204,8 @@ export const anonBoardScenario: Scenario = {
     CEO: [
       {
         when: { has: 'ANON_FULL' },
-        vote: 'HOLD',
-        reason: '완전 익명 — 추적 불가 조건이 있어 보류',
+        vote: 'NO',
+        reason: '완전 익명 — 추적 불가 조건은 갖춰지기 전이라 찬성할 수 없어 반대',
       },
       { when: { always: true }, vote: 'YES', reason: '솔직한 목소리를 여는 방향에 찬성' },
     ],
@@ -222,8 +222,8 @@ export const anonBoardScenario: Scenario = {
       },
       {
         when: { always: true },
-        vote: 'HOLD',
-        reason: '한 게시판에서 시범과 운영 효과 측정 후 확대 조건이 함께 있지 않아 보류',
+        vote: 'NO',
+        reason: '한 게시판에서 시범과 운영 효과 측정 후 확대 조건이 함께 갖춰지기 전이라 찬성할 수 없어 반대',
       },
     ],
     CAIO: [
@@ -256,8 +256,8 @@ export const anonBoardScenario: Scenario = {
       },
       {
         when: { has: 'TRACE' },
-        vote: 'HOLD',
-        reason: '문제 발생 시 추적 가능 조건은 있으나 게시 전 검수 조건이 없어 보류',
+        vote: 'NO',
+        reason: '문제 발생 시 추적 가능 조건은 있으나 게시 전 검수 조건이 갖춰지기 전이라 찬성할 수 없어 반대',
       },
       {
         when: { always: true },
@@ -268,13 +268,11 @@ export const anonBoardScenario: Scenario = {
   },
   resultCopy: {
     pass: '수정안이 승인되었습니다. 운영 전에 확인할 조건도 함께 기록했습니다.',
-    hold: '추가 검토 후 다시 심의합니다. 이사님의 확인 요청을 기록했습니다.',
     reject: '이번 안건은 부결되었습니다. 주요 우려와 이사님의 의견을 기록했습니다.',
     sixMonthsLater: {
       pass: '익명 게시판에 글이 늘었습니다. 이사회가 붙인 조건이 신고 처리와 검수의 기준이 되었습니다.',
       passOriginal:
         '익명 게시판에 글이 늘었습니다. 추적 범위와 검수 절차는 운영하면서 정해야 합니다.',
-      hold: '신고 처리와 로그 기준을 정리한 뒤 안건이 다시 상정됩니다. 그때까지 게시판은 실명으로 운영됩니다.',
       reject: '게시판은 실명 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },

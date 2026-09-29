@@ -50,9 +50,9 @@ const ROLE_CONDITION: Record<string, string> = {
   CISO: 'TRACE',
 };
 
-const ROLE_VOTE: Record<string, 'YES' | 'HOLD' | 'NO'> = {
+const ROLE_VOTE: Record<string, 'YES' | 'NO'> = {
   CEO: 'YES',
-  CFO: 'HOLD',
+  CFO: 'NO',
   CAIO: 'YES',
   CISO: 'NO',
 };
@@ -76,7 +76,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     roleId,
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
-    vote: ROLE_VOTE[roleId] ?? 'HOLD',
+    vote: ROLE_VOTE[roleId] ?? 'NO',
     reason: `[mock] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
     remainingConcerns: [],

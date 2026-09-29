@@ -1,11 +1,11 @@
-// 최종 투표 화면: 안건 카드 아래 찬성/보류/반대 radio(초기 미선택)와 별도 확정
+// 최종 투표 화면: 안건 카드 아래 찬성/반대 radio(초기 미선택)와 별도 확정
 // CTA를 둔다. 확정 버튼은 선택 전 비활성이며, 클릭 즉시 비활성화해 이중 확정을
 // 막는다(DESIGN_SPEC.md 4장 "최종 투표 radio"). live 모드에서 참가자가 확정한 뒤에도
 // 임원 표가 아직 도착하지 않았으면(execBallotsPending) "임원 판단을 기다리는 중"을
 // 보여준다(T30, AGENT_BOARDROOM_SPEC.md 6장 "8초 또는 deadline을 넘지 않는다"). 임원
 // 표 자체는 이 화면에서 절대 보여주지 않는다 — RESULT 전 비공개다.
-// T45(조종석 배치): 왼쪽 열은 찬성/보류/반대 3열 + 확정 CTA, 오른쪽 열은 안건 카드·
-// 조건을 담는다(DESIGN_SPEC.md v1.0 6절 표).
+// T45(조종석 배치): 왼쪽 열은 찬성/반대 2열 + 확정 CTA, 오른쪽 열은 안건 카드·
+// 조건을 담는다(DESIGN_SPEC.md v1.0 6절 표). T62: 보류를 없애 2열로 줄였다.
 
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -23,11 +23,10 @@ export interface VoteScreenProps {
   onConfirmVote: () => void;
 }
 
-const VOTE_ORDER: readonly PendingVote[] = ['YES', 'HOLD', 'NO'];
+const VOTE_ORDER: readonly PendingVote[] = ['YES', 'NO'];
 
 const VOTE_LABELS: Record<PendingVote, string> = {
   YES: '찬성',
-  HOLD: '보류',
   NO: '반대',
 };
 

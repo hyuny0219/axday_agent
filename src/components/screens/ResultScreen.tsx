@@ -52,17 +52,15 @@ function seatLabel(memberId: MemberId): string {
 
 const VOTE_TEXT: Record<Ballot['vote'], string> = {
   YES: '찬성',
-  HOLD: '보류',
   NO: '반대',
   UNCAST: '미표결',
 };
 
-// 반대·보류·미표결은 색만으로 구분하지 않고 아이콘을 더한다(DESIGN_SPEC.md 4장
-// "반대·보류·미표결은 색+텍스트+아이콘"). 찬성은 색+텍스트만으로도 구분에 문제가
+// 반대·미표결은 색만으로 구분하지 않고 아이콘을 더한다(DESIGN_SPEC.md 4장
+// "반대·미표결은 색+텍스트+아이콘"). 찬성은 색+텍스트만으로도 구분에 문제가
 // 없어 아이콘을 더하지 않는다. 장식이므로 스크린리더에는 노출하지 않는다
 // (텍스트 라벨이 이미 접근 가능한 이름을 제공한다).
 const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
-  HOLD: '⏸',
   NO: '✕',
   UNCAST: '–',
 };
@@ -127,11 +125,7 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   }
 
   const conclusion =
-    session.outcome === 'PASS'
-      ? scenario.resultCopy.pass
-      : session.outcome === 'REJECT'
-        ? scenario.resultCopy.reject
-        : scenario.resultCopy.hold;
+    session.outcome === 'PASS' ? scenario.resultCopy.pass : scenario.resultCopy.reject;
 
   // 가결은 도장과 같은 기준(반영 조건 유무)으로 pass/passOriginal을 가른다
   // (components/resultEpilogue.ts, PR #8 Codex 2차 검토).
@@ -238,8 +232,7 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
               <h3 className="result-screen__section-label">이사회 한 장 요약</h3>
               {resultSummary && (
                 <p className="result-summary__tally" data-testid="result-summary-tally">
-                  찬성 {resultSummary.tally.counts.YES} · 보류 {resultSummary.tally.counts.HOLD} ·
-                  반대 {resultSummary.tally.counts.NO}
+                  찬성 {resultSummary.tally.counts.YES} · 반대 {resultSummary.tally.counts.NO}
                   {resultSummary.tally.counts.UNCAST > 0 &&
                     ` · 미표결 ${resultSummary.tally.counts.UNCAST}`}
                 </p>

@@ -18,8 +18,8 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  // 최종 결정 한 줄은 승인 쪽으로도 부결 쪽으로도 유도하지 않고 그대로 병기된다.
-  await expect(page.getByTestId('briefing-role')).toContainText('최종 결정: 승인 · 보류 · 부결');
+  // 최종 결정 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다.
+  await expect(page.getByTestId('briefing-role')).toContainText('최종 결정: 찬성 · 반대');
 
   // T52: "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점 목록은 제거됐다.
   await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
