@@ -863,3 +863,19 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공(외부 요청 0건 fixture 포함). 두 해상도 스크린샷을 시안과 나란히 놓고 사용자가 확인. 1272×698 축소 경로에서 종이 패널 그림자·스탬프가 잘리지 않음.
 - 순서: 시연(2026-09-29 15:00) 뒤 시작. T58(전문 패널)은 이 카드에 흡수하거나 직후에.
 - 크기: L.
+
+## T65 live 응답 지연 진단·복원 — 서버 호출 로그, 단계별 타임아웃, 실패 임원 "다시 요청"
+
+- 목표: 2026-09-29 부사장 시연에서 참가자가 의견을 전달한 뒤 임원 반응이 "응답 지연·확인 필요"로 끝나고 그 뒤 라운드에서도 임원 의견을 받지 못했다. 서버는 기동 줄 외에 아무 것도 기록하지 않아 원인(모델 지연·제공자 오류·클라이언트 8초 중단 중 무엇인지)을 사후에 알 수 없었다. 세 가지를 만든다 — (1) 호출 단위 로그, (2) 라운드 종류별 타임아웃, (3) 실패한 임원만 다시 요청하는 버튼. 4분 체험·8초 예산 원칙(AGENT_BOARDROOM_SPEC 6장)은 유지하되 예외를 명시한다.
+- 읽을 것: `server/handlers/round.ts`·`vote.ts`(withTimeout, Promise.allSettled, 재시도 0회), `server/providers/anthropic.ts`(오류 분류), `src/services/boardAgents/live.ts`(MAX_ROUND_TIMEOUT_MS 8000, 클라이언트 abort), `src/services/orchestrator/runner.ts`(failedStatementOutcomes, roundChain), `src/components/parts/LiveStatementCards.tsx`(응답 지연 표시), `src/app/App.tsx`(라운드 effect·roundLog), `docs/AGENT_BOARDROOM_SPEC.md` 6장, `docs/FACILITATOR_GUIDE.md` "판단 중은 고장이 아니다" 절, `scripts/booth-update.sh`(로그 경로 안내).
+- 만들 것:
+  1. **서버 호출 로그** `server/log.ts`(신규): 라운드·표결·probe·refine·summarize 호출마다 한 줄 JSON을 stdout과 `logs/board-<YYYY-MM-DD>.jsonl`(저장소 루트, `.gitignore`)에 남긴다 — `{ts, kind:'round'|'vote'|…, sessionId, stage, roleId, status:'answered'|'failed', failReason, providerErrorClass('timeout'|'rate_limit'|'overloaded'|'auth'|'invalid_response'|'network'|'other'), httpStatus?, latencyMs, timeoutMs, promptVersion, modelId}`. 참가자 발언·모델 발언 본문·키는 기록하지 않는다(길이만). 세션 종료 시 세션당 요약 한 줄(라운드 수·실패 수·최대 지연). `booth-update.sh` 마지막 안내에 로그 경로 한 줄 추가.
+  2. **타임아웃을 라운드 종류별로**: `server/config.ts`에 `ROUND_TIMEOUT_MS`(기본 8000, OPINIONS·VOTE·probe)와 `REACTION_TIMEOUT_MS`(기본 12000, REACTIONS·FOLLOWUP — 프롬프트가 참가자 의견·이전 발언까지 실어 길다) 환경변수. 클라이언트 `live.ts`의 abort도 같은 값으로(서버 health 응답에 두 값을 실어 클라이언트가 읽는다 — 하드코딩 8000 제거). 스펙 6장에 "REACTIONS·FOLLOWUP은 12초까지"를 예외로 적고 4분 예산 안에서 어떻게 흡수하는지 한 문장. 실측: 고정 평가 세트 144행의 단계별 지연 분포(p50·p95·max)를 `docs/eval/latency-<날짜>.md`에 남겨 두 값의 근거로 삼는다.
+  3. **실패 임원 "다시 요청"**: 라운드 결과에 failed가 있으면 임원 카드 영역에 보조 버튼 "응답 없는 임원 다시 요청"(`data-testid="retry-failed-roles"`)을 둔다. 누르면 **실패한 역할만** 같은 stage로 다시 호출하고(서버 `/api/board/round`에 `roleIds` 선택 필드 추가, 없으면 넷 다), 성공하면 카드·무대·발언 흐름·표정이 갱신된다. 라운드당 1회, 세션 호출 상한(`server/sessionLimit.ts` 라운드 3)은 재요청을 포함해 4로 올린다. VOTE의 최종표 실패(UNCAST)에도 같은 버튼("미표결 임원 다시 요청", 1회). 자동 재시도는 두지 않는다(부스에서 대기 시간이 예측 가능해야 한다).
+  4. **운영 안내**: FACILITATOR_GUIDE에 "응답 지연·확인 필요가 뜨면 → 다시 요청 1회 → 그래도 안 되면 운영 메뉴 → scripted로 새 체험" 순서와 로그 파일로 사후 확인하는 법. DEPLOY/README에 환경변수 두 개.
+  5. **테스트**: 서버 단위(타임아웃 값 분기, roleIds 부분 호출, 로그 한 줄의 필드·본문 미포함), mock 제공자에 `x-mock-scenario: timeout:CFO` 같은 지연 주입이 이미 있으면 재사용해 e2e — REACTIONS에서 CFO 실패 → "다시 요청" → 카드 갱신·표정 갱신·발언 흐름에 반영, VOTE 미표결 재요청.
+- 허용 경로: `server/`, `src/services/`, `src/components/`, `src/app/`, `src/styles/`, `scripts/booth-update.sh`, `.gitignore`, `docs/`, `tests/`, `e2e/`.
+- 하지 말 것: 자동 재시도 루프. 참가자·모델 발언 본문을 로그에 남기기. 표결 규칙·집계 변경. 8초 원칙을 모든 단계에서 늘리기(REACTIONS·FOLLOWUP만).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. mock 지연 주입 e2e 통과. 실제 키로 `logs/` 한 줄 형식 확인(키·본문 없음). latency 문서에 단계별 p95가 타임아웃 안에 드는지 기록.
+- 순서: **T64 직후, 다음 시연 전 필수.**
+- 크기: M.
