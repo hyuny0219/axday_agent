@@ -69,6 +69,14 @@
   font-size: 20px;
 }
 
+/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
+.reaction-reply__mood {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .reaction-reply__texts {
   margin: 0;
   padding-left: var(--space-2);

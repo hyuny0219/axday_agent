@@ -9,7 +9,7 @@
 // 세션이 멈추지 않게 한다.
 
 import type { ExecMemberId, Vote } from '../../content/types';
-import type { StatementStage } from '../../domain/types';
+import type { Stance, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { accessHeaders } from '../transport/accessToken';
 import type {
@@ -36,6 +36,10 @@ function isStringArray(value: unknown): value is string[] {
 
 function isVote(value: unknown): value is Vote {
   return value === 'YES' || value === 'NO';
+}
+
+function isStance(value: unknown): value is Stance {
+  return value === 'FOR' || value === 'AGAINST' || value === 'UNDECIDED';
 }
 
 function allFailed(reason: string): Array<{ roleId: ExecMemberId; status: 'failed'; failReason: string }> {
@@ -115,13 +119,15 @@ function toStatementOutcome(
 ): StatementOutcome {
   const statement = entry.statement;
   if (entry.status === 'answered' && isRecord(statement)) {
-    const { message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds } = statement;
+    const { message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds, stance } =
+      statement;
     if (
       typeof message === 'string' &&
       isStringArray(evidenceIds) &&
       isStringArray(referencedStatementIds) &&
       isStringArray(concerns) &&
-      isStringArray(suggestedConditionIds)
+      isStringArray(suggestedConditionIds) &&
+      isStance(stance)
     ) {
       return {
         roleId,
@@ -135,6 +141,7 @@ function toStatementOutcome(
           referencedStatementIds,
           concerns,
           suggestedConditionIds,
+          stance,
           source: 'live',
           createdAt: 0,
         },

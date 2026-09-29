@@ -185,6 +185,7 @@ async function mockLongStatements(page: Page): Promise<void> {
         referencedStatementIds: index === 0 ? [] : [`ref-${index}`],
         concerns: [],
         suggestedConditionIds: [],
+        stance: 'FOR',
       },
       latencyMs: 10,
       modelId: 'mock',

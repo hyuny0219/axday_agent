@@ -16,8 +16,8 @@
 // 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Scenario } from '../../content/types';
-import type { Transcript } from '../../domain/types';
+import type { ExecMemberId, Scenario } from '../../content/types';
+import type { Stance, Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
   editText,
@@ -36,6 +36,7 @@ import { AssistantPanel } from '../parts/AssistantPanel';
 import { Avatar } from '../parts/Avatar';
 import { EvidenceGrid } from '../parts/EvidenceGrid';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
 export interface DiscussSubmitPayload {
@@ -49,6 +50,8 @@ export interface DiscussScreenProps {
   sessionId: string;
   /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
   transcript: Transcript;
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   onSubmit: (payload: DiscussSubmitPayload) => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
   onAssistantAction: (event: AssistantActionEvent) => void;
@@ -70,6 +73,7 @@ export function DiscussScreen({
   scenario,
   sessionId,
   transcript,
+  stances,
   onSubmit,
   onAssistantAction,
   assistantAdapter,
@@ -242,7 +246,12 @@ export function DiscussScreen({
             <article key={opinion.memberId} className="discuss-exec-card">
               <Avatar memberId={opinion.memberId} size="sm" />
               <div className="discuss-exec-card__body">
-                <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                <div className="discuss-exec-card__head">
+                  <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                  <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
+                    {STANCE_LABEL[stances[opinion.memberId]]}
+                  </span>
+                </div>
                 <p className="discuss-exec-card__text">{opinion.text}</p>
               </div>
             </article>

@@ -52,6 +52,11 @@ export interface Ballot {
 
 export type StatementStage = 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP';
 
+/** 임원이 안건에 지금 기울어 있는 쪽(T63, stance.ts). Statement가 이 타입을 쓰므로
+ * (types.ts <-> stance.ts 순환 참조를 피해) 여기 두고 stance.ts는 이 타입을 그대로
+ * 다시 내보낸다. */
+export type Stance = 'FOR' | 'AGAINST' | 'UNDECIDED';
+
 /** live 모드에서 임원 에이전트 한 명이 낸 발언 한 건. 참가자 원문/AI 초안과는 별개다. */
 export interface Statement {
   id: string;
@@ -62,6 +67,10 @@ export interface Statement {
   referencedStatementIds: string[];
   concerns: string[];
   suggestedConditionIds: string[];
+  /** 이 발언 끝에 이 임원이 기울어 있는 쪽(T63). scripted 발언은 stance.ts의
+   * scriptedStances가 별도로 계산하므로 여기서는 항상 실려 있지 않아도 된다(0/undefined
+   * 허용) — live 발언만 서버 응답의 stance를 그대로 옮겨 싣는다. */
+  stance?: Stance;
   source: 'live' | 'scripted';
   createdAt: number;
 }

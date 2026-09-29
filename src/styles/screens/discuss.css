@@ -46,10 +46,24 @@
   min-width: 0;
 }
 
+.discuss-exec-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
 .discuss-exec-card__member {
   margin: 0;
   font-size: var(--fs-meta);
   color: var(--text-muted);
+}
+
+/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
+.discuss-exec-card__mood {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* 임원 첫 의견은 4줄로 클램프한다(v1.0 6절 표 "임원 첫 의견 4줄") — 패널 자체는

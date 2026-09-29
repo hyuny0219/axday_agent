@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { LiveStatementCards } from '../../src/components/parts/LiveStatementCards';
 import { anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
-import type { RoleStatus, Statement } from '../../src/domain/types';
+import type { RoleStatus, Stance, Statement } from '../../src/domain/types';
 
 afterEach(() => {
   cleanup();
@@ -34,10 +34,23 @@ const statements: Statement[] = [
   },
 ];
 
+const stances: Record<ExecMemberId, Stance> = {
+  CEO: 'FOR',
+  CFO: 'AGAINST',
+  CAIO: 'UNDECIDED',
+  CISO: 'UNDECIDED',
+};
+
 describe('LiveStatementCards', () => {
   it('기본은 4열 그리드 컨테이너이며 답글형 클래스가 붙지 않는다', () => {
     render(
-      <LiveStatementCards scenario={scenario} stage="OPINIONS" roleStatus={roleStatus} statements={statements} />,
+      <LiveStatementCards
+        scenario={scenario}
+        stage="OPINIONS"
+        roleStatus={roleStatus}
+        statements={statements}
+        stances={stances}
+      />,
     );
     const container = screen.getByTestId('live-round-OPINIONS');
     expect(container).toHaveClass('live-round__cards');
@@ -51,6 +64,7 @@ describe('LiveStatementCards', () => {
         stage="REACTIONS"
         roleStatus={roleStatus}
         statements={statements}
+        stances={stances}
         variant="reply"
       />,
     );
@@ -59,5 +73,8 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
     expect(screen.getByTestId('statement-failed-CAIO')).toHaveTextContent('응답 지연');
     expect(screen.getByTestId('live-role-CEO')).toHaveClass('live-statement--answered');
+    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
+    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('미정');
   });
 });

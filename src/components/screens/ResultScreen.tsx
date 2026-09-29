@@ -26,7 +26,7 @@ import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { buildResultSummary } from '../resultSummary';
-import { SEAT_REVEAL_STEP_SECONDS } from '../resultStamp';
+import { SEAT_REVEAL_STEP_SECONDS, computePersuasion } from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
 import { Avatar } from '../parts/Avatar';
 // 결론 도장(result-stamp)은 T44에서 무대 열 우하단으로 옮겨 AppShell이 StageBand에
@@ -79,6 +79,10 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   );
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
+
+  // "설득 도장" 근거 한 줄(T63, v1.0 9절). 참가자 좌석이 UNCAST면(가능한 경우) 계산하지
+  // 않는다(computePersuasion이 null을 돌려준다).
+  const persuasion = useMemo(() => computePersuasion(session), [session]);
 
   const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions), [session.opinions]);
   const includedIds = useMemo(
@@ -292,6 +296,12 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
                     </span>
                   </li>
                 </ul>
+                {persuasion && (
+                  <p className="result-summary__persuasion" data-testid="persuasion-summary">
+                    이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
+                    {persuasion.earned ? ' → 추가 도장' : ' · 추가 도장은 3석부터'}
+                  </p>
+                )}
                 <div className="result-mine" data-testid="result-mine">
                   {resultSummary.quote.map((text, index) => (
                     <p key={index} className="result-mine__quote">

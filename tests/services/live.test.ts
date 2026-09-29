@@ -93,6 +93,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'FOR',
           },
         },
         { roleId: 'CFO', status: 'failed', failReason: 'timeout' },
@@ -106,6 +107,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'UNDECIDED',
           },
         },
         {
@@ -118,6 +120,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'AGAINST',
           },
         },
       ],
@@ -134,6 +137,7 @@ describe('live board agents adapter', () => {
     expect(byRole.CEO?.statement?.text).toBe('자료를 검토했습니다.');
     expect(byRole.CEO?.statement?.stage).toBe('OPINIONS');
     expect(byRole.CEO?.statement?.source).toBe('live');
+    expect(byRole.CEO?.statement?.stance).toBe('FOR');
     expect(byRole.CFO?.status).toBe('failed');
     expect(byRole.CFO?.failReason).toBe('timeout');
   });
@@ -205,6 +209,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'AGAINST',
           },
         },
         { roleId: 'CAIO', status: 'failed', failReason: 'invalid_response' },
@@ -218,6 +223,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'UNDECIDED',
           },
         },
       ],

@@ -6,6 +6,7 @@ import {
   CONDITION_IDS,
   EVIDENCE_IDS,
   EXEC_ROLE_IDS,
+  STANCE_VALUES,
   STATEMENT_STAGES,
   statementResponseSchema,
   type ExecRoleId,
@@ -70,6 +71,7 @@ const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
     'referencedStatementIds',
     'concerns',
     'suggestedConditionIds',
+    'stance',
   ],
   properties: {
     roleId: { type: 'string', enum: [...EXEC_ROLE_IDS] },
@@ -78,6 +80,7 @@ const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
     referencedStatementIds: { type: 'array', items: { type: 'string' } },
     concerns: { type: 'array', items: { type: 'string' } },
     suggestedConditionIds: { type: 'array', items: { type: 'string', enum: [...CONDITION_IDS] } },
+    stance: { type: 'string', enum: [...STANCE_VALUES] },
   },
 };
 

@@ -37,6 +37,7 @@ async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<v
               referencedStatementIds: [],
               concerns: [],
               suggestedConditionIds: [],
+              stance: 'FOR',
             },
             latencyMs: 10,
             modelId: 'mock',

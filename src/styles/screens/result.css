@@ -283,6 +283,18 @@
   font-size: var(--fs-meta);
 }
 
+/* "설득 도장" 근거 한 줄(T63, v1.0 9절). 다른 요약 줄과 같은 예산 안에 들도록 1줄
+   클램프한다(세로 예산은 9절 "머리글과 집계 배지는 한 줄" 규칙과 같은 전제). */
+.result-summary__persuasion {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* 행 목록은 줄어들지 않는다(flex-shrink:0) — 세로가 모자라면 행을 조용히 감추는 대신
    e2e(noscroll live 케이스)의 요약 패널 잘림 검사가 실패하도록 한다. */
 .result-summary__rows {
@@ -493,7 +505,8 @@
   .result-summary__name,
   .result-summary__vote,
   .result-summary__reason,
-  .result-summary__conditions {
+  .result-summary__conditions,
+  .result-summary__persuasion {
     font-size: 12px;
   }
 

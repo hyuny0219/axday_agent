@@ -21,13 +21,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Opinion, RoleStatus, Statement } from '../../domain/types';
+import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import { reactionsFor } from '../reactionsFor';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
@@ -48,6 +49,8 @@ export interface ReactionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
   transcriptRevision: number;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
@@ -75,6 +78,7 @@ export function ReactionsScreen({
   mode,
   roleStatus,
   statements,
+  stances,
   transcriptRevision,
   onSubmitFollowup,
   onKeepPrevious,
@@ -299,6 +303,7 @@ export function ReactionsScreen({
             stage="REACTIONS"
             roleStatus={roleStatus}
             statements={statements}
+            stances={stances}
             variant="reply"
           />
         ) : (
@@ -316,6 +321,9 @@ export function ReactionsScreen({
                   <div className="reaction-reply__head">
                     <Avatar memberId={memberId} size="sm" />
                     <h3 className="reaction-reply__member">{MEMBER_LABELS[memberId]}</h3>
+                    <span className="reaction-reply__mood" data-testid={`exec-mood-label-${memberId}`}>
+                      {STANCE_LABEL[stances[memberId]]}
+                    </span>
                   </div>
                   {changed ? (
                     <ul className="reaction-reply__texts">

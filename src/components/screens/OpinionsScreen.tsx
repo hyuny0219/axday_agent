@@ -8,8 +8,9 @@
 
 import { useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { RoleStatus, Statement } from '../../domain/types';
+import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import { Avatar } from '../parts/Avatar';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
@@ -19,10 +20,12 @@ export interface OpinionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   onNext: () => void;
 }
 
-export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext }: OpinionsScreenProps) {
+export function OpinionsScreen({ scenario, mode, roleStatus, statements, stances, onNext }: OpinionsScreenProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const actions = (
@@ -39,7 +42,13 @@ export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext 
         {actions}
         <div className="app-body__content screen opinions-screen__info">
           <h2 className="opinions-screen__title">임원들의 첫 의견</h2>
-          <LiveStatementCards scenario={scenario} stage="OPINIONS" roleStatus={roleStatus} statements={statements} />
+          <LiveStatementCards
+            scenario={scenario}
+            stage="OPINIONS"
+            roleStatus={roleStatus}
+            statements={statements}
+            stances={stances}
+          />
         </div>
       </>
     );
@@ -58,6 +67,9 @@ export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext 
                 <div className="opinion-card__head">
                   <Avatar memberId={opinion.memberId} size="sm" />
                   <h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                  <span className="opinion-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
+                    {STANCE_LABEL[stances[opinion.memberId]]}
+                  </span>
                 </div>
                 <p className="opinion-card__text">{opinion.text}</p>
                 <button

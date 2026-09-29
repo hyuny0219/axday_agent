@@ -11,11 +11,20 @@
 // 폭만 줄어들 뿐(clamp(420px,42vw,860px)) 두 해상도 모두 항상 전체 무대로 보인다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Ballot, MemberId, Opinion, RoleStatus, SessionMode, SessionStage, Statement } from '../../domain/types';
+import type {
+  Ballot,
+  MemberId,
+  Opinion,
+  RoleStatus,
+  SessionMode,
+  SessionStage,
+  Stance,
+  Statement,
+} from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { firstSentenceClipped } from '../stageText';
-import type { ResultStamp } from '../resultStamp';
-import { STAMP_DELAY_SECONDS } from '../resultStamp';
+import type { ResultPersuasion, ResultStamp } from '../resultStamp';
+import { PERSUASION_STAMP_DELAY_SECONDS, STAMP_DELAY_SECONDS } from '../resultStamp';
 import { useResultStampSkip } from '../useResultStampSkip';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
@@ -27,12 +36,17 @@ export interface StageBandProps {
   statements: Statement[];
   opinions: Opinion[];
   scenario: Scenario;
+  /** 임원 4명이 지금 안건에 기울어 있는 쪽(T63, domain/stance.ts). RESULT에서는 쓰지 않는다
+   * (표 배지가 대신한다). */
+  stances: Record<ExecMemberId, Stance>;
   /** RESULT 단계에서만 넘긴다. 있으면 표결 배지를 순차 공개한다. */
   ballots?: Ballot[];
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
   chairLine?: string;
   /** RESULT 단계에서만 넘긴다. 있으면 무대 우하단에 결론 도장을 겹쳐 찍는다(v1.0 5절). */
   resultStamp?: ResultStamp | null;
+  /** RESULT 단계에서만 넘긴다. earned면 결론 도장 0.4초 뒤 "설득 도장"을 겹쳐 찍는다(T63). */
+  persuasion?: ResultPersuasion | null;
 }
 
 /** 배경 이미지 기준 좌석 가로 위치(DESIGN_SPEC.md v1.0 1절). */
@@ -146,6 +160,54 @@ const VOTE_BADGE_ICON: Record<Ballot['vote'], string> = {
   UNCAST: '–',
 };
 
+/** 임원 표정 배지(T63) 안의 얼굴선. 이모지를 쓰지 않고(부스 PC OS마다 다르게 그려진다)
+ * CSS/inline SVG로만 그린다. 색뿐 아니라 눈·입 모양으로도 세 값을 구분한다(색만으로
+ * 구분 금지). 선 색은 배지 배경(stage.css의 stage-band__mood--*)과 대비되도록
+ * currentColor를 쓰고, 배지 쪽에서 color를 지정한다. */
+function MoodIcon({ stance }: { stance: Stance }) {
+  if (stance === 'FOR') {
+    return (
+      <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
+        <circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" />
+        <circle cx="13.5" cy="6.5" r="1.1" fill="currentColor" />
+        <path d="M4 10.5 Q9 14 14 10.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (stance === 'AGAINST') {
+    return (
+      <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
+        <circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" />
+        <circle cx="13.5" cy="6.5" r="1.1" fill="currentColor" />
+        <path d="M4 12.5 Q9 9 14 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
+      <circle cx="4" cy="9" r="1.3" fill="currentColor" />
+      <circle cx="9" cy="9" r="1.3" fill="currentColor" />
+      <circle cx="14" cy="9" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** 임원 한 명의 표정 배지(RESULT 제외). key를 stance 값으로 둬 값이 바뀔 때마다 React가
+ * 이 span을 새로 마운트하게 해, mount 애니메이션(stage.css stage-band__mood 200ms
+ * 스케일)이 그때마다 한 번씩 다시 재생된다(prefers-reduced-motion에서는 base.css 전역
+ * 규칙이 지속 시간을 0으로 낮춘다). */
+function MoodBadge({ memberId, stance }: { memberId: ExecMemberId; stance: Stance }) {
+  return (
+    <span
+      key={stance}
+      className={`stage-band__mood stage-band__mood--${stance.toLowerCase()}`}
+      data-testid={`stage-mood-${memberId}`}
+    >
+      <MoodIcon stance={stance} />
+    </span>
+  );
+}
+
 const RESULT_SEAT_ORDER: readonly MemberId[] = [...EXEC_MEMBER_ORDER, 'PARTICIPANT'];
 
 /** RESULT 단계에서만 쓰는 표결 배지. memberId의 등장 순서(CEO→CFO→CAIO→CISO→나)
@@ -172,9 +234,11 @@ export function StageBand({
   statements,
   opinions,
   scenario,
+  stances,
   ballots,
   chairLine,
   resultStamp,
+  persuasion,
 }: StageBandProps) {
   const participant = participantSeatOverlay(stage, opinions);
   const stampSkip = useResultStampSkip(stage === 'RESULT' && Boolean(resultStamp));
@@ -226,7 +290,11 @@ export function StageBand({
                 <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
                   {memberId}
                 </span>
-                {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
+                {stage === 'RESULT' && ballots ? (
+                  <VoteBadge memberId={memberId} ballots={ballots} />
+                ) : (
+                  <MoodBadge memberId={memberId} stance={stances[memberId]} />
+                )}
                 <span
                   className={`stage-band__silhouette stage-band__silhouette--${memberId.toLowerCase()}${
                     overlay.dimmed ? ' stage-band__silhouette--dimmed' : ''
@@ -271,6 +339,18 @@ export function StageBand({
             }}
           >
             {resultStamp.text}
+          </div>
+        )}
+        {resultStamp && persuasion?.earned && (
+          <div
+            className="stage-band__stamp stage-band__stamp--persuasion result-stamp result-stamp--persuasion"
+            data-testid="persuasion-stamp"
+            style={{
+              animationDelay: stampSkip ? '0.01ms' : `${PERSUASION_STAMP_DELAY_SECONDS}s`,
+              animationDuration: stampSkip ? '0.01ms' : undefined,
+            }}
+          >
+            설득 성공
           </div>
         )}
       </div>

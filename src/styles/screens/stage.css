@@ -130,6 +130,48 @@
   border-color: var(--vote-hold);
 }
 
+/* 임원 표정 배지(T63): 명패 아래 지름 18px 원. RESULT에서는 표 배지(stage-band__vote-badge)가
+   같은 자리를 대신 쓴다. 색뿐 아니라 StageBand.tsx의 MoodIcon(눈+입 SVG)으로도 세 값을
+   구분한다(색만으로 구분 금지). key=stance 트릭으로 값이 바뀔 때마다 이 span이 다시
+   마운트되어 아래 mount 애니메이션이 한 번씩 재생된다(prefers-reduced-motion에서는
+   base.css 전역 규칙이 지속 시간을 0으로 낮춘다). */
+.stage-band__mood {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  animation: stage-mood-pop 200ms ease-out both;
+}
+
+@keyframes stage-mood-pop {
+  from {
+    transform: scale(0.5);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* 찬성 쪽은 표 배지 찬성(--accent)과 같은 계열, 반대 쪽은 --vote-no, 미정은 --text-muted
+   (카드가 요구한 --vote-yes 토큰은 없어 기존 찬성 색 --accent로 대신한다). */
+.stage-band__mood--for {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+.stage-band__mood--against {
+  background-color: var(--vote-no);
+  color: var(--bg);
+}
+
+.stage-band__mood--undecided {
+  background-color: var(--text-muted);
+  color: var(--bg);
+}
+
 /* 발언 시 바닥 시안 글로우(v1.0 1절). silhouette는 좌석 바닥의 색 얼룩으로 표현하고,
    --glow가 붙을 때만 밝아진다(정적 레이어, 애니메이션 없음 — 성능 규칙). */
 .stage-band__silhouette {
@@ -352,6 +394,31 @@
 
 .result-stamp--reject {
   color: var(--vote-no);
+}
+
+/* "설득 도장"(T63): 가결·부결 도장 바로 위에 겹쳐 찍는다(같은 우하단 모서리, 다른 색·
+   회전으로 구분). --warm(v1.0 노을 강조 토큰)을 써서 가결·부결 도장(--accent/--vote-no)과
+   섞이지 않게 한다. */
+.stage-band__stamp--persuasion {
+  bottom: calc(var(--space-2) + 64px);
+}
+
+.result-stamp--persuasion {
+  color: var(--warm);
+  transform: rotate(8deg) scale(0.6);
+  animation-name: result-stamp-in-persuasion;
+}
+
+@keyframes result-stamp-in-persuasion {
+  from {
+    opacity: 0;
+    transform: rotate(8deg) scale(0.5);
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(8deg) scale(1);
+  }
 }
 
 @media (max-width: 1280px) {

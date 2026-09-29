@@ -25,9 +25,10 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
-import type { Session } from '../domain/types';
+import type { Session, Stance } from '../domain/types';
+import { liveStances, scriptedStances } from '../domain/stance';
 import { scenarios } from '../content/scenarios';
-import type { Scenario } from '../content/types';
+import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
@@ -50,7 +51,7 @@ import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
-import { computeResultStamp } from '../components/resultStamp';
+import { computePersuasion, computeResultStamp } from '../components/resultStamp';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -369,6 +370,7 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          stances={stancesFor(session, scenario)}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
         />
       );
@@ -382,6 +384,7 @@ function StageRouter() {
           scenario={scenario}
           sessionId={session.sessionId}
           transcript={session.transcript}
+          stances={stancesFor(session, scenario)}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
@@ -400,6 +403,7 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
@@ -472,6 +476,23 @@ function chairLineFor(stage: Session['stage'], scenario: Scenario | null): strin
   return undefined;
 }
 
+const ALL_UNDECIDED_STANCES: Record<ExecMemberId, Stance> = {
+  CEO: 'UNDECIDED',
+  CFO: 'UNDECIDED',
+  CAIO: 'UNDECIDED',
+  CISO: 'UNDECIDED',
+};
+
+/** 임원 4명의 표정(T63): live는 transcript의 가장 최근 발언 stance, scripted는 표결
+ * 규칙표로 미리 계산한다(domain/stance.ts). scenario가 아직 없으면(BRIEFING 이전) 넷
+ * 다 미정으로 둔다. */
+function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMemberId, Stance> {
+  if (!scenario) {
+    return ALL_UNDECIDED_STANCES;
+  }
+  return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
+}
+
 const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'BRIEFING',
   'OPINIONS',
@@ -504,6 +525,7 @@ function AppShell() {
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
   const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
+  const persuasion = session.stage === 'RESULT' ? computePersuasion(session) : null;
   const fit = useViewportFit();
   const wrapperStyle: CSSProperties | undefined =
     fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;
@@ -538,9 +560,11 @@ function AppShell() {
                     statements={session.transcript.statements}
                     opinions={session.opinions}
                     scenario={scenario}
+                    stances={stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(session.stage, scenario)}
                     resultStamp={resultStamp}
+                    persuasion={persuasion}
                   />
                 </div>
                 {content}

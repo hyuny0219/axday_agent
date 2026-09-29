@@ -10,9 +10,10 @@
 // (판단 중/발언/응답 실패)는 그대로다(PR #4 Codex 검토).
 
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { RoleStatus, Statement, StatementStage } from '../../domain/types';
+import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import { Avatar } from './Avatar';
 import '../../styles/screens/live.css';
 
@@ -23,6 +24,8 @@ export interface LiveStatementCardsProps {
   /** 회의 기록 전체(현재 단계가 아닌 발언도 포함) — referencedStatementIds가 가리키는
    * 다른 단계의 발언을 찾아 인용 미리보기를 만들 때 쓴다. */
   statements: Statement[];
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63, "찬성 쪽/반대 쪽/미정"). */
+  stances: Record<ExecMemberId, Stance>;
   /** 'grid'(기본, OPINIONS 4열) 또는 'reply'(REACTIONS 답글형). */
   variant?: 'grid' | 'reply';
 }
@@ -52,6 +55,7 @@ export function LiveStatementCards({
   stage,
   roleStatus,
   statements,
+  stances,
   variant = 'grid',
 }: LiveStatementCardsProps) {
   const containerClass = `live-round__cards${variant === 'reply' ? ' live-round__cards--reply' : ''}`;
@@ -70,6 +74,9 @@ export function LiveStatementCards({
             <div className="live-statement__head">
               <Avatar memberId={roleId} size="sm" />
               <h3 className="live-statement__member">{MEMBER_LABELS[roleId]}</h3>
+              <span className="live-statement__mood" data-testid={`exec-mood-label-${roleId}`}>
+                {STANCE_LABEL[stances[roleId]]}
+              </span>
             </div>
             {status === 'answered' && statement ? (
               <div data-testid={`statement-card-${roleId}`}>

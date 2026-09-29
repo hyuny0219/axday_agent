@@ -87,6 +87,7 @@ describe('handleRound with the mock provider', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'FOR',
           },
           modelId: 'fake-model',
         };

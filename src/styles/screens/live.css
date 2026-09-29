@@ -55,6 +55,15 @@
   font-size: 18px;
 }
 
+/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). 무대는
+   aria-hidden이라 이 텍스트가 읽어야 할 정보를 전담한다. 상태 칩(::after, 판단 중/발언/
+   응답 없음) 바로 앞에 둔다. */
+.live-statement__mood {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* 상태 칩: markup 변경 없이 head의 마지막 flex 항목으로 배지를 붙인다(DESIGN_SPEC.md
    "v0.8 화면 추가 요구 · 임원별 판단 중/발언/응답 실패 상태를 표시"). 실제 접근 가능한
    문구는 아래 live-statement__status-text(및 통과된 발언 카드 본문)가 이미 전담하므로,
