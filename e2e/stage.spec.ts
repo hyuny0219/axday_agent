@@ -76,6 +76,47 @@ async function visibleBoxOrNull(page: Page, selector: string): Promise<Box | nul
   return locator.boundingBox();
 }
 
+/** PR #11 Codex 28차 검토(P2): 말풍선은 200ms 등장 애니메이션(stage-bubble-in)으로
+ * 뜨고 시작 프레임은 translateY(6px)만큼 위치가 다르다 — 애니메이션이 끝나기 전에
+ * boundingBox를 재면 정착 위치(steady state)의 겹침을 놓칠 수 있다. .stage-band__bubble
+ * 각각의 실행 중인 Animation.finished를 기다려 정착 위치에서만 잰다. */
+async function waitForBubbleAnimations(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const bubbles = Array.from(document.querySelectorAll('.stage-band__bubble'));
+    await Promise.all(
+      bubbles.flatMap((el) => el.getAnimations().map((anim) => anim.finished.catch(() => undefined))),
+    );
+  });
+}
+
+/** REACTIONS에서 지정한 좌석 말풍선이 CAM 01/CLASSIFIED HUD 라벨과 겹치지 않는지
+ * 확인한다(T67 item6·PR #11 Codex 28차 검토 공용 검사, 1281px 이상 여러 폭에서
+ * 재사용). 기본은 네 임원 전부다 — CFO·CAIO는 좌석이 라벨과 같은 가로 구간에 있지
+ * 않아 stage.css에 겹침 보정이 없다(1281px대 CFO 겹침은 이 PR 범위 밖의 별도
+ * 발견 사항, 아래 1366×768 검사에서는 CEO·CISO만 확인한다). */
+async function assertExecBubblesDoNotOverlapHudLabels(
+  page: Page,
+  memberIds: readonly string[] = ['CEO', 'CFO', 'CAIO', 'CISO'],
+): Promise<void> {
+  await waitForBubbleAnimations(page);
+  const readout = await visibleBoxOrNull(page, '.stage-band__readout');
+  const classified = await visibleBoxOrNull(page, '.stage-band__classified');
+  expect(readout, 'CAM 01 라벨이 보여야 한다').not.toBeNull();
+  expect(classified, 'CLASSIFIED 라벨이 보여야 한다').not.toBeNull();
+
+  for (const memberId of memberIds) {
+    const bubble = await visibleBoxOrNull(page, `[data-testid="stage-bubble-${memberId}"]`);
+    if (!bubble) {
+      continue;
+    }
+    expect(boxesIntersect(bubble, readout!), `${memberId} 말풍선이 CAM 01 라벨과 겹친다`).toBe(false);
+    expect(
+      boxesIntersect(bubble, classified!),
+      `${memberId} 말풍선이 CLASSIFIED 라벨과 겹친다`,
+    ).toBe(false);
+  }
+}
+
 test.describe('1920×1080에서 무대 열', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 
@@ -161,26 +202,7 @@ test.describe('1920×1080에서 무대 열', () => {
     // T67 item6·7a(2026-09-30 실측, docs/screenshots/desktop-1080/reactions.png):
     // 양쪽 끝 좌석(CEO·CISO) 말풍선이 HUD 판독 라벨을 덮었다.
     await enterReactionsWithAllConditions(page);
-
-    const readout = await visibleBoxOrNull(page, '.stage-band__readout');
-    const classified = await visibleBoxOrNull(page, '.stage-band__classified');
-    expect(readout, '1920×1080에서는 CAM 01 라벨이 보여야 한다').not.toBeNull();
-    expect(classified, '1920×1080에서는 CLASSIFIED 라벨이 보여야 한다').not.toBeNull();
-
-    for (const memberId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-      const bubble = await visibleBoxOrNull(page, `[data-testid="stage-bubble-${memberId}"]`);
-      if (!bubble) {
-        continue;
-      }
-      expect(
-        boxesIntersect(bubble, readout!),
-        `${memberId} 말풍선이 CAM 01 라벨과 겹친다`,
-      ).toBe(false);
-      expect(
-        boxesIntersect(bubble, classified!),
-        `${memberId} 말풍선이 CLASSIFIED 라벨과 겹친다`,
-      ).toBe(false);
-    }
+    await assertExecBubblesDoNotOverlapHudLabels(page);
 
     const participantBubble = await visibleBoxOrNull(page, '[data-testid="stage-bubble-PARTICIPANT"]');
     const cfoNameplate = await page.locator('.stage-band__nameplate--cfo').boundingBox();
@@ -196,6 +218,21 @@ test.describe('1920×1080에서 무대 열', () => {
       boxesIntersect(participantBubble!, caioNameplate!),
       '참가자 말풍선이 CAIO 명패와 겹친다',
     ).toBe(false);
+  });
+});
+
+// PR #11 Codex 28차 검토(P2): calc(4% + 11px)는 "4%"가 stage 폭에 비례해 1281px
+// 부근일수록 여유가 줄었다(1920만 검사하면 가장 넓어 여유가 가장 큰 경우만 본다).
+// HUD 라벨 미디어쿼리 경계(min-width:1281px) 바로 위 폭에서 같은 검사를 반복해
+// 고정 px로 바꾼 CEO·CISO 여유가 폭에 상관없이 유지되는지 확인한다.
+test.describe('1366×768에서 무대 열', () => {
+  test.use({ viewport: { width: 1366, height: 768 } });
+
+  test('REACTIONS에서 CEO·CISO 말풍선이 CAM 01/CLASSIFIED HUD 라벨과 겹치지 않는다', async ({
+    page,
+  }) => {
+    await enterReactionsWithAllConditions(page);
+    await assertExecBubblesDoNotOverlapHudLabels(page, ['CEO', 'CISO']);
   });
 });
 

@@ -392,19 +392,28 @@
   }
 }
 
-/* T67 item6(2026-09-30): 양쪽 끝 좌석(CEO·CISO) 말풍선은 HUD 판독 라벨("CAM 01 ·
-   회의실 A · REC")·"CLASSIFIED" 칩과 같은 가로 구간(좌·우 40px 안쪽)에 있어, 3줄
-   클램프까지 찬 말풍선이 라벨을 덮는다(실측, docs/screenshots/desktop-1080/
-   reactions.png). 두 라벨이 폭 1280px 이하에서는 숨어 있으므로(위 .stage-band__
-   readout·.stage-band__classified 미디어쿼리) 그 구간에서는 이 보정이 필요 없다 —
-   좁은 폭에서까지 밀어 내리면 3줄 클램프 말풍선이 하늘 여백(28%, e2e/stage.spec.ts)
-   밖으로 넘칠 여유가 더 빠듯해진다. CLASSIFIED 칩 하단(무대 상단 기준 실측 약
-   34px)보다 여유를 두고 시작하도록 기존 4% 위에 11px를 더한다 — 3줄 클램프 최대
-   높이(실측 약 80px)에서도 28% 하늘 여백 선까지 남는 여유(~4px)를 실측으로 확인했다. */
+/* T67 item6(2026-09-30) 이어(PR #11 Codex 28차 검토, P2): 위 calc(4% + 11px)는 "4%"
+   부분이 stage 폭이 좁아질수록 함께 줄어, 1281px 쪽에서는 여유가 음수가 돼 CISO
+   말풍선 상단이 CLASSIFIED 칩 하단과 실제로 겹쳤다(1281~1920 전 구간 실측,
+   docs/screenshots/desktop-1080/reactions.png — 폭이 넓을수록만 우연히 안 겹쳤을
+   뿐이다). 두 라벨(CAM 01 판독 라벨·CLASSIFIED 칩)은 top:8px 고정 + 자기 테두리·
+   패딩·글자 높이로만 정해져 stage 폭과 무관하게 항상 같은 px 위치다 — 그래서 여유도
+   %가 아니라 고정 px여야 폭이 바뀌어도 겹치지 않는다(실측: 1281~1920 전 구간에서
+   CLASSIFIED 칩 하단은 무대 상단 기준 항상 약 34px, CAM 01 라벨 하단은 항상 약
+   24px). CISO는 34px에 여유 ~10px을 더한 44px에서 시작한다. CEO는 라벨이 더 짧아
+   32px에서 시작해도 겹치지 않으면서(여유 ~8px), BRIEFING 의장 말풍선 3줄 클램프
+   최대 높이(실측 약 86px, 40자 최대 클램프 텍스트 기준)가 1920에서도 28% 하늘
+   여백 선(stage.spec.ts) 안에 남는다 — CISO와 같은 44px을 CEO에도 쓰면 이 여백이
+   음수가 돼 그 e2e가 깨진다(실측으로 확인). 두 라벨 모두 폭 1280px 이하에서는 숨어
+   있으므로(위 .stage-band__readout·.stage-band__classified 미디어쿼리) 이 보정도
+   그 구간에서는 필요 없다. */
 @media (min-width: 1281px) {
-  [data-testid='stage-seat-CEO'] .stage-band__bubble,
+  [data-testid='stage-seat-CEO'] .stage-band__bubble {
+    top: 32px;
+  }
+
   [data-testid='stage-seat-CISO'] .stage-band__bubble {
-    top: calc(4% + 11px);
+    top: 44px;
   }
 }
 
