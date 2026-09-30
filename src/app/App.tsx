@@ -447,6 +447,11 @@ function StageRouter() {
           stances={stancesFor(session, scenario)}
           opinions={session.opinions}
           freezeDisabled={session.mode === 'live' && followUpPending}
+          mode={session.mode}
+          roleStatus={session.roleStatus}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('FOLLOWUP', roleIds) : undefined
+          }
           onFreeze={(confirmedConditionIds) =>
             dispatch({ type: 'FREEZE_MOTION', scenario, confirmedConditionIds })
           }
