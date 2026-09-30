@@ -388,6 +388,8 @@ function StageRouter() {
           scenario={scenario}
           sessionId={session.sessionId}
           transcript={session.transcript}
+          mode={session.mode}
+          roleStatus={session.roleStatus}
           stances={stancesFor(session, scenario)}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}

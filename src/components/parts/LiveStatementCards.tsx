@@ -42,7 +42,9 @@ function referencedLabel(statements: Statement[], id: string): string {
   return referenced ? `${MEMBER_LABELS[referenced.roleId]}의 발언` : id;
 }
 
-const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
+// DiscussScreen도 live 모드 임원 카드에 같은 문구를 그대로 써야 하므로(Codex 18차 검토 P2)
+// export한다 — 참가자가 아직 답이 없는 임원을 두 화면에서 다른 말로 보면 안 된다.
+export const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
   pending: '판단 중…',
   failed: '응답 지연·확인 필요',
 };

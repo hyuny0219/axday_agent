@@ -82,6 +82,13 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+
+  // DISCUSS: 임원 카드 본문도 OPINIONS 라운드의 실제 발언이어야 한다(scenario.initialOpinions
+  // 각본 문장이 아니다 — PR #11 Codex 18차 검토 P2. 무대 표정 배지는 실제 stance인데 카드
+  // 본문이 각본 문장이면 서로 모순돼 보이고, 참가자가 AI가 실제로 하지 않은 말을 근거로
+  // 의견을 쓰게 된다).
+  await expect(page.getByTestId('statement-card-CEO')).toHaveText('[mock] CEO의 OPINIONS 단계 발언입니다.');
+
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();

@@ -243,6 +243,11 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // DISCUSS: 임원 카드 본문도 OPINIONS의 실제 120자 발언으로 바뀌었다(Codex 18차 검토
+  // P2). line-clamp로 잘려 보이더라도 카드 높이가 늘어나 페이지 스크롤이 생기면 안 된다.
+  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
+  await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
   // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
   // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();

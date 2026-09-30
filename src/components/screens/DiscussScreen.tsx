@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Stance, Transcript } from '../../domain/types';
+import type { RoleStatus, SessionMode, Stance, Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
   editText,
@@ -26,6 +26,7 @@ import {
   togglePhrase,
 } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromPhrases, proposeFromText } from '../../domain/conditions';
+import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -35,6 +36,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { Avatar } from '../parts/Avatar';
 import { EvidenceGrid } from '../parts/EvidenceGrid';
+import { STATUS_TEXT } from '../parts/LiveStatementCards';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -48,8 +50,15 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. live 모드에서는
+   * 아래 임원 4장 카드의 본문도 이 transcript의 OPINIONS 발언에서 그대로 가져온다(Codex
+   * 18차 검토 P2 — 실제 발언과 다른 각본 문장을 나란히 보여주면 안 된다). */
   transcript: Transcript;
+  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. 임원 카드 본문을 실제
+   * 발언(live)으로 보여줄지 각본 문장(scripted)으로 보여줄지 가른다. */
+  mode: SessionMode;
+  /** live 모드에서 임원별 OPINIONS 라운드 응답 상태(아직 응답 전/실패 포함). */
+  roleStatus: Record<ExecMemberId, RoleStatus>;
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
   onSubmit: (payload: DiscussSubmitPayload) => void;
@@ -73,6 +82,8 @@ export function DiscussScreen({
   scenario,
   sessionId,
   transcript,
+  mode,
+  roleStatus,
   stances,
   onSubmit,
   onAssistantAction,
@@ -242,20 +253,56 @@ export function DiscussScreen({
           <EvidenceGrid evidence={scenario.evidence} />
         </div>
         <div className="discuss-screen__execs" data-testid="discuss-exec-row">
-          {scenario.initialOpinions.map((opinion) => (
-            <article key={opinion.memberId} className="discuss-exec-card">
-              <Avatar memberId={opinion.memberId} size="sm" />
-              <div className="discuss-exec-card__body">
-                <div className="discuss-exec-card__head">
-                  <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
-                  <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
-                    {STANCE_LABEL[stances[opinion.memberId]]}
-                  </span>
-                </div>
-                <p className="discuss-exec-card__text">{opinion.text}</p>
-              </div>
-            </article>
-          ))}
+          {mode === 'live'
+            ? EXEC_MEMBER_ORDER.map((memberId) => {
+                const status = roleStatus[memberId];
+                // DISCUSS는 OPINIONS 라운드가 끝난 뒤 화면이라 여기서 보여줄 실제 발언도
+                // stage:'OPINIONS'다(OpinionsScreen·LiveStatementCards와 같은 근거).
+                const statement = transcript.statements.find(
+                  (item) => item.roleId === memberId && item.stage === 'OPINIONS',
+                );
+                return (
+                  <article key={memberId} className="discuss-exec-card">
+                    <Avatar memberId={memberId} size="sm" />
+                    <div className="discuss-exec-card__body">
+                      <div className="discuss-exec-card__head">
+                        <h3 className="discuss-exec-card__member">{MEMBER_LABELS[memberId]}</h3>
+                        <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${memberId}`}>
+                          {STANCE_LABEL[stances[memberId]]}
+                        </span>
+                      </div>
+                      {status === 'answered' && statement ? (
+                        <p className="discuss-exec-card__text" data-testid={`statement-card-${memberId}`}>
+                          {statement.text}
+                        </p>
+                      ) : (
+                        <p
+                          className="discuss-exec-card__text"
+                          data-testid={
+                            status === 'failed' ? `statement-failed-${memberId}` : `statement-pending-${memberId}`
+                          }
+                        >
+                          {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            : scenario.initialOpinions.map((opinion) => (
+                <article key={opinion.memberId} className="discuss-exec-card">
+                  <Avatar memberId={opinion.memberId} size="sm" />
+                  <div className="discuss-exec-card__body">
+                    <div className="discuss-exec-card__head">
+                      <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                      <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
+                        {STANCE_LABEL[stances[opinion.memberId]]}
+                      </span>
+                    </div>
+                    <p className="discuss-exec-card__text">{opinion.text}</p>
+                  </div>
+                </article>
+              ))}
         </div>
       </div>
     </>
