@@ -278,7 +278,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 `tokens.css`에 v1.0 토큰(`--bg`·`--panel`·`--accent` 등)을 그대로 둔 채 새 토큰을 더한다(다른 화면·카드가 계속 v1.0 토큰을 참조할 수 있어 즉시 지우지 않는다).
 
 - 무대(HUD) 계열: `--hud-bg #050b14`, `--hud-line #28d9f0`(브래킷·판독 라벨), `--hud-warn #ffb457`.
-- 본문(서류) 계열: `--bg #0b0d10`, `--paper #ece7dc`, `--paper-2 #fbf8f1`, `--paper-border #c9c2b4`, `--ink #1b1a17`, `--ink-muted #5c5850`, `--label #6b4a1f`(타자기 라벨), `--amber #e0a34a`(CTA), `--stamp-red #b23b3b`, `--stamp-amber #b8781f`. 표 색은 종이 위(`--paper-vote-yes #1f8f5f`·`--paper-vote-no #b23b3b`)와 어두운 바탕(`--dark-vote-yes #7ce0b3`·`--dark-vote-no #e06b6b`)을 구분해 둔다.
+- 본문(서류) 계열: `--bg #0b0d10`, `--paper #ece7dc`, `--paper-2 #fbf8f1`, `--paper-border #c9c2b4`, `--ink #1b1a17`, `--ink-muted #5c5850`, `--label #6b4a1f`(타자기 라벨), `--amber #e0a34a`(CTA), `--stamp-red #b23b3b`, `--stamp-amber #b8781f`. 표 색은 종이 위(`--paper-vote-yes #0d5c37`·`--paper-vote-no #b23b3b`)와 어두운 바탕(`--dark-vote-yes #7ce0b3`·`--dark-vote-no #e06b6b`)을 구분해 둔다. `--paper-vote-yes`는 `--paper-2` 대비 7.61:1·`--paper` 대비 6.54:1로 WCAG AA(4.5:1) 이상이다(2026-09-30 Codex 리뷰 17차 지적 — 이전 값 `#1f8f5f`는 각각 3.84:1/3.31:1로 미달이었다).
 - 배경(`--skin-bg` 계열): 짙은 배경 위 앰버 40px 격자(5% 알파) + 좌상단 앰버 라디얼(`.app-scale-outer::before`).
 - 서체: `--font-label 'Special Elite'`(타자기, 라벨·칩·로그 발화자), `--font-hud 'Share Tech Mono'`(무대 판독·명패). 두 서체 모두 라틴 서브셋 woff2 한 장을 `public/fonts/`에 로컬로 번들해 `fonts.css`의 `@font-face`로 싣는다(런타임 외부 요청 금지 — `e2e/fixtures.ts`가 localhost 밖 요청을 차단). 한글 라벨 문구(예: "01 상황 파악")는 이 폰트에 없는 문자라 스택의 다음 값(시스템 폰트)으로 글자 단위 자동 대체된다(원본 시안과 같은 동작). 본문·제목(Noto Sans KR·Black Han Sans)은 그대로 v1.0 서체를 쓴다.
 

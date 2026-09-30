@@ -83,7 +83,10 @@
   --amber-soft: #f0c27a;
   --stamp-red: #b23b3b;
   --stamp-amber: #b8781f;
-  --paper-vote-yes: #1f8f5f;
+  /* WCAG 대비 4.5:1 이상: --paper-2(#fbf8f1) 대비 7.61:1, --paper(#ece7dc) 대비
+     6.54:1(Codex 리뷰 17차 지적 — 기존 #1f8f5f는 각각 3.84:1/3.31:1로 미달). 빨강
+     --paper-vote-no(#b23b3b)와 구분되는 녹색 색상은 유지한다. */
+  --paper-vote-yes: #0d5c37;
   --dark-vote-yes: #7ce0b3;
   --paper-vote-no: #b23b3b;
   --dark-vote-no: #e06b6b;

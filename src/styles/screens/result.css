@@ -425,14 +425,16 @@
   border-bottom: none;
 }
 
+/* 직함은 코드명이 아니라 전체 직함을 그대로 보여준다(2026-09-30 결정) — 가장 긴
+   "정보보호책임임원(CISO)"이 두 해상도 모두 줄바꿈 없이 들어가도록 폭을 그 직함
+   기준으로 넉넉히 잡는다(고정 96/128px 말줄임은 잘림 원인이라 폐기, Codex 리뷰
+   17차 지적). 5행이 같은 폭을 공유해 표·사유 열이 그대로 정렬된다. */
 .result-seat__title {
   flex: 0 0 auto;
-  width: 128px;
+  min-width: 168px;
   font-family: var(--font-label);
   font-size: var(--fs-meta);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--ink);
 }
 
@@ -576,7 +578,7 @@
   }
 
   .result-seat__title {
-    width: 96px;
+    min-width: 128px;
   }
 
   .result-summary__tally,

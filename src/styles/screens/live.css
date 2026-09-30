@@ -10,33 +10,39 @@
   gap: var(--space-2);
 }
 
+/* T64 이후 이 카드는 오른쪽 열(종이 서류철) 안에서만 그려진다(OpinionsScreen·
+   ReactionsScreen이 live 모드에서 .app-body__content 안에 렌더). scripted의
+   .opinion-card·.reaction-reply와 같은 종이-2 카드 + 잉크 글자로 맞춘다(Codex
+   리뷰 17차 지적 — 실측에서 옛 짙은 네이비 패널 그대로 남아 있었다). */
 .live-statement {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  background-color: var(--panel);
-  border: 2px solid var(--border);
+  background-color: var(--paper-2);
+  border: 2px solid var(--paper-border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
-  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  box-shadow: var(--shadow-paper-card);
 }
 
 .live-statement--failed {
-  border-color: var(--vote-uncast);
+  border-color: var(--stamp-red);
 }
 
 /* 임원 발언 강조: 얇은 glow 1회(DESIGN_SPEC.md 4장 "임원 발언 강조는 얇은 glow 1회").
    status가 'answered'로 바뀔 때만 클래스가 붙으므로 애니메이션이 한 번만 재생되고,
-   이후 리렌더로는 class 값이 그대로라 다시 재생되지 않는다. 발언 상태의 시안 테두리는
-   글로우가 끝난 뒤에도 유지된다. */
+   이후 리렌더로는 class 값이 그대로라 다시 재생되지 않는다. 발언 상태의 강조 테두리는
+   글로우가 끝난 뒤에도 유지된다. 종이 위라 짙은 네이비용 --accent 대신 scripted의
+   reaction-reply--changed와 같은 --label(타자기 잉크)을 쓴다. */
 .live-statement--answered {
-  border-color: var(--accent);
+  border-color: var(--label);
   animation: exec-statement-glow 900ms ease-out;
 }
 
 @keyframes exec-statement-glow {
   from {
-    box-shadow: 0 0 0 2px var(--accent);
+    box-shadow: 0 0 0 2px var(--label);
   }
 
   to {
@@ -60,7 +66,7 @@
    응답 없음) 바로 앞에 둔다. */
 .live-statement__mood {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   white-space: nowrap;
 }
 
@@ -74,8 +80,8 @@
   align-items: center;
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid var(--paper-border);
+  color: var(--ink-muted);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -87,19 +93,21 @@
 
 .live-statement--answered .live-statement__head::after {
   content: '발언' / '';
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--label);
+  color: var(--label);
 }
 
+/* 실패(응답 지연·확인 필요)는 종이 위에서 눈에 띄어야 하므로 도장 빨강을 쓴다(4.5:1
+   이상, --paper-2 대비 5.53:1·--paper 대비 4.75:1). */
 .live-statement--failed .live-statement__head::after {
   content: '응답 없음' / '';
-  border-color: var(--vote-uncast);
-  color: var(--vote-uncast);
+  border-color: var(--stamp-red);
+  color: var(--stamp-red);
 }
 
 .live-statement__text {
   margin: 0;
-  color: var(--text);
+  color: var(--ink-muted);
   font-size: var(--fs-card);
   line-height: 1.5;
 }
@@ -116,25 +124,25 @@
 .live-statement__evidence li {
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid var(--paper-border);
+  color: var(--ink-muted);
   font-size: 13px;
 }
 
 .live-statement__references {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: 14px;
 }
 
 .live-statement__status-text {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-style: italic;
 }
 
 .live-statement--failed .live-statement__status-text {
-  color: var(--vote-uncast);
+  color: var(--stamp-red);
   font-style: normal;
 }
 
@@ -162,7 +170,7 @@
   left: calc(-1 * var(--space-3));
   width: var(--space-3);
   height: 1px;
-  background-color: var(--border);
+  background-color: var(--paper-border);
 }
 
 .live-round__cards--reply .live-statement--answered {
@@ -229,19 +237,22 @@
 .result-seat__unavailable {
   margin: 0;
   font-size: var(--fs-meta);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
 .result-screen__mode-notice {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }
 
+/* RESULT 오른쪽 열은 T66부터 종이 보고서라 --panel(짙은 네이비)·--vote-hold(밝은
+   골드)는 종이 위에서 어두운 상자로 튀었다(Codex 리뷰 17차 지적) — 다른 경고 문구와
+   같은 종이-2 + 도장 앰버 테두리 + --label 잉크로 맞춘다. */
 .result-screen__limited-notice {
   margin: 0;
   padding: var(--space-2);
   border-radius: var(--radius-control);
-  border: 1px solid var(--vote-hold);
-  background-color: var(--panel);
-  color: var(--vote-hold);
+  border: 1px solid var(--stamp-amber);
+  background-color: var(--paper-2);
+  color: var(--label);
 }
