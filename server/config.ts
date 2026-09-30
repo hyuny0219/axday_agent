@@ -40,9 +40,12 @@ function parsePort(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PORT;
 }
 
-function positiveMsOr(value: string | undefined, fallback: number): number {
+/** 타임아웃(ms)은 양의 정수만 받는다. round/vote 요청 스키마의 budgetMs가 z.number().int()라
+ * 소수(예: 8000.5)를 health로 내려보내면 클라이언트 요청이 전부 400이 된다(PR #11 Codex
+ * 26차). 정수가 아니거나 0 이하·숫자가 아니면 기본값으로 돌아간다. */
+function positiveIntMsOr(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 /** 환경변수에서 서버 설정을 만든다. 테스트에서는 env 객체를 직접 넘길 수 있다. */
@@ -52,7 +55,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     provider: parseProvider(env.MODEL_PROVIDER),
     modelId: env.MODEL_ID?.trim() || DEFAULT_MODEL_ID,
     promptVersion: PROMPT_VERSION,
-    roundTimeoutMs: positiveMsOr(env.ROUND_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS),
-    reactionTimeoutMs: positiveMsOr(env.REACTION_TIMEOUT_MS, DEFAULT_REACTION_TIMEOUT_MS),
+    roundTimeoutMs: positiveIntMsOr(env.ROUND_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS),
+    reactionTimeoutMs: positiveIntMsOr(env.REACTION_TIMEOUT_MS, DEFAULT_REACTION_TIMEOUT_MS),
   };
 }
