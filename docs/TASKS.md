@@ -931,3 +931,18 @@
 - 하지 말 것: DISCUSS 화면의 EvidenceGrid(accordion) 변경(다음 카드에서 같은 팝업으로 통일할지 결정), 자료 내용·ID 변경, 주 CTA 위치 변경.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 BRIEFING 오른쪽 열에 자료 카드가 없고 버튼만 있으며 페이지 스크롤 없음. 팝업에서 4장 전문이 보이고 세 가지 방법으로 닫힌다. 헤더에 칩 잇는 선이 없다.
 - 크기: S.
+
+## T69 의견 작성 화면 — 자료 카드(accordion)를 T68 "근거 자료 보기" 팝업으로 통일
+
+- 목표(2026-10-01 사용자 결정): DISCUSS 오른쪽 열의 `EvidenceGrid`(variant accordion, 4장 접힘 카드)를 없애고 BRIEFING(T68)과 같은 **"근거 자료 보기" 버튼 + EvidenceDialog 팝업**으로 바꾼다. 두 화면의 자료 보기 동작이 같아지고, 오른쪽 열은 추천 문구·임원 카드에 더 넓게 쓴다.
+- 읽을 것: `src/components/screens/DiscussScreen.tsx`(`discuss-screen__evidence`, 오른쪽 열 구성: 추천 문구 → 자료 → 임원 카드), `src/components/screens/BriefingScreen.tsx`(T68 버튼·팝업 연결 방식·testid `open-evidence`), `src/components/parts/EvidenceDialog.tsx`, `src/components/parts/EvidenceGrid.tsx`(accordion variant의 남은 사용처 확인), `src/styles/screens/discuss.css`·`briefing.css`(버튼 행 스타일 재사용), `e2e/noscroll.spec.ts`·`screenshots.spec.ts`·`e2e/discuss*.spec.ts`, `tests/components/BriefingScreen.test.tsx`(같은 형태의 테스트를 Discuss에도), `docs/design/DESIGN_SPEC.md` 3장 DISCUSS·v1.2 절.
+- 만들 것:
+  1. DiscussScreen: `discuss-screen__evidence` 블록을 BRIEFING과 같은 버튼 행(`근거 자료 보기` + "EXHIBIT A–D · 4장", `data-testid="open-evidence"`)으로 바꾸고 EvidenceDialog를 로컬 state로 연다. 버튼 행은 추천 문구 아래·임원 카드 위, 보조 CTA 스타일(주 CTA "의견 전달"과 구분). 버튼 행 스타일은 briefing.css의 것을 공용 클래스로 빼서 두 화면이 같은 규칙을 쓴다(`src/styles/screens/evidenceDialog.css` 또는 새 `evidenceButton` 규칙).
+  2. AssistantPanel(AI 비서실장)이 열린 상태에서 팝업을 열어도 포커스·스크롤 잠금·닫기 동작이 정상이어야 한다(팝업이 패널 위에 오도록 z-index, 닫으면 포커스는 "근거 자료 보기" 버튼으로).
+  3. EvidenceGrid의 accordion variant가 더 이상 쓰이지 않으면 코드·CSS·테스트에서 제거하고 expanded만 남긴다(사용처가 남으면 그대로).
+  4. 남는 세로 공간: 임원 카드 4장(discuss-exec-card)의 본문 line-clamp(현재 4줄)를 늘리지 말고 그대로 두되, 카드 간격·추천 문구 영역이 자연히 여유를 얻는다. 두 해상도 페이지 스크롤 없음.
+  5. 테스트: `tests/components/DiscussScreen.test.tsx`에 "팝업 열기 전 evidence-card 없음 → 버튼 클릭 후 4장 → Esc로 닫힘·포커스 복귀" 추가, e2e discuss 흐름에 버튼→팝업→닫기 한 번, noscroll·screenshots 갱신(discuss 두 해상도 + `discuss-evidence.png` 추가). DESIGN_SPEC 3장 DISCUSS 개정(v1.2).
+- 허용 경로: `src/components/`, `src/styles/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 추천 문구·임원 카드·의견 입력의 동작 변경, 자료 내용 변경, BRIEFING 쪽 동작 변경(공용 스타일 추출은 허용).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드가 없고 버튼만 있으며, 팝업이 BRIEFING과 동일하게 열리고 닫힌다. 페이지 스크롤 없음.
+- 크기: S.
