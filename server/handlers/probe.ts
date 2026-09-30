@@ -8,6 +8,7 @@ import type { ModelProvider } from '../providers/types';
 import type { ProviderName } from '../config';
 import type { Clock } from '../clock';
 import { logCall } from '../log';
+import { PROMPT_VERSION } from '../prompts/version';
 import { withTimeout } from './timeout';
 import { classifyFailure } from './shared';
 
@@ -75,7 +76,7 @@ export async function handleProbe({ provider, config, clock, timeoutMs }: ProbeD
         providerErrorClass: 'invalid_response',
         latencyMs,
         timeoutMs: effectiveTimeoutMs,
-        promptVersion: '',
+        promptVersion: PROMPT_VERSION,
         modelId: result.modelId,
       });
       return {
@@ -92,7 +93,7 @@ export async function handleProbe({ provider, config, clock, timeoutMs }: ProbeD
       status: 'answered',
       latencyMs,
       timeoutMs: effectiveTimeoutMs,
-      promptVersion: '',
+      promptVersion: PROMPT_VERSION,
       modelId: result.modelId,
     });
     return { ok: true, provider: config.provider, modelId: result.modelId, latencyMs };
@@ -109,7 +110,7 @@ export async function handleProbe({ provider, config, clock, timeoutMs }: ProbeD
       httpStatus,
       latencyMs,
       timeoutMs: effectiveTimeoutMs,
-      promptVersion: '',
+      promptVersion: PROMPT_VERSION,
       modelId: '',
     });
     return {
