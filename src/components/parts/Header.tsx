@@ -1,28 +1,20 @@
-// 상단 공통 바: BOARDROOM 2026 · 단계명 · 운영 메뉴
-// (DESIGN_SPEC.md 3장 "공통" 문단). T30에서 진행 방식 배지(LIVE / 사전 구성 시뮬레이션)를
-// 더했다(AGENT_BOARDROOM_SPEC.md 6장 "세션 시작 전에 live/scripted 모드를 고정하고
-// 화면에 표시한다"). T50(2026-09-22 사용자 결정)에서 240초 카운트다운 표시를 없앴다.
+// 상단 공통 바: BOARDROOM 2026 · 진행 스트립 · 운영 메뉴
+// (DESIGN_SPEC.md 3장 "공통" 문단, v1.2). T30에서 진행 방식 배지(LIVE / 사전 구성
+// 시뮬레이션)를 더했다(AGENT_BOARDROOM_SPEC.md 6장 "세션 시작 전에 live/scripted
+// 모드를 고정하고 화면에 표시한다"). T50(2026-09-22 사용자 결정)에서 240초 카운트다운
+// 표시를 없앴다. T67(2026-09-30 사용자 요청)에서 참가자 명패와 단계 이름 칩을 없애고,
+// 본문 위에 따로 있던 ProgressStrip을 헤더 가운데로 올렸다(`docs/design/mockups/
+// Main.html` 헤더 한 줄: 좌 브랜드·케이스 라벨 | 가운데 01~05 탭 | 우 모드 배지·운영).
+// ATTRACT·SELECT는 ProgressStrip이 null을 돌려주므로 가운데가 비고 좌·우만 남는다.
 
-import type { Session, SessionStage } from '../../domain/types';
+import type { Session } from '../../domain/types';
 import '../../styles/screens/shell.css';
-import { Nameplate } from './Nameplate';
 import { OperatorMenu } from './OperatorMenu';
+import { ProgressStrip } from './ProgressStrip';
 
 const MODE_BADGE_TEXT: Record<Session['mode'], string> = {
   live: 'LIVE',
   scripted: '사전 구성 시뮬레이션',
-};
-
-const STAGE_LABELS: Record<SessionStage, string> = {
-  ATTRACT: '대기',
-  SELECT: '안건 선택',
-  BRIEFING: '브리핑',
-  OPINIONS: '임원 의견',
-  DISCUSS: '의견 작성',
-  REACTIONS: '반응',
-  MOTION: '최종 안건',
-  VOTE: '최종 투표',
-  RESULT: '결과',
 };
 
 export interface HeaderProps {
@@ -41,11 +33,10 @@ export function Header({ session, onOperatorReset }: HeaderProps) {
         <span className="app-header__case-file" aria-hidden="true">
           CASE FILE No. 02 · SESSION {session.sessionId.slice(0, 4).toUpperCase()}
         </span>
-        {/* 참가자 명패는 헤더 좌측에 상시 둔다(v1.0 6절 개정: 무대 좌상단 pill은
-            의장 말풍선과 겹쳐 헤더로 옮겼다). ATTRACT에서는 아직 좌석이 없으므로 숨긴다. */}
-        {session.stage !== 'ATTRACT' && <Nameplate className="nameplate--header" />}
       </div>
-      <span className="app-header__stage">{STAGE_LABELS[session.stage]}</span>
+      <div className="app-header__center">
+        <ProgressStrip stage={session.stage} />
+      </div>
       <div className="app-header__right">
         <span
           className={`mode-badge mode-badge--${session.mode}`}

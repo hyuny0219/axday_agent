@@ -46,7 +46,6 @@ import { liveAssistantAdapter } from '../services/assistant/live';
 import { scriptedAssistantAdapter } from '../services/assistant/scripted';
 import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
-import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
@@ -574,9 +573,6 @@ function AppShell() {
             session={session}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
           />
-          {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
-            <ProgressStrip stage={session.stage} />
-          )}
           {hasStageBand && scenario ? (
             // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
             // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen

@@ -74,8 +74,6 @@ test.describe('1920×1080에서 무대 열', () => {
     // 브리핑에서는 의장(CEO) 말풍선만 있고, 무대는 읽어야 할 정보를 스스로 담지
     // 않는다(장식, aria-hidden).
     await expect(page.getByTestId('stage-bubble-CEO')).toBeVisible();
-    // 명패는 무대 안 좌상단 pill로 옮겨졌다(v1.0 6절).
-    await expect(page.getByTestId('nameplate')).toBeInViewport();
   });
 
   test('BRIEFING 의장 말풍선이 무대 상단 28%(하늘 여백) 안에서 끝난다', async ({ page }) => {
