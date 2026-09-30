@@ -60,7 +60,9 @@ describe('SessionLimitRegistry', () => {
     expect(registry.allow('s1', 'round')).toBe('ok'); // OPINIONS
     expect(registry.allow('s1', 'round')).toBe('ok'); // REACTIONS
     expect(registry.allow('s1', 'round')).toBe('ok'); // FOLLOWUP
-    expect(registry.allow('s1', 'round')).toBe('ok'); // "다시 요청" 1회(T65)
+    expect(registry.allow('s1', 'round')).toBe('ok'); // OPINIONS "다시 요청"(T65, 라운드 단계마다 1회)
+    expect(registry.allow('s1', 'round')).toBe('ok'); // REACTIONS "다시 요청"
+    expect(registry.allow('s1', 'round')).toBe('ok'); // FOLLOWUP "다시 요청"
     expect(registry.allow('s1', 'round')).toBe('call_limit');
     expect(registry.allow('s1', 'vote')).toBe('ok');
     expect(registry.allow('s1', 'vote')).toBe('ok'); // "미표결 임원 다시 요청" 1회(T65)
@@ -92,8 +94,10 @@ describe('SessionLimitRegistry', () => {
     expect(registry.allow('s1', 'round')).toBe('ok'); // FOLLOWUP — 첫 요청 뒤 수명의 두 배 가까이
     advance(ttl - 1);
     expect(registry.allow('s1', 'vote')).toBe('ok'); // 최종표
-    // 호출 횟수는 그대로 누적된다(라운드 상한 4, T65 — "다시 요청" 1회를 아직 안 썼다).
-    expect(registry.allow('s1', 'round')).toBe('ok'); // "다시 요청" 1회
+    // 호출 횟수는 그대로 누적된다(라운드 상한 6, T65 — 라운드 단계마다 재요청 1회씩 아직 안 썼다).
+    expect(registry.allow('s1', 'round')).toBe('ok'); // OPINIONS "다시 요청"
+    expect(registry.allow('s1', 'round')).toBe('ok'); // REACTIONS "다시 요청"
+    expect(registry.allow('s1', 'round')).toBe('ok'); // FOLLOWUP "다시 요청"
     expect(registry.allow('s1', 'round')).toBe('call_limit');
   });
 
@@ -174,9 +178,9 @@ describe('createBoardServer가 세션 상한을 429로 연결한다', () => {
       expect(second.status).toBe(429);
       expect(await second.json()).toEqual({ error: 'session_limit' });
 
-      // 같은 세션은 라운드 4회까지만 통과하고(T65: "다시 요청" 1회 포함) 5번째부터
+      // 같은 세션은 라운드 6회까지만 통과하고(T65: 라운드 단계마다 재요청 1회씩 포함) 7번째부터
       // call_limit이다(requestId는 매번 새것).
-      for (let n = 2; n <= 4; n += 1) {
+      for (let n = 2; n <= 6; n += 1) {
         const again = await fetch(url('/api/board/round'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -184,13 +188,13 @@ describe('createBoardServer가 세션 상한을 429로 연결한다', () => {
         });
         expect(again.status).not.toBe(429);
       }
-      const fifth = await fetch(url('/api/board/round'), {
+      const seventh = await fetch(url('/api/board/round'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(baseRoundBody('session-limit-1', 'req-limit-1-5')),
+        body: JSON.stringify(baseRoundBody('session-limit-1', 'req-limit-1-7')),
       });
-      expect(fifth.status).toBe(429);
-      expect(await fifth.json()).toEqual({ error: 'call_limit' });
+      expect(seventh.status).toBe(429);
+      expect(await seventh.json()).toEqual({ error: 'call_limit' });
     } finally {
       await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()));
     }
