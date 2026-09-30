@@ -43,9 +43,14 @@ function parsePort(value: string | undefined): number {
 /** 타임아웃(ms)은 양의 정수만 받는다. round/vote 요청 스키마의 budgetMs가 z.number().int()라
  * 소수(예: 8000.5)를 health로 내려보내면 클라이언트 요청이 전부 400이 된다(PR #11 Codex
  * 26차). 정수가 아니거나 0 이하·숫자가 아니면 기본값으로 돌아간다. */
+/** 타임아웃 운영 상한(ms). 4분 체험에서 한 라운드가 2분을 넘길 이유가 없고, 32비트 타이머
+ * 한계(2^31-1ms)를 넘는 값은 Node setTimeout이 1ms로 바꿔 즉시 타임아웃이 난다(PR #11 Codex
+ * 27차). 이 범위를 벗어나면 기본값으로 돌아간다. */
+export const MAX_TIMEOUT_MS = 120_000;
+
 function positiveIntMsOr(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= MAX_TIMEOUT_MS ? parsed : fallback;
 }
 
 /** 환경변수에서 서버 설정을 만든다. 테스트에서는 env 객체를 직접 넘길 수 있다. */
