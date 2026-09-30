@@ -16,7 +16,7 @@ const STEPS: ProgressStep[] = [
   { step: 1, label: '01 상황 파악' },
   { step: 2, label: '02 임원 의견' },
   { step: 3, label: '03 내 의견' },
-  { step: 4, label: '04 반응' },
+  { step: 4, label: '04 반응에 답하기' },
   { step: 5, label: '05 표결' },
 ];
 
