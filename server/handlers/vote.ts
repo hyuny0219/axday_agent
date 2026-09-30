@@ -22,7 +22,7 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { classifyFailure } from './shared';
+import { classifyFailure, roleIdsSchema } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -51,7 +51,7 @@ export const voteRequestSchema = z.object({
   }),
   /** 미표결(UNCAST) 임원만 다시 호출할 때 쓰는 선택 필드(T65, "미표결 임원 다시 요청").
    * 없으면 임원 4명 전체를 부른다. */
-  roleIds: z.array(z.enum(EXEC_ROLE_IDS)).min(1).optional(),
+  roleIds: roleIdsSchema.optional(),
   /** 테스트/개발 전용: roleId -> mock 장애 주입. 운영 요청에는 없다. */
   mock: z.record(z.string(), z.string()).optional(),
 });

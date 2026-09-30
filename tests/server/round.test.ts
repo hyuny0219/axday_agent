@@ -2,7 +2,7 @@
 // 준수, 참가자 발언 프롬프트 주입 격리. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
 import { describe, expect, it } from 'vitest';
-import { handleRound, type RoundRequest } from '../../server/handlers/round';
+import { handleRound, roundRequestSchema, type RoundRequest } from '../../server/handlers/round';
 import { createMockProvider } from '../../server/providers/mock';
 import type { ModelProvider } from '../../server/providers/types';
 import { PROMPT_VERSION } from '../../server/prompts/version';
@@ -214,5 +214,16 @@ describe('handleRound with the mock provider', () => {
       { provider: fakeProvider, timeouts: { roundTimeoutMs: 3000, reactionTimeoutMs: 5000 } },
     );
     expect(timeoutsSeen).toEqual([5000]);
+  });
+});
+
+describe('roundRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
+  it('중복 역할·4개 초과는 거부하고, 고유한 1~4개만 받는다', () => {
+    const base = baseRoundInput({ requestId: 'req-schema' });
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CEO'] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CEO'] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: [] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CFO', 'CAIO'] }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO'] }).success).toBe(true);
   });
 });

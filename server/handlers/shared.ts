@@ -2,6 +2,8 @@
 // 문자열로, 그리고(T65) 로그용 providerErrorClass·httpStatus로 좁힌다. 참가자·모델 발언
 // 본문은 다루지 않는다 — 오류 종류 판단에만 쓴다.
 
+import { z } from 'zod';
+import { EXEC_ROLE_IDS } from '../validate';
 import { ModelRefusalError, ProviderCallError } from '../providers/types';
 
 export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_error';
@@ -80,3 +82,12 @@ export function classifyFailure(err: unknown): FailClassification {
 export function mapFailReason(err: unknown): FailReason {
   return classifyFailure(err).failReason;
 }
+
+/** "다시 요청"의 roleIds(T65). 부스 URL 토큰만 있으면 누구나 호출할 수 있는데 세션 상한은 HTTP
+ * 요청 단위로 세므로, 같은 역할을 반복해 보내 한 요청으로 유료 호출을 늘리지 못하게 최대
+ * 4개·중복 없음으로 잘라 둔다(PR #11 Codex 21차 P1). */
+export const roleIdsSchema = z
+  .array(z.enum(EXEC_ROLE_IDS))
+  .min(1)
+  .max(EXEC_ROLE_IDS.length)
+  .refine((ids) => new Set(ids).size === ids.length, { message: 'roleIds must be unique' });

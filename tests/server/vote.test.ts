@@ -2,7 +2,7 @@
 // 포함하지 않음을 확인한다. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
 import { describe, expect, it } from 'vitest';
-import { handleVote, type VoteRequest } from '../../server/handlers/vote';
+import { handleVote, voteRequestSchema, type VoteRequest } from '../../server/handlers/vote';
 import { createMockProvider } from '../../server/providers/mock';
 import type { ModelProvider } from '../../server/providers/types';
 
@@ -192,5 +192,14 @@ describe('handleVote with the mock provider', () => {
     });
     expect(timeoutsSeen[0]).toBe(8000);
     expect(timeoutsSeen[4]).toBe(3000);
+  });
+});
+
+describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
+  it('중복 역할·4개 초과는 거부하고, 고유한 1~4개만 받는다', () => {
+    const base = baseVoteInput({ requestId: 'req-schema' });
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO', 'CAIO'] }).success).toBe(false);
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CFO'] }).success).toBe(false);
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO'] }).success).toBe(true);
   });
 });
