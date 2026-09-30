@@ -115,8 +115,8 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 [CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 안건 ② 프로토타입부터 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
 
 - [기획서 v0.7](AX_Day_2026_Boardroom_Plan.md)
-- [안건 ① 상세 시나리오·표결 분기](docs/SCENARIO_CUSTOMER_SUPPORT.md)
-- [안건 ③ 상세 시나리오·표결 분기](docs/SCENARIO_PREVENTION.md)
+- [안건 ① 상세 시나리오·표결 분기 (T62 이전 초안, HOLD 규칙 구버전)](docs/SCENARIO_CUSTOMER_SUPPORT.md)
+- [안건 ③ 상세 시나리오·표결 분기 (T62 이전 초안, HOLD 규칙 구버전)](docs/SCENARIO_PREVENTION.md)
 - [안건 ② 상세 시나리오·표결 분기](docs/SCENARIO_AI_ASSISTANT.md)
 - [디자인 명세·화면 이미지](docs/design/DESIGN_SPEC.md)
 - [CSS 디자인 토큰](docs/design/tokens.css)
