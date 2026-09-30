@@ -21,6 +21,15 @@ import {
   VOTE_RETRY_GRACE_MS,
   type OrchestratorStore,
 } from '../../src/services/orchestrator/runner';
+import {
+  resetRoundTimeouts,
+  setRoundTimeouts,
+  TRANSPORT_MARGIN_MS,
+} from '../../src/services/transport/roundTimeouts';
+
+/** 표결 최초 대기의 기본값(PR #11 Codex 25차 P2) — getRoundTimeouts()가 기본값(8000)일 때
+ * runner.ts의 finalVoteWaitMs()가 실제로 기다리는 길이와 같다. */
+const DEFAULT_FIRST_VOTE_WAIT_MS = FINAL_VOTE_WAIT_MS + TRANSPORT_MARGIN_MS;
 
 function selectScenario(clock: FakeClock, mode: SessionMode): Session {
   let session = createInitialSession(clock.now());
@@ -423,6 +432,9 @@ describe('runner.startFinalVotes / awaitResult', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    // roundTimeouts 캐시는 모듈 싱글턴이라 한 테스트가 setRoundTimeouts()로 바꾸면 다음
+    // 테스트로 샐 수 있다(PR #11 Codex 25차 P2) — 매번 기본값으로 되돌린다.
+    resetRoundTimeouts();
   });
 
   it('4표가 8초 전에 모두 도착하면 기다리지 않고 바로 FINALIZE_RESULT를 반영한다', async () => {
@@ -687,9 +699,10 @@ describe('runner.startFinalVotes / awaitResult', () => {
         statement: { ...answeredStatement(roleId), id: `re-${roleId}`, stage: 'REACTIONS' },
       })),
     );
-    // 표 호출이 시작된 뒤 8초(FINAL_VOTE_WAIT_MS) + 재요청 유예(VOTE_RETRY_GRACE_MS)만큼만
-    // 더 기다리면 된다 — 무한 대기가 아니라 예측 가능한 상한 안에서 끝난다.
-    await vi.advanceTimersByTimeAsync(FINAL_VOTE_WAIT_MS);
+    // 표 호출이 시작된 뒤 최초 대기(기본값 = FINAL_VOTE_WAIT_MS + TRANSPORT_MARGIN_MS, PR #11
+    // Codex 25차 P2) + 재요청 유예(VOTE_RETRY_GRACE_MS)만큼만 더 기다리면 된다 — 무한
+    // 대기가 아니라 예측 가능한 상한 안에서 끝난다.
+    await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS);
     expect(store.getSession().stage).toBe('VOTE');
     await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS);
     await resultPromise;
@@ -701,7 +714,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
   });
 
-  it('임원 표가 도착하지 않으면 8초+재요청 유예 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다', async () => {
+  it('임원 표가 도착하지 않으면 최초 대기+재요청 유예 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
     const store = createStore(session, clock);
@@ -717,9 +730,10 @@ describe('runner.startFinalVotes / awaitResult', () => {
 
     void orchestrator.startFinalVotes();
     const resultPromise = orchestrator.awaitResult();
-    // 첫 8초(FINAL_VOTE_WAIT_MS) 뒤에도 아직 확정하지 않는다 — "미표결 임원 다시 요청"을
-    // 위해 VOTE_RETRY_GRACE_MS만큼 한 번 더 기다린다(T65, 재요청을 안 쓰면 그대로 UNCAST).
-    await vi.advanceTimersByTimeAsync(FINAL_VOTE_WAIT_MS);
+    // 첫 최초 대기(기본값 = FINAL_VOTE_WAIT_MS + TRANSPORT_MARGIN_MS) 뒤에도 아직 확정하지
+    // 않는다 — "미표결 임원 다시 요청"을 위해 VOTE_RETRY_GRACE_MS만큼 한 번 더 기다린다(T65,
+    // 재요청을 안 쓰면 그대로 UNCAST).
+    await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS);
     expect(store.getSession().stage).toBe('VOTE');
     await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS);
     await resultPromise;
@@ -842,6 +856,90 @@ describe('runner.startFinalVotes / awaitResult', () => {
     const caioBallot = finalSession.ballots.find((b) => b.memberId === 'CAIO');
     expect(caioBallot?.vote).toBe('YES');
     expect(caioBallot?.source).toBe('live');
+  });
+
+  it('ROUND_TIMEOUT_MS를 12초로 올려도(운영자 설정) t=13.2초에 도착한 표는 UNCAST가 아니라 실제 표로 반영된다(PR #11 Codex 25차 P2)', async () => {
+    setRoundTimeouts({ roundTimeoutMs: 12000, reactionTimeoutMs: 12000 });
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const store = createStore(session, clock);
+    const adapter = fakeAdapter({
+      finalVotes: async () => {
+        // 서버 타임아웃이 12초로 늘었으니 클라이언트 abort 여유(1.5초)까지 더한 13.5초
+        // 안이면(여기선 13.2초) 고치기 전 고정 8초+5초=13초 상한으로는 이미 UNCAST로
+        // 확정됐을 시점에 도착해도 실제 표로 반영돼야 한다.
+        await new Promise<void>((resolve) => setTimeout(resolve, 13200));
+        return EXEC_MEMBER_ORDER.map((roleId): BallotOutcome => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            memberId: roleId,
+            motionId: motion.id,
+            motionHash: motion.hash,
+            vote: 'YES',
+            confirmedAt: 0,
+            source: 'live',
+            reason: '늘어난 서버 타임아웃 안에서 판단했습니다.',
+            remainingConcerns: [],
+          },
+        }));
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    const resultPromise = orchestrator.awaitResult();
+
+    // 고정 8초 기준이었다면 이미 13초에 UNCAST로 확정됐을 시점이다 — 아직 VOTE에 남아
+    // 있어야 한다.
+    await vi.advanceTimersByTimeAsync(13000);
+    expect(store.getSession().stage).toBe('VOTE');
+
+    await vi.advanceTimersByTimeAsync(200);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
+    expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
+  });
+
+  it('기본값에서 표 호출이 끝내 응답하지 않으면 roundTimeoutMs+전송 여유+재요청 유예 안에서 UNCAST로 확정된다(PR #11 Codex 25차 P2)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const store = createStore(session, clock);
+    const neverResolves = deferred<BallotOutcome[]>();
+    const adapter = fakeAdapter({ finalVotes: () => neverResolves.promise });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    const resultPromise = orchestrator.awaitResult();
+
+    // roundTimeoutMs(기본 8000) + TRANSPORT_MARGIN_MS(1500) + VOTE_RETRY_GRACE_MS(5000) =
+    // 14500ms를 넘기지 않고 확정돼야 한다(무한 대기 없음).
+    await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS + VOTE_RETRY_GRACE_MS);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
+    expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
   });
 
   it('실패 후 "미표결 임원 다시 요청"이 성공하면 확정 전에 실제 표로 반영된다(T65)', async () => {

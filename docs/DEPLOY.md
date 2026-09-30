@@ -83,6 +83,13 @@ REACTIONS·FOLLOWUP 기본 3회에 **라운드 단계마다 다시 요청 1회�
 올리기보다 먼저 네트워크·모델 상태를 점검한다.
 
 클라이언트의 fetch abort 타이머는 이 서버 타임아웃값 그대로가 아니라 `TRANSPORT_MARGIN_MS`
-(1.5초, `src/services/boardAgents/live.ts`에 하드코딩)를 더한 값을 쓴다 — 서버가 자기 타이머로
-일부 역할만 실패 처리한 응답을 돌려주기 직전에 클라이언트가 먼저 요청을 끊어버리지 않게 하는
-여유다(PR #11 Codex 24차).
+(1.5초, `src/services/transport/roundTimeouts.ts`에 하드코딩, `boardAgents/live.ts`가 재export)를
+더한 값을 쓴다 — 서버가 자기 타이머로 일부 역할만 실패 처리한 응답을 돌려주기 직전에
+클라이언트가 먼저 요청을 끊어버리지 않게 하는 여유다(PR #11 Codex 24차).
+
+`src/services/orchestrator/runner.ts`의 최종표 최초 대기도 같은 두 값을 쓴다(PR #11 Codex
+25차 P2): `ROUND_TIMEOUT_MS`(캐시된 `roundTimeoutMs`) + `TRANSPORT_MARGIN_MS`. `ROUND_TIMEOUT_MS`를
+8000보다 크게 올리면(행사장 네트워크가 느릴 때) 이 최초 대기도 자동으로 함께 늘어나 늘린
+값 안에 도착한 정상 표를 UNCAST로 잘못 확정하지 않는다 — 값을 하드코딩해 두면 서버·표결
+대기가 어긋나 이 문제가 재발하므로, 새 타임아웃 관련 상수를 추가할 때도 항상
+`getRoundTimeouts()`를 거치게 한다.

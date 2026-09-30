@@ -42,9 +42,23 @@ import type {
   BoardAgentsContext,
   StatementOutcome,
 } from '../boardAgents/types';
+import { getRoundTimeouts, TRANSPORT_MARGIN_MS } from '../transport/roundTimeouts';
 
-/** 최종표 대기 상한(AGENT_BOARDROOM_SPEC.md 6장 "8초를 넘지 않는다"). */
+/** 최종표 대기 상한의 기본값(문서·호환용, AGENT_BOARDROOM_SPEC.md 6장 "8초를 넘지 않는다" —
+ * getRoundTimeouts().roundTimeoutMs의 기본값과 같다). 실제 대기는 finalVoteWaitMs()가 매번
+ * 현재 캐시된 값으로 계산한다: 운영자가 ROUND_TIMEOUT_MS를 8초보다 크게 잡으면(DEPLOY.md)
+ * live 어댑터의 표 요청 자체도 그만큼(+ TRANSPORT_MARGIN_MS) 더 걸릴 수 있는데, 이 상수를
+ * 그대로 썼다면 유효한 표 응답이 도착하기 전에 UNCAST로 확정해버렸다(PR #11 Codex 25차 P2). */
 export const FINAL_VOTE_WAIT_MS = 8000;
+
+/** 최종표 최초 대기 = 서버 VOTE 타임아웃(roundTimeoutMs, /api/health로 갱신) + 클라이언트
+ * 전송 여유(TRANSPORT_MARGIN_MS) — boardAgents/live.ts의 fetch abort 타이머와 정확히 같은
+ * 길이를 쓴다. 이 값보다 짧게 기다리면 서버가 아직 응답할 시간이 남았는데도 미리 재요청
+ * grace로 넘어가거나 UNCAST로 확정하게 된다. */
+function finalVoteWaitMs(): number {
+  return getRoundTimeouts().roundTimeoutMs + TRANSPORT_MARGIN_MS;
+}
+
 /** 실패한 역할이 있을 때 "미표결 임원 다시 요청"을 위해 자동 확정 전에 더 기다리는 시간
  * (T65, 스펙 6장 예외). 참가자가 이 안에 재요청을 누르면 그 결과가 끝날 때까지(자체
  * 타임아웃만큼) 기다렸다가 확정하고, 누르지 않으면 그대로 UNCAST로 확정한다 — 대기 시간이
@@ -394,16 +408,16 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       return;
     }
 
-    await Promise.race([finalVotesSettled, delay(FINAL_VOTE_WAIT_MS)]);
+    await Promise.race([finalVotesSettled, delay(finalVoteWaitMs())]);
 
     // 실패한 역할이 있으면(execBallotsPending) 바로 확정하지 않고 "미표결 임원 다시
     // 요청"을 위해 한 번 더 기다린다(T65, 스펙 6장 예외). 재요청이 이미 시작됐으면 grace
     // 타이머 대신 그 완료를 기다리고, 시작되지 않았으면 grace 시간만큼만 기다린 뒤 그대로
     // 진행한다 — 어느 쪽이든 대기 시간은 예측 가능한 상한 안에서 끝난다.
     //
-    // PR #11 Codex 24차 P1: 클라이언트 abort 여유(boardAgents/live.ts TRANSPORT_MARGIN_MS)
-    // 때문에 실제 표 응답은 FINAL_VOTE_WAIT_MS(8초)를 살짝 넘겨(최대 +1.5초) 도착할 수 있다.
-    // grace 대기 중에도 finalVotesSettled를 함께 지켜봐서, 그 사이 표 요청이 실제로 settle되면
+    // PR #11 Codex 24·25차: 위 첫 대기(finalVoteWaitMs())가 이미 서버 타임아웃+전송 여유를
+    // 반영하지만, 그래도 그 경계 바로 뒤에 응답이 도착하는 경우가 있다. grace 대기 중에도
+    // finalVotesSettled를 함께 지켜봐서, 그 사이 표 요청이 실제로 settle되면
     // (delay가 다 지나가길 기다리지 않고) 바로 다시 판단한다 — 이미 4표가 다 도착했으면 그대로
     // FINALIZE_RESULT로 넘어가고, 그래도 일부만 실패로 남아 있으면 그 시점부터 재요청 grace를
     // 새로 준다(참가자가 방금 도착한 결과를 보고도 재요청 버튼을 누를 시간을 온전히 갖도록).

@@ -16,7 +16,7 @@ import type { ExecMemberId, Vote } from '../../content/types';
 import type { Stance, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { accessHeaders } from '../transport/accessToken';
-import { getRoundTimeouts } from '../transport/roundTimeouts';
+import { getRoundTimeouts, TRANSPORT_MARGIN_MS } from '../transport/roundTimeouts';
 import type {
   BallotOutcome,
   BoardAgentsAdapter,
@@ -28,13 +28,11 @@ import type {
  * 실제 값은 서버 응답을 캐시한 getRoundTimeouts()에서 읽는다. */
 export const MAX_ROUND_TIMEOUT_MS = 8000;
 
-/** 클라이언트 fetch abort 타이머는 서버 per-role 타임아웃(budgetMs)보다 이만큼 더 늦게
- * 끊는다(PR #11 Codex 24차 P1). 서버는 요청을 받은 뒤에야 자기 타이머를 시작하므로, 클라이언트
- * 타이머가 서버와 정확히 같은 길이면 실제로는 네트워크 왕복·JSON 직렬화 시간만큼 먼저
- * abort된다 — 그러면 일부 역할만 실패한 Promise.allSettled 응답이 거의 도착한 순간에도
- * 클라이언트가 요청 전체를 끊어 4명 모두 failed(timeout)로 남고, "다시 요청"이 이미 도착했어야
- * 할 표까지 다시 부르게 된다. 여유를 두어 서버가 부분 실패를 내려줄 시간을 보장한다. */
-export const TRANSPORT_MARGIN_MS = 1500;
+/** TRANSPORT_MARGIN_MS는 orchestrator/runner.ts도 표결 최초 대기를 계산할 때 써야 해서
+ * (PR #11 Codex 25차 P2) transport/roundTimeouts.ts로 옮겼다 — runner.ts가 fetch 전용인
+ * 이 어댑터 파일을 직접 import하지 않아도 되게 하려는 목적이다. 여기서는 기존 import 경로를
+ * 쓰던 코드(tests/services/live.test.ts 등)가 깨지지 않도록 그대로 재export한다. */
+export { TRANSPORT_MARGIN_MS };
 
 /** REACTIONS·FOLLOWUP만 더 긴 예외 타임아웃을 쓴다(스펙 6장). VOTE는 stage 인자 없이 부르며
  * OPINIONS와 같은 기본 상한을 쓴다. */
