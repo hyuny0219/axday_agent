@@ -19,8 +19,10 @@ import { buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/commo
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
+import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
+import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { mapFailReason } from './shared';
+import { classifyFailure } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -41,6 +43,9 @@ export const roundRequestSchema = z.object({
   participantOpinion: z.string().min(1).optional(),
   scenarioId: z.string().min(1),
   budgetMs: z.number().int().positive(),
+  /** 실패한 역할만 다시 호출할 때 쓰는 선택 필드(T65, "다시 요청"). 없으면 임원 4명 전체를
+   * 부른다 — 기존 요청은 이 필드가 없으므로 동작이 그대로다. */
+  roleIds: z.array(z.enum(EXEC_ROLE_IDS)).min(1).optional(),
   /** 테스트/개발 전용: roleId -> mock 장애 주입. 운영 요청에는 없다. */
   mock: z.record(z.string(), z.string()).optional(),
 });
@@ -59,6 +64,23 @@ export interface RoundRoleResult {
 export interface RoundHandlerDeps {
   provider: ModelProvider;
   clock?: Clock;
+  /** OPINIONS·VOTE와 REACTIONS·FOLLOWUP의 타임아웃(ms, T65). 생략하면 config.ts 기본값
+   * (8000/12000)을 쓴다 — 기존 테스트가 그대로 통과한다. */
+  timeouts?: { roundTimeoutMs: number; reactionTimeoutMs: number };
+}
+
+const DEFAULT_TIMEOUTS = {
+  roundTimeoutMs: DEFAULT_ROUND_TIMEOUT_MS,
+  reactionTimeoutMs: DEFAULT_REACTION_TIMEOUT_MS,
+};
+
+/** REACTIONS·FOLLOWUP만 더 긴 예외 타임아웃을 쓴다(스펙 6장 "REACTIONS·FOLLOWUP은 12초까지") —
+ * 프롬프트가 참가자 의견·이전 발언까지 실어 OPINIONS보다 길다. */
+function stageTimeoutMs(
+  stage: RoundRequest['stage'],
+  timeouts: { roundTimeoutMs: number; reactionTimeoutMs: number },
+): number {
+  return stage === 'REACTIONS' || stage === 'FOLLOWUP' ? timeouts.reactionTimeoutMs : timeouts.roundTimeoutMs;
 }
 
 const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
@@ -161,6 +183,20 @@ async function callRole(
     const latencyMs = clock.now() - start;
     const parsed = statementResponseSchema(knownStatementIds).safeParse(result.json);
     if (!parsed.success || parsed.data.roleId !== roleId) {
+      logCall({
+        ts: new Date(clock.now()).toISOString(),
+        kind: 'round',
+        sessionId: input.sessionId,
+        stage: input.stage,
+        roleId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        timeoutMs,
+        promptVersion: PROMPT_VERSION,
+        modelId: result.modelId,
+      });
       return {
         roleId,
         status: 'failed',
@@ -170,6 +206,18 @@ async function callRole(
         promptVersion: PROMPT_VERSION,
       };
     }
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'round',
+      sessionId: input.sessionId,
+      stage: input.stage,
+      roleId,
+      status: 'answered',
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: result.modelId,
+    });
     return {
       roleId,
       status: 'answered',
@@ -180,10 +228,26 @@ async function callRole(
     };
   } catch (err) {
     const latencyMs = clock.now() - start;
+    const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'round',
+      sessionId: input.sessionId,
+      stage: input.stage,
+      roleId,
+      status: 'failed',
+      failReason,
+      providerErrorClass,
+      httpStatus,
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: '',
+    });
     return {
       roleId,
       status: 'failed',
-      failReason: mapFailReason(err),
+      failReason,
       latencyMs,
       modelId: '',
       promptVersion: PROMPT_VERSION,
@@ -193,8 +257,10 @@ async function callRole(
   }
 }
 
-/** 임원 4명을 병렬 호출한다(재시도 0회). 알 수 없는 scenarioId는 예외를 던진다(호출자가 400
- * 등으로 변환). 개별 임원 실패는 failed 결과로만 남고 다른 임원 호출에 영향을 주지 않는다. */
+/** 임원(기본 4명, roleIds가 있으면 그 역할만)을 병렬 호출한다(재시도 0회). 알 수 없는
+ * scenarioId는 예외를 던진다(호출자가 400 등으로 변환). 개별 임원 실패는 failed 결과로만
+ * 남고 다른 임원 호출에 영향을 주지 않는다. roleIds는 실패한 역할만 다시 부르는 "다시
+ * 요청"(T65)이 쓴다 — 응답은 요청한 역할만큼만 돌아온다. */
 export async function handleRound(
   input: RoundRequest,
   deps: RoundHandlerDeps,
@@ -204,19 +270,19 @@ export async function handleRound(
     throw new Error(`unknown_scenario:${input.scenarioId}`);
   }
   const clock = deps.clock ?? systemClock;
-  const timeoutMs = Math.min(8000, input.budgetMs);
+  const timeouts = deps.timeouts ?? DEFAULT_TIMEOUTS;
+  const timeoutMs = Math.min(stageTimeoutMs(input.stage, timeouts), input.budgetMs);
+  const targets = input.roleIds ?? EXEC_ROLE_IDS;
 
   const settled = await Promise.allSettled(
-    EXEC_ROLE_IDS.map((roleId) =>
-      callRole(roleId, input, materials, timeoutMs, deps.provider, clock),
-    ),
+    targets.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock)),
   );
 
   return settled.map((result, index) => {
     if (result.status === 'fulfilled') {
       return result.value;
     }
-    const roleId = EXEC_ROLE_IDS[index] as ExecRoleId;
+    const roleId = targets[index] as ExecRoleId;
     return {
       roleId,
       status: 'failed',

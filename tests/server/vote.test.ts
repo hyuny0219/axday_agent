@@ -133,4 +133,64 @@ describe('handleVote with the mock provider', () => {
     const input = baseVoteInput({ requestId: 'req-5', scenarioId: 'not-a-scenario' });
     await expect(handleVote(input, { provider })).rejects.toThrow('unknown_scenario');
   });
+
+  it('roleIds가 있으면 그 역할만 호출한다("미표결 임원 다시 요청", T65)', async () => {
+    const calls: string[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        const envelope = JSON.parse(req.user) as { roleId: string; motionId: string; motionHash: string };
+        calls.push(envelope.roleId);
+        return {
+          json: {
+            roleId: envelope.roleId,
+            motionId: envelope.motionId,
+            motionHash: envelope.motionHash,
+            vote: 'YES',
+            reason: '재요청 판단입니다.',
+            evidenceIds: [],
+            remainingConcerns: [],
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseVoteInput({ requestId: 'req-retry-1', roleIds: ['CAIO'] });
+    const results = await handleVote(input, { provider: fakeProvider });
+
+    expect(calls).toEqual(['CAIO']);
+    expect(results).toHaveLength(1);
+    expect(results[0]?.roleId).toBe('CAIO');
+    expect(results[0]?.status).toBe('answered');
+  });
+
+  it('deps.timeoutMs로 타임아웃 상한을 바꿀 수 있다(T65, 기본은 ROUND_TIMEOUT_MS 8000)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string; motionId: string; motionHash: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            motionId: envelope.motionId,
+            motionHash: envelope.motionHash,
+            vote: 'YES',
+            reason: '판단입니다.',
+            evidenceIds: [],
+            remainingConcerns: [],
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    await handleVote(baseVoteInput({ requestId: 'req-timeout-default', budgetMs: 999_999 }), {
+      provider: fakeProvider,
+    });
+    await handleVote(baseVoteInput({ requestId: 'req-timeout-custom', budgetMs: 999_999 }), {
+      provider: fakeProvider,
+      timeoutMs: 3000,
+    });
+    expect(timeoutsSeen[0]).toBe(8000);
+    expect(timeoutsSeen[4]).toBe(3000);
+  });
 });

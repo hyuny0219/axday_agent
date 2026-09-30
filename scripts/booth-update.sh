@@ -228,5 +228,6 @@ fi
 if [ -n "${HAS_KEY}" ]; then
   echo "[booth] 개장 전 운영 메뉴 → 모델 연결 확인을 한 번 더 누른다"
 fi
+echo "[booth] 응답 지연·오류 사후 확인: logs/board-<날짜>.jsonl (본문·키 없음, 호출 한 줄씩)"
 
 wait "${SERVER_PID}"

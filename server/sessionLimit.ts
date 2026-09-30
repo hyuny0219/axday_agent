@@ -3,10 +3,11 @@
 // validate.ts의 RequestIdRegistry처럼 프로세스 메모리에만 둔다 — 재시작하면 초기화되고
 // 여러 인스턴스 간 공유하지 않는다(무료 플랜은 단일 인스턴스를 전제한다).
 //
-// 호출 상한 근거(AGENT_BOARDROOM_SPEC.md 6장 "세션당 임원 호출 ≤16"): 라운드 3회(OPINIONS·
-// REACTIONS·FOLLOWUP) × 4명 + 최종표 1회 × 4명 = 16. 비서실장은 정리 2회(클라이언트 상한과
-// 같음)·요약은 화면 진입마다 한 번이라 여유를 둔다. 클라이언트는 재시도하지 않으므로 이
-// 값을 넘는 요청은 정상 흐름이 아니다.
+// 호출 상한 근거(AGENT_BOARDROOM_SPEC.md 6장): 라운드 4회(OPINIONS·REACTIONS·FOLLOWUP +
+// "다시 요청" 1회, T65) × 4명 + 최종표 2회("미표결 임원 다시 요청" 1회 포함) × 4명 = 24.
+// 비서실장은 정리 2회(클라이언트 상한과 같음)·요약은 화면 진입마다 한 번이라 여유를 둔다.
+// 클라이언트는 자동 재시도를 하지 않으므로(수동 "다시 요청" 1회만 있다) 이 값을 넘는 요청은
+// 정상 흐름이 아니다.
 
 import type { Clock } from './clock';
 
@@ -23,8 +24,10 @@ export const DEFAULT_SESSION_TTL_MINUTES = 30;
 export type CallKind = 'round' | 'vote' | 'refine' | 'summarize';
 
 export const DEFAULT_MAX_CALLS_PER_SESSION: Record<CallKind, number> = {
-  round: 3,
-  vote: 1,
+  // T65 "다시 요청": 실패한 역할만 같은 stage로 한 번 더 부르는 호출도 이 종류로 센다.
+  round: 4,
+  // T65 "미표결 임원 다시 요청": 최종표도 한 번 더 부를 수 있어야 한다.
+  vote: 2,
   refine: 2,
   summarize: 4,
 };
@@ -71,6 +74,11 @@ export class SessionLimitRegistry {
   constructor(
     private readonly clock: Clock,
     config: SessionLimitConfig | number,
+    /** 세션이 메모리에서 지워질 때(아래 prune, 마지막 요청 뒤 1시간) 한 번 불린다(T65).
+     * server/log.ts의 flushSessionSummary가 이 자리에서 세션 요약 로그 한 줄을 남긴다 —
+     * 서버에는 별도의 "세션 종료" 신호가 없어 이 지연 정리 시점을 기준으로 삼는다(실시간은
+     * 아니다: 다음 요청이 prune을 부를 때까지 최대 1시간 늦게 flush될 수 있다). */
+    private readonly onSessionEnd?: (sessionId: string) => void,
   ) {
     this.config =
       typeof config === 'number'
@@ -91,6 +99,7 @@ export class SessionLimitRegistry {
     for (const [sessionId, entry] of this.sessions) {
       if (now - entry.lastSeenAt >= WINDOW_MS) {
         this.sessions.delete(sessionId);
+        this.onSessionEnd?.(sessionId);
       }
     }
   }

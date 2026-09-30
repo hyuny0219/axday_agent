@@ -12,8 +12,10 @@ import { getScenarioMaterials } from '../scenario-data';
 import { buildMeetingRecordBlock } from '../prompts/common';
 import { buildRefineSystemPrompt, buildSummarizeSystemPrompt } from '../prompts/assistant';
 import { PROMPT_VERSION } from '../prompts/version';
+import { systemClock, type Clock } from '../clock';
+import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { mapFailReason } from './shared';
+import { classifyFailure } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -64,6 +66,7 @@ export interface AssistantResult {
 
 export interface AssistantHandlerDeps {
   provider: ModelProvider;
+  clock?: Clock;
 }
 
 function assistantJsonSchema(): Record<string, unknown> {
@@ -84,12 +87,16 @@ function assistantJsonSchema(): Record<string, unknown> {
  * 값)만 받아 provider를 한 번 부르고 assistantResponseSchema로 검증한다. */
 async function callAssistant(
   kind: 'assistant_refine' | 'assistant_summarize',
+  sessionId: string,
   system: string,
   draftRevision: number,
   timeoutMs: number,
   provider: ModelProvider,
+  clock: Clock,
   mockFault: string | undefined,
 ): Promise<AssistantResult> {
+  const logKind = kind === 'assistant_refine' ? 'refine' : 'summarize';
+  const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -103,8 +110,21 @@ async function callAssistant(
       signal: controller.signal,
     });
     const result = await withTimeout(raw, timeoutMs);
+    const latencyMs = clock.now() - start;
     const parsed = assistantResponseSchema({ draftRevision }).safeParse(result.json);
     if (!parsed.success) {
+      logCall({
+        ts: new Date(clock.now()).toISOString(),
+        kind: logKind,
+        sessionId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        timeoutMs,
+        promptVersion: PROMPT_VERSION,
+        modelId: result.modelId,
+      });
       return {
         status: 'failed',
         failReason: 'invalid_response',
@@ -112,6 +132,16 @@ async function callAssistant(
         promptVersion: PROMPT_VERSION,
       };
     }
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: logKind,
+      sessionId,
+      status: 'answered',
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: result.modelId,
+    });
     return {
       status: 'answered',
       draftText: parsed.data.draftText,
@@ -121,9 +151,24 @@ async function callAssistant(
       promptVersion: PROMPT_VERSION,
     };
   } catch (err) {
+    const latencyMs = clock.now() - start;
+    const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: logKind,
+      sessionId,
+      status: 'failed',
+      failReason,
+      providerErrorClass,
+      httpStatus,
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: '',
+    });
     return {
       status: 'failed',
-      failReason: mapFailReason(err),
+      failReason,
       modelId: '',
       promptVersion: PROMPT_VERSION,
     };
@@ -157,10 +202,12 @@ export async function handleAssistantRefine(
   const system = buildRefineSystemPrompt(meetingRecord);
   return callAssistant(
     'assistant_refine',
+    input.sessionId,
     system,
     input.draftRevision,
     timeoutMs,
     deps.provider,
+    deps.clock ?? systemClock,
     input.mock,
   );
 }
@@ -188,10 +235,12 @@ export async function handleAssistantSummarize(
   const system = buildSummarizeSystemPrompt(meetingRecord);
   return callAssistant(
     'assistant_summarize',
+    input.sessionId,
     system,
     input.transcript.revision,
     timeoutMs,
     deps.provider,
+    deps.clock ?? systemClock,
     input.mock,
   );
 }

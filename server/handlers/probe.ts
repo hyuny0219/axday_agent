@@ -7,9 +7,12 @@
 import type { ModelProvider } from '../providers/types';
 import type { ProviderName } from '../config';
 import type { Clock } from '../clock';
+import { logCall } from '../log';
 import { withTimeout } from './timeout';
+import { classifyFailure } from './shared';
 
-/** 진단 호출에 허용하는 최대 시간. DESIGN_SPEC.md v1.0 10절 "8초 상한". */
+/** 진단 호출에 허용하는 최대 시간. DESIGN_SPEC.md v1.0 10절 "8초 상한"(T65: config.ts의
+ * ROUND_TIMEOUT_MS와 같은 값 — probe도 OPINIONS·VOTE와 같은 예산을 쓴다). */
 export const PROBE_TIMEOUT_MS = 8000;
 
 /** 오류 메시지를 화면·로그에 남길 때 자르는 길이. */
@@ -37,6 +40,8 @@ export interface ProbeDeps {
   /** 실패 시 돌려줄 modelId(설정값)와 결과에 실을 provider 이름. */
   config: { provider: ProviderName; modelId: string };
   clock: Clock;
+  /** config.ts의 ROUND_TIMEOUT_MS(T65). 생략하면 PROBE_TIMEOUT_MS(8000)를 쓴다. */
+  timeoutMs?: number;
 }
 
 function isOkResponse(json: unknown): boolean {
@@ -48,19 +53,31 @@ function truncateError(message: string): string {
 }
 
 /** 제공자에 짧은 확인 호출 1회를 보내고 성공/실패를 값으로 돌려준다. */
-export async function handleProbe({ provider, config, clock }: ProbeDeps): Promise<ProbeResult> {
+export async function handleProbe({ provider, config, clock, timeoutMs }: ProbeDeps): Promise<ProbeResult> {
   const start = clock.now();
+  const effectiveTimeoutMs = timeoutMs ?? PROBE_TIMEOUT_MS;
   try {
     const raw = provider.complete({
       system: '연결 확인. JSON {"ok": true}만 응답.',
       user: 'ok',
       schema: PROBE_SCHEMA,
       maxTokens: 20,
-      timeoutMs: PROBE_TIMEOUT_MS,
+      timeoutMs: effectiveTimeoutMs,
     });
-    const result = await withTimeout(raw, PROBE_TIMEOUT_MS);
+    const result = await withTimeout(raw, effectiveTimeoutMs);
     const latencyMs = clock.now() - start;
     if (!isOkResponse(result.json)) {
+      logCall({
+        ts: new Date(clock.now()).toISOString(),
+        kind: 'probe',
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        timeoutMs: effectiveTimeoutMs,
+        promptVersion: '',
+        modelId: result.modelId,
+      });
       return {
         ok: false,
         provider: config.provider,
@@ -69,10 +86,32 @@ export async function handleProbe({ provider, config, clock }: ProbeDeps): Promi
         error: 'probe_response_not_ok',
       };
     }
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'probe',
+      status: 'answered',
+      latencyMs,
+      timeoutMs: effectiveTimeoutMs,
+      promptVersion: '',
+      modelId: result.modelId,
+    });
     return { ok: true, provider: config.provider, modelId: result.modelId, latencyMs };
   } catch (err) {
     const latencyMs = clock.now() - start;
     const message = err instanceof Error ? err.message : String(err);
+    const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'probe',
+      status: 'failed',
+      failReason,
+      providerErrorClass,
+      httpStatus,
+      latencyMs,
+      timeoutMs: effectiveTimeoutMs,
+      promptVersion: '',
+      modelId: '',
+    });
     return {
       ok: false,
       provider: config.provider,

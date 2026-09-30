@@ -25,7 +25,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
-import type { Session, Stance } from '../domain/types';
+import type { Session, Stance, StatementStage } from '../domain/types';
 import { liveStances, scriptedStances } from '../domain/stance';
 import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
@@ -85,6 +85,10 @@ interface SessionContextValue {
   /** 서버 가용성 확인(live/scripted 판정)이 아직 끝나지 않았는가. 첫 마운트와 리셋 직후
    * true이며, AttractScreen이 "체험 시작"을 잠그는 데 쓴다(PR #11 Codex 7차). */
   modeCheckPending: boolean;
+  /** 실패한 역할만 같은 stage로 다시 부른다("응답 없는 임원 다시 요청", T65). */
+  retryRound: (stage: StatementStage, roleIds: ExecMemberId[]) => Promise<void>;
+  /** 미표결(실패) 역할만 최종표를 다시 요청한다("미표결 임원 다시 요청", T65). */
+  retryFinalVotes: (roleIds: ExecMemberId[]) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -299,8 +303,16 @@ function SessionProvider({ children }: { children: ReactNode }) {
   }, [session.mode, session.stage, session.sessionId, session.finalMotion, session.ballots, orchestrator]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, followUpPending, roundLog, modeCheckPending }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending],
+    () => ({
+      session,
+      dispatch,
+      followUpPending,
+      roundLog,
+      modeCheckPending,
+      retryRound: orchestrator.retryRound,
+      retryFinalVotes: orchestrator.retryFinalVotes,
+    }),
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -327,7 +339,8 @@ function useViewportFit(): ViewportFit {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch, followUpPending, modeCheckPending, roundLog } = useSession();
+  const { session, dispatch, followUpPending, modeCheckPending, roundLog, retryRound, retryFinalVotes } =
+    useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -376,6 +389,9 @@ function StageRouter() {
           statements={session.transcript.statements}
           stances={stancesFor(session, scenario)}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('OPINIONS', roleIds) : undefined
+          }
         />
       );
 
@@ -415,6 +431,9 @@ function StageRouter() {
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('REACTIONS', roleIds) : undefined
+          }
         />
       );
 
@@ -446,8 +465,10 @@ function StageRouter() {
           pendingVote={session.pendingVote}
           mode={session.mode}
           execBallotsPending={session.execBallotsPending}
+          roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
+          onRetryFailedRoles={session.mode === 'live' ? (roleIds) => void retryFinalVotes(roleIds) : undefined}
         />
       );
 

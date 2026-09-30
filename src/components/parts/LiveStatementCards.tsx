@@ -8,6 +8,10 @@
 // 답글형(들여쓰기·연결선)으로 세로로 늘어놓는다. 발언이 온 임원은 시안 테두리로 강조하고
 // 아직 판단 중인 임원은 흐리게 둔다(scripted의 "기존 의견 유지"와 같은 위계). 상태 표시
 // (판단 중/발언/응답 실패)는 그대로다(PR #4 Codex 검토).
+// T65: 실패한 역할이 있으면 보조 버튼 "응답 없는 임원 다시 요청"을 보여준다. 호출부
+// (OpinionsScreen·ReactionsScreen)가 실패한 roleId 목록을 계산해 onRetryFailedRoles로
+// 넘긴다 — 이 컴포넌트는 자동 재시도를 하지 않고, 눌렀을 때만 한 번 부른다(라운드당 1회
+// 제한은 호출부의 상태다).
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
@@ -28,6 +32,11 @@ export interface LiveStatementCardsProps {
   stances: Record<ExecMemberId, Stance>;
   /** 'grid'(기본, OPINIONS 4열) 또는 'reply'(REACTIONS 답글형). */
   variant?: 'grid' | 'reply';
+  /** 있으면 실패한 역할이 하나 이상일 때 "응답 없는 임원 다시 요청" 버튼을 보여준다(T65).
+   * 없으면(scripted 등) 버튼을 그리지 않는다. */
+  onRetryFailedRoles?: () => void;
+  /** 라운드당 1회 제한(T65) — 호출부가 이미 한 번 눌렀으면 true로 넘겨 버튼을 잠근다. */
+  retryDisabled?: boolean;
 }
 
 // 화면에는 자료 ID(E1~E4)를 쓰지 않고 자료명만 보여준다(T52). 일치하는 자료가 없으면
@@ -59,10 +68,14 @@ export function LiveStatementCards({
   statements,
   stances,
   variant = 'grid',
+  onRetryFailedRoles,
+  retryDisabled = false,
 }: LiveStatementCardsProps) {
   const containerClass = `live-round__cards${variant === 'reply' ? ' live-round__cards--reply' : ''}`;
+  const hasFailedRole = EXEC_MEMBER_ORDER.some((roleId) => roleStatus[roleId] === 'failed');
   return (
-    <div className={containerClass} data-testid={`live-round-${stage}`}>
+    <div className="live-round">
+      <div className={containerClass} data-testid={`live-round-${stage}`}>
       {EXEC_MEMBER_ORDER.map((roleId) => {
         const status = roleStatus[roleId];
         const statement = statements.find((item) => item.roleId === roleId && item.stage === stage);
@@ -110,6 +123,18 @@ export function LiveStatementCards({
           </article>
         );
       })}
+      </div>
+      {onRetryFailedRoles && hasFailedRole && (
+        <button
+          type="button"
+          className="live-round__retry cta cta--secondary"
+          data-testid="retry-failed-roles"
+          disabled={retryDisabled}
+          onClick={onRetryFailedRoles}
+        >
+          {retryDisabled ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+        </button>
+      )}
     </div>
   );
 }

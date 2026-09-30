@@ -121,4 +121,98 @@ describe('handleRound with the mock provider', () => {
     const input = baseRoundInput({ requestId: 'req-6', scenarioId: 'not-a-scenario' });
     await expect(handleRound(input, { provider })).rejects.toThrow('unknown_scenario');
   });
+
+  it('roleIds가 있으면 그 역할만 호출하고 응답도 그 역할만큼만 돌아온다("다시 요청", T65)', async () => {
+    const calls: string[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        calls.push(envelope.roleId);
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재요청 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-1', roleIds: ['CFO', 'CAIO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+
+    expect(calls.sort()).toEqual(['CAIO', 'CFO']);
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.roleId).sort()).toEqual(['CAIO', 'CFO']);
+    expect(results.every((r) => r.status === 'answered')).toBe(true);
+  });
+
+  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 12000)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 8000)를 쓴다(T65)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '괜찮습니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+
+    await handleRound(
+      baseRoundInput({ requestId: 'req-timeout-opinions', stage: 'OPINIONS', budgetMs: 999_999, roleIds: ['CEO'] }),
+      { provider: fakeProvider },
+    );
+    await handleRound(
+      baseRoundInput({ requestId: 'req-timeout-reactions', stage: 'REACTIONS', budgetMs: 999_999, roleIds: ['CEO'] }),
+      { provider: fakeProvider },
+    );
+
+    expect(timeoutsSeen).toEqual([8000, 12000]);
+  });
+
+  it('deps.timeouts로 상한을 바꿀 수 있다(T65)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '괜찮습니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    await handleRound(
+      baseRoundInput({
+        requestId: 'req-custom-timeout',
+        stage: 'REACTIONS',
+        budgetMs: 999_999,
+        roleIds: ['CEO'],
+      }),
+      { provider: fakeProvider, timeouts: { roundTimeoutMs: 3000, reactionTimeoutMs: 5000 } },
+    );
+    expect(timeoutsSeen).toEqual([5000]);
+  });
 });

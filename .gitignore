@@ -8,6 +8,7 @@ coverage
 *.tsbuildinfo
 test-results
 playwright-report
+/logs
 .env
 .env.*
 docs/eval/*-mock.jsonl

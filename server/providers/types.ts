@@ -32,3 +32,17 @@ export class ModelRefusalError extends Error {
     this.name = 'ModelRefusalError';
   }
 }
+
+/** 제공자 HTTP 오류를 상태 코드·오류 종류(error.type)까지 실어 던진다(T65). handlers/shared.ts의
+ * classifyFailure가 이 정보로 로그의 providerErrorClass·httpStatus를 채운다. */
+export class ProviderCallError extends Error {
+  readonly httpStatus?: number;
+  readonly errorType?: string;
+
+  constructor(message: string, opts: { httpStatus?: number; errorType?: string } = {}) {
+    super(message);
+    this.name = 'ProviderCallError';
+    this.httpStatus = opts.httpStatus;
+    this.errorType = opts.errorType;
+  }
+}

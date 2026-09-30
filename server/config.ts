@@ -12,6 +12,12 @@ export { PROMPT_VERSION };
 
 export const DEFAULT_PORT = 8787;
 
+/** OPINIONS·VOTE·probe 호출의 기본 타임아웃(T65, AGENT_BOARDROOM_SPEC.md 6장). */
+export const DEFAULT_ROUND_TIMEOUT_MS = 8000;
+/** REACTIONS·FOLLOWUP 전용 예외 타임아웃(T65) — 프롬프트가 참가자 의견·이전 발언까지
+ * 실어 OPINIONS·VOTE보다 길다(2026-09-29 시연 지연의 원인 중 하나였다). */
+export const DEFAULT_REACTION_TIMEOUT_MS = 12000;
+
 export type ProviderName = 'mock' | 'anthropic';
 
 export interface ServerConfig {
@@ -19,6 +25,10 @@ export interface ServerConfig {
   provider: ProviderName;
   modelId: string;
   promptVersion: string;
+  /** OPINIONS·VOTE·probe 타임아웃(ms). 환경변수 ROUND_TIMEOUT_MS. */
+  roundTimeoutMs: number;
+  /** REACTIONS·FOLLOWUP 타임아웃(ms). 환경변수 REACTION_TIMEOUT_MS. */
+  reactionTimeoutMs: number;
 }
 
 function parseProvider(value: string | undefined): ProviderName {
@@ -30,6 +40,11 @@ function parsePort(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PORT;
 }
 
+function positiveMsOr(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 /** 환경변수에서 서버 설정을 만든다. 테스트에서는 env 객체를 직접 넘길 수 있다. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   return {
@@ -37,5 +52,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     provider: parseProvider(env.MODEL_PROVIDER),
     modelId: env.MODEL_ID?.trim() || DEFAULT_MODEL_ID,
     promptVersion: PROMPT_VERSION,
+    roundTimeoutMs: positiveMsOr(env.ROUND_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS),
+    reactionTimeoutMs: positiveMsOr(env.REACTION_TIMEOUT_MS, DEFAULT_REACTION_TIMEOUT_MS),
   };
 }

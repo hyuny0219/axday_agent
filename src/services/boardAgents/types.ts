@@ -22,9 +22,15 @@ export interface BoardAgentsContext {
    * 그대로 보존한다(호출 중간에 세션이 바뀌어도 이 값 자체는 바뀌지 않는다). */
   session: Session;
   scenario: Scenario;
-  /** 이 라운드에 허용된 최대 대기 시간(ms). 어댑터는 min(8000, budgetMs)를 넘겨 기다리지 않는다. */
+  /** 이 라운드에 허용된 최대 대기 시간(ms). 어댑터는 stage별 상한(min(.., budgetMs))을
+   * 넘겨 기다리지 않는다(T65: OPINIONS·VOTE 8초, REACTIONS·FOLLOWUP 12초 — services/
+   * transport/roundTimeouts.ts). */
   budgetMs: number;
   signal: AbortSignal;
+  /** 있으면 이 역할들만 다시 부른다("다시 요청"/"미표결 임원 다시 요청", T65). 없으면
+   * 임원 4명 전체를 부른다(기존 동작). scripted.ts는 이 필드를 읽지 않는다 — scripted는
+   * 응답 실패가 없어 재요청이 일어나지 않는다. */
+  roleIds?: ExecMemberId[];
 }
 
 export interface StatementOutcome {

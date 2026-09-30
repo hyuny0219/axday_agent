@@ -10,6 +10,16 @@
   gap: var(--space-2);
 }
 
+/* 실패한 역할이 있을 때만 나타나는 보조 버튼(T65 "다시 요청"). 카드 그리드 아래, 오른쪽
+   정보 열 안에 작게 둔다 — 왼쪽 무대 아래 주 CTA(.cta 단독)와 크기·위계를 구분한다. */
+.live-round__retry {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  min-height: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: 14px;
+}
+
 /* T64 이후 이 카드는 오른쪽 열(종이 서류철) 안에서만 그려진다(OpinionsScreen·
    ReactionsScreen이 live 모드에서 .app-body__content 안에 렌더). scripted의
    .opinion-card·.reaction-reply와 같은 종이-2 카드 + 잉크 글자로 맞춘다(Codex

@@ -59,6 +59,8 @@ export interface ReactionsScreenProps {
   onAssistantAction: (event: AssistantActionEvent) => void;
   /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
   assistantAdapter?: AssistantAdapter;
+  /** 실패한 역할만 골라 REACTIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
+  onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -84,12 +86,24 @@ export function ReactionsScreen({
   onKeepPrevious,
   onAssistantAction,
   assistantAdapter,
+  onRetryFailedRoles,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
   const previousConfirmedIds = useMemo(
     () => lastOpinion?.confirmedConditionIds ?? [],
     [lastOpinion],
   );
+  // 라운드당 1회(T65) — server/sessionLimit.ts의 호출 상한이 최종 방어선이다.
+  const [retryUsed, setRetryUsed] = useState(false);
+
+  function handleRetry() {
+    const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
+    if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
+      return;
+    }
+    setRetryUsed(true);
+    onRetryFailedRoles(failedRoleIds);
+  }
 
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
@@ -305,6 +319,8 @@ export function ReactionsScreen({
             statements={statements}
             stances={stances}
             variant="reply"
+            onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
+            retryDisabled={retryUsed}
           />
         ) : (
           <ul className="reactions-screen__replies">
