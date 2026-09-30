@@ -69,6 +69,17 @@
   flex-shrink: 0;
 }
 
+/* 행 앞 직함 코드(T64, "[mm:ss] CEO" 중 코드 부분 — 도착 시각이 없어 직함만 보여준다).
+   타자기 앰버로 TRANSCRIPT 머리글과 같은 톤을 쓴다. */
+.minutes__tag {
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  white-space: nowrap;
+}
+
 /* "판단 중" 상태 문구: 화면에서는 감추되 스크린리더에는 남긴다(표준 sr-only 기법).
    점 세 개는 장식(aria-hidden)이라 상태 문구가 없으면 pending 행이 발화자 이름만
    읽힌다(PR #7 Codex 2차 검토). */

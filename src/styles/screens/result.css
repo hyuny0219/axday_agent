@@ -48,13 +48,15 @@
   border: 1px solid var(--label);
 }
 
-/* 도장 칸(200px, item 7 "오른쪽 200px 도장 칸"). 결론 도장 + (있으면) 설득 도장을
-   겹쳐 둔다 — 겹침 좌표는 mock(C_Result.html)의 150px/108px 원 배치를 그대로 옮긴다. */
+/* 도장 칸(200px 폭, item 7 "오른쪽 200px 도장 칸"). 결론 도장 + (있으면) 설득 도장을
+   겹쳐 둔다 — mock(C_Result.html)은 원을 150px/108px로 그리지만, 세로 예산(v1.0 9절
+   "최악 조합")에 맞춰 높이는 왼쪽 제목·안내문 블록과 같은 90px로 줄인다(실측: 다섯
+   줄 요약 최악 조합에서 54px가 모자랐다 — PR 검토). */
 .result-stamp-box {
   position: relative;
   flex-shrink: 0;
   width: 200px;
-  height: 148px;
+  height: 90px;
 }
 
 /* 결론 도장: 잉크(붉은 원, multiply). 4장 규칙(도장 종류를 늘리지 않는다)에 따라
@@ -62,11 +64,11 @@
 .result-stamp {
   position: absolute;
   top: 0;
-  right: 10px;
-  width: 130px;
-  height: 130px;
+  right: 14px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
-  border: 4px solid var(--stamp-red);
+  border: 3px solid var(--stamp-red);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -83,21 +85,21 @@
 
 .result-stamp__case {
   font-family: var(--font-label);
-  font-size: 9px;
-  letter-spacing: 0.3em;
+  font-size: 7px;
+  letter-spacing: 0.24em;
 }
 
 .result-stamp__text {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 17px;
   letter-spacing: 0.06em;
   line-height: 1;
 }
 
 .result-stamp__meta {
   font-family: var(--font-label);
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  font-size: 7px;
+  letter-spacing: 0.12em;
 }
 
 /* 설득 도장(T63): 결론 도장 0.4초 뒤 왼쪽 아래에 겹쳐 찍는다(앰버 잉크). */
@@ -106,9 +108,9 @@
   bottom: 0;
   left: 0;
   right: auto;
-  width: 92px;
-  height: 92px;
-  border-width: 3px;
+  width: 58px;
+  height: 58px;
+  border-width: 2px;
   border-color: var(--stamp-amber);
   color: var(--stamp-amber);
   transform: rotate(9deg);
@@ -117,7 +119,7 @@
 }
 
 .result-stamp--persuasion .result-stamp__text {
-  font-size: 15px;
+  font-size: 10px;
 }
 
 @keyframes result-stamp-in {
@@ -168,29 +170,107 @@
 }
 
 @media (max-width: 1280px) {
+  /* 720에서는 도장 칸이 제목과 같은 줄을 나눠 쓴다(item 7). 도장 칸 폭이 200px대로
+     넓으면 결론 문장(최악 조합, 예: "수정안이 승인되었습니다. 운영 전에 확인할
+     조건도 함께 기록했습니다.")이 두 줄로 접혀 세로 예산을 넘친다(실측). 폭을
+     80px까지 줄여 제목이 한 줄에 들어가게 한다(PR 검토 실측: 폭 ≤80px에서 한 줄). */
   .result-stamp-box {
-    width: 140px;
-    height: 104px;
+    width: 80px;
+    height: 80px;
   }
 
   .result-stamp {
-    width: 96px;
-    height: 96px;
-    right: 4px;
+    width: 76px;
+    height: 76px;
+    right: 2px;
+    border-width: 2px;
+  }
+
+  .result-stamp__case,
+  .result-stamp__meta {
+    font-size: 7px;
   }
 
   .result-stamp__text {
-    font-size: 18px;
+    font-size: 13px;
   }
 
   .result-stamp--persuasion {
-    width: 64px;
-    height: 64px;
+    width: 52px;
+    height: 52px;
+    border-width: 2px;
   }
 
   .result-stamp--persuasion .result-stamp__text {
-    font-size: 11px;
+    font-size: 9px;
   }
+}
+
+/* TALLY 패널(T64 item 7, Main.html/C_Result.html 왼쪽 열 "TALLY · 5석 과반"). 무대
+   아래 어두운 판 + 5칸 막대 — 오른쪽 종이 보고서와 톤을 맞추지 않고 무대 계열
+   (--transcript-bg 등 어두운 톤)을 쓴다. 값은 모두 오른쪽 열에도 접근 가능한 형태로
+   있어 이 패널 자체는 장식(aria-hidden, ResultScreen.tsx)이다. */
+.result-tally {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid rgba(40, 217, 240, 0.35);
+  background-color: rgba(5, 11, 20, 0.7);
+}
+
+.result-tally__head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--hud-line);
+}
+
+.result-tally__head span:last-child {
+  color: #9fb6cc;
+}
+
+.result-tally__bars {
+  height: 14px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.result-tally__bar {
+  background-color: var(--ink-muted);
+}
+
+.result-tally__bar--yes {
+  background-color: var(--dark-vote-yes);
+  box-shadow: 0 0 10px var(--dark-vote-yes);
+}
+
+.result-tally__bar--no {
+  background-color: var(--dark-vote-no);
+}
+
+.result-tally__caption {
+  margin: 0;
+  font-size: 13px;
+  color: #9fb6cc;
+}
+
+/* 회의록 전문 패널(T58 흡수, T64 item 7). "이사회 한 장 요약" 대신 오른쪽 열 기록
+   영역을 통째로 채운다 — MinutesPanel(어두운 TRANSCRIPT 판)을 그대로 재사용한다. */
+.result-transcript {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.result-transcript .minutes {
+  flex: 1;
+  min-height: 0;
 }
 
 .result-screen__expired-notice {
@@ -666,8 +746,11 @@
      "720에서 요약 행은 12px, 임원 4행+내 행+조건+원문 2줄 = 기록 영역 안"). 아바타도
      줄여야 5행+조건+원문이 262px 안에 들어간다(행 높이가 아바타 32px에 눌려
      PR 검토에서 CISO·내 행이 원문과 겹치는 문제가 확인됐다). */
+  /* 도장 칸이 제목과 한 줄을 나눠 쓰며 확보한 여유가 최악 조합(조건 4개 + 160자
+     근거 4행)에는 아직 11px 모자라 패딩·행간을 한 번 더 줄인다(실측, PR 검토). */
   .result-summary {
-    gap: 4px;
+    gap: 2px;
+    padding: 4px var(--space-1);
     line-height: 1.2;
   }
 

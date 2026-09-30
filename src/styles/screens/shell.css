@@ -607,6 +607,26 @@
   cursor: not-allowed;
 }
 
+/* 보조 CTA(T64 item 4, Main.html "회의록 전문 보기"): 앰버 테두리만 — 채움·굵은
+   그림자는 주 CTA("체험 종료")만의 것으로 남겨 시각적 위계를 지킨다. 모양(깎인
+   모서리)·최소 크기는 .cta와 같다. */
+.cta.cta--secondary {
+  background-color: transparent;
+  color: var(--amber);
+  border: 2px solid var(--amber);
+  box-shadow: none;
+}
+
+.cta.cta--secondary:hover:not(:disabled) {
+  background-color: rgba(224, 163, 74, 0.12);
+  box-shadow: none;
+}
+
+.cta.cta--secondary:disabled {
+  background-color: transparent;
+  border: 2px solid var(--border);
+}
+
 /* 진행 스트립(v0.9): ① 상황 파악 → ⑤ 표결 5단계를 헤더 아래에 상시 표시한다. */
 .progress-strip {
   flex-shrink: 0;

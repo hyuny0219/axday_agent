@@ -327,7 +327,7 @@ function useViewportFit(): ViewportFit {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch, followUpPending, modeCheckPending } = useSession();
+  const { session, dispatch, followUpPending, modeCheckPending, roundLog } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -457,6 +457,7 @@ function StageRouter() {
         <ResultScreen
           scenario={scenario}
           session={session}
+          roundLog={roundLog}
           onReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
         />
       );

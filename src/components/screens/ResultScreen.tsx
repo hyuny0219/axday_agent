@@ -26,6 +26,8 @@ import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { buildResultSummary } from '../resultSummary';
+import { buildMinutes, type RoundLogEntry } from '../minutes';
+import { MinutesPanel } from '../parts/MinutesPanel';
 import {
   PERSUASION_STAMP_DELAY_SECONDS,
   SEAT_REVEAL_STEP_SECONDS,
@@ -45,6 +47,9 @@ import '../../styles/screens/live.css';
 export interface ResultScreenProps {
   scenario: Scenario;
   session: Session;
+  /** 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기")이 buildMinutes에 넘길
+   * 라운드별 임원 응답 기록. App.tsx가 SET_ROLE_STATUS dispatch를 가로채 쌓아 둔다. */
+  roundLog: RoundLogEntry[];
   onReset: () => void;
 }
 
@@ -77,7 +82,7 @@ const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
   scripted: '사전 구성 시뮬레이션 결과입니다.',
 };
 
-export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) {
+export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
 
   const additionalHelp = useMemo(
@@ -116,6 +121,16 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
     }
     return countVotesChangedByConditions(scenario, finalMotion);
   }, [session.mode, scenario, finalMotion]);
+
+  // 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기"): 화면 로컬 상태로 오른쪽
+  // 열의 기록 영역(5석 아래 records)만 "이사회 한 장 요약" ↔ 전문으로 바꾼다. 세션
+  // 상태는 건드리지 않는다. 전문 항목은 다른 화면의 "발언 흐름" 패널과 같은 순수
+  // 함수(buildMinutes)로 계산해 항목 수·순서가 어긋나지 않는다.
+  const [showTranscript, setShowTranscript] = useState(false);
+  const transcriptEntries = useMemo(
+    () => buildMinutes(session, scenario, roundLog),
+    [session, scenario, roundLog],
+  );
 
   // 클릭·키 입력으로 배지·도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
   // 뒤에는 리스너를 더 둘 이유가 없어 정리한다.
@@ -159,6 +174,34 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   return (
     <>
       <div className="app-body__actions screen result-screen__actions">
+        {/* TALLY 패널(T64 item 7, Main.html C_Result.html 왼쪽 열 "TALLY · 5석 과반").
+            5칸 막대 + 집계·설득 문구는 오른쪽 "이사회 한 장 요약"과 같은 계산값을
+            다시 그린 것이라 aria-hidden으로 중복 낭독을 막는다(무대 띠와 같은 규칙,
+            같은 정보가 오른쪽 열 본문에 접근 가능하게 그대로 있다). */}
+        <section className="result-tally" data-testid="result-tally" aria-hidden="true">
+          <div className="result-tally__head">
+            <span>TALLY · 5석 과반</span>
+            <span>YES {tallyResult.counts.YES} / NO {tallyResult.counts.NO}</span>
+          </div>
+          <div className="result-tally__bars">
+            {SEAT_ORDER.map((memberId) => {
+              const vote = session.ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
+              return (
+                <span
+                  key={memberId}
+                  className={`result-tally__bar result-tally__bar--${vote.toLowerCase()}`}
+                />
+              );
+            })}
+          </div>
+          {persuasion && (
+            <p className="result-tally__caption">
+              이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
+              {persuasion.earned ? ' → 추가 도장 획득' : ' · 추가 도장은 3석부터'}
+              {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
+            </p>
+          )}
+        </section>
         {votesChangedByConditions !== null && (
           <p className="result-screen__gauge" data-testid="result-gauge">
             내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
@@ -175,6 +218,17 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         )}
         <button type="button" className="cta" onClick={onReset} data-testid="end-session">
           체험 종료
+        </button>
+        {/* "회의록 전문 보기"(보조 CTA, T58 흡수 — T64 item 7). 세션 상태는 바꾸지
+            않고 오른쪽 열 기록 영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
+        <button
+          type="button"
+          className="cta cta--secondary"
+          onClick={() => setShowTranscript((previous) => !previous)}
+          aria-pressed={showTranscript}
+          data-testid="result-transcript-toggle"
+        >
+          {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
         </button>
       </div>
       <div className="app-body__content screen result-screen" data-skip={skip}>
@@ -296,10 +350,20 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             );
           })}
         </div>
-        {/* 기록 영역을 "이사회 한 장 요약"(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운
+        {/* 회의록 전문 패널(T58 흡수, T64 item 7): 토글이 켜지면 아래 기록 영역
+            전체를 "발언 흐름"과 같은 순수 함수(buildMinutes)로 계산한 전문으로
+            바꾼다. 무대 아래 "발언 흐름" 패널은 RESULT에서 렌더되지 않으므로
+            전문은 여기서만 읽을 수 있다(원 카드 T58 목표). 다시 누르면 요약으로
+            돌아온다 — 세션 상태는 그대로다. */}
+        {showTranscript ? (
+          <section className="result-transcript" data-testid="result-transcript">
+            <MinutesPanel entries={transcriptEntries} />
+          </section>
+        ) : (
+        /* 기록 영역을 "이사회 한 장 요약"(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운
             일)로 재배치한다(DESIGN_SPEC.md v1.0 9절, T48). 'AI가 도운 일'만 내부
             스크롤(화면당 유일한 스크롤 패널)이고, 요약 행·내 의견 원문은 클램프로
-            세로 예산을 넘지 않게 한다. */}
+            세로 예산을 넘지 않게 한다. */
         <div className="result-screen__records">
           <section className="result-summary" data-testid="result-summary">
             {/* 머리글과 집계 배지를 한 줄에 둔다 — live 최악 조합(조건 4개 + 160자 근거
@@ -411,6 +475,7 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
             </section>
           </div>
         </div>
+        )}
       </div>
     </>
   );

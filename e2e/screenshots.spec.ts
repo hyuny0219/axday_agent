@@ -32,10 +32,14 @@ async function capture(page: Page, projectName: string, screenName: string) {
   // 캡처가 남는다(T38 결과 확인에서 발견).
   // 마운트 직후 캡처하면 screen-enter가 아직 시작되지 않아 반투명하게 남을 수 있어
   // (T40 반응 화면에서 발견) 진행 중인 애니메이션이 끝나기를 먼저 기다린다.
-  await page
-    .locator('.screen')
-    .first()
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  // BRIEFING~RESULT는 `.screen`이 왼쪽(app-body__actions)·오른쪽(app-body__content) 두
+  // 개다. 왼쪽은 shell.css에서 애니메이션을 껐지만(AssistantPanel 드로어 때문, T45)
+  // 오른쪽은 그대로 opacity 전환이 있다 — `.first()`만 기다리면 왼쪽(애니메이션 없음,
+  // 즉시 resolve)만 기다리고 오른쪽이 아직 페이드 중인 상태로 찍혀 종이 패널이 어두운
+  // 배경과 섞인 회색으로 캡처된다(실측, T64). 모든 `.screen` 요소를 함께 기다린다.
+  await page.locator('.screen').evaluateAll((elements) =>
+    Promise.all(elements.flatMap((el) => el.getAnimations().map((a) => a.finished))),
+  );
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 

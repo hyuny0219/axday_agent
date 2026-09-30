@@ -313,12 +313,15 @@
    곳을 허용한다. */
 .stage-band__bubble {
   position: absolute;
-  top: 8%;
+  /* T64가 발화자 라벨 줄을 더하며(아래) 말풍선이 커져 하늘 여백(28%) 밖으로
+     밀려났다(실측). top을 8%에서 4%로 올려 늘어난 만큼의 여유를 되찾는다
+     (e2e/stage.spec.ts). */
+  top: 4%;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
   max-width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 0;
   background-color: rgba(5, 11, 20, 0.85);
   border: 1px solid var(--hud-line);
@@ -338,9 +341,10 @@
   display: block;
   font-family: var(--font-hud);
   font-size: 10px;
+  line-height: 1;
   letter-spacing: 0.2em;
   color: var(--hud-line);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 /* 말풍선 본문은 글자 수가 아니라 줄 수로 자른다(2026-09-28 사용자). 말풍선 폭이 좌석

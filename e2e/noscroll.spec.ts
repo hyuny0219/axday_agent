@@ -130,6 +130,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
 
+  // VOTE의 "발언 흐름" 항목 수를 기억해 둔다 — RESULT의 회의록 전문(T58 흡수)이
+  // 같은 buildMinutes 계산을 쓰므로 항목 수가 같아야 한다(카드 완료 확인).
+  const minutesCountAtVote = await page.locator('[data-testid^="minutes-entry-"]').count();
+
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
@@ -140,6 +144,23 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // 뷰포트 안에 있다(페이지 스크롤 없음은 위 expectNoPageScroll로 이미 확인했다).
   await expect(page.getByTestId('result-summary')).toBeInViewport();
   await expect(page.getByTestId('result-ai-help')).toBeInViewport();
+
+  // "회의록 전문 보기"(T58 흡수, T64 item 7): 토글로 전문 패널이 열리고, 항목 수가
+  // 위 VOTE의 "발언 흐름"과 같으며, 페이지 스크롤 없이 다시 요약으로 돌아온다.
+  const transcriptToggle = page.getByTestId('result-transcript-toggle');
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'false');
+  await transcriptToggle.click();
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('result-transcript')).toBeVisible();
+  await expect(page.getByTestId('result-summary')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="minutes-entry-"]')).toHaveCount(minutesCountAtVote);
+  await expectNoPageScroll(page, 'RESULT(회의록 전문)');
+
+  await transcriptToggle.click();
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('result-summary')).toBeVisible();
+  await expect(page.getByTestId('result-transcript')).toHaveCount(0);
+  await expectNoPageScroll(page, 'RESULT(요약으로 복귀)');
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을
