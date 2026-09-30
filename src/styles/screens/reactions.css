@@ -7,18 +7,20 @@
 /* 내 발언 인용 카드를 왼쪽 열 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 ·
    반응 · 내 발언 인용 카드(시안 경계)를 맨 위"). 2줄로 클램프한다(v1.0 6절 표
    "내 발언 인용(2줄 클램프)"). T67 item7b(2026-09-30 실측, docs/screenshots/
-   desktop-720/reactions.png): 원인은 렌더링 결함이 아니라 여백 계산이었다 —
-   `overflow:hidden`의 클립 경계는 테두리 안쪽(패딩 바깥쪽) 가장자리라, 아래쪽
-   패딩만큼은 "글자가 없는 빈 공간"이 아니라 "넘친 다음 줄이 밀고 들어올 수 있는
-   여유 공간"이 된다. `max-height`에 아래쪽 패딩까지 budget으로 얹으면(예전 값)
-   그 패딩 폭만큼 다음 줄 위쪽이 클립 경계 안으로 들어와 최하단 줄 일부가 그대로
-   보였다(Range.getClientRects()로 실측: 2줄은 정확히 42px에서 끝나는데 클립
-   경계는 그보다 8px(패딩 하단) 뒤인 지점이었다). 아래쪽 패딩을 0으로 없애 클립
-   경계가 2번째 줄이 끝나는 지점과 정확히 겹치게 한다 — line-height(1.4)가 이미
-   글자 밑에 여유를 두므로 시각적으로 답답해 보이지 않는다. */
+   desktop-720/reactions.png)에서는 max-height + overflow:hidden 수치 예산으로
+   맞췄으나, PR #11 Codex 28차 검토(P2)에서 그 계산(테두리 2px를 뺀 것)이 틀렸다고
+   지적됐다 — 다시 실측해 보니 이 예산 자체가 화면·글꼴 힌팅에 따라 1px 안팎으로
+   흔들리는 아주 좁은(약 1px) 안전 구간이라(테두리를 더하거나 빼는 어느 쪽으로도
+   실측 경계를 살짝 벗어나면 2번째 줄 아래쪽이 잘리거나 3번째 줄 위쪽이 살짝
+   드러난다, Range.getClientRects() 재실측), px 예산을 정확히 맞추는 대신 무대
+   말풍선(stage.css `.stage-band__bubble-text`)과 같은 방식 — `-webkit-line-clamp`
+   —으로 바꾼다. 줄 수는 브라우저가 실제 줄 상자를 세어 자르므로 테두리·패딩
+   반올림 오차에서 자유롭다(같은 이유로 무대 말풍선도 이 방식을 쓴다). 잘렸을 때
+   말줄임표가 붙는 점은 stageText.ts의 40자 클램프가 이미 쓰는 것과 같은 신호라
+   새 동작이 아니다. */
 .reactions-screen__quote {
   margin: 0;
-  padding: var(--space-1) var(--space-2) 0;
+  padding: var(--space-1) var(--space-2);
   background-color: var(--panel);
   border: 1px solid var(--accent);
   border-left-width: 4px;
@@ -26,13 +28,10 @@
   color: var(--text);
   font-size: var(--fs-card);
   box-shadow: var(--shadow-card);
-  /* box-sizing: border-box(base.css 전역)라 max-height는 테두리까지 포함한 전체
-     박스 높이다 — 실제 글자 2줄(1.4em × 2) 위에 위쪽 패딩(var(--space-1))을 더하고
-     위아래 테두리(1px 두 번, +2px)는 글꼴 힌팅으로 줄 높이가 소수점 아래에서 살짝
-     반올림되는 여유(실측 1080에서 약 1px, e2e/reactions.spec.ts)를 흡수하는 안전
-     여백으로 그대로 뺀다 — 2px를 더하고 2px를 빼 결과적으로 더하지 않는다(아래쪽
-     패딩은 위에서 0으로 없앴다). */
-  max-height: calc(2.8em + var(--space-1));
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
 }
 
