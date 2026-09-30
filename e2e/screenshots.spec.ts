@@ -57,12 +57,28 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
 
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
-  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·자료 4장·CTA(T52).
+  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·근거 자료 버튼·CTA(T68).
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  await expect(page.getByTestId('evidence-card-E4')).toBeVisible();
+  await expect(page.getByTestId('open-evidence')).toBeVisible();
   await capture(page, testInfo.project.name, 'briefing');
+
+  // BRIEFING(팝업 열림, T68): "근거 자료 보기"를 눌러 EvidenceDialog에서 자료 4장
+  // 전문을 보는 상태를 별도로 캡처한다.
+  await page.getByTestId('open-evidence').click();
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
+  await expect(evidenceDialog.getByTestId('evidence-card-E4')).toBeVisible();
+  // 팝업 자체의 등장 애니메이션(evidenceDialog.css)은 `.screen` 밖이라 capture()의
+  // 대기 대상이 아니다 — 여기서 따로 끝나기를 기다려 페이드 중간에 찍히지 않게 한다.
+  await page
+    .getByTestId('evidence-dialog-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await evidenceDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'briefing-evidence');
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
 

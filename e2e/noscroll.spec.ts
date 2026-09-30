@@ -63,12 +63,33 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // (무대·행동·회의록)이 잘리지 않는다.
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
-  // 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보이고 잘리지 않는다(T52).
+  // T68: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있고, 남는
+  // 세로 여유로 오른쪽 열의 나머지 카드(현재 상황·제안·미정·할 일)가 잘리지 않는다.
+  await expect(page.getByTestId('open-evidence')).toBeVisible();
+  await expectNoPageScroll(page, 'BRIEFING(자료 버튼)');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 버튼)');
+
+  // 팝업을 열어도 페이지 스크롤은 생기지 않는다(팝업은 position:fixed 오버레이,
+  // 내부 스크롤은 팝업 카드 안에서만 허용된다 — DESIGN_SPEC.md v1.2 BRIEFING 절).
+  await page.getByTestId('open-evidence').click();
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
   for (const id of ['E1', 'E2', 'E3', 'E4']) {
-    await expect(page.getByTestId(`evidence-card-${id}`)).toBeVisible();
+    await expect(evidenceDialog.getByTestId(`evidence-card-${id}`)).toBeVisible();
   }
-  await expectNoPageScroll(page, 'BRIEFING(자료 4장)');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 4장)');
+  await expectNoPageScroll(page, 'BRIEFING(자료 팝업 열림)');
+  const dialogBox = await evidenceDialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(dialogBox, 'BRIEFING(자료 팝업 열림): 팝업 위치를 읽을 수 있어야 한다').not.toBeNull();
+  expect(viewport, 'BRIEFING(자료 팝업 열림): viewport 크기를 알 수 없다').not.toBeNull();
+  if (dialogBox && viewport) {
+    expect(
+      dialogBox.y >= -1 && dialogBox.y + dialogBox.height <= viewport.height + 1,
+      `BRIEFING(자료 팝업 열림): 팝업이 뷰포트를 벗어났다(top=${dialogBox.y}, bottom=${dialogBox.y + dialogBox.height}, viewport=${viewport.height})`,
+    ).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();

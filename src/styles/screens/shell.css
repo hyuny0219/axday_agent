@@ -638,13 +638,12 @@
   min-width: 0;
 }
 
-/* 칩을 잇는 선(DESIGN_SPEC.md v1.0 2절 "진행 스트립: 알약 칩을 잇는 선을 그리고 현재
-   단계는 시안 채움, 지난 단계는 체크"). 목록 뒤에 가로선을 깔고, 칩 각각은 불투명
-   배경으로 그 위를 덮어 선이 칩 사이 여백에서만 보이게 한다. T67: 헤더 한 줄 안에
-   들어가야 하므로 줄바꿈하지 않는다(1280에서도 좌·우 요소와 겹치지 않게 5개 탭이
-   한 줄에 들어가는 폭을 확보했다, docs/design/mockups/Main.html 헤더). */
+/* 칩 목록(DESIGN_SPEC.md v1.0 2절 "진행 스트립". v1.2 T68: 칩을 잇는 가로선(::before)이
+   글자 가운데를 지나는 것처럼 보여 없앴다 — 현재/완료 표시(칩 채움색·체크)만으로
+   단계를 구분한다). T67: 헤더 한 줄 안에 들어가야 하므로 줄바꿈하지 않는다(1280에서도
+   좌·우 요소와 겹치지 않게 5개 탭이 한 줄에 들어가는 폭을 확보했다,
+   docs/design/mockups/Main.html 헤더). */
 .progress-strip__list {
-  position: relative;
   display: flex;
   flex-wrap: nowrap;
   gap: var(--space-1) var(--space-2);
@@ -653,23 +652,9 @@
   padding: 0;
 }
 
-.progress-strip__list::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: var(--border);
-  transform: translateY(-50%);
-  z-index: 0;
-}
-
 /* T64(Main.html 단계 탭): 알약 대신 각진 박스, 타자기 서체. 현재 단계는 종이색
    채움(짙은 글자), 나머지는 회색 테두리 — 시안 강조색 대신 서류철 톤을 쓴다. */
 .progress-strip__step {
-  position: relative;
-  z-index: 1;
   padding: 6px var(--space-2);
   border-radius: 0;
   border: 1px solid #4a4d55;
