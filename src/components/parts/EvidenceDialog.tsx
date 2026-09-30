@@ -37,6 +37,18 @@ export function EvidenceDialog({ evidence, onClose }: EvidenceDialogProps) {
     };
   }, []);
 
+  // 팝업이 열린 동안 배경 문서 스크롤을 잠근다. 1200px 미만·700px 미만 reflow 경로에서는
+  // shell.css가 문서 스크롤을 허용하므로, 딤 위 휠·터치나 팝업 본문 끝에서의 스크롤이 뒤의
+  // 회의 화면을 움직였다(PR #11 Codex 29차). 언마운트 시 원래 값을 되돌린다.
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousOverflow = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = previousOverflow;
+    };
+  }, []);
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {

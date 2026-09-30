@@ -88,4 +88,13 @@ describe('EvidenceDialog', () => {
 
     outsideButton.remove();
   });
+
+  it('열려 있는 동안 문서 스크롤을 잠그고 닫히면 원래 값으로 되돌린다(PR #11 Codex 29차)', () => {
+    document.documentElement.style.overflow = 'auto';
+    const { unmount } = render(<EvidenceDialog evidence={evidence} onClose={vi.fn()} />);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.documentElement.style.overflow).toBe('auto');
+    document.documentElement.style.overflow = '';
+  });
 });
