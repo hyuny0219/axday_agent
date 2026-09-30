@@ -330,3 +330,12 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - testid는 그대로다: `progress-strip`·`progress-step-1`~`5`·`mode-badge`. `nameplate`·`app-header__stage` 관련 testid/클래스는 더 이상 존재하지 않는다.
 - 검수: `npm run check && npm run build && npx playwright test`(외부 요청 0건 fixture 포함)가 통과해야 한다. 두 해상도 모든 화면 스크린샷에서 헤더 한 줄에 진행 스트립이 들어가고 명패·단계 칩이 없으며, 페이지 스크롤이 없다(`e2e/noscroll.spec.ts`).
 
+### 무대 HUD 라벨·말풍선·명패 겹침 수정 (T67 item6·7, 2026-09-30)
+
+`docs/screenshots/desktop-1080/reactions.png`·`desktop-720/reactions.png` 실측에서 드러난 세 겹침을 고친다. 무대(`stage.css`·`StageBand.tsx`) 2절 서술에 아래 예외 규칙을 더한다.
+
+- **HUD 라벨 상단 띠 예약(item6)**: 양쪽 끝 좌석(CEO·CISO)은 "CAM 01 · 회의실 A · REC" 판독 라벨(좌상단)·"CLASSIFIED" 칩(우상단)과 같은 가로 구간에 있어, 3줄 클램프까지 찬 말풍선이 라벨을 덮었다(1920×1080 실측, 1280 이하는 두 라벨이 이미 숨어 있어(2절 "1280 이하는 숨김") 해당 없음). `stage.css`가 `min-width:1281px`에서만 두 좌석의 말풍선 `top`에 라벨 칩 하단(실측 최대 약 34px) + 여유를 더한 `calc(4% + 11px)`을 준다 — 가운데 두 좌석(CFO·CAIO)은 라벨과 가로로 겹치지 않아 그대로 `4%`를 쓴다. 하늘 여백 28% 규칙(`e2e/stage.spec.ts`)은 3줄 클램프 최악 높이 기준으로 두 해상도 모두 재확인했다(1080에서 약 4px 여유).
+- **참가자 말풍선 하단 고정 앵커(item7a)**: 참가자 말풍선(`.stage-band__bubble--participant`)은 `top:60%`로 위에서 내려 그렸는데, 글자 줄 수가 늘수록 아래쪽(=CFO·CAIO 명패 줄)으로 자라 1280×720에서 명패를 덮었다. `top`을 없애고 `bottom`(1080: 118px·720: 96px, 명패 줄 상단까지 실측 + 여유 15px 안팎)으로 앵커링해 글자가 늘어도 위쪽(명패에서 먼 방향)으로만 자라게 했다.
+- **내 발언 인용 상자 클램프 정합(item7b)**: `reactions.css`의 2줄 클램프 상자(`.reactions-screen__quote`)가 아래쪽 패딩만큼 다음 줄이 클립 경계 안으로 들어와 3번째 줄 일부가 그대로 보였다(`overflow:hidden`의 클립 경계는 패딩 바깥쪽이라, 아래쪽 패딩은 "빈 공간"이 아니라 "넘친 다음 줄이 밀고 들어올 여유 공간"이 된다). 아래쪽 패딩을 0으로 없애고 `max-height`를 그만큼 줄여 클립 경계가 2번째 줄 끝과 겹치게 했다. 말줄임표(…)는 없어졌지만 잘리는 위치는 정확해졌다.
+- 검증: `e2e/stage.spec.ts`에 REACTIONS 말풍선 vs CAM/CLASSIFIED 라벨, 참가자 말풍선 vs CFO·CAIO 명패의 bounding box 비겹침 단언을 추가(두 해상도). `e2e/reactions.spec.ts`에 인용 상자가 `Range.getClientRects()` 기준으로 클립 경계에 걸쳐 반쯤 보이는 줄이 없다는 단언을 추가. 세 항목 모두 `docs/screenshots`의 `opinions`·`discuss`·`reactions`(두 해상도) 재생성으로 육안 확인.
+

@@ -371,11 +371,41 @@
   border-bottom: 0;
 }
 
+/* T67 item7a(2026-09-30 실측, docs/screenshots/desktop-720/reactions.png): top:60%로
+   위에서부터 내려 그리면 글자 줄 수가 늘수록 아래쪽(=CFO·CAIO 명패 줄)으로 자라나
+   1280×720에서 명패를 덮었다(1920×1080은 좌석 열이 더 높아 우연히 안 덮였을 뿐).
+   위로 자라도록 아래쪽을 고정 px로 앵커링한다(`bottom`) — 글자가 늘어도 명패에서
+   멀어지는 방향(위)으로만 커진다. 값은 명패 줄 상단이 무대 바닥에서 얼마나
+   떨어져 있는지 실측(1080 ≈101px, 720 ≈78px)에 여유(~18px)를 더했다(40자 최대
+   글자 텍스트로 강제해 실측한 최악 높이 기준으로도 명패까지 15px 안팎 남는다). */
 .stage-band__bubble--participant {
-  top: 60%;
+  top: auto;
+  bottom: 118px;
   background-color: rgba(5, 11, 20, 0.85);
   border-color: var(--hud-line);
   color: #eaf4ff;
+}
+
+@media (max-width: 1280px) {
+  .stage-band__bubble--participant {
+    bottom: 96px;
+  }
+}
+
+/* T67 item6(2026-09-30): 양쪽 끝 좌석(CEO·CISO) 말풍선은 HUD 판독 라벨("CAM 01 ·
+   회의실 A · REC")·"CLASSIFIED" 칩과 같은 가로 구간(좌·우 40px 안쪽)에 있어, 3줄
+   클램프까지 찬 말풍선이 라벨을 덮는다(실측, docs/screenshots/desktop-1080/
+   reactions.png). 두 라벨이 폭 1280px 이하에서는 숨어 있으므로(위 .stage-band__
+   readout·.stage-band__classified 미디어쿼리) 그 구간에서는 이 보정이 필요 없다 —
+   좁은 폭에서까지 밀어 내리면 3줄 클램프 말풍선이 하늘 여백(28%, e2e/stage.spec.ts)
+   밖으로 넘칠 여유가 더 빠듯해진다. CLASSIFIED 칩 하단(무대 상단 기준 실측 약
+   34px)보다 여유를 두고 시작하도록 기존 4% 위에 11px를 더한다 — 3줄 클램프 최대
+   높이(실측 약 80px)에서도 28% 하늘 여백 선까지 남는 여유(~4px)를 실측으로 확인했다. */
+@media (min-width: 1281px) {
+  [data-testid='stage-seat-CEO'] .stage-band__bubble,
+  [data-testid='stage-seat-CISO'] .stage-band__bubble {
+    top: calc(4% + 11px);
+  }
 }
 
 @keyframes stage-bubble-in {

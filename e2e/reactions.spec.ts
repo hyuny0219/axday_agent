@@ -140,3 +140,55 @@ test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
 });
+
+// T67 item7b(2026-09-30 실측, docs/screenshots/desktop-720/reactions.png): 2줄
+// 클램프 상자(reactions-screen__quote)가 아래쪽 패딩만큼 다음 줄이 클립 경계 안으로
+// 들어와, 3번째 줄 일부가 잘리지 않고 그대로 보였다(패딩 하단을 없애 클립 경계를
+// 2번째 줄 끝과 맞춘 수정, src/styles/screens/reactions.css). 실제 300자에 가까운
+// 긴 발언(여러 줄)으로 재현하고, Range.getClientRects()로 각 줄의 실제 페인트 위치를
+// 확인해 클립 경계에 걸쳐 반쯤 보이는 줄이 없는지 단언한다.
+const LONG_OPINION_TEXT =
+  '한 게시판에서 먼저 시범 운영합시다. 게시 전 검수 절차를 두고 시작합시다. ' +
+  '문제가 생기면 작성자를 확인할 수 있게 해 둡시다. 운영 효과를 측정한 뒤 전사로 넓힙시다. ' +
+  '시범 기간에는 게시 건수와 신고 처리 결과를 함께 공유해 신뢰를 쌓고, 확대 여부는 이 기록을 근거로 ' +
+  '다음 이사회에서 다시 판단하겠습니다. 신고 처리 담당자를 먼저 지정하고, 로그 보관 기간을 정한 뒤 ' +
+  '순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
+
+test('내 발언 인용 상자는 2줄을 넘는 내용이 있어도 클램프 경계에 걸쳐 반쯤 보이는 줄이 없다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('draft-editor-textarea').fill(LONG_OPINION_TEXT);
+  await page.getByTestId('submit-opinion').click();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+
+  const quote = page.getByTestId('reactions-quote');
+  // 실제로 2줄보다 많은 내용이 있어야 이 단언이 의미가 있다(클램프가 걸릴 내용인지 확인).
+  const overflowing = await quote.evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+  expect(overflowing, '테스트 문구가 2줄보다 짧아 클램프가 걸리지 않았다').toBe(true);
+
+  const straddlingLines = await quote.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    const textNode = el.firstChild;
+    if (!textNode) {
+      return [];
+    }
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const epsilon = 1;
+    return Array.from(range.getClientRects())
+      .filter((line) => line.top < rect.bottom - epsilon && line.bottom > rect.bottom + epsilon)
+      .map((line) => ({ top: line.top, bottom: line.bottom, boxBottom: rect.bottom }));
+  });
+  expect(
+    straddlingLines,
+    `클램프 경계에 걸쳐 반쯤 보이는 줄이 있다: ${JSON.stringify(straddlingLines)}`,
+  ).toHaveLength(0);
+});
