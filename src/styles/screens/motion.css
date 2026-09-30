@@ -16,31 +16,34 @@
 }
 
 /* 최종 안건 카드: 중앙 정렬 + max-width960px(DESIGN_SPEC.md "만들 것 · 최종 안건·투표
-   · 안건 카드 중앙 max-width960px·--shadow-card"). */
+   · 안건 카드 중앙 max-width960px"). T64(오른쪽 열 서류철): 종이-2 카드 + 잉크 글자. */
 .motion-screen__card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  background-color: var(--panel);
-  border: 2px solid var(--border);
+  background-color: var(--paper-2);
+  border: 2px solid var(--paper-border);
   border-radius: var(--radius-card);
   padding: var(--space-3);
   max-width: 960px;
   width: 100%;
   margin: 0 auto;
-  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  box-shadow: var(--shadow-paper-card);
 }
 
 .motion-screen__original {
   margin: 0;
   font-size: var(--fs-card);
-  color: var(--text);
+  color: var(--ink);
 }
 
 .motion-screen__section-label {
   margin: var(--space-2) 0 0;
   font-size: 18px;
-  color: var(--text-muted);
+  font-family: var(--font-label);
+  letter-spacing: 0.1em;
+  color: var(--label);
 }
 
 /* 실행 방식·조건 목록을 pill로 보여준다(DESIGN_SPEC.md "만들 것 · 실행 방식/조건
@@ -58,13 +61,13 @@
 .motion-screen__conditions li,
 .motion-screen__tasks li {
   padding: 6px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--paper-border);
   border-radius: 999px;
-  color: var(--text);
+  color: var(--ink);
   font-size: var(--fs-meta);
 }
 
 .motion-screen__no-conditions {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }

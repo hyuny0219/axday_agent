@@ -27,6 +27,11 @@ export interface EvidenceGridProps {
   variant?: 'accordion' | 'expanded';
 }
 
+// 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록"). 화면 문구에
+// 자료 ID(E1~E4)를 쓰지 않는 규칙(위 주석)을 그대로 지키기 위해 ID 대신 카드 순서로
+// A~D를 매긴다 — evidence-card-{id} 같은 자동화용 값이 아니라 순수 장식이다.
+const EXHIBIT_LETTERS = ['A', 'B', 'C', 'D'] as const;
+
 export function EvidenceGrid({ evidence, variant = 'accordion' }: EvidenceGridProps) {
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -42,13 +47,18 @@ export function EvidenceGrid({ evidence, variant = 'accordion' }: EvidenceGridPr
   if (variant === 'expanded') {
     return (
       <div className="evidence-grid evidence-grid--expanded">
-        {evidence.map((card) => (
+        {evidence.map((card, index) => (
           <article
             key={card.id}
             className="evidence-card evidence-card--expanded"
             data-testid={`evidence-card-${card.id}`}
           >
-            <h3 className="evidence-card__title">{card.title}</h3>
+            <h3 className="evidence-card__title">
+              <span className="evidence-card__tag" aria-hidden="true">
+                EXHIBIT {EXHIBIT_LETTERS[index % EXHIBIT_LETTERS.length]}
+              </span>
+              {card.title}
+            </h3>
             <p className="evidence-card__insight">{card.insight}</p>
             <p className="evidence-card__content evidence-card__content--expanded">{card.content}</p>
           </article>
@@ -59,7 +69,7 @@ export function EvidenceGrid({ evidence, variant = 'accordion' }: EvidenceGridPr
 
   return (
     <div className="evidence-grid">
-      {evidence.map((card) => {
+      {evidence.map((card, index) => {
         const open = openId === card.id;
         return (
           <details
@@ -70,7 +80,12 @@ export function EvidenceGrid({ evidence, variant = 'accordion' }: EvidenceGridPr
             onToggle={(event) => handleToggle(card.id, event.currentTarget.open)}
           >
             <summary className="evidence-card__summary">
-              <h3 className="evidence-card__title">{card.title}</h3>
+              <h3 className="evidence-card__title">
+                <span className="evidence-card__tag" aria-hidden="true">
+                  EXHIBIT {EXHIBIT_LETTERS[index % EXHIBIT_LETTERS.length]}
+                </span>
+                {card.title}
+              </h3>
                 <p className="evidence-card__insight">{card.insight}</p>
             </summary>
             <p className="evidence-card__content">{card.content}</p>

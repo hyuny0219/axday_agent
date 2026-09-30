@@ -7,13 +7,24 @@
   gap: var(--space-2);
 }
 
+/* T64(오른쪽 열 서류철): 어두운 패널 대신 종이-2 카드 + 잉크 글자. 서류 라벨(EXHIBIT
+   A~D, 장식)은 EvidenceGrid.tsx가 제목 앞에 아바타 있는 자리 없이 한 줄로 붙인다. */
 .evidence-card {
   display: block;
-  background-color: var(--panel);
-  border: 2px solid var(--border);
+  background-color: var(--paper-2);
+  border: 2px solid var(--paper-border);
   border-radius: var(--radius-card);
   padding: var(--space-2);
-  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  box-shadow: var(--shadow-paper-card);
+}
+
+.evidence-card__tag {
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--label);
+  margin-right: 6px;
 }
 
 .evidence-card__summary {
@@ -35,7 +46,7 @@
    (PR #6 Codex 3차 검토). 원문 전체는 브리핑 스크린리더 읽기와 시나리오 문서에 있다. */
 .evidence-card__content {
   margin: var(--space-1) 0 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-card);
   line-height: 1.5;
   display: -webkit-box;
@@ -47,7 +58,7 @@
 
 .evidence-card__insight {
   margin: 0;
-  color: var(--text);
+  color: var(--ink);
   font-size: var(--fs-card);
   line-height: 1.5;
 }

@@ -26,12 +26,19 @@ import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { buildResultSummary } from '../resultSummary';
-import { SEAT_REVEAL_STEP_SECONDS, computePersuasion } from '../resultStamp';
+import {
+  PERSUASION_STAMP_DELAY_SECONDS,
+  SEAT_REVEAL_STEP_SECONDS,
+  STAMP_DELAY_SECONDS,
+  computePersuasion,
+  computeResultStamp,
+} from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
 import { Avatar } from '../parts/Avatar';
-// 결론 도장(result-stamp)은 T44에서 무대 열 우하단으로 옮겨 AppShell이 StageBand에
-// 넘긴다(components/resultStamp.ts computeResultStamp). 이 화면은 더는 도장을
-// 직접 그리지 않는다 — 5석·게이지·기록만 담당한다.
+// 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
+// 스킨)에서 오른쪽 종이 보고서의 전용 칸(200px)으로 옮겼다(docs/design/mockups/README.md
+// "도장은 결과 화면 오른쪽 종이 보고서 우상단에 — 무대에는 표 배지만"). 이 화면이
+// components/resultStamp.ts의 순수 함수를 직접 불러 도장 문구·타이밍을 계산한다.
 import '../../styles/screens/result.css';
 import '../../styles/screens/live.css';
 
@@ -79,6 +86,10 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   );
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
+
+  // 결론 도장(T44/T64): PASS·REJECT일 때만 문구가 있다(finalMotion 없으면 null이지만
+  // RESULT는 항상 finalMotion이 있다, 아래 이른 반환 참고).
+  const resultStamp = useMemo(() => computeResultStamp(session), [session]);
 
   // "설득 도장" 근거 한 줄(T63, v1.0 9절). 참가자 좌석이 UNCAST면(가능한 경우) 계산하지
   // 않는다(computePersuasion이 null을 돌려준다).
@@ -131,6 +142,12 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   const conclusion =
     session.outcome === 'PASS' ? scenario.resultCopy.pass : scenario.resultCopy.reject;
 
+  // 도장 칸 케이스 태그(장식, T64 "CASE 02"). 안건 사건 번호(incident.caseLabel, 예
+  // "사건 02")에서 숫자만 뽑아 영문 케이스 태그로 바꾼다 — 새 사실을 만들지 않는다.
+  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
+  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
+  const stampHeadline = resultStamp?.text ?? '';
+
   // 가결은 도장과 같은 기준(반영 조건 유무)으로 pass/passOriginal을 가른다
   // (components/resultEpilogue.ts, PR #8 Codex 2차 검토).
   const epilogue = epilogueText(
@@ -161,27 +178,82 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
         </button>
       </div>
       <div className="app-body__content screen result-screen" data-skip={skip}>
-        <h2 className="result-screen__title" data-testid="result-conclusion">
-          {conclusion}
-        </h2>
-        {session.expiredWithoutMotion && (
-          <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
-            시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
-          </p>
-        )}
-        <p className="result-screen__mode-notice" data-testid="result-mode-notice">
-          {MODE_NOTICE_TEXT[session.mode]}
-        </p>
-        {tallyResult.limitedByUnavailable && (
-          <p className="result-screen__limited-notice" data-testid="result-limited-notice">
-            일부 임원 미표결로 판단이 제한되었습니다.
-          </p>
-        )}
-        {/* 표결 배지 순차 공개(DESIGN_SPEC.md v1.0 3절). 결론 도장은 T44에서 무대 열
-            우하단으로 옮겨 AppShell이 StageBand 안에 렌더한다(같은 STAMP_DELAY_SECONDS를
-            쓴다). 5석 카드 텍스트는 처음부터 그대로 있고, 여기서는 CSS animation-delay로
-            시각 효과만 늦춘다(setTimeout 없음). 클릭·키 입력이 오면 data-skip='true'가
-            붙어 모든 지연·재생 시간을 0에 가깝게 만든다. */}
+        {/* 종이 보고서 머리글(T64, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약").
+            제목·안내문은 왼쪽에, 결론·설득 도장은 오른쪽 200px 칸에 둔다(item 7). */}
+        <div className="result-report__top">
+          <div className="result-report__main">
+            <p className="result-report__eyebrow" aria-hidden="true">
+              <span className="result-report__eyebrow-tag">DEBRIEF 02</span>
+              <span>이사회 한 장 요약</span>
+            </p>
+            <h2 className="result-screen__title" data-testid="result-conclusion">
+              {conclusion}
+            </h2>
+            {session.expiredWithoutMotion && (
+              <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
+                시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
+              </p>
+            )}
+            <p className="result-screen__mode-notice" data-testid="result-mode-notice">
+              {MODE_NOTICE_TEXT[session.mode]}
+            </p>
+            {tallyResult.limitedByUnavailable && (
+              <p className="result-screen__limited-notice" data-testid="result-limited-notice">
+                일부 임원 미표결로 판단이 제한되었습니다.
+              </p>
+            )}
+          </div>
+          {/* 도장 칸(200px, item 7): 결론 도장은 잉크(붉은 원, multiply) — PASS/REJECT
+              색은 아래 result.css가 --stamp-red 한 색으로 통일한다(4장 규칙: 도장 종류를
+              늘리지 않는다). 설득 도장은 0.4초 뒤 왼쪽 아래에 겹친다. 클릭·키 입력으로
+              건너뛰면(위 skip) 두 도장 모두 지연 없이 바로 보인다. */}
+          {resultStamp && (
+            <div className="result-stamp-box">
+              <div
+                className="result-stamp"
+                data-testid="result-stamp"
+                style={{ animationDelay: `${skip ? 0 : STAMP_DELAY_SECONDS}s` }}
+              >
+                <span className="result-stamp__case" aria-hidden="true">
+                  {caseTag}
+                </span>
+                <span className="result-stamp__text">{stampHeadline}</span>
+                <span className="result-stamp__meta" aria-hidden="true">
+                  {resultStamp.outcome === 'PASS' ? 'APPROVED' : 'REJECTED'} · {tallyResult.counts.YES}:
+                  {tallyResult.counts.NO}
+                </span>
+              </div>
+              {persuasion &&
+                (persuasion.earned ? (
+                  <div
+                    className="result-stamp result-stamp--persuasion"
+                    data-testid="persuasion-stamp"
+                    style={{
+                      animationDelay: `${skip ? 0 : PERSUASION_STAMP_DELAY_SECONDS}s`,
+                    }}
+                  >
+                    <span className="result-stamp__case" aria-hidden="true">
+                      BONUS
+                    </span>
+                    <span className="result-stamp__text">설득 성공</span>
+                    <span className="result-stamp__meta" aria-hidden="true">
+                      같은 표 {persuasion.sameVoteSeats}석
+                    </span>
+                  </div>
+                ) : (
+                  <p className="result-bonus-missed" data-testid="persuasion-stamp-missed">
+                    BONUS 미획득
+                    <br />
+                    같은 표 {persuasion.sameVoteSeats}석 · 3석부터
+                  </p>
+                ))}
+            </div>
+          )}
+        </div>
+        {/* 표결 배지 순차 공개(DESIGN_SPEC.md v1.0 3절). 5석 카드 텍스트는 처음부터
+            그대로 있고, 여기서는 CSS animation-delay로 시각 효과만 늦춘다(setTimeout
+            없음). 클릭·키 입력이 오면 data-skip='true'가 붙어 모든 지연·재생 시간을
+            0에 가깝게 만든다(위 도장도 같은 skip 값을 쓴다). */}
         <div className="result-screen__seats">
           {SEAT_ORDER.map((memberId, index) => {
             const ballot = session.ballots.find((b) => b.memberId === memberId);

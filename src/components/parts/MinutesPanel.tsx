@@ -20,6 +20,13 @@ function speakerLabel(speaker: MemberId): string {
   return speaker === 'PARTICIPANT' ? '나 · 특별 이사' : MEMBER_LABELS[speaker];
 }
 
+/** 행 앞 직함 라벨(장식, T64 "[mm:ss] CEO"). 도착 시각을 세션 데이터에 담지 않아
+ * 타임스탬프는 붙이지 않고 직함만 보여준다(카드 "없으면 항목 순서 기준 표시는 하지
+ * 않고 직함만"). 아바타가 이미 같은 정보를 시각으로 보여주므로 짧은 코드만 더한다. */
+function speakerTag(speaker: MemberId): string {
+  return speaker === 'PARTICIPANT' ? '나' : speaker;
+}
+
 export function MinutesPanel({ entries }: MinutesPanelProps) {
   const listRef = useRef<HTMLOListElement>(null);
   // "최신을 따라가는 중"인지. 참가자가 위로 올려 앞선 발언을 읽는 동안에는 false가 되어
@@ -138,6 +145,11 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
           >
             <Avatar memberId={entry.speaker} size="sm" />
             <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
+            {/* 직함 라벨(장식, T64 "[mm:ss] CEO"). 위 minutes__speaker(sr-only)가 이미
+                전체 직함을 스크린리더에 전한다 — 여기는 화면에 보이는 짧은 코드다. */}
+            <span className="minutes__tag" aria-hidden="true">
+              {speakerTag(entry.speaker)}
+            </span>
             {entry.kind === 'pending' ? (
               <>
                 <span className="minutes__dots" aria-hidden="true">

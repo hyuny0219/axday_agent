@@ -51,7 +51,6 @@ import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
-import { computePersuasion, computeResultStamp } from '../components/resultStamp';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -522,17 +521,16 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
  * 열로 이뤄진 조종석 배치다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙",
- * T45). ATTRACT·SELECT는 무대가 없어 여전히 1열이다. 도장(result-stamp)은 무대 열
- * 우하단에 겹쳐 찍으므로 StageBand에 resultStamp로 넘긴다(components/resultStamp.ts,
- * ResultScreen과 공유하는 순수 함수).
+ * T45). ATTRACT·SELECT는 무대가 없어 여전히 1열이다. 결론·설득 도장은 T64에서 무대
+ * 열 우하단 겹침 규칙을 폐기하고 오른쪽 종이 보고서 전용 칸으로 옮겼다
+ * (docs/design/mockups/README.md) — ResultScreen이 components/resultStamp.ts를 직접
+ * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
   const { session, dispatch, roundLog } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
-  const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
-  const persuasion = session.stage === 'RESULT' ? computePersuasion(session) : null;
   const fit = useViewportFit();
   const wrapperStyle: CSSProperties | undefined =
     fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;
@@ -570,8 +568,6 @@ function AppShell() {
                     stances={stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(session.stage, scenario)}
-                    resultStamp={resultStamp}
-                    persuasion={persuasion}
                   />
                 </div>
                 {content}

@@ -102,6 +102,16 @@
      로컬로 싣는다). 본문·제목은 기존 --font-ui·--font-display를 그대로 쓴다. */
   --font-label: 'Special Elite', monospace;
   --font-hud: 'Share Tech Mono', monospace;
+
+  /* 종이 카드 그림자(T64, Main.html 자료 카드 톤 — 오른쪽 열 안 개별 카드는 메인 종이
+     패널(8px 8px 0 #1f2126)보다 한 단계 작은 4px로 겹침 무게를 맞춘다). 오른쪽 열의
+     임원 의견·반응·안건·자료·표결·결과 카드가 공유한다. */
+  --shadow-paper-card: 4px 4px 0 #1f2126;
+
+  /* TRANSCRIPT(발언 흐름) 패널 톤(T64, Main.html "background:#15171b; border:1px solid
+     #2a2d33"). 왼쪽 열(무대 아래)이라 종이가 아니라 무채색 어두운 판이다. */
+  --transcript-bg: #15171b;
+  --transcript-border: #2a2d33;
 }
 
 @media (max-width: 1280px) {

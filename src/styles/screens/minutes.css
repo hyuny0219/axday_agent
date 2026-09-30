@@ -2,6 +2,9 @@
    area(minutes)를 채운다. 2026-09-28 사용자 결정: 모든 항목을 전문 그대로 줄바꿈해 보여주고,
    넘치면 목록(.minutes__list)만 세로 스크롤한다. 페이지 스크롤 금지는 그대로다 — 패널은
    그리드 칸 높이(minmax(0, 1fr))에 갇히고 목록이 그 안에서 스크롤한다. */
+/* T64(Main.html TRANSCRIPT 패널): 짙은 회색 판(--transcript-bg/--transcript-border) +
+   타자기 앰버 머리글. 문구·testid는 그대로 두고(카드 preamble "문구 불변") 색·서체만
+   바꾼다. */
 .minutes {
   min-height: 0;
   overflow: hidden;
@@ -9,9 +12,9 @@
   flex-direction: column;
   gap: 4px;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--transcript-border);
   border-radius: var(--radius-card);
-  background-color: var(--panel);
+  background-color: var(--transcript-bg);
 }
 
 .minutes__head {
@@ -25,13 +28,15 @@
   margin: 0;
   font-size: var(--fs-meta);
   font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
+  font-family: var(--font-label);
+  letter-spacing: 0.1em;
+  color: var(--amber);
 }
 
 .minutes__count {
   font-size: 12px;
-  color: var(--text-muted);
+  font-family: var(--font-label);
+  color: #8f8a80;
 }
 
 .minutes__list {
