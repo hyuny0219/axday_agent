@@ -19,6 +19,16 @@
 // fillMissingBallots로 채운다(domain은 건드리지 않는다). 그래서 재요청이 성공하면 확정 전
 // RECORD_EXEC_BALLOT으로 실제 표를 기록할 수 있고, 재요청을 안 쓰거나 실패해도 자동 확정
 // (awaitResult, 최대 8초)이 그대로 UNCAST로 끝맺어 기존 동작과 같다.
+//
+// PR #11 Codex 20차 P1: startFinalVotes()는 roundChain 뒤에 이어 붙기 때문에 REACTIONS·
+// FOLLOWUP이 아직 응답 전이면 실제 표 호출은 그 라운드가 끝날 때까지(최대
+// reactionTimeoutMs) 시작되지 않는다. 그런데 awaitResult()의 8초(FINAL_VOTE_WAIT_MS) 타이머는
+// 참가자가 확정한 시점에 바로 시작됐었다 — 그래서 앞 라운드가 늦게 끝나면 표 호출이 시작되기도
+// 전에(혹은 시작 직후) 8초+유예가 다 지나가 실제로 도착한 표까지 UNCAST로 덮어썼다.
+// voteRoundStarted 신호로 "앞 라운드가 끝나 표 호출이 실제로 시작된 시점"을 표시하고,
+// awaitResult()가 그 신호(또는 전체 settle)를 먼저 기다린 뒤에야 8초 타이머를 시작하게
+// 고쳤다 — 이 첫 대기는 roundChain 자체의 stage별 상한에 갇혀 있어 별도 delay 없이도
+// 무한히 늘어나지 않는다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RequestRegistry } from '../../app/requests';
@@ -126,6 +136,19 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     voteRetryCompletion = Promise.resolve();
   }
 
+  // 표결 라운드가 실제로(roundChain을 다 드레인한 뒤) 시작됐다는 신호(PR #11 Codex 20차
+  // P1). startFinalVotes()가 새 표결을 예약할 때마다 새로 만들고, startFinalVotesNow()가
+  // 앞 라운드를 기다리고 세션 유효성 검사까지 통과한 바로 그 시점에 resolve한다.
+  // awaitResult()는 8초 타이머를 시작하기 전에 이 신호(또는 전체 settle)부터 기다린다.
+  let voteRoundStarted: Promise<void> = new Promise(() => undefined);
+  let resolveVoteRoundStarted: () => void = () => undefined;
+
+  function resetVoteRoundStartedSignal(): void {
+    voteRoundStarted = new Promise((resolve) => {
+      resolveVoteRoundStarted = resolve;
+    });
+  }
+
   function runRound(stage: StatementStage): Promise<void> {
     const run = roundChain.then(() => runRoundNow(stage));
     roundChain = run.catch(() => undefined);
@@ -215,6 +238,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
   // 회의 기록에 참가자 의견에 대한 반응이 빠진다. finalVotesSettled는 동기적으로 잡아
   // awaitResult()가 호출 순서와 무관하게 같은 약속을 기다리게 한다.
   function startFinalVotes(): Promise<void> {
+    resetVoteRoundStartedSignal();
     const run = roundChain.then(() => startFinalVotesNow());
     roundChain = run.catch(() => undefined);
     finalVotesSettled = run;
@@ -225,7 +249,9 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     const session = deps.store.getSession();
     const sessionId = session.sessionId;
     const motion = session.finalMotion;
-    // 라운드를 기다리는 사이 리셋됐으면(RESULT/ATTRACT) 표를 요청하지 않는다.
+    // 라운드를 기다리는 사이 리셋됐으면(RESULT/ATTRACT) 표를 요청하지 않는다. 이 경우
+    // voteRoundStarted는 resolve하지 않지만, awaitResult()는 finalVotesSettled(이 함수의
+    // 반환)로 대신 깨어나므로 무한히 기다리지 않는다.
     if (!motion || session.stage !== 'VOTE') {
       return;
     }
@@ -234,6 +260,9 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       return;
     }
 
+    // 여기부터가 "표결 라운드가 실제로 시작"하는 시점이다 — awaitResult()의 8초 타이머가
+    // 이 신호를 기다렸다가 시작된다.
+    resolveVoteRoundStarted();
     resetVoteRetrySignal();
     for (const roleId of EXEC_MEMBER_ORDER) {
       deps.store.dispatch({ type: 'SET_ROLE_STATUS', roleId, status: 'pending' });
@@ -352,6 +381,19 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     if (session.stage !== 'VOTE') {
       return;
     }
+
+    // 표결 라운드가 실제로 시작되기 전(앞선 REACTIONS·FOLLOWUP이 roundChain을 드레인하는
+    // 동안)에는 8초 타이머를 시작하지 않는다(PR #11 Codex 20차 P1). voteRoundStarted가
+    // resolve되면 실제 표 호출이 막 시작된 것이고, startFinalVotesNow가 세션 유효성 검사에
+    // 걸려 표를 아예 부르지 않았다면 finalVotesSettled가 먼저 끝나 대신 깨운다 — 어느 쪽이든
+    // 이 대기는 roundChain 자체의 stage별 상한(reactionTimeoutMs)에 갇혀 있다.
+    await Promise.race([voteRoundStarted, finalVotesSettled]);
+
+    const afterStart = deps.store.getSession();
+    if (afterStart.sessionId !== session.sessionId || afterStart.stage !== 'VOTE') {
+      return;
+    }
+
     await Promise.race([finalVotesSettled, delay(FINAL_VOTE_WAIT_MS)]);
 
     // 실패한 역할이 있으면(execBallotsPending) 바로 확정하지 않고 "미표결 임원 다시

@@ -545,6 +545,162 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots).toHaveLength(4);
   });
 
+  it('REACTIONS가 11초 뒤에 끝나도 표 호출은 그때부터 8초를 온전히 받아 실제 표를 반영한다(PR #11 Codex 20차 P1)', async () => {
+    const clock = fakeClock(0);
+    let session = toOpinionsStage(clock);
+    session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // OPINIONS -> DISCUSS
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '검토했습니다. 작은 범위로 시작하는 데 동의합니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: [],
+      },
+      clock.now(),
+    ); // DISCUSS -> REACTIONS
+    const store = createStore(session, clock);
+
+    const reactionsPending = deferred<StatementOutcome[]>();
+    let motionRef: { id: string; hash: string } | null = null;
+    const adapter = fakeAdapter({
+      reactions: () => reactionsPending.promise,
+      finalVotes: async () => {
+        // 표 호출 자체는 3초 뒤에 응답한다 — REACTIONS가 끝난 시점(11초)부터 계산해도
+        // 8초(FINAL_VOTE_WAIT_MS) 안에 들어온다.
+        await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+        return EXEC_MEMBER_ORDER.map((roleId): BallotOutcome => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            memberId: roleId,
+            motionId: motionRef!.id,
+            motionHash: motionRef!.hash,
+            vote: 'YES',
+            confirmedAt: 0,
+            source: 'live',
+            reason: '반응까지 기다렸다가 판단합니다.',
+            remainingConcerns: [],
+          },
+        }));
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    // REACTIONS가 아직 응답하기 전에 참가자가 최종안을 고정하고(REACTIONS -> MOTION -> VOTE)
+    // 바로 표를 확정한다 — 실제 표 호출은 roundChain 뒤에 붙어 REACTIONS가 끝나야 시작된다.
+    void orchestrator.runRound('REACTIONS');
+    store.dispatch({ type: 'KEEP_PREVIOUS' });
+    store.dispatch({
+      type: 'FREEZE_MOTION',
+      scenario: anonBoardScenario,
+      confirmedConditionIds: [],
+    });
+    const frozen = store.getSession().finalMotion;
+    if (!frozen) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    motionRef = { id: frozen.id, hash: frozen.hash };
+
+    void orchestrator.startFinalVotes();
+    store.dispatch({ type: 'SELECT_VOTE', vote: 'YES' });
+    store.dispatch({ type: 'CONFIRM_VOTE' }); // t=0에 참가자가 확정한다(execBallotsPending 유지).
+    const resultPromise = orchestrator.awaitResult();
+
+    // t=8초(FINAL_VOTE_WAIT_MS) 시점에도 REACTIONS가 아직 안 끝났으니 표 호출 자체가
+    // 시작되지 않았다 — 고침 전이었다면 여기서 이미 UNCAST 확정으로 흘러갔을 시점이다.
+    await vi.advanceTimersByTimeAsync(8000);
+    expect(store.getSession().stage).toBe('VOTE');
+
+    // t=11초에 REACTIONS가 끝난다.
+    await vi.advanceTimersByTimeAsync(3000);
+    reactionsPending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: { ...answeredStatement(roleId), id: `re-${roleId}`, stage: 'REACTIONS' },
+      })),
+    );
+    // 표 호출은 t=11+3=14초에 응답한다.
+    await vi.advanceTimersByTimeAsync(3000);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
+    expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
+  });
+
+  it('표 호출 자체가 끝내 응답하지 않아도(REACTIONS 지연 뒤) 정해진 상한 안에서 UNCAST로 확정된다', async () => {
+    const clock = fakeClock(0);
+    let session = toOpinionsStage(clock);
+    session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // OPINIONS -> DISCUSS
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '검토했습니다. 작은 범위로 시작하는 데 동의합니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: [],
+      },
+      clock.now(),
+    ); // DISCUSS -> REACTIONS
+    const store = createStore(session, clock);
+
+    const reactionsPending = deferred<StatementOutcome[]>();
+    const neverResolves = deferred<BallotOutcome[]>();
+    const adapter = fakeAdapter({
+      reactions: () => reactionsPending.promise,
+      finalVotes: () => neverResolves.promise,
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.runRound('REACTIONS');
+    store.dispatch({ type: 'KEEP_PREVIOUS' });
+    store.dispatch({
+      type: 'FREEZE_MOTION',
+      scenario: anonBoardScenario,
+      confirmedConditionIds: [],
+    });
+    void orchestrator.startFinalVotes();
+    store.dispatch({ type: 'SELECT_VOTE', vote: 'YES' });
+    store.dispatch({ type: 'CONFIRM_VOTE' });
+    const resultPromise = orchestrator.awaitResult();
+
+    // REACTIONS가 11초 뒤에 끝난다 — 그전까지는 표 호출 자체가 시작되지 않는다.
+    await vi.advanceTimersByTimeAsync(11000);
+    reactionsPending.resolve(
+      EXEC_MEMBER_ORDER.map((roleId): StatementOutcome => ({
+        roleId,
+        status: 'answered',
+        statement: { ...answeredStatement(roleId), id: `re-${roleId}`, stage: 'REACTIONS' },
+      })),
+    );
+    // 표 호출이 시작된 뒤 8초(FINAL_VOTE_WAIT_MS) + 재요청 유예(VOTE_RETRY_GRACE_MS)만큼만
+    // 더 기다리면 된다 — 무한 대기가 아니라 예측 가능한 상한 안에서 끝난다.
+    await vi.advanceTimersByTimeAsync(FINAL_VOTE_WAIT_MS);
+    expect(store.getSession().stage).toBe('VOTE');
+    await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
+    expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
+  });
+
   it('임원 표가 도착하지 않으면 8초+재요청 유예 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
