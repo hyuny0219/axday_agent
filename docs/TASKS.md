@@ -879,3 +879,19 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. mock 지연 주입 e2e 통과. 실제 키로 `logs/` 한 줄 형식 확인(키·본문 없음). latency 문서에 단계별 p95가 타임아웃 안에 드는지 기록.
 - 순서: **T64 직후, 다음 시연 전 필수.**
 - 크기: M.
+
+## T66 결과 화면을 시안(C_Result·C_Result_Reject)대로 — 종이 디브리핑 보고서 + 도장 칸
+
+- 목표: T64가 결과 화면을 스킨만 입히고 구조는 옛것(5석 동일 카드 + 한 장 요약 2/3 + 보조 패널 1/3)으로 남겨, 확정 시안 `docs/design/mockups/C_Result.html`·`C_Result_Reject.html`과 다르다. 실측(`docs/screenshots/desktop-1080/result.png`) 문제: 도장 두 개가 어두운 바탕 우상단에 작게 겹쳐 "조건부 가결" 글자가 원 안에서 줄바꿈돼 깨지고, 설득 도장은 읽을 수 없으며, 종이 보고서 패널이 없다. 결과 화면 오른쪽 열을 시안 구조로 바꾼다. 도메인·집계·문구 데이터는 그대로다.
+- 읽을 것: `docs/design/mockups/C_Result.html`(가결)·`C_Result_Reject.html`(부결) 루트 `<div>` 안의 오른쪽 열 마크업(종이 패널 → 위쪽 두 열: 왼쪽 제목·YOUR CONDITIONS·YOUR WORDS / 오른쪽 200px 도장 칸 → VERDICTS 전체 폭 → "+6 MONTHS" 한 줄), 왼쪽 열(무대 + TALLY 패널 + CTA + "회의록 전문 보기"), `src/components/screens/ResultScreen.tsx`, `src/styles/screens/result.css`, `src/components/resultSummary.ts`·`resultStamp.ts`·`resultEpilogue.ts`, `docs/design/DESIGN_SPEC.md` v1.1 게임형 스킨 절·9절, `e2e/screenshots.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/stance.spec.ts`(도장 testid).
+- 만들 것:
+  1. **오른쪽 열 = 종이 보고서 한 장**(`result-debrief`, 종이색 패널, 8px 8px 0 그림자). 위쪽 `display:flex; gap:16px` — 왼쪽(flex-grow, min-width 0): "DEBRIEF 02 · 이사회 한 장 요약" 라벨 칩 → 결론 제목(`result-conclusion`, Black Han Sans 30px 잉크색; 지금 문구 그대로) → 두 카드 그리드(YOUR CONDITIONS · 반영 조건 / YOUR WORDS · 내 원문, 종이-2 바탕·왼쪽 3px 라벨색 선). 오른쪽: **도장 칸 200px × 232px**(`result-stamp-slot`, position relative) — 결론 도장(`result-stamp`, 150px 원, 붉은 잉크 `--stamp-red`, 4px 테두리, -12° 회전, multiply, 안에 "CASE 02 / 가결|부결 (34px) / APPROVED|REJECTED · n:m") 위에 절대 배치, 설득 도장(`persuasion-stamp`, 108px 원, 앰버 잉크 `--stamp-amber`, 9°, "BONUS / 설득 성공 / 같은 표 n석") 왼쪽 아래 겹침, **미획득이면 점선 테두리 한 줄**(`persuasion-summary`, "BONUS 미획득 · 같은 표 n석 · 3석부터"). 도장 문구가 원 안에서 줄바꿈되지 않게 글자 크기·letter-spacing을 시안 값 그대로(도장 결론 문구는 두 글자 "가결/부결"만 크게, "조건부"는 위 작은 줄 "CASE 02 · 조건부"로). 순차 연출(결론 도장 0.8초, 설득 도장 +0.4초)·reduced-motion 규칙 유지.
+  2. **VERDICTS · 임원별 판단**(종이-2 패널, 전체 폭): 5행(CEO·CFO·CAIO·CISO·나) — 직함(타자기 서체, 찬성 초록 `#1f8f5f`/반대 붉음 `#b23b3b`) + 표 + 판단 이유 한 줄(기존 resultSummary 행 데이터 그대로, "이사님 조건으로 바뀜" 칩 유지). live의 UNCAST 행은 "미표결 · 사유". 그 아래 **남은 과제**와 **AI가 도운 일**을 각 한 줄로(라벨 + 항목을 "·"로 이어서; AI 미사용이면 기존 미사용 문구). 마지막 줄 "+6 MONTHS · <epilogue> [체험용 가상 전망]".
+  3. **5석 동일 카드 제거.** 표 배지는 무대 명패(StageBand VoteBadge)가 이미 보여주고 VERDICTS 5행이 표를 글자로 다시 적으므로 중복이다. DESIGN_SPEC 3장 "결과에서는 5명이 같은 크기의 투표 카드" 규칙을 v1.1에서 폐기로 표시. `result-seat-*` testid는 VERDICTS 행으로 옮기고(`result-seat-<id>`, `result-seat-reason-<id>` 유지) 기존 e2e 단언이 그대로 통과하게 한다.
+  4. **왼쪽 열**: 무대(표 배지) → TALLY 패널(어두운 판, "TALLY · 5석 과반 / YES n · NO m", 5칸 막대, 근거 한 줄 "이사님 표 찬성 · 같은 표 n석 → 추가 도장 획득" 또는 "… · 추가 도장은 3석부터") → "체험 종료"(앰버 CTA) → "회의록 전문 보기"(보조, T58 토글 — 누르면 오른쪽 열이 회의록 전문 패널로 바뀌고 다시 누르면 보고서로). 6개월 뒤 카드와 "내 조건이 바꾼 표 n명"은 왼쪽에서 빼고 보고서 안(+6 MONTHS 줄, VERDICTS 칩)으로.
+  5. 두 해상도·1272×698 무스크롤 유지(보고서 패널은 세로 예산 안에 들어야 한다 — VERDICTS 행 5개 + 두 줄 + +6 MONTHS가 720에서 넘치면 행 높이·여백을 줄이되 글자를 자르지 않는다). 스크린샷 갱신, DESIGN_SPEC 9절 갱신.
+- 허용 경로: `src/components/screens/ResultScreen.tsx`, `src/components/parts/`, `src/components/result*.ts`, `src/styles/screens/result.css`·`stage.css`·`tokens.css`, `e2e/`, `tests/`, `docs/`.
+- 하지 말 것: 집계·결론·설득 판정 로직 변경. 문구 데이터 변경. 무대에 도장 그리기. 5석 카드를 남기기.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. `docs/screenshots/*/result.png`이 시안 `C_Result.html`과 같은 구조(종이 보고서·도장 칸·VERDICTS)로 보이고 도장 글자가 원 안에서 깨지지 않음(육안). 부결 경로(찬성 2석) 스크린샷 1장 추가(`result-reject.png`).
+- 순서: 지금(T64 직후).
+- 크기: M.
