@@ -915,3 +915,17 @@
 - 하지 말 것: 단계 이름·순서 변경, 화면 본문 컴포넌트 수정(세로 예산 CSS 변수 조정은 허용), 모드 배지·운영 메뉴 동작 변경.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도 모든 화면 스크린샷에서 헤더 한 줄에 스트립이 들어가고 명패·단계 칩이 없다. 페이지 스크롤 없음.
 - 크기: S.
+
+## T68 상황 파악 화면 — "근거 자료" 버튼 + 팝업, 진행 스트립 연결선 제거
+
+- 목표(2026-09-30 사용자 요청): (1) BRIEFING 화면 오른쪽 열의 "판단에 참고할 자료" 4장(EvidenceGrid expanded)이 세로를 많이 차지하고 720에서는 잘린다 → 그 자리를 **"근거 자료" 버튼** 하나로 바꾸고, 누르면 **팝업(모달)** 에서 4장을 전문으로 본다. 오른쪽 열이 여유로워진 만큼 현재 상황·제안·아직 정하지 않은 것·특별 이사님이 할 일 카드가 시안처럼 숨 쉴 공간을 얻는다. (2) 헤더 진행 스트립의 칩을 잇는 가로선(`.progress-strip__list::before`, 파란 선)이 글자 가운데를 지나는 것처럼 보인다 → 선을 없앤다.
+- 읽을 것: `src/components/screens/BriefingScreen.tsx`(`briefing-screen__body`·evidence-heading), `src/components/parts/EvidenceGrid.tsx`(variant expanded/accordion), `src/components/parts/AssistantPanel.tsx`(기존 오버레이 UI가 있으면 같은 방식), `src/styles/screens/briefing.css`·`shell.css`(`.progress-strip__list::before`), `docs/design/DESIGN_SPEC.md` 3장 BRIEFING·2절 진행 스트립, `e2e/briefing.spec.ts`·`noscroll.spec.ts`·`screenshots.spec.ts`, `docs/design/mockups/A_Briefing.html`·`B_Briefing.html`(오른쪽 열 구성 참고).
+- 만들 것:
+  1. **EvidenceDialog**(`src/components/parts/EvidenceDialog.tsx`, 신규): `role="dialog"` `aria-modal="true"` `aria-labelledby`(제목 "근거 자료 · EXHIBIT A–D"), 배경 딤, 안에 `EvidenceGrid variant="expanded"`를 그대로 렌더(4장 전문, 팝업 내부 스크롤 허용). 닫기: 우상단 "닫기" 버튼(`data-testid="evidence-dialog-close"`), Esc, 딤 클릭. 열릴 때 닫기 버튼(또는 제목)에 포커스, 닫히면 연 버튼으로 포커스 복귀, Tab 포커스는 팝업 안에서 순환. 종이 서류철 스킨(T64 토큰: paper·ink·paper-border)으로 그린다. 세션 리셋·화면 전환 시 열려 있으면 닫힌다.
+  2. **BriefingScreen**: `briefing-screen__body`의 제목+EvidenceGrid를 버튼 `근거 자료 보기`(`data-testid="open-evidence"`, 보조 CTA 스타일 — 왼쪽 무대 아래 주 CTA "의견 듣기"와 구분)로 바꾼다. 버튼 옆에 "EXHIBIT A–D · 4장" 같은 짧은 안내 한 줄. 팝업 상태는 BriefingScreen 로컬 state.
+  3. **진행 스트립 선 제거**: `.progress-strip__list::before` 규칙과 칩의 "선을 덮기 위한 불투명 배경" 주석·규칙 중 선 때문에만 있던 것을 정리한다. 칩 모양·현재/완료 표시는 그대로.
+  4. 접근성·테스트: 단위 테스트(EvidenceDialog 열기/닫기 3경로·포커스 복귀, Briefing에 evidence-card가 팝업 열기 전엔 없고 연 뒤 4장), e2e `briefing.spec.ts`(버튼 → 팝업 4장 → Esc 닫힘 → 포커스 복귀), noscroll·screenshots 갱신(briefing 두 해상도 + 팝업 연 상태 스크린샷 `briefing-evidence.png` 추가). DESIGN_SPEC 3장 BRIEFING·2절 진행 스트립 개정(v1.2).
+- 허용 경로: `src/components/`, `src/styles/`, `src/app/App.tsx`(리셋 시 닫힘 연결이 필요할 때만), `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: DISCUSS 화면의 EvidenceGrid(accordion) 변경(다음 카드에서 같은 팝업으로 통일할지 결정), 자료 내용·ID 변경, 주 CTA 위치 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 BRIEFING 오른쪽 열에 자료 카드가 없고 버튼만 있으며 페이지 스크롤 없음. 팝업에서 4장 전문이 보이고 세 가지 방법으로 닫힌다. 헤더에 칩 잇는 선이 없다.
+- 크기: S.
