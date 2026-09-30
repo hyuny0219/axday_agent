@@ -286,5 +286,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // 마지막 블록(내 의견 원문)이 실제로 보이는지 단언한다(PR #9 Codex 1차 검토).
   await expectNoClip(page, '[data-testid="result-summary"]', 'RESULT(live, 조건 4개)');
   await expect(page.getByTestId('result-mine')).toBeInViewport();
-  await expect(page.getByTestId('result-summary-row-PARTICIPANT')).toBeInViewport();
+  // 참가자 행 testid는 T66에서 result-seat-PARTICIPANT로 통일했다(5석 카드가
+  // 빠지며 VERDICTS 행이 그 자리를 겸한다).
+  await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeInViewport();
 });

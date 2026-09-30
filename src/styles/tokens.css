@@ -107,6 +107,10 @@
      패널(8px 8px 0 #1f2126)보다 한 단계 작은 4px로 겹침 무게를 맞춘다). 오른쪽 열의
      임원 의견·반응·안건·자료·표결·결과 카드가 공유한다. */
   --shadow-paper-card: 4px 4px 0 #1f2126;
+  /* 메인 종이 패널 그림자(T66, C_Result.html 오른쪽 열 전체 — "box-shadow: 8px 8px 0
+     #1f2126"). RESULT 오른쪽 열을 종이 보고서 한 장으로 통일하는 첫 카드라 여기서
+     처음 정의한다(그 전에는 쓰던 화면이 없었다). */
+  --shadow-paper-main: 8px 8px 0 #1f2126;
 
   /* TRANSCRIPT(발언 흐름) 패널 톤(T64, Main.html "background:#15171b; border:1px solid
      #2a2d33"). 왼쪽 열(무대 아래)이라 종이가 아니라 무채색 어두운 판이다. */

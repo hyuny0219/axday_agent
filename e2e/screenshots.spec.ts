@@ -118,9 +118,9 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 왼쪽 열(게이지+체험 종료 CTA)과 오른쪽 열(결론·5석·기록)이 스크롤 없이
-  // 한 화면에 모두 보인다(DESIGN_SPEC.md v1.0 6절 무스크롤). 표결 배지·결론 도장
-  // (T43)이 다 나온 뒤에 캡처한다.
+  // RESULT: 왼쪽 열(TALLY+체험 종료 CTA)과 오른쪽 열(종이 보고서: 결론·도장 칸·
+  // VERDICTS)이 스크롤 없이 한 화면에 모두 보인다(T66). 표결 배지·결론 도장(T43)이
+  // 다 나온 뒤에 캡처한다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
   await expect(page.getByTestId('result-stamp')).toBeVisible();
@@ -129,4 +129,35 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
     .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');
+
+  // 부결 경로(찬성 2석) 스크린샷(T66 완료 확인 "부결 경로 스크린샷 1장 추가"). 같은
+  // 세션을 리셋하지 않고 "체험 종료" 전에 이미 result.png를 찍었으니, 여기서는
+  // 새로 완주해 반대를 확정한다.
+  await page.getByTestId('end-session').click();
+  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
+  // (anonBoard.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·
+  // 반대 3으로 부결이면서 "내 표와 같은 표 2석(CEO)"인 C_Result_Reject.html 조합이
+  // 그대로 재현된다(e2e/stance.spec.ts의 "조건 없이 진행" 경로와 같다).
+  await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('followup-option-1').click();
+  await page.getByTestId('submit-followup').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  await expect(page.getByTestId('result-stamp')).toBeVisible();
+  await page
+    .getByTestId('result-stamp')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(page.getByTestId('end-session')).toBeInViewport();
+  await capture(page, testInfo.project.name, 'result-reject');
 });

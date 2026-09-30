@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 5석과 결론이 보인다', async ({
+test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 VERDICTS 5행과 결론이 보인다', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -36,7 +36,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 결론과 동등한 5석 카드가 보인다.
+  // RESULT: 결론과 VERDICTS 5행(임원 4명 + 나)이 보인다(T66, 5석 카드는 폐기).
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-CEO')).toBeVisible();
   await expect(page.getByTestId('result-seat-CFO')).toBeVisible();
@@ -91,7 +91,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 5석 카드가 모두 보인다.
+  // RESULT: VERDICTS 5행이 모두 보인다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-CEO')).toBeVisible();
   await expect(page.getByTestId('result-seat-CFO')).toBeVisible();
@@ -138,17 +138,18 @@ test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await expect(page.getByTestId('result-summary-decisive')).toContainText(
     '이사님의 한 표가 결과를 정했습니다',
   );
-  // 조건 없는 baseline 대비 CFO만 표가 바뀐다(NO→YES).
+  // 조건 없는 baseline 대비 CFO만 표가 바뀐다(NO→YES). 행 testid는 T66에서
+  // result-seat-<id>로 통일했다(5석 카드가 빠지며 VERDICTS 행이 그 자리를 겸한다).
   await expect(
-    page.getByTestId('result-summary-row-CFO').getByTestId('result-summary-changed'),
+    page.getByTestId('result-seat-CFO').getByTestId('result-summary-changed'),
   ).toBeVisible();
   await expect(
-    page.getByTestId('result-summary-row-CEO').getByTestId('result-summary-changed'),
+    page.getByTestId('result-seat-CEO').getByTestId('result-summary-changed'),
   ).toHaveCount(0);
   await expect(
-    page.getByTestId('result-summary-row-CAIO').getByTestId('result-summary-changed'),
+    page.getByTestId('result-seat-CAIO').getByTestId('result-summary-changed'),
   ).toHaveCount(0);
   await expect(
-    page.getByTestId('result-summary-row-CISO').getByTestId('result-summary-changed'),
+    page.getByTestId('result-seat-CISO').getByTestId('result-summary-changed'),
   ).toHaveCount(0);
 });
