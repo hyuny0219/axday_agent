@@ -15,6 +15,7 @@
 // 더해 무대 표정·"설득 도장"이 쓰는 값을 임원이 직접 밝히게 했다(응답 스키마가 바뀌므로 버전을
 // 올린다). 표결 판단·stance 지시는 공통 가드레일이 아니라 임원 전용 EXEC_DECISION_RULE
 // (prompts/roles/index.ts)에 둔다 — 비서실장 refine·summarize에 새지 않게(PR #11 Codex 10차).
-// stance는 "첫 의견부터 방향을 밝히라"로 한 번 더 손봤다(after3, 크레딧 소진으로 부분 측정).
-// 전후 비교는 docs/eval/tuning-v7.md.
+// stance는 "첫 의견부터 방향을 밝히라"로 한 번 더 손봤다(after3). 최종 문구로 144행 전수
+// 재측정해 실패 0·stance 누락 0을 확보했다(첫 실행은 크레딧 소진으로 중단, 두 번째는 실패 5행이
+// 있어 세 번째 기록을 최종으로 삼는다). 전후 비교는 docs/eval/tuning-v7.md.
 export const PROMPT_VERSION = 'v7';
