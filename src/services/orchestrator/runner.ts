@@ -400,18 +400,41 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     // 요청"을 위해 한 번 더 기다린다(T65, 스펙 6장 예외). 재요청이 이미 시작됐으면 grace
     // 타이머 대신 그 완료를 기다리고, 시작되지 않았으면 grace 시간만큼만 기다린 뒤 그대로
     // 진행한다 — 어느 쪽이든 대기 시간은 예측 가능한 상한 안에서 끝난다.
+    //
+    // PR #11 Codex 24차 P1: 클라이언트 abort 여유(boardAgents/live.ts TRANSPORT_MARGIN_MS)
+    // 때문에 실제 표 응답은 FINAL_VOTE_WAIT_MS(8초)를 살짝 넘겨(최대 +1.5초) 도착할 수 있다.
+    // grace 대기 중에도 finalVotesSettled를 함께 지켜봐서, 그 사이 표 요청이 실제로 settle되면
+    // (delay가 다 지나가길 기다리지 않고) 바로 다시 판단한다 — 이미 4표가 다 도착했으면 그대로
+    // FINALIZE_RESULT로 넘어가고, 그래도 일부만 실패로 남아 있으면 그 시점부터 재요청 grace를
+    // 새로 준다(참가자가 방금 도착한 결과를 보고도 재요청 버튼을 누를 시간을 온전히 갖도록).
     const afterVotes = deps.store.getSession();
     if (
       afterVotes.sessionId === session.sessionId &&
       afterVotes.stage === 'VOTE' &&
       afterVotes.execBallotsPending
     ) {
-      const started = await Promise.race([
-        delay(VOTE_RETRY_GRACE_MS).then(() => false as const),
-        voteRetryStarted.then(() => true as const),
+      const waited = await Promise.race([
+        delay(VOTE_RETRY_GRACE_MS).then(() => 'grace' as const),
+        voteRetryStarted.then(() => 'retry' as const),
+        finalVotesSettled.then(() => 'settled' as const),
       ]);
-      if (started) {
+      if (waited === 'retry') {
         await voteRetryCompletion;
+      } else if (waited === 'settled') {
+        const afterSettle = deps.store.getSession();
+        if (
+          afterSettle.sessionId === session.sessionId &&
+          afterSettle.stage === 'VOTE' &&
+          afterSettle.execBallotsPending
+        ) {
+          const started = await Promise.race([
+            delay(VOTE_RETRY_GRACE_MS).then(() => false as const),
+            voteRetryStarted.then(() => true as const),
+          ]);
+          if (started) {
+            await voteRetryCompletion;
+          }
+        }
       }
     }
 

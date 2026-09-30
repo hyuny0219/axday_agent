@@ -81,3 +81,8 @@ REACTIONS·FOLLOWUP 기본 3회에 **라운드 단계마다 다시 요청 1회�
 (`src/services/boardAgents/live.ts`)가 이 값을 읽어 쓴다 — 값을 바꾸면 서버·클라이언트가
 함께 새 상한을 따른다. 부스에서 응답이 자주 느리면(`logs/board-*.jsonl`로 확인) 이 값을
 올리기보다 먼저 네트워크·모델 상태를 점검한다.
+
+클라이언트의 fetch abort 타이머는 이 서버 타임아웃값 그대로가 아니라 `TRANSPORT_MARGIN_MS`
+(1.5초, `src/services/boardAgents/live.ts`에 하드코딩)를 더한 값을 쓴다 — 서버가 자기 타이머로
+일부 역할만 실패 처리한 응답을 돌려주기 직전에 클라이언트가 먼저 요청을 끊어버리지 않게 하는
+여유다(PR #11 Codex 24차).

@@ -731,6 +731,119 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
   });
 
+  it('표 응답이 t=9.2초에(전송 여유 안) 모두 도착하면 13초까지 기다리지 않고 그 즉시 확정한다(PR #11 Codex 24차 P1)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const store = createStore(session, clock);
+    const adapter = fakeAdapter({
+      finalVotes: async () => {
+        // boardAgents/live.ts의 TRANSPORT_MARGIN_MS 때문에 실제 표 응답은 FINAL_VOTE_WAIT_MS
+        // (8초)를 살짝 넘겨(여기선 9.2초) 도착할 수 있다.
+        await new Promise<void>((resolve) => setTimeout(resolve, 9200));
+        return EXEC_MEMBER_ORDER.map((roleId): BallotOutcome => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            memberId: roleId,
+            motionId: motion.id,
+            motionHash: motion.hash,
+            vote: 'YES',
+            confirmedAt: 0,
+            source: 'live',
+            reason: '전송 여유 안에 도착했습니다.',
+            remainingConcerns: [],
+          },
+        }));
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    const resultPromise = orchestrator.awaitResult();
+
+    // 9.2초만 진행한다 — 재요청 유예(VOTE_RETRY_GRACE_MS)의 나머지를 더 진행하지 않고도
+    // resultPromise가 여기서 이미 settle돼야 한다(고치기 전이었다면 13초까지 걸렸을 것이다).
+    await vi.advanceTimersByTimeAsync(9200);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(execBallots).toHaveLength(4);
+    expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
+  });
+
+  it('표 응답이 t=9.2초에 일부만(1명 실패) 도착하면 그 시점부터 재요청 유예가 새로 열리고, 그 안의 재요청이 반영된다(PR #11 Codex 24차 P1)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const store = createStore(session, clock);
+    let caioAnswers = false;
+    const adapter = fakeAdapter({
+      finalVotes: async (ctx) => {
+        const targets = ctx.roleIds ?? EXEC_MEMBER_ORDER;
+        if (!ctx.roleIds) {
+          // 최초 4명 요청만 전송 여유 안(t=9.2초)에 도착한다.
+          await new Promise<void>((resolve) => setTimeout(resolve, 9200));
+        }
+        return targets.map((roleId): BallotOutcome => {
+          if (roleId === 'CAIO' && !caioAnswers) {
+            return { roleId, status: 'failed', failReason: 'timeout' };
+          }
+          return {
+            roleId,
+            status: 'answered',
+            ballot: {
+              memberId: roleId,
+              motionId: motion.id,
+              motionHash: motion.hash,
+              vote: 'YES',
+              confirmedAt: 0,
+              source: 'live',
+              reason: '판단입니다.',
+              remainingConcerns: [],
+            },
+          };
+        });
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    const resultPromise = orchestrator.awaitResult();
+
+    await vi.advanceTimersByTimeAsync(9200);
+    // CAIO만 실패로 도착했다 — 아직 확정하지 않고 그 시점부터 재요청 유예가 새로 열려 있어야
+    // 한다(13초까지 기다리지 않고 9.2초부터 VOTE_RETRY_GRACE_MS를 다시 준다).
+    expect(store.getSession().stage).toBe('VOTE');
+    expect(store.getSession().roleStatus.CAIO).toBe('failed');
+
+    caioAnswers = true;
+    await orchestrator.retryFinalVotes(['CAIO']);
+    await resultPromise;
+
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const caioBallot = finalSession.ballots.find((b) => b.memberId === 'CAIO');
+    expect(caioBallot?.vote).toBe('YES');
+    expect(caioBallot?.source).toBe('live');
+  });
+
   it('실패 후 "미표결 임원 다시 요청"이 성공하면 확정 전에 실제 표로 반영된다(T65)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);

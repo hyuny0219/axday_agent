@@ -28,6 +28,14 @@ import type {
  * 실제 값은 서버 응답을 캐시한 getRoundTimeouts()에서 읽는다. */
 export const MAX_ROUND_TIMEOUT_MS = 8000;
 
+/** 클라이언트 fetch abort 타이머는 서버 per-role 타임아웃(budgetMs)보다 이만큼 더 늦게
+ * 끊는다(PR #11 Codex 24차 P1). 서버는 요청을 받은 뒤에야 자기 타이머를 시작하므로, 클라이언트
+ * 타이머가 서버와 정확히 같은 길이면 실제로는 네트워크 왕복·JSON 직렬화 시간만큼 먼저
+ * abort된다 — 그러면 일부 역할만 실패한 Promise.allSettled 응답이 거의 도착한 순간에도
+ * 클라이언트가 요청 전체를 끊어 4명 모두 failed(timeout)로 남고, "다시 요청"이 이미 도착했어야
+ * 할 표까지 다시 부르게 된다. 여유를 두어 서버가 부분 실패를 내려줄 시간을 보장한다. */
+export const TRANSPORT_MARGIN_MS = 1500;
+
 /** REACTIONS·FOLLOWUP만 더 긴 예외 타임아웃을 쓴다(스펙 6장). VOTE는 stage 인자 없이 부르며
  * OPINIONS와 같은 기본 상한을 쓴다. */
 function stageTimeoutMs(stage?: StatementStage): number {
@@ -184,7 +192,12 @@ async function runRoundRequest(ctx: BoardAgentsContext, stage: StatementStage): 
   const timeoutMs = timeoutMsFor(ctx, stage);
   let raw: unknown;
   try {
-    raw = await postBoardRequest('/api/board/round', buildRoundBody(ctx, stage, timeoutMs), ctx, timeoutMs);
+    raw = await postBoardRequest(
+      '/api/board/round',
+      buildRoundBody(ctx, stage, timeoutMs),
+      ctx,
+      timeoutMs + TRANSPORT_MARGIN_MS,
+    );
   } catch {
     return (ctx.roleIds ?? EXEC_MEMBER_ORDER).map((roleId) => ({
       roleId,
@@ -267,7 +280,12 @@ async function runFinalVotesRequest(ctx: BoardAgentsContext): Promise<BallotOutc
   const timeoutMs = timeoutMsFor(ctx);
   let raw: unknown;
   try {
-    raw = await postBoardRequest('/api/board/vote', buildVoteBody(ctx, timeoutMs), ctx, timeoutMs);
+    raw = await postBoardRequest(
+      '/api/board/vote',
+      buildVoteBody(ctx, timeoutMs),
+      ctx,
+      timeoutMs + TRANSPORT_MARGIN_MS,
+    );
   } catch {
     return targets.map((roleId) => ({ roleId, status: 'failed' as const, failReason: 'timeout' }));
   }
