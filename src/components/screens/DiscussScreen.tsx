@@ -14,6 +14,10 @@
 // 토글이 왼쪽에 남고, 열렸을 때의 드로어 본문은 assistant.css가 오른쪽 열 위에 절대
 // 위치로 겹쳐 그린다(position:absolute, DOM은 그대로 왼쪽 트리 안이지만 .app-body가
 // 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
+// T69(2026-10-01 사용자 결정): 근거 2×2(압축) 상시 카드는 BRIEFING(T68)과 같은
+// "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다. 팝업 열림 상태는 이 화면의
+// 로컬 state다(화면 전환·세션 리셋으로 DiscussScreen이 언마운트되면 함께 닫힌다). 자료
+// 카드가 빠지며 생긴 세로 여유는 추천 문구·임원 첫 의견 블록이 자연히 흡수한다.
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -35,7 +39,7 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { Avatar } from '../parts/Avatar';
-import { EvidenceGrid } from '../parts/EvidenceGrid';
+import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { STATUS_TEXT } from '../parts/LiveStatementCards';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
@@ -92,6 +96,7 @@ export function DiscussScreen({
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -249,8 +254,16 @@ export function DiscussScreen({
             ))}
           </div>
         </div>
-        <div className="discuss-screen__evidence">
-          <EvidenceGrid evidence={scenario.evidence} />
+        <div className="discuss-screen__evidence-row">
+          <button
+            type="button"
+            className="evidence-open-button"
+            onClick={() => setEvidenceOpen(true)}
+            data-testid="open-evidence"
+          >
+            근거 자료 보기
+          </button>
+          <span className="evidence-open-hint">EXHIBIT A–D · 4장</span>
         </div>
         <div className="discuss-screen__execs" data-testid="discuss-exec-row">
           {mode === 'live'
@@ -305,6 +318,9 @@ export function DiscussScreen({
               ))}
         </div>
       </div>
+      {evidenceOpen && (
+        <EvidenceDialog evidence={scenario.evidence} onClose={() => setEvidenceOpen(false)} />
+      )}
     </>
   );
 }

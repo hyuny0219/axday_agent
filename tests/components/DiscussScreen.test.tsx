@@ -1,9 +1,12 @@
 // live 모드의 DISCUSS 화면 임원 카드는 scenario.initialOpinions(각본 문구)가 아니라
 // transcript의 실제 OPINIONS 발언을 보여줘야 한다(PR #11 Codex 18차 검토 P2 — live
 // 무대 표정 배지는 실제 stance인데 카드 본문이 각본 문장이면 서로 모순돼 보인다).
+// T69(2026-10-01): 자료 카드(EvidenceGrid accordion)는 없애고 BRIEFING(T68)과 같은
+// "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다 — BriefingScreen.test.tsx와
+// 같은 형태의 테스트를 여기에도 둔다.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DiscussScreen } from '../../src/components/screens/DiscussScreen';
 import { anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
@@ -115,5 +118,47 @@ describe('DiscussScreen', () => {
       expect(screen.getByText(opinion.text)).toBeInTheDocument();
     }
     expect(screen.queryAllByTestId(/^statement-card-/)).toHaveLength(0);
+  });
+
+  it('팝업을 열기 전에는 evidence-card가 없고, "근거 자료 보기" 클릭 시 4장이 나타나며 Esc로 닫으면 포커스가 버튼으로 돌아온다', () => {
+    const roleStatus: Record<ExecMemberId, RoleStatus> = {
+      CEO: 'idle',
+      CFO: 'idle',
+      CAIO: 'idle',
+      CISO: 'idle',
+    };
+    const transcript: Transcript = { revision: 0, statements: [] };
+
+    render(
+      <DiscussScreen
+        scenario={scenario}
+        sessionId="s1"
+        transcript={transcript}
+        mode="scripted"
+        roleStatus={roleStatus}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+      />,
+    );
+
+    for (const card of scenario.evidence) {
+      expect(screen.queryByTestId(`evidence-card-${card.id}`)).not.toBeInTheDocument();
+    }
+
+    const openEvidence = screen.getByTestId('open-evidence');
+    // jsdom의 fireEvent.click은 실제 브라우저와 달리 클릭한 버튼에 포커스를 주지
+    // 않으므로, EvidenceDialog가 "열기 전 포커스 요소"로 기억할 대상을 직접 만든다.
+    openEvidence.focus();
+    fireEvent.click(openEvidence);
+
+    expect(screen.getByTestId('evidence-dialog')).toBeInTheDocument();
+    for (const card of scenario.evidence) {
+      expect(screen.getByTestId(`evidence-card-${card.id}`)).toBeInTheDocument();
+    }
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('evidence-dialog')).not.toBeInTheDocument();
+    expect(openEvidence).toHaveFocus();
   });
 });

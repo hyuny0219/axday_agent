@@ -105,9 +105,25 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('phrase-card-P4').click();
   await expectNoPageScroll(page, 'DISCUSS(조건 4개 선택)');
-  await page.getByTestId('evidence-card-E4').locator('summary').click();
-  await expectNoClip(page, '.app-body__content', 'DISCUSS(E4 펼침)');
-  await page.getByTestId('evidence-card-E4').locator('summary').click();
+  // T69: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있다
+  // (BRIEFING과 같은 동작). 팝업은 position:fixed 전체 화면 오버레이라 비서실장
+  // 드로어(오른쪽 열 위에 겹치는 절대 위치 드로어, z-index 6)보다 위(evidence-dialog
+  // z-index 40)에 뜬다 — 드로어가 열려 오른쪽 열을 덮은 동안은 이 버튼도 함께 덮이므로
+  // (오른쪽 열의 다른 카드와 같은 규칙) 드로어를 닫은 이 시점에 먼저 확인한다.
+  const discussOpenEvidence = page.getByTestId('open-evidence');
+  await expect(discussOpenEvidence).toBeVisible();
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 4개 선택)');
+
+  await discussOpenEvidence.click();
+  const discussEvidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(discussEvidenceDialog).toBeVisible();
+  for (const id of ['E1', 'E2', 'E3', 'E4']) {
+    await expect(discussEvidenceDialog.getByTestId(`evidence-card-${id}`)).toBeVisible();
+  }
+  await expectNoPageScroll(page, 'DISCUSS(자료 팝업 열림)');
+  await page.keyboard.press('Escape');
+  await expect(discussEvidenceDialog).toHaveCount(0);
+  await expect(discussOpenEvidence).toBeFocused();
 
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
   await page.getByTestId('assistant-toggle').click();

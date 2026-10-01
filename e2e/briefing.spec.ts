@@ -34,7 +34,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   }
   const openEvidence = page.getByTestId('open-evidence');
   await expect(openEvidence).toBeVisible();
-  await expect(page.locator('.briefing-screen__evidence-hint')).toContainText('EXHIBIT A–D · 4장');
+  await expect(page.locator('.evidence-open-hint')).toContainText('EXHIBIT A–D · 4장');
 
   await openEvidence.click();
   const dialog = page.getByTestId('evidence-dialog');

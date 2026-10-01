@@ -109,6 +109,21 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await capture(page, testInfo.project.name, 'discuss');
+
+  // DISCUSS(팝업 열림, T69): "근거 자료 보기"를 눌러 BRIEFING과 같은 EvidenceDialog에서
+  // 자료 4장 전문을 보는 상태를 별도로 캡처한다.
+  await page.getByTestId('open-evidence').click();
+  const discussEvidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(discussEvidenceDialog).toBeVisible();
+  await expect(discussEvidenceDialog.getByTestId('evidence-card-E4')).toBeVisible();
+  await page
+    .getByTestId('evidence-dialog-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await discussEvidenceDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'discuss-evidence');
+  await page.keyboard.press('Escape');
+  await expect(discussEvidenceDialog).toHaveCount(0);
+
   await submitOpinion.click();
 
   // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을

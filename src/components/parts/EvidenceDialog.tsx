@@ -116,7 +116,7 @@ export function EvidenceDialog({ evidence, onClose }: EvidenceDialogProps) {
           </button>
         </div>
         <div className="evidence-dialog__body">
-          <EvidenceGrid evidence={evidence} variant="expanded" />
+          <EvidenceGrid evidence={evidence} />
         </div>
       </div>
     </div>

@@ -69,13 +69,13 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
         <div className="briefing-screen__body">
           <button
             type="button"
-            className="briefing-screen__evidence-button"
+            className="evidence-open-button"
             onClick={() => setEvidenceOpen(true)}
             data-testid="open-evidence"
           >
             근거 자료 보기
           </button>
-          <span className="briefing-screen__evidence-hint">EXHIBIT A–D · 4장</span>
+          <span className="evidence-open-hint">EXHIBIT A–D · 4장</span>
         </div>
       </div>
       {evidenceOpen && (
