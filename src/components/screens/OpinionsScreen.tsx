@@ -8,8 +8,10 @@
 
 import { useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { RoleStatus, Statement } from '../../domain/types';
+import type { RoleStatus, Stance, Statement } from '../../domain/types';
+import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import { Avatar } from '../parts/Avatar';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
@@ -19,11 +21,35 @@ export interface OpinionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   onNext: () => void;
+  /** 실패한 역할만 골라 OPINIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
+  onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
 }
 
-export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext }: OpinionsScreenProps) {
+export function OpinionsScreen({
+  scenario,
+  mode,
+  roleStatus,
+  statements,
+  stances,
+  onNext,
+  onRetryFailedRoles,
+}: OpinionsScreenProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // 라운드당 1회(T65) — 세션 호출 상한(server/sessionLimit.ts)이 최종 방어선이지만, 화면도
+  // 한 번 누르면 버튼을 잠가 재요청 의도를 분명히 한다.
+  const [retryUsed, setRetryUsed] = useState(false);
+
+  function handleRetry() {
+    const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
+    if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
+      return;
+    }
+    setRetryUsed(true);
+    onRetryFailedRoles(failedRoleIds);
+  }
 
   const actions = (
     <div className="app-body__actions screen opinions-screen">
@@ -39,7 +65,15 @@ export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext 
         {actions}
         <div className="app-body__content screen opinions-screen__info">
           <h2 className="opinions-screen__title">임원들의 첫 의견</h2>
-          <LiveStatementCards scenario={scenario} stage="OPINIONS" roleStatus={roleStatus} statements={statements} />
+          <LiveStatementCards
+            scenario={scenario}
+            stage="OPINIONS"
+            roleStatus={roleStatus}
+            statements={statements}
+            stances={stances}
+            onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
+            retryDisabled={retryUsed}
+          />
         </div>
       </>
     );
@@ -58,6 +92,9 @@ export function OpinionsScreen({ scenario, mode, roleStatus, statements, onNext 
                 <div className="opinion-card__head">
                   <Avatar memberId={opinion.memberId} size="sm" />
                   <h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                  <span className="opinion-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
+                    {STANCE_LABEL[stances[opinion.memberId]]}
+                  </span>
                 </div>
                 <p className="opinion-card__text">{opinion.text}</p>
                 <button

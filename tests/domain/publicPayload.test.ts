@@ -114,7 +114,7 @@ describe('selectPublic', () => {
     expect(payload.tally?.outcome).toBe(session.outcome);
     expect(
       payload.tally
-        ? payload.tally.counts.YES + payload.tally.counts.NO + payload.tally.counts.HOLD + payload.tally.counts.UNCAST
+        ? payload.tally.counts.YES + payload.tally.counts.NO + payload.tally.counts.UNCAST
         : 0,
     ).toBe(5);
   });

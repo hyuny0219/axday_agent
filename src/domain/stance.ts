@@ -1,0 +1,102 @@
+// 임원 4명의 "지금 기울어 있는 쪽" 표정(T63). 표결 집계(voting.ts)는 손대지 않고,
+// 그 위에서 무대 오버레이·본문 카드에 보여줄 표시용 값만 계산한다. scripted는 표결
+// 규칙표(voteRules)로 미리 계산하고(2026-09-29 사용자 "AI 임원들이 안건을 보고 느낀
+// 감정을 항상 표시"), live는 각 임원의 가장 최근 발언에 실린 stance 필드를 그대로 쓴다.
+
+import type { ExecMemberId, Scenario, Vote } from '../content/types';
+import type { Ballot, Opinion, Session, SessionStage, Stance } from './types';
+import { EXEC_MEMBER_ORDER, decideMember } from './voting';
+import type { VoteContext } from './voting';
+
+export type { Stance };
+
+/** BRIEFING(과 그 이전 ATTRACT/SELECT)은 넷 다 UNDECIDED다. 이 이후 단계에서만 표결
+ * 규칙표로 계산한다(OPINIONS 단계 진입 즉시 넷 함께, DISCUSS는 그대로 유지, REACTIONS는
+ * 의견·후속 답이 들어올 때마다 갱신, MOTION·VOTE는 마지막 확정 집합으로 고정 — 아래 표는
+ * session.opinions가 그 시점까지 쌓인 값을 그대로 읽기만 해도 자연히 성립한다). */
+const STANCE_COMPUTED_STAGES: ReadonlySet<SessionStage> = new Set([
+  'OPINIONS',
+  'DISCUSS',
+  'REACTIONS',
+  'MOTION',
+  'VOTE',
+  'RESULT',
+]);
+
+const ALL_UNDECIDED: Record<ExecMemberId, Stance> = {
+  CEO: 'UNDECIDED',
+  CFO: 'UNDECIDED',
+  CAIO: 'UNDECIDED',
+  CISO: 'UNDECIDED',
+};
+
+function voteToStance(vote: Vote): Stance {
+  if (vote === 'YES') return 'FOR';
+  if (vote === 'NO') return 'AGAINST';
+  return 'UNDECIDED';
+}
+
+/** 가장 최근 의견의 확정 조건 ID를 그대로 쓴다(합집합이 아니다) —
+ * components/opinionConditions.ts의 collectConfirmedConditionIds와 같은 규칙이다.
+ * 후속 보완에서 조건을 해제했을 때 그 조건이 되살아나지 않게 하기 위해서다. */
+function latestConfirmedConditionIds(opinions: readonly Opinion[]): string[] {
+  const latest = opinions[opinions.length - 1];
+  if (!latest) {
+    return [];
+  }
+  const result: string[] = [];
+  for (const id of latest.confirmedConditionIds) {
+    if (!result.includes(id)) {
+      result.push(id);
+    }
+  }
+  return result;
+}
+
+/** scripted 표결 규칙표로 임원 4명의 표정을 미리 계산한다(순수 함수). live와는 무관하다. */
+export function scriptedStances(
+  scenario: Scenario,
+  session: Pick<Session, 'stage' | 'opinions'>,
+): Record<ExecMemberId, Stance> {
+  if (!STANCE_COMPUTED_STAGES.has(session.stage)) {
+    return ALL_UNDECIDED;
+  }
+  const ctx: VoteContext = {
+    conditionIds: latestConfirmedConditionIds(session.opinions),
+    executionMode: 'DEFAULT',
+  };
+  const result: Record<ExecMemberId, Stance> = { ...ALL_UNDECIDED };
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    result[memberId] = voteToStance(decideMember(scenario.voteRules[memberId], ctx));
+  }
+  return result;
+}
+
+/** live 임원의 가장 최근 발언(단계 무관, transcript 전체에서 그 임원의 마지막 항목)에
+ * 실린 stance를 그대로 쓴다. 발언이 아직 없으면 UNDECIDED, 이번 라운드 응답이 실패하면
+ * (새 발언이 기록되지 않으므로) 직전 발언의 stance가 그대로 남는다. */
+export function liveStances(session: Pick<Session, 'transcript'>): Record<ExecMemberId, Stance> {
+  const result: Record<ExecMemberId, Stance> = { ...ALL_UNDECIDED };
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    const statements = session.transcript.statements.filter((item) => item.roleId === memberId);
+    const last = statements[statements.length - 1];
+    result[memberId] = last?.stance ?? 'UNDECIDED';
+  }
+  return result;
+}
+
+export interface PersuasionStamp {
+  /** 내 표와 같은 표가 나를 포함해 3석 이상(5석 과반)이면 true. */
+  earned: boolean;
+  /** 내 표와 같은 값을 낸 좌석 수(참가자 포함, UNCAST 제외). */
+  sameVoteSeats: number;
+}
+
+/** "설득 도장" 판정(T63). participantVote와 같은 표를 낸 좌석 수를 참가자 좌석까지
+ * 포함해 센다(UNCAST는 세지 않는다). 표결 집계(tally) 자체는 바꾸지 않는다. */
+export function persuasionStamp(ballots: readonly Ballot[], participantVote: Vote): PersuasionStamp {
+  const sameVoteSeats = ballots.filter(
+    (ballot) => ballot.vote !== 'UNCAST' && ballot.vote === participantVote,
+  ).length;
+  return { earned: sameVoteSeats >= 3, sameVoteSeats };
+}

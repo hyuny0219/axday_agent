@@ -46,10 +46,24 @@
   min-width: 0;
 }
 
+.discuss-exec-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
 .discuss-exec-card__member {
   margin: 0;
   font-size: var(--fs-meta);
   color: var(--text-muted);
+}
+
+/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
+.discuss-exec-card__mood {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* 임원 첫 의견은 4줄로 클램프한다(v1.0 6절 표 "임원 첫 의견 4줄") — 패널 자체는
@@ -81,17 +95,15 @@
   gap: var(--space-1);
 }
 
-/* 근거 카드 압축(v1.0 6절 표 "근거 2×2 압축"): 오른쪽 열에 추천 문구·임원 의견과
-   함께 세 블록이 들어가야 해서 evidence.css의 기본 패딩·줄 수보다 더 줄인다. */
-.discuss-screen__evidence .evidence-card {
-  padding: var(--space-1);
-}
-
-.discuss-screen__evidence .evidence-card__insight {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+/* 근거 자료 보기 버튼 행(T69, 2026-10-01). 근거 2×2(압축) 상시 카드를 없애고
+   BRIEFING(T68)과 같은 버튼 + EvidenceDialog 팝업으로 연다 — 버튼·안내 한 줄 자체
+   스타일(`.evidence-open-button`·`.evidence-open-hint`)은 evidenceDialog.css의 공용
+   규칙이고, 여기서는 추천 문구 아래·임원 첫 의견 위에 놓는 배치만 맡는다. */
+.discuss-screen__evidence-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* 내 발언 영역: 시안 왼쪽 4px 경계로 참가자 좌석임을 표시한다(DESIGN_SPEC.md

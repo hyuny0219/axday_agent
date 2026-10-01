@@ -1,6 +1,6 @@
 // 회의록 패널이 그릴 항목을 계산하는 순수 함수 검증(DESIGN_SPEC.md v1.0 7절, T41).
 // scripted 전 단계 항목 순서·내용, live pending/failed가 뒤 라운드 후에도 남는지,
-// visibleWindow의 창 계산을 확인한다.
+// (창 고정 visibleWindow는 2026-09-28 사용자 결정으로 제거됐다 — 전체 항목을 스크롤로 보여준다.)
 
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
@@ -9,7 +9,6 @@ import type { Session, SessionMode, Statement } from '../../src/domain/types';
 import {
   buildMinutes,
   upsertRoundLogEntry,
-  visibleWindow,
   type MinutesEntry,
   type RoundLogEntry,
 } from '../../src/components/minutes';
@@ -223,41 +222,6 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
     const entries = buildMinutes(session, scenario, []);
     const ceoOpinion = entries.find((entry) => entry.id === 'opinion-CEO');
     expect(ceoOpinion).toMatchObject({ kind: 'pending', text: '' });
-  });
-});
-
-describe('visibleWindow', () => {
-  const entries: MinutesEntry[] = Array.from({ length: 8 }, (_, index) => ({
-    id: `entry-${index}`,
-    speaker: 'CEO',
-    text: `문장 ${index}`,
-    kind: 'speech',
-  }));
-
-  it('n보다 많은 항목이 있으면 앞쪽 항목만 hidden이 된다', () => {
-    const windowed = visibleWindow(entries, 6);
-    expect(windowed.filter((entry) => entry.hidden).map((entry) => entry.id)).toEqual([
-      'entry-0',
-      'entry-1',
-    ]);
-    expect(windowed.filter((entry) => !entry.hidden).map((entry) => entry.id)).toEqual([
-      'entry-2',
-      'entry-3',
-      'entry-4',
-      'entry-5',
-      'entry-6',
-      'entry-7',
-    ]);
-  });
-
-  it('n이 전체 길이 이상이면 아무 것도 숨기지 않는다', () => {
-    const windowed = visibleWindow(entries, 100);
-    expect(windowed.every((entry) => !entry.hidden)).toBe(true);
-  });
-
-  it('n이 0이면 전부 숨긴다', () => {
-    const windowed = visibleWindow(entries, 0);
-    expect(windowed.every((entry) => entry.hidden)).toBe(true);
   });
 });
 

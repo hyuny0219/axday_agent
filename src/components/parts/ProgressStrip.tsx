@@ -10,12 +10,14 @@ interface ProgressStep {
   label: string;
 }
 
+// T64(Main.html 단계 탭): 원(①~⑤) 대신 두 자리 숫자(01~05)로 바꾼다 — 각진 종이 탭
+// 모양과 어울리는 타자기 표기다. 단계 이름 자체(상황 파악·임원 의견 등)는 그대로 둔다.
 const STEPS: ProgressStep[] = [
-  { step: 1, label: '① 상황 파악' },
-  { step: 2, label: '② 임원 의견' },
-  { step: 3, label: '③ 내 의견' },
-  { step: 4, label: '④ 반응에 답하기' },
-  { step: 5, label: '⑤ 표결' },
+  { step: 1, label: '01 상황 파악' },
+  { step: 2, label: '02 임원 의견' },
+  { step: 3, label: '03 내 의견' },
+  { step: 4, label: '04 반응에 답하기' },
+  { step: 5, label: '05 표결' },
 ];
 
 /** BRIEFING~RESULT를 5단계로 묶는다. MOTION·VOTE·RESULT는 모두 마지막 '표결' 단계에

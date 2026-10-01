@@ -14,6 +14,7 @@
 
 import type { SessionAction } from '../domain/session';
 import { accessHeaders } from '../services/transport/accessToken';
+import { setRoundTimeouts } from '../services/transport/roundTimeouts';
 
 /** GET /api/health 응답을 기다리는 최대 시간. */
 export const MODE_HEALTH_CHECK_TIMEOUT_MS = 1500;
@@ -39,6 +40,9 @@ async function checkServerMode(timeoutMs: number): Promise<'live' | 'scripted'> 
     }
     const body: unknown = await res.json();
     const mode = typeof body === 'object' && body !== null ? (body as { mode?: unknown }).mode : undefined;
+    // T65: 서버가 라운드/반응 타임아웃 값을 함께 내려주면 live.ts가 8초를 하드코딩하지
+    // 않도록 캐시해 둔다. 서버가 없거나(scripted) 구버전이면 기존 기본값을 그대로 쓴다.
+    setRoundTimeouts(body);
     return mode === 'live' ? 'live' : 'scripted';
   } catch {
     return 'scripted';

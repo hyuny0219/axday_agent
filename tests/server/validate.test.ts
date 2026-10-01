@@ -18,6 +18,7 @@ function validStatement() {
     referencedStatementIds: [],
     concerns: ['도입 속도'],
     suggestedConditionIds: ['PILOT'],
+    stance: 'FOR',
   };
 }
 
@@ -93,6 +94,20 @@ describe('statementResponseSchema', () => {
   it('rejects a response that includes a ballot field', () => {
     const schema = statementResponseSchema();
     const result = schema.safeParse({ ...validStatement(), ballot: { vote: 'YES' } });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a response missing the stance field (T63)', () => {
+    const schema = statementResponseSchema();
+    const withoutStance: Record<string, unknown> = { ...validStatement() };
+    delete withoutStance.stance;
+    const result = schema.safeParse(withoutStance);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an unknown stance value', () => {
+    const schema = statementResponseSchema();
+    const result = schema.safeParse({ ...validStatement(), stance: 'MAYBE' });
     expect(result.success).toBe(false);
   });
 });

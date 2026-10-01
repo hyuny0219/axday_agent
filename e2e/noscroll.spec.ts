@@ -63,12 +63,33 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // (무대·행동·회의록)이 잘리지 않는다.
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
-  // 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보이고 잘리지 않는다(T52).
+  // T68: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있고, 남는
+  // 세로 여유로 오른쪽 열의 나머지 카드(현재 상황·제안·미정·할 일)가 잘리지 않는다.
+  await expect(page.getByTestId('open-evidence')).toBeVisible();
+  await expectNoPageScroll(page, 'BRIEFING(자료 버튼)');
+  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 버튼)');
+
+  // 팝업을 열어도 페이지 스크롤은 생기지 않는다(팝업은 position:fixed 오버레이,
+  // 내부 스크롤은 팝업 카드 안에서만 허용된다 — DESIGN_SPEC.md v1.2 BRIEFING 절).
+  await page.getByTestId('open-evidence').click();
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
   for (const id of ['E1', 'E2', 'E3', 'E4']) {
-    await expect(page.getByTestId(`evidence-card-${id}`)).toBeVisible();
+    await expect(evidenceDialog.getByTestId(`evidence-card-${id}`)).toBeVisible();
   }
-  await expectNoPageScroll(page, 'BRIEFING(자료 4장)');
-  await expectNoClip(page, '.app-body__content', 'BRIEFING(자료 4장)');
+  await expectNoPageScroll(page, 'BRIEFING(자료 팝업 열림)');
+  const dialogBox = await evidenceDialog.boundingBox();
+  const viewport = page.viewportSize();
+  expect(dialogBox, 'BRIEFING(자료 팝업 열림): 팝업 위치를 읽을 수 있어야 한다').not.toBeNull();
+  expect(viewport, 'BRIEFING(자료 팝업 열림): viewport 크기를 알 수 없다').not.toBeNull();
+  if (dialogBox && viewport) {
+    expect(
+      dialogBox.y >= -1 && dialogBox.y + dialogBox.height <= viewport.height + 1,
+      `BRIEFING(자료 팝업 열림): 팝업이 뷰포트를 벗어났다(top=${dialogBox.y}, bottom=${dialogBox.y + dialogBox.height}, viewport=${viewport.height})`,
+    ).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
@@ -84,9 +105,25 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('phrase-card-P4').click();
   await expectNoPageScroll(page, 'DISCUSS(조건 4개 선택)');
-  await page.getByTestId('evidence-card-E4').locator('summary').click();
-  await expectNoClip(page, '.app-body__content', 'DISCUSS(E4 펼침)');
-  await page.getByTestId('evidence-card-E4').locator('summary').click();
+  // T69: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있다
+  // (BRIEFING과 같은 동작). 팝업은 position:fixed 전체 화면 오버레이라 비서실장
+  // 드로어(오른쪽 열 위에 겹치는 절대 위치 드로어, z-index 6)보다 위(evidence-dialog
+  // z-index 40)에 뜬다 — 드로어가 열려 오른쪽 열을 덮은 동안은 이 버튼도 함께 덮이므로
+  // (오른쪽 열의 다른 카드와 같은 규칙) 드로어를 닫은 이 시점에 먼저 확인한다.
+  const discussOpenEvidence = page.getByTestId('open-evidence');
+  await expect(discussOpenEvidence).toBeVisible();
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 4개 선택)');
+
+  await discussOpenEvidence.click();
+  const discussEvidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(discussEvidenceDialog).toBeVisible();
+  for (const id of ['E1', 'E2', 'E3', 'E4']) {
+    await expect(discussEvidenceDialog.getByTestId(`evidence-card-${id}`)).toBeVisible();
+  }
+  await expectNoPageScroll(page, 'DISCUSS(자료 팝업 열림)');
+  await page.keyboard.press('Escape');
+  await expect(discussEvidenceDialog).toHaveCount(0);
+  await expect(discussOpenEvidence).toBeFocused();
 
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
   await page.getByTestId('assistant-toggle').click();
@@ -130,6 +167,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
 
+  // VOTE의 "발언 흐름" 항목 수를 기억해 둔다 — RESULT의 회의록 전문(T58 흡수)이
+  // 같은 buildMinutes 계산을 쓰므로 항목 수가 같아야 한다(카드 완료 확인).
+  const minutesCountAtVote = await page.locator('[data-testid^="minutes-entry-"]').count();
+
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
@@ -140,6 +181,23 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // 뷰포트 안에 있다(페이지 스크롤 없음은 위 expectNoPageScroll로 이미 확인했다).
   await expect(page.getByTestId('result-summary')).toBeInViewport();
   await expect(page.getByTestId('result-ai-help')).toBeInViewport();
+
+  // "회의록 전문 보기"(T58 흡수, T64 item 7): 토글로 전문 패널이 열리고, 항목 수가
+  // 위 VOTE의 "발언 흐름"과 같으며, 페이지 스크롤 없이 다시 요약으로 돌아온다.
+  const transcriptToggle = page.getByTestId('result-transcript-toggle');
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'false');
+  await transcriptToggle.click();
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('result-transcript')).toBeVisible();
+  await expect(page.getByTestId('result-summary')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="minutes-entry-"]')).toHaveCount(minutesCountAtVote);
+  await expectNoPageScroll(page, 'RESULT(회의록 전문)');
+
+  await transcriptToggle.click();
+  await expect(transcriptToggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('result-summary')).toBeVisible();
+  await expect(page.getByTestId('result-transcript')).toHaveCount(0);
+  await expectNoPageScroll(page, 'RESULT(요약으로 복귀)');
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을
@@ -185,6 +243,7 @@ async function mockLongStatements(page: Page): Promise<void> {
         referencedStatementIds: index === 0 ? [] : [`ref-${index}`],
         concerns: [],
         suggestedConditionIds: [],
+        stance: 'FOR',
       },
       latencyMs: 10,
       modelId: 'mock',
@@ -221,6 +280,11 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // DISCUSS: 임원 카드 본문도 OPINIONS의 실제 120자 발언으로 바뀌었다(Codex 18차 검토
+  // P2). line-clamp로 잘려 보이더라도 카드 높이가 늘어나 페이지 스크롤이 생기면 안 된다.
+  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
+  await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
   // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
   // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();
@@ -264,5 +328,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // 마지막 블록(내 의견 원문)이 실제로 보이는지 단언한다(PR #9 Codex 1차 검토).
   await expectNoClip(page, '[data-testid="result-summary"]', 'RESULT(live, 조건 4개)');
   await expect(page.getByTestId('result-mine')).toBeInViewport();
-  await expect(page.getByTestId('result-summary-row-PARTICIPANT')).toBeInViewport();
+  // 참가자 행 testid는 T66에서 result-seat-PARTICIPANT로 통일했다(5석 카드가
+  // 빠지며 VERDICTS 행이 그 자리를 겸한다).
+  await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeInViewport();
 });

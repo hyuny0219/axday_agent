@@ -54,8 +54,8 @@ describe('정상 완주', () => {
     expect(session.stage).toBe('RESULT');
     expect(session.pendingVote).toBeNull();
     expect(session.ballots).toHaveLength(5);
-    // 대표 경로표: 없음(원안) / YES,HOLD,NO,NO / 참가자 YES → HOLD.
-    expect(session.outcome).toBe('HOLD');
+    // 대표 경로표: 없음(원안) / YES,NO,NO,NO / 참가자 YES → REJECT.
+    expect(session.outcome).toBe('REJECT');
     expect(session.warnings).toEqual([]);
 
     // AI 비서실장을 쓰지 않은 완주에는 어떤 AI 기록도 없다(보이지 않은 카드를 기록하지 않음).
@@ -197,6 +197,17 @@ describe('리셋 후 이전 값 없음', () => {
     expect(reset.followUpUsed).toBe(false);
     expect(reset.warnings).toEqual([]);
     expect(reset.sessionId).toBe('reset-1');
+  });
+
+  it('OPERATOR_RESET은 mode를 유지한다(live 배포에서 "체험 종료"·"새 체험" 뒤에도 live)', () => {
+    let session = reduce(createInitialSession(T0, 'live-1'), { type: 'SET_MODE', mode: 'live' }, T0);
+    expect(session.mode).toBe('live');
+    session = reduce(session, { type: 'OPERATOR_RESET', nextSessionId: 'reset-live' }, T0 + 1);
+    expect(session.stage).toBe('ATTRACT');
+    expect(session.mode).toBe('live');
+    // scripted도 그대로 유지된다.
+    const scripted = reduce(createInitialSession(T0, 's-1'), { type: 'OPERATOR_RESET', nextSessionId: 's-2' }, T0);
+    expect(scripted.mode).toBe('scripted');
   });
 
   it('리셋은 순수하다: 같은 (session, action, now)를 두 번 reduce하면 같은 결과가 나온다', () => {

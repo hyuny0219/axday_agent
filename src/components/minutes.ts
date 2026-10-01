@@ -213,14 +213,3 @@ export function buildMinutes(
 
   return entries;
 }
-
-/** entries 중 최근 n건만 보이게 하고 나머지는 hidden으로 표시한다(창 고정, sr-only —
- * 화면에는 최근 n건만, 스크린리더에는 전체가 남는다). n이 entries.length 이상이면 아무
- * 것도 숨기지 않는다. */
-export function visibleWindow(
-  entries: MinutesEntry[],
-  n: number,
-): Array<MinutesEntry & { hidden: boolean }> {
-  const cutoff = entries.length - Math.max(n, 0);
-  return entries.map((entry, index) => ({ ...entry, hidden: index < cutoff }));
-}

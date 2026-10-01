@@ -14,10 +14,14 @@
 // 토글이 왼쪽에 남고, 열렸을 때의 드로어 본문은 assistant.css가 오른쪽 열 위에 절대
 // 위치로 겹쳐 그린다(position:absolute, DOM은 그대로 왼쪽 트리 안이지만 .app-body가
 // 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
+// T69(2026-10-01 사용자 결정): 근거 2×2(압축) 상시 카드는 BRIEFING(T68)과 같은
+// "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다. 팝업 열림 상태는 이 화면의
+// 로컬 state다(화면 전환·세션 리셋으로 DiscussScreen이 언마운트되면 함께 닫힌다). 자료
+// 카드가 빠지며 생긴 세로 여유는 추천 문구·임원 첫 의견 블록이 자연히 흡수한다.
 
-import { useEffect, useMemo, useState } from 'react';
-import type { Scenario } from '../../content/types';
-import type { Transcript } from '../../domain/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ExecMemberId, Scenario } from '../../content/types';
+import type { RoleStatus, SessionMode, Stance, Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
   editText,
@@ -26,6 +30,7 @@ import {
   togglePhrase,
 } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromPhrases, proposeFromText } from '../../domain/conditions';
+import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -34,8 +39,10 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { Avatar } from '../parts/Avatar';
-import { EvidenceGrid } from '../parts/EvidenceGrid';
+import { EvidenceDialog } from '../parts/EvidenceDialog';
+import { STATUS_TEXT } from '../parts/LiveStatementCards';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
 export interface DiscussSubmitPayload {
@@ -47,8 +54,17 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. live 모드에서는
+   * 아래 임원 4장 카드의 본문도 이 transcript의 OPINIONS 발언에서 그대로 가져온다(Codex
+   * 18차 검토 P2 — 실제 발언과 다른 각본 문장을 나란히 보여주면 안 된다). */
   transcript: Transcript;
+  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. 임원 카드 본문을 실제
+   * 발언(live)으로 보여줄지 각본 문장(scripted)으로 보여줄지 가른다. */
+  mode: SessionMode;
+  /** live 모드에서 임원별 OPINIONS 라운드 응답 상태(아직 응답 전/실패 포함). */
+  roleStatus: Record<ExecMemberId, RoleStatus>;
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   onSubmit: (payload: DiscussSubmitPayload) => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
   onAssistantAction: (event: AssistantActionEvent) => void;
@@ -70,13 +86,26 @@ export function DiscussScreen({
   scenario,
   sessionId,
   transcript,
+  mode,
+  roleStatus,
+  stances,
   onSubmit,
   onAssistantAction,
   assistantAdapter,
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
+  // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·임원 카드)은 시각적으로
+  // 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에 닿을 수 있었다
+  // (PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어 포커스·클릭을 막는다.
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
+  useEffect(() => {
+    infoRef.current?.toggleAttribute('inert', assistantOpen);
+  }, [assistantOpen]);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -204,6 +233,7 @@ export function DiscussScreen({
             transcript={transcript}
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
+            onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
           <button
@@ -220,7 +250,7 @@ export function DiscussScreen({
           빈 칸이거나 300자를 넘으면 전달할 수 없습니다. 축약 표현은 이사님이 직접 정합니다.
         </p>
       </div>
-      <div className="app-body__content screen discuss-screen__info">
+      <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">
         <div className="discuss-screen__phrases">
           <h3 className="discuss-screen__section-label">비서실장 추천 문구 (여러 개 선택 가능)</h3>
           <div className="discuss-screen__phrase-list">
@@ -234,21 +264,73 @@ export function DiscussScreen({
             ))}
           </div>
         </div>
-        <div className="discuss-screen__evidence">
-          <EvidenceGrid evidence={scenario.evidence} />
+        <div className="discuss-screen__evidence-row">
+          <button
+            type="button"
+            className="evidence-open-button"
+            onClick={() => setEvidenceOpen(true)}
+            data-testid="open-evidence"
+          >
+            근거 자료 보기
+          </button>
+          <span className="evidence-open-hint">EXHIBIT A–D · 4장</span>
         </div>
         <div className="discuss-screen__execs" data-testid="discuss-exec-row">
-          {scenario.initialOpinions.map((opinion) => (
-            <article key={opinion.memberId} className="discuss-exec-card">
-              <Avatar memberId={opinion.memberId} size="sm" />
-              <div className="discuss-exec-card__body">
-                <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
-                <p className="discuss-exec-card__text">{opinion.text}</p>
-              </div>
-            </article>
-          ))}
+          {mode === 'live'
+            ? EXEC_MEMBER_ORDER.map((memberId) => {
+                const status = roleStatus[memberId];
+                // DISCUSS는 OPINIONS 라운드가 끝난 뒤 화면이라 여기서 보여줄 실제 발언도
+                // stage:'OPINIONS'다(OpinionsScreen·LiveStatementCards와 같은 근거).
+                const statement = transcript.statements.find(
+                  (item) => item.roleId === memberId && item.stage === 'OPINIONS',
+                );
+                return (
+                  <article key={memberId} className="discuss-exec-card">
+                    <Avatar memberId={memberId} size="sm" />
+                    <div className="discuss-exec-card__body">
+                      <div className="discuss-exec-card__head">
+                        <h3 className="discuss-exec-card__member">{MEMBER_LABELS[memberId]}</h3>
+                        <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${memberId}`}>
+                          {STANCE_LABEL[stances[memberId]]}
+                        </span>
+                      </div>
+                      {status === 'answered' && statement ? (
+                        <p className="discuss-exec-card__text" data-testid={`statement-card-${memberId}`}>
+                          {statement.text}
+                        </p>
+                      ) : (
+                        <p
+                          className="discuss-exec-card__text"
+                          data-testid={
+                            status === 'failed' ? `statement-failed-${memberId}` : `statement-pending-${memberId}`
+                          }
+                        >
+                          {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            : scenario.initialOpinions.map((opinion) => (
+                <article key={opinion.memberId} className="discuss-exec-card">
+                  <Avatar memberId={opinion.memberId} size="sm" />
+                  <div className="discuss-exec-card__body">
+                    <div className="discuss-exec-card__head">
+                      <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
+                      <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
+                        {STANCE_LABEL[stances[opinion.memberId]]}
+                      </span>
+                    </div>
+                    <p className="discuss-exec-card__text">{opinion.text}</p>
+                  </div>
+                </article>
+              ))}
         </div>
       </div>
+      {evidenceOpen && (
+        <EvidenceDialog evidence={scenario.evidence} onClose={() => setEvidenceOpen(false)} />
+      )}
     </>
   );
 }

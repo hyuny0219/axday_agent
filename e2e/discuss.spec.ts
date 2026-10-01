@@ -42,6 +42,27 @@ test('문구를 고르지 않고 직접 입력만으로도 의견을 전달할 �
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
 });
 
+test('"근거 자료 보기" 버튼이 BRIEFING과 같은 팝업을 열고, Esc로 닫으면 버튼으로 포커스가 돌아온다', async ({
+  page,
+}) => {
+  await reachDiscuss(page);
+
+  await expect(page.getByTestId('evidence-card-E1')).toHaveCount(0);
+  const openEvidence = page.getByTestId('open-evidence');
+  await expect(openEvidence).toBeVisible();
+
+  await openEvidence.click();
+  const dialog = page.getByTestId('evidence-dialog');
+  await expect(dialog).toBeVisible();
+  for (const id of ['E1', 'E2', 'E3', 'E4']) {
+    await expect(dialog.getByTestId(`evidence-card-${id}`)).toBeVisible();
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(openEvidence).toBeFocused();
+});
+
 test('직접 수정 후 체크를 바꾸면 유지/재구성 확인 UI가 뜨고, 유지를 고르면 입력을 보존한다', async ({
   page,
 }) => {

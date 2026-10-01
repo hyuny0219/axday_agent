@@ -50,11 +50,20 @@ const ROLE_CONDITION: Record<string, string> = {
   CISO: 'TRACE',
 };
 
-const ROLE_VOTE: Record<string, 'YES' | 'HOLD' | 'NO'> = {
+const ROLE_VOTE: Record<string, 'YES' | 'NO'> = {
   CEO: 'YES',
-  CFO: 'HOLD',
+  CFO: 'NO',
   CAIO: 'YES',
   CISO: 'NO',
+};
+
+/** 발언(statement)의 고정 stance(T63). ROLE_VOTE와 같은 방향으로 둬 mock 실행에서도
+ * "OPINIONS stance와 최종 표의 일치율"을 관측할 수 있게 한다. */
+const ROLE_STANCE: Record<string, 'FOR' | 'AGAINST' | 'UNDECIDED'> = {
+  CEO: 'FOR',
+  CFO: 'AGAINST',
+  CAIO: 'FOR',
+  CISO: 'AGAINST',
 };
 
 function buildStatementJson(env: MockRequestEnvelope): unknown {
@@ -67,6 +76,7 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     referencedStatementIds: [],
     concerns: [`[mock] ${roleId} 우려사항`],
     suggestedConditionIds: [ROLE_CONDITION[roleId] ?? 'PILOT'],
+    stance: ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
 
@@ -76,7 +86,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     roleId,
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
-    vote: ROLE_VOTE[roleId] ?? 'HOLD',
+    vote: ROLE_VOTE[roleId] ?? 'NO',
     reason: `[mock] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
     remainingConcerns: [],

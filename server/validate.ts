@@ -19,7 +19,10 @@ export const CONDITION_IDS = ['PILOT', 'SCREEN', 'TRACE', 'MEASURE', 'ANON_FULL'
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;
 export const REQUEST_STAGES = [...STATEMENT_STAGES, 'VOTE', 'ASSISTANT'] as const;
 
-export const VOTE_VALUES = ['YES', 'HOLD', 'NO'] as const;
+export const VOTE_VALUES = ['YES', 'NO'] as const;
+
+/** 발언 끝에 임원이 지금 기울어 있는 쪽(T63, src/domain/stance.ts의 Stance와 값이 같다). */
+export const STANCE_VALUES = ['FOR', 'AGAINST', 'UNDECIDED'] as const;
 
 const evidenceIdSchema = z.enum(EVIDENCE_IDS);
 const conditionIdSchema = z.enum(CONDITION_IDS);
@@ -50,6 +53,7 @@ export function statementResponseSchema(knownStatementIds: readonly string[] = [
         }),
       concerns: z.array(z.string()),
       suggestedConditionIds: z.array(conditionIdSchema),
+      stance: z.enum(STANCE_VALUES),
     })
     .strict();
 }

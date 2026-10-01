@@ -82,7 +82,10 @@ Workflow({ scriptPath: ".claude/workflows/task-cycle.js", args: { task: "T01", m
 
 ## 7. Codex 교차 검토
 
-builder·reviewer는 같은 계열 모델이라 같은 맹점을 공유할 수 있다. 다른 모델(OpenAI Codex)의 검토를 PR 단위로 끼워 넣는다. Codex는 이 환경에 설치돼 있지 않으므로 GitHub 연동(PR 코멘트 트리거)으로만 부른다. 사전 조건: 사용자가 Codex 설정에서 이 저장소를 GitHub에 연결해 두어야 한다.
+builder·reviewer는 같은 계열 모델이라 같은 맹점을 공유할 수 있다. 다른 모델(OpenAI Codex)의 검토를 PR 단위로 끼워 넣는다. 부르는 길은 둘이다.
+
+- **GitHub 연동**(PR 코멘트 `@codex review` 트리거). 사전 조건: 사용자가 Codex 설정에서 이 저장소를 GitHub에 연결해 두어야 한다. 모델은 고를 수 없다(문서에 모델·추론 강도 옵션이 없다, 2026-09-28 확인).
+- **로컬 Codex CLI**(2026-09-28부터, 이 PC에 `codex-cli` 0.155.1 설치됨). 모델을 지정할 수 있다. `codex review --base main`은 사용자 지시와 함께 쓸 수 없으므로, 범위·형식을 지시하려면 `codex exec --skip-git-repo-check -s read-only -c model=gpt-6-astra -c model_reasoning_effort=high "<지시: git diff origin/main...HEAD를 보고 [must|should|nit] 파일:줄 — 결함 — 근거 — 제안 형식으로>"`처럼 읽기 전용 샌드박스로 돌린다. 결과는 GitHub에 남지 않으므로 오케스트레이터가 PR 댓글에 요약을 남긴다. 사용자 OpenAI 사용량을 쓰므로 사용자가 요청했을 때만 돌린다.
 
 | 시점 | 오케스트레이터가 하는 일 |
 | --- | --- |

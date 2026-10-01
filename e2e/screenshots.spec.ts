@@ -32,10 +32,14 @@ async function capture(page: Page, projectName: string, screenName: string) {
   // 캡처가 남는다(T38 결과 확인에서 발견).
   // 마운트 직후 캡처하면 screen-enter가 아직 시작되지 않아 반투명하게 남을 수 있어
   // (T40 반응 화면에서 발견) 진행 중인 애니메이션이 끝나기를 먼저 기다린다.
-  await page
-    .locator('.screen')
-    .first()
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  // BRIEFING~RESULT는 `.screen`이 왼쪽(app-body__actions)·오른쪽(app-body__content) 두
+  // 개다. 왼쪽은 shell.css에서 애니메이션을 껐지만(AssistantPanel 드로어 때문, T45)
+  // 오른쪽은 그대로 opacity 전환이 있다 — `.first()`만 기다리면 왼쪽(애니메이션 없음,
+  // 즉시 resolve)만 기다리고 오른쪽이 아직 페이드 중인 상태로 찍혀 종이 패널이 어두운
+  // 배경과 섞인 회색으로 캡처된다(실측, T64). 모든 `.screen` 요소를 함께 기다린다.
+  await page.locator('.screen').evaluateAll((elements) =>
+    Promise.all(elements.flatMap((el) => el.getAnimations().map((a) => a.finished))),
+  );
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
@@ -53,12 +57,28 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
 
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
-  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·자료 4장·CTA(T52).
+  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·근거 자료 버튼·CTA(T68).
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  await expect(page.getByTestId('evidence-card-E4')).toBeVisible();
+  await expect(page.getByTestId('open-evidence')).toBeVisible();
   await capture(page, testInfo.project.name, 'briefing');
+
+  // BRIEFING(팝업 열림, T68): "근거 자료 보기"를 눌러 EvidenceDialog에서 자료 4장
+  // 전문을 보는 상태를 별도로 캡처한다.
+  await page.getByTestId('open-evidence').click();
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
+  await expect(evidenceDialog.getByTestId('evidence-card-E4')).toBeVisible();
+  // 팝업 자체의 등장 애니메이션(evidenceDialog.css)은 `.screen` 밖이라 capture()의
+  // 대기 대상이 아니다 — 여기서 따로 끝나기를 기다려 페이드 중간에 찍히지 않게 한다.
+  await page
+    .getByTestId('evidence-dialog-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await evidenceDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'briefing-evidence');
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
 
@@ -89,6 +109,21 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await capture(page, testInfo.project.name, 'discuss');
+
+  // DISCUSS(팝업 열림, T69): "근거 자료 보기"를 눌러 BRIEFING과 같은 EvidenceDialog에서
+  // 자료 4장 전문을 보는 상태를 별도로 캡처한다.
+  await page.getByTestId('open-evidence').click();
+  const discussEvidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(discussEvidenceDialog).toBeVisible();
+  await expect(discussEvidenceDialog.getByTestId('evidence-card-E4')).toBeVisible();
+  await page
+    .getByTestId('evidence-dialog-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await discussEvidenceDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'discuss-evidence');
+  await page.keyboard.press('Escape');
+  await expect(discussEvidenceDialog).toHaveCount(0);
+
   await submitOpinion.click();
 
   // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
@@ -114,9 +149,9 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 왼쪽 열(게이지+체험 종료 CTA)과 오른쪽 열(결론·5석·기록)이 스크롤 없이
-  // 한 화면에 모두 보인다(DESIGN_SPEC.md v1.0 6절 무스크롤). 표결 배지·결론 도장
-  // (T43)이 다 나온 뒤에 캡처한다.
+  // RESULT: 왼쪽 열(TALLY+체험 종료 CTA)과 오른쪽 열(종이 보고서: 결론·도장 칸·
+  // VERDICTS)이 스크롤 없이 한 화면에 모두 보인다(T66). 표결 배지·결론 도장(T43)이
+  // 다 나온 뒤에 캡처한다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
   await expect(page.getByTestId('result-stamp')).toBeVisible();
@@ -125,4 +160,35 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
     .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');
+
+  // 부결 경로(찬성 2석) 스크린샷(T66 완료 확인 "부결 경로 스크린샷 1장 추가"). 같은
+  // 세션을 리셋하지 않고 "체험 종료" 전에 이미 result.png를 찍었으니, 여기서는
+  // 새로 완주해 반대를 확정한다.
+  await page.getByTestId('end-session').click();
+  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
+  // (anonBoard.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·
+  // 반대 3으로 부결이면서 "내 표와 같은 표 2석(CEO)"인 C_Result_Reject.html 조합이
+  // 그대로 재현된다(e2e/stance.spec.ts의 "조건 없이 진행" 경로와 같다).
+  await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('followup-option-1').click();
+  await page.getByTestId('submit-followup').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  await expect(page.getByTestId('result-stamp')).toBeVisible();
+  await page
+    .getByTestId('result-stamp')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(page.getByTestId('end-session')).toBeInViewport();
+  await capture(page, testInfo.project.name, 'result-reject');
 });

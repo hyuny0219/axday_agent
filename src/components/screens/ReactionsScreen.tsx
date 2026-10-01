@@ -19,15 +19,16 @@
 // 빠른 답을 hidden으로 숨기되 선택 상태는 유지). .reactions-screen__scroll 내부
 // 스크롤은 없앴다.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Opinion, RoleStatus, Statement } from '../../domain/types';
+import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
 import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
+import { STANCE_LABEL } from '../moodLabel';
 import { reactionsFor } from '../reactionsFor';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
@@ -48,6 +49,8 @@ export interface ReactionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  stances: Record<ExecMemberId, Stance>;
   /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
   transcriptRevision: number;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
@@ -56,6 +59,8 @@ export interface ReactionsScreenProps {
   onAssistantAction: (event: AssistantActionEvent) => void;
   /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
   assistantAdapter?: AssistantAdapter;
+  /** 실패한 역할만 골라 REACTIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
+  onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
 }
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -75,17 +80,39 @@ export function ReactionsScreen({
   mode,
   roleStatus,
   statements,
+  stances,
   transcriptRevision,
   onSubmitFollowup,
   onKeepPrevious,
   onAssistantAction,
   assistantAdapter,
+  onRetryFailedRoles,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
   const previousConfirmedIds = useMemo(
     () => lastOpinion?.confirmedConditionIds ?? [],
     [lastOpinion],
   );
+  // 라운드당 1회(T65) — server/sessionLimit.ts의 호출 상한이 최종 방어선이다.
+  const [retryUsed, setRetryUsed] = useState(false);
+  // DISCUSS와 같은 이유로(PR #11 Codex 31·32차) AI 비서실장 드로어가 열린 동안 오른쪽 열을
+  // inert로 만든다 — 특히 live의 "응답 없는 임원 다시 요청"이 드로어 뒤에서 Tab으로 눌려
+  // 유료 재요청이 나가지 않게 한다.
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
+  useEffect(() => {
+    infoRef.current?.toggleAttribute('inert', assistantOpen);
+  }, [assistantOpen]);
+
+  function handleRetry() {
+    const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
+    if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
+      return;
+    }
+    setRetryUsed(true);
+    onRetryFailedRoles(failedRoleIds);
+  }
 
   const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
@@ -275,6 +302,7 @@ export function ReactionsScreen({
               transcript={transcript}
               onApplyDraft={handleTextChange}
               onAssistantAction={onAssistantAction}
+              onOpenChange={handleAssistantOpenChange}
               adapter={assistantAdapter}
             />
             <button
@@ -289,7 +317,7 @@ export function ReactionsScreen({
           </div>
         </div>
       </div>
-      <div className="app-body__content screen reactions-screen__info">
+      <div className="app-body__content screen reactions-screen__info" ref={infoRef} data-testid="reactions-info">
         <h2 className="reactions-screen__title">
           이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
         </h2>
@@ -299,7 +327,10 @@ export function ReactionsScreen({
             stage="REACTIONS"
             roleStatus={roleStatus}
             statements={statements}
+            stances={stances}
             variant="reply"
+            onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
+            retryDisabled={retryUsed}
           />
         ) : (
           <ul className="reactions-screen__replies">
@@ -316,6 +347,9 @@ export function ReactionsScreen({
                   <div className="reaction-reply__head">
                     <Avatar memberId={memberId} size="sm" />
                     <h3 className="reaction-reply__member">{MEMBER_LABELS[memberId]}</h3>
+                    <span className="reaction-reply__mood" data-testid={`exec-mood-label-${memberId}`}>
+                      {STANCE_LABEL[stances[memberId]]}
+                    </span>
                   </div>
                   {changed ? (
                     <ul className="reaction-reply__texts">

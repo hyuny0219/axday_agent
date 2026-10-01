@@ -59,16 +59,22 @@ function withParticipant(boardBallots: Ballot[], motion: Motion, vote: Vote): Ba
   return [...boardBallots, participantBallot];
 }
 
-const PARTICIPANT_VOTES: Vote[] = ['YES', 'HOLD', 'NO', 'UNCAST'];
+const PARTICIPANT_VOTES: Vote[] = ['YES', 'NO', 'UNCAST'];
 
-describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
+describe('허용 조건 조합 전수 (24개 × 참가자 3표)', () => {
   it('충돌쌍을 제외한 허용 조합이 24개다', () => {
     expect(allowedCombos.length).toBe(24);
   });
 
-  it('규칙 총괄성·5석·ANON_FULL 부결·세 결론 도달·임원별 YES 존재', () => {
+  it('규칙 총괄성·5석·ANON_FULL 부결·두 결론 도달·임원별 YES·NO 존재', () => {
     const outcomesSeen = new Set<TallyResult['outcome']>();
     const yesSeenByMember: Record<ExecMemberId, boolean> = {
+      CEO: false,
+      CFO: false,
+      CAIO: false,
+      CISO: false,
+    };
+    const noSeenByMember: Record<ExecMemberId, boolean> = {
       CEO: false,
       CFO: false,
       CAIO: false,
@@ -86,14 +92,16 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
         if (ballot && ballot.vote === 'YES') {
           yesSeenByMember[memberId] = true;
         }
+        if (ballot && ballot.vote === 'NO') {
+          noSeenByMember[memberId] = true;
+        }
       }
 
       for (const participantVote of PARTICIPANT_VOTES) {
         const ballots = withParticipant(boardBallots, motion, participantVote);
         const result = tally(ballots);
         outcomesSeen.add(result.outcome);
-        const totalSeats =
-          result.counts.YES + result.counts.NO + result.counts.HOLD + result.counts.UNCAST;
+        const totalSeats = result.counts.YES + result.counts.NO + result.counts.UNCAST;
         expect(totalSeats).toBe(5);
         if (combo.includes('ANON_FULL')) {
           expect(result.outcome).toBe('REJECT');
@@ -101,9 +109,10 @@ describe('허용 조건 조합 전수 (24개 × 참가자 4표)', () => {
       }
     }
 
-    expect(outcomesSeen).toEqual(new Set(['PASS', 'HOLD', 'REJECT']));
+    expect(outcomesSeen).toEqual(new Set(['PASS', 'REJECT']));
     for (const memberId of EXEC_MEMBER_ORDER) {
       expect(yesSeenByMember[memberId]).toBe(true);
+      expect(noSeenByMember[memberId]).toBe(true);
     }
   });
 });
@@ -117,7 +126,8 @@ interface RepresentativePathRow {
   counts: TallyResult['counts'];
 }
 
-// docs/SCENARIO_AI_ASSISTANT.md "대표 경로 — v0.6" 표를 그대로 옮긴다.
+// docs/SCENARIO_ANON_BOARD.md "표결 우선순위"(T62, 보류 제거 후 찬성·반대 두 표) 표를
+// 그대로 옮긴다.
 const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
   {
     label: 'PILOT,SCREEN,TRACE,MEASURE / YES,YES,YES,YES / 참가자 YES',
@@ -125,7 +135,7 @@ const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
     execVotes: ['YES', 'YES', 'YES', 'YES'],
     participantVote: 'YES',
     outcome: 'PASS',
-    counts: { YES: 5, NO: 0, HOLD: 0, UNCAST: 0 },
+    counts: { YES: 5, NO: 0, UNCAST: 0 },
   },
   {
     label: 'PILOT,SCREEN,TRACE,MEASURE / YES,YES,YES,YES / 참가자 NO',
@@ -133,47 +143,47 @@ const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
     execVotes: ['YES', 'YES', 'YES', 'YES'],
     participantVote: 'NO',
     outcome: 'PASS',
-    counts: { YES: 4, NO: 1, HOLD: 0, UNCAST: 0 },
+    counts: { YES: 4, NO: 1, UNCAST: 0 },
   },
   {
-    label: 'SCREEN,TRACE / YES,HOLD,YES,YES / 참가자 YES',
+    label: 'SCREEN,TRACE / YES,NO,YES,YES / 참가자 YES',
     conditionIds: ['SCREEN', 'TRACE'],
-    execVotes: ['YES', 'HOLD', 'YES', 'YES'],
+    execVotes: ['YES', 'NO', 'YES', 'YES'],
     participantVote: 'YES',
     outcome: 'PASS',
-    counts: { YES: 4, NO: 0, HOLD: 1, UNCAST: 0 },
+    counts: { YES: 4, NO: 1, UNCAST: 0 },
   },
   {
-    label: 'SCREEN,TRACE / YES,HOLD,YES,YES / 참가자 HOLD',
+    label: 'SCREEN,TRACE / YES,NO,YES,YES / 참가자 NO',
     conditionIds: ['SCREEN', 'TRACE'],
-    execVotes: ['YES', 'HOLD', 'YES', 'YES'],
-    participantVote: 'HOLD',
+    execVotes: ['YES', 'NO', 'YES', 'YES'],
+    participantVote: 'NO',
     outcome: 'PASS',
-    counts: { YES: 3, NO: 0, HOLD: 2, UNCAST: 0 },
+    counts: { YES: 3, NO: 2, UNCAST: 0 },
   },
   {
-    label: '없음(원안) / YES,HOLD,NO,NO / 참가자 NO',
+    label: '없음(원안) / YES,NO,NO,NO / 참가자 NO',
     conditionIds: [],
-    execVotes: ['YES', 'HOLD', 'NO', 'NO'],
+    execVotes: ['YES', 'NO', 'NO', 'NO'],
     participantVote: 'NO',
     outcome: 'REJECT',
-    counts: { YES: 1, NO: 3, HOLD: 1, UNCAST: 0 },
+    counts: { YES: 1, NO: 4, UNCAST: 0 },
   },
   {
-    label: '없음(원안) / YES,HOLD,NO,NO / 참가자 YES',
+    label: '없음(원안) / YES,NO,NO,NO / 참가자 YES',
     conditionIds: [],
-    execVotes: ['YES', 'HOLD', 'NO', 'NO'],
-    participantVote: 'YES',
-    outcome: 'HOLD',
-    counts: { YES: 2, NO: 2, HOLD: 1, UNCAST: 0 },
-  },
-  {
-    label: 'ANON_FULL / HOLD,NO,NO,NO / 참가자 YES',
-    conditionIds: ['ANON_FULL'],
-    execVotes: ['HOLD', 'NO', 'NO', 'NO'],
+    execVotes: ['YES', 'NO', 'NO', 'NO'],
     participantVote: 'YES',
     outcome: 'REJECT',
-    counts: { YES: 1, NO: 3, HOLD: 1, UNCAST: 0 },
+    counts: { YES: 2, NO: 3, UNCAST: 0 },
+  },
+  {
+    label: 'ANON_FULL / NO,NO,NO,NO / 참가자 YES',
+    conditionIds: ['ANON_FULL'],
+    execVotes: ['NO', 'NO', 'NO', 'NO'],
+    participantVote: 'YES',
+    outcome: 'REJECT',
+    counts: { YES: 1, NO: 4, UNCAST: 0 },
   },
   {
     label: 'PILOT,MEASURE / YES,YES,NO,NO / 참가자 YES',
@@ -181,7 +191,7 @@ const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
     execVotes: ['YES', 'YES', 'NO', 'NO'],
     participantVote: 'YES',
     outcome: 'PASS',
-    counts: { YES: 3, NO: 2, HOLD: 0, UNCAST: 0 },
+    counts: { YES: 3, NO: 2, UNCAST: 0 },
   },
   {
     label: 'PILOT,MEASURE / YES,YES,NO,NO / 참가자 NO',
@@ -189,37 +199,29 @@ const REPRESENTATIVE_PATHS: RepresentativePathRow[] = [
     execVotes: ['YES', 'YES', 'NO', 'NO'],
     participantVote: 'NO',
     outcome: 'REJECT',
-    counts: { YES: 2, NO: 3, HOLD: 0, UNCAST: 0 },
-  },
-  {
-    label: 'PILOT,MEASURE / YES,YES,NO,NO / 참가자 HOLD',
-    conditionIds: ['PILOT', 'MEASURE'],
-    execVotes: ['YES', 'YES', 'NO', 'NO'],
-    participantVote: 'HOLD',
-    outcome: 'HOLD',
-    counts: { YES: 2, NO: 2, HOLD: 1, UNCAST: 0 },
+    counts: { YES: 2, NO: 3, UNCAST: 0 },
   },
   {
     label: 'PILOT,MEASURE / YES,YES,NO,NO / 참가자 UNCAST',
     conditionIds: ['PILOT', 'MEASURE'],
     execVotes: ['YES', 'YES', 'NO', 'NO'],
     participantVote: 'UNCAST',
-    outcome: 'HOLD',
-    counts: { YES: 2, NO: 2, HOLD: 0, UNCAST: 1 },
+    outcome: 'REJECT',
+    counts: { YES: 2, NO: 2, UNCAST: 1 },
   },
   {
-    label: '없음(원안) / YES,HOLD,NO,NO / 참가자 UNCAST',
+    label: '없음(원안) / YES,NO,NO,NO / 참가자 UNCAST',
     conditionIds: [],
-    execVotes: ['YES', 'HOLD', 'NO', 'NO'],
+    execVotes: ['YES', 'NO', 'NO', 'NO'],
     participantVote: 'UNCAST',
-    outcome: 'HOLD',
-    counts: { YES: 1, NO: 2, HOLD: 1, UNCAST: 1 },
+    outcome: 'REJECT',
+    counts: { YES: 1, NO: 3, UNCAST: 1 },
   },
 ];
 
-describe('문서 대표 경로표 — v0.6 (12행)', () => {
+describe('문서 대표 경로표 — T62 (11행)', () => {
   it('테스트 케이스 수가 문서 표 행 수와 같다', () => {
-    expect(REPRESENTATIVE_PATHS.length).toBe(12);
+    expect(REPRESENTATIVE_PATHS.length).toBe(11);
   });
 
   it.each(REPRESENTATIVE_PATHS)(
@@ -246,7 +248,7 @@ describe('countVotesChangedByConditions — 내 조건이 바꾼 표 게이지(T
     expect(countVotesChangedByConditions(scenario, motion)).toBe(0);
   });
 
-  it('PILOT,MEASURE는 문서 표 기준 CFO 1명만 바뀐다(HOLD→YES)', () => {
+  it('PILOT,MEASURE는 문서 표 기준 CFO 1명만 바뀐다(NO→YES)', () => {
     const motion = buildMotion(['PILOT', 'MEASURE']);
     expect(countVotesChangedByConditions(scenario, motion)).toBe(1);
   });
@@ -291,15 +293,15 @@ describe('explainBoard — 이사회 한 장 요약의 임원별 이유·바뀐 
   it('조건 없음(원안): 자기 자신과 비교하므로 아무도 바뀌지 않는다', () => {
     const motion = buildMotion([]);
     const rows = explainBoard(scenario, motion);
-    expect(rows.map((r) => r.vote)).toEqual(['YES', 'HOLD', 'NO', 'NO']);
+    expect(rows.map((r) => r.vote)).toEqual(['YES', 'NO', 'NO', 'NO']);
     expect(rows.every((r) => !r.changed)).toBe(true);
   });
 
-  it('ANON_FULL: CEO·CFO가 바뀌고 CAIO·CISO는 원안과 같은 NO라 바뀌지 않는다', () => {
+  it('ANON_FULL: CEO만 바뀌고 CFO·CAIO·CISO는 원안과 같은 NO라 바뀌지 않는다', () => {
     const motion = buildMotion(['ANON_FULL']);
     const rows = explainBoard(scenario, motion);
-    expect(rows.map((r) => r.vote)).toEqual(['HOLD', 'NO', 'NO', 'NO']);
-    expect(rows.map((r) => r.changed)).toEqual([true, true, false, false]);
+    expect(rows.map((r) => r.vote)).toEqual(['NO', 'NO', 'NO', 'NO']);
+    expect(rows.map((r) => r.changed)).toEqual([true, false, false, false]);
     expect(rows.every((r) => r.reason?.includes('완전 익명 — 추적 불가'))).toBe(true);
   });
 });
@@ -323,7 +325,7 @@ describe('participantDecisive — 내 표의 결정력(T48)', () => {
     const motion = buildMotion(['PILOT', 'MEASURE']);
     const boardBallots = decideBoard(scenario, motion);
     const ballots = withParticipant(boardBallots, motion, 'UNCAST');
-    expect(tally(ballots).outcome).toBe('HOLD');
+    expect(tally(ballots).outcome).toBe('REJECT');
     expect(participantDecisive(ballots)).toBe(true);
   });
 });

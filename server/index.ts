@@ -27,6 +27,7 @@ import {
 } from './auth';
 import { loadSessionLimitConfig, SessionLimitRegistry, type CallKind } from './sessionLimit';
 import { systemClock } from './clock';
+import { flushSessionSummary } from './log';
 import { tryServeStatic } from './static';
 
 const config = loadConfig();
@@ -42,7 +43,8 @@ const provider: ModelProvider =
 const requestIds = new RequestIdRegistry();
 const accessTokenConfig = loadAccessTokenConfig();
 const sessionLimitConfig = loadSessionLimitConfig();
-const sessionLimitRegistry = new SessionLimitRegistry(systemClock, sessionLimitConfig);
+const sessionLimitRegistry = new SessionLimitRegistry(systemClock, sessionLimitConfig, flushSessionSummary);
+const roundVoteTimeouts = { roundTimeoutMs: config.roundTimeoutMs, reactionTimeoutMs: config.reactionTimeoutMs };
 
 /** 엔드포인트 → 세션당 호출 상한을 셀 때 쓰는 종류. */
 const CALL_KIND_BY_ENDPOINT: Record<string, CallKind> = {
@@ -112,6 +114,7 @@ async function handleOpsProbe(_req: IncomingMessage, res: ServerResponse): Promi
     provider,
     config: { provider: config.provider, modelId: config.modelId },
     clock: systemClock,
+    timeoutMs: config.roundTimeoutMs,
   });
   sendJson(res, 200, result);
 }
@@ -129,6 +132,9 @@ function handleHealth(req: IncomingMessage, res: ServerResponse): void {
     provider: config.provider,
     modelId: config.modelId,
     promptVersion: config.promptVersion,
+    // T65: 클라이언트(live.ts)가 8초를 하드코딩하지 않고 이 값을 읽어 쓴다.
+    roundTimeoutMs: config.roundTimeoutMs,
+    reactionTimeoutMs: config.reactionTimeoutMs,
   });
 }
 
@@ -197,7 +203,7 @@ const routes: Record<string, RouteHandler> = {
     handleBoardEndpoint(
       'board.round',
       roundRequestSchema,
-      (data) => handleRound(data, { provider }),
+      (data) => handleRound(data, { provider, timeouts: roundVoteTimeouts }),
       req,
       res,
     ),
@@ -205,7 +211,7 @@ const routes: Record<string, RouteHandler> = {
     handleBoardEndpoint(
       'board.vote',
       voteRequestSchema,
-      (data) => handleVote(data, { provider }),
+      (data) => handleVote(data, { provider, timeoutMs: roundVoteTimeouts.roundTimeoutMs }),
       req,
       res,
     ),

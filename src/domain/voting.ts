@@ -122,7 +122,7 @@ export function explainBoard(scenario: Scenario, motion: Motion): BoardExplanati
 
 /**
  * 참가자 표가 결론을 정했는지(T48, "이사회 한 장 요약" 결정력 문구). 참가자 표를
- * YES/NO/HOLD/UNCAST 각각으로 바꿔 tally했을 때 outcome이 실제와 하나라도 다르면
+ * YES/NO/UNCAST 각각으로 바꿔 tally했을 때 outcome이 실제와 하나라도 다르면
  * true다. 참가자 좌석이 없으면(결과 전) false.
  */
 export function participantDecisive(ballots: Ballot[]): boolean {
@@ -131,7 +131,7 @@ export function participantDecisive(ballots: Ballot[]): boolean {
     return false;
   }
   const actualOutcome = tally(ballots).outcome;
-  const alternativeVotes: Vote[] = ['YES', 'NO', 'HOLD', 'UNCAST'];
+  const alternativeVotes: Vote[] = ['YES', 'NO', 'UNCAST'];
   return alternativeVotes.some((vote) => {
     const alternativeBallots = ballots.map((b) =>
       b.memberId === 'PARTICIPANT' ? { ...b, vote } : b,
@@ -141,27 +141,23 @@ export function participantDecisive(ballots: Ballot[]): boolean {
 }
 
 export interface TallyResult {
-  outcome: 'PASS' | 'HOLD' | 'REJECT';
-  counts: { YES: number; NO: number; HOLD: number; UNCAST: number };
+  outcome: 'PASS' | 'REJECT';
+  counts: { YES: number; NO: number; UNCAST: number };
   /** 참가자가 아니라 임원 좌석에 UNCAST가 있는지(응답 장애로 판단이 제한됐는지). */
   limitedByUnavailable: boolean;
 }
 
-/** 5석 표를 집계한다. YES>=3 가결, NO>=3 부결, 그 외 보류. UNCAST는 별도 집계한다. */
+/** 5석 표를 집계한다. YES>=3(5석 과반)이면 가결, 그 외(UNCAST로 과반에 못 미친 경우 포함)는
+ * 부결이다. UNCAST는 별도 집계한다. */
 export function tally(ballots: Ballot[]): TallyResult {
   if (ballots.length !== 5) {
     throw new Error('의석은 항상 5석이어야 합니다.');
   }
-  const counts = { YES: 0, NO: 0, HOLD: 0, UNCAST: 0 };
+  const counts = { YES: 0, NO: 0, UNCAST: 0 };
   for (const ballot of ballots) {
     counts[ballot.vote] += 1;
   }
-  let outcome: TallyResult['outcome'] = 'HOLD';
-  if (counts.YES >= 3) {
-    outcome = 'PASS';
-  } else if (counts.NO >= 3) {
-    outcome = 'REJECT';
-  }
+  const outcome: TallyResult['outcome'] = counts.YES >= 3 ? 'PASS' : 'REJECT';
   const limitedByUnavailable = ballots.some(
     (ballot) => ballot.memberId !== 'PARTICIPANT' && ballot.vote === 'UNCAST',
   );
@@ -208,8 +204,8 @@ export function castParticipant(
 /**
  * finalMotion 기준으로 아직 도착하지 않은 임원 좌석·참가자 좌석을 UNCAST(source:
  * 'unavailable')로 채워 5석을 완성한다. 다른 motionHash의 표는 재사용하지 않고(다른
- * 안건에 대한 표는 버리고) 그 좌석도 UNCAST로 채운다. HOLD나 사전 표로 대체하지
- * 않는다(AGENT_BOARDROOM_SPEC.md 6장). FINALIZE_RESULT가 쓴다.
+ * 안건에 대한 표는 버리고) 그 좌석도 UNCAST로 채운다. 임의로 YES·NO나 사전 표로
+ * 대체하지 않는다(AGENT_BOARDROOM_SPEC.md 6장). FINALIZE_RESULT가 쓴다.
  */
 export function fillMissingBallots(
   ballots: Ballot[],

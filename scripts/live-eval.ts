@@ -463,7 +463,7 @@ function computeHeuristics(rows: EvalRow[]): HeuristicReport {
 }
 
 function voteDistribution(rows: EvalRow[], pathId: string): string {
-  const counts: Record<string, number> = { YES: 0, HOLD: 0, NO: 0, 실패: 0 };
+  const counts: Record<string, number> = { YES: 0, NO: 0, 실패: 0 };
   for (const row of rows) {
     if (row.stage !== 'VOTE' || row.pathId !== pathId) continue;
     if (row.status === 'failed' || !row.vote) {
@@ -472,7 +472,7 @@ function voteDistribution(rows: EvalRow[], pathId: string): string {
       counts[row.vote] = (counts[row.vote] ?? 0) + 1;
     }
   }
-  return `YES ${counts.YES}·HOLD ${counts.HOLD}·NO ${counts.NO}·실패 ${counts['실패']}`;
+  return `YES ${counts.YES}·NO ${counts.NO}·실패 ${counts['실패']}`;
 }
 
 function averageLatency(rows: EvalRow[], stage: EvalRow['stage'], pathId: string): number {

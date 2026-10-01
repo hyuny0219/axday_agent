@@ -64,7 +64,7 @@ describe('buildResultSummary — scripted', () => {
     const summary = buildResultSummary(scenario, session);
 
     expect(summary.tally.outcome).toBe('PASS');
-    expect(summary.tally.counts).toEqual({ YES: 3, NO: 2, HOLD: 0, UNCAST: 0 });
+    expect(summary.tally.counts).toEqual({ YES: 3, NO: 2, UNCAST: 0 });
     expect(summary.conditionLabels).toEqual(['한 게시판에서 시범', '운영 효과 측정 후 확대']);
     expect(summary.execRows.map((r) => r.vote)).toEqual(['YES', 'YES', 'NO', 'NO']);
     expect(summary.execRows.map((r) => r.changed)).toEqual([false, true, false, false]);

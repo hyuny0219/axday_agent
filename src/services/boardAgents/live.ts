@@ -2,16 +2,21 @@
 // 호출해 서버가 검증까지 끝낸 응답만 Statement/Ballot으로 옮긴다. 실제 판단은 서버(T28
 // handlers)가 하며 이 파일은 요청 조립·시간 예산·응답 형태 변환만 담당한다.
 //
-// 대기 시간은 min(8000ms, ctx.budgetMs)를 넘기지 않는다(스펙 6장 "실제 허용 대기는 min(8초,
-// 남은 세션 시간)"). ctx.signal이 먼저 abort되면(세션 리셋 등) 그 즉시 요청도 취소한다.
-// 서버 응답이 배열이 아니거나 개별 항목이 예상한 필드를 갖추지 못하면(네트워크 중간 오류·
-// 스키마 변경 등) 해당 역할을 failed로 남길 뿐 예외를 던지지 않는다 — 늦거나 깨진 응답으로
-// 세션이 멈추지 않게 한다.
+// 대기 시간은 stage별 상한(OPINIONS·VOTE 8초, REACTIONS·FOLLOWUP 12초, T65)과 ctx.budgetMs
+// 중 작은 쪽을 넘기지 않는다(스펙 6장). 값은 서버 /api/health가 내려준 것을 services/
+// transport/roundTimeouts.ts가 캐시해 두며, 하드코딩하지 않는다. ctx.signal이 먼저
+// abort되면(세션 리셋 등) 그 즉시 요청도 취소한다. 서버 응답이 배열이 아니거나 개별 항목이
+// 예상한 필드를 갖추지 못하면(네트워크 중간 오류·스키마 변경 등) 해당 역할을 failed로 남길
+// 뿐 예외를 던지지 않는다 — 늦거나 깨진 응답으로 세션이 멈추지 않게 한다.
+//
+// ctx.roleIds가 있으면("다시 요청"/"미표결 임원 다시 요청", T65) 그 역할만 요청하고 응답도
+// 그 역할만큼만 만든다 — 이미 성공한 역할의 발언·표를 건드리지 않는다(runner.ts가 병합한다).
 
 import type { ExecMemberId, Vote } from '../../content/types';
-import type { StatementStage } from '../../domain/types';
+import type { Stance, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { accessHeaders } from '../transport/accessToken';
+import { getRoundTimeouts, TRANSPORT_MARGIN_MS } from '../transport/roundTimeouts';
 import type {
   BallotOutcome,
   BoardAgentsAdapter,
@@ -19,11 +24,25 @@ import type {
   StatementOutcome,
 } from './types';
 
-/** 임원 라운드별 최대 대기 시간(AGENT_BOARDROOM_SPEC.md 6장). */
+/** OPINIONS 단계의 기본 최대 대기 시간(호환용 상수, tests/services/live.test.ts가 쓴다).
+ * 실제 값은 서버 응답을 캐시한 getRoundTimeouts()에서 읽는다. */
 export const MAX_ROUND_TIMEOUT_MS = 8000;
 
-function timeoutMsFor(ctx: BoardAgentsContext): number {
-  return Math.max(0, Math.min(MAX_ROUND_TIMEOUT_MS, ctx.budgetMs));
+/** TRANSPORT_MARGIN_MS는 orchestrator/runner.ts도 표결 최초 대기를 계산할 때 써야 해서
+ * (PR #11 Codex 25차 P2) transport/roundTimeouts.ts로 옮겼다 — runner.ts가 fetch 전용인
+ * 이 어댑터 파일을 직접 import하지 않아도 되게 하려는 목적이다. 여기서는 기존 import 경로를
+ * 쓰던 코드(tests/services/live.test.ts 등)가 깨지지 않도록 그대로 재export한다. */
+export { TRANSPORT_MARGIN_MS };
+
+/** REACTIONS·FOLLOWUP만 더 긴 예외 타임아웃을 쓴다(스펙 6장). VOTE는 stage 인자 없이 부르며
+ * OPINIONS와 같은 기본 상한을 쓴다. */
+function stageTimeoutMs(stage?: StatementStage): number {
+  const timeouts = getRoundTimeouts();
+  return stage === 'REACTIONS' || stage === 'FOLLOWUP' ? timeouts.reactionTimeoutMs : timeouts.roundTimeoutMs;
+}
+
+function timeoutMsFor(ctx: BoardAgentsContext, stage?: StatementStage): number {
+  return Math.max(0, Math.min(stageTimeoutMs(stage), ctx.budgetMs));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -35,11 +54,11 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 function isVote(value: unknown): value is Vote {
-  return value === 'YES' || value === 'HOLD' || value === 'NO';
+  return value === 'YES' || value === 'NO';
 }
 
-function allFailed(reason: string): Array<{ roleId: ExecMemberId; status: 'failed'; failReason: string }> {
-  return EXEC_MEMBER_ORDER.map((roleId) => ({ roleId, status: 'failed' as const, failReason: reason }));
+function isStance(value: unknown): value is Stance {
+  return value === 'FOR' || value === 'AGAINST' || value === 'UNDECIDED';
 }
 
 function findEntry(raw: unknown[], roleId: ExecMemberId): Record<string, unknown> | undefined {
@@ -48,7 +67,12 @@ function findEntry(raw: unknown[], roleId: ExecMemberId): Record<string, unknown
 }
 
 /** ctx.signal(외부 abort)과 자체 timeoutMs 중 먼저 일어나는 쪽으로 fetch를 취소한다. */
-async function postBoardRequest(path: string, body: unknown, ctx: BoardAgentsContext): Promise<unknown> {
+async function postBoardRequest(
+  path: string,
+  body: unknown,
+  ctx: BoardAgentsContext,
+  timeoutMs: number,
+): Promise<unknown> {
   const controller = new AbortController();
   const onExternalAbort = () => controller.abort();
   if (ctx.signal.aborted) {
@@ -56,7 +80,7 @@ async function postBoardRequest(path: string, body: unknown, ctx: BoardAgentsCon
   } else {
     ctx.signal.addEventListener('abort', onExternalAbort, { once: true });
   }
-  const timer = setTimeout(() => controller.abort(), timeoutMsFor(ctx));
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(path, {
       method: 'POST',
@@ -93,7 +117,7 @@ function latestParticipantOpinion(ctx: BoardAgentsContext): string | undefined {
   return opinions[opinions.length - 1]?.originalText;
 }
 
-function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage) {
+function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutMs: number) {
   return {
     sessionId: ctx.sessionId,
     requestId: ctx.requestId,
@@ -102,7 +126,8 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage) {
     transcript: transcriptPayload(ctx),
     participantOpinion: latestParticipantOpinion(ctx),
     scenarioId: ctx.scenario.id,
-    budgetMs: timeoutMsFor(ctx),
+    budgetMs: timeoutMs,
+    roleIds: ctx.roleIds,
   };
 }
 
@@ -115,13 +140,15 @@ function toStatementOutcome(
 ): StatementOutcome {
   const statement = entry.statement;
   if (entry.status === 'answered' && isRecord(statement)) {
-    const { message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds } = statement;
+    const { message, evidenceIds, referencedStatementIds, concerns, suggestedConditionIds, stance } =
+      statement;
     if (
       typeof message === 'string' &&
       isStringArray(evidenceIds) &&
       isStringArray(referencedStatementIds) &&
       isStringArray(concerns) &&
-      isStringArray(suggestedConditionIds)
+      isStringArray(suggestedConditionIds) &&
+      isStance(stance)
     ) {
       return {
         roleId,
@@ -135,6 +162,7 @@ function toStatementOutcome(
           referencedStatementIds,
           concerns,
           suggestedConditionIds,
+          stance,
           source: 'live',
           createdAt: 0,
         },
@@ -145,27 +173,40 @@ function toStatementOutcome(
   return { roleId, status: 'failed', failReason };
 }
 
-function buildRoundOutcomes(raw: unknown, stage: StatementStage): StatementOutcome[] {
+/** roleIds가 있으면 그 역할만큼만 outcome을 만든다(재요청). 없으면 임원 4명 전체를
+ * 기준으로 만든다(기존 동작) — 응답에 없는 역할은 failed(invalid_response)로 채운다. */
+function buildRoundOutcomes(raw: unknown, stage: StatementStage, roleIds?: ExecMemberId[]): StatementOutcome[] {
+  const targets = roleIds ?? EXEC_MEMBER_ORDER;
   if (!Array.isArray(raw)) {
-    return allFailed('invalid_response');
+    return targets.map((roleId) => ({ roleId, status: 'failed' as const, failReason: 'invalid_response' }));
   }
-  return EXEC_MEMBER_ORDER.map((roleId) => {
+  return targets.map((roleId) => {
     const entry = findEntry(raw, roleId);
     return entry ? toStatementOutcome(roleId, entry, stage) : { roleId, status: 'failed', failReason: 'invalid_response' };
   });
 }
 
 async function runRoundRequest(ctx: BoardAgentsContext, stage: StatementStage): Promise<StatementOutcome[]> {
+  const timeoutMs = timeoutMsFor(ctx, stage);
   let raw: unknown;
   try {
-    raw = await postBoardRequest('/api/board/round', buildRoundBody(ctx, stage), ctx);
+    raw = await postBoardRequest(
+      '/api/board/round',
+      buildRoundBody(ctx, stage, timeoutMs),
+      ctx,
+      timeoutMs + TRANSPORT_MARGIN_MS,
+    );
   } catch {
-    return allFailed('timeout');
+    return (ctx.roleIds ?? EXEC_MEMBER_ORDER).map((roleId) => ({
+      roleId,
+      status: 'failed' as const,
+      failReason: 'timeout',
+    }));
   }
-  return buildRoundOutcomes(raw, stage);
+  return buildRoundOutcomes(raw, stage, ctx.roleIds);
 }
 
-function buildVoteBody(ctx: BoardAgentsContext) {
+function buildVoteBody(ctx: BoardAgentsContext, timeoutMs: number) {
   const motion = ctx.session.finalMotion;
   if (!motion) {
     throw new Error('no_final_motion');
@@ -175,7 +216,7 @@ function buildVoteBody(ctx: BoardAgentsContext) {
     requestId: ctx.requestId,
     mode: 'live' as const,
     scenarioId: ctx.scenario.id,
-    budgetMs: timeoutMsFor(ctx),
+    budgetMs: timeoutMs,
     transcript: transcriptPayload(ctx),
     motion: {
       id: motion.id,
@@ -184,6 +225,7 @@ function buildVoteBody(ctx: BoardAgentsContext) {
       effectiveConditionIds: motion.effectiveConditionIds,
       executionMode: motion.executionMode,
     },
+    roleIds: ctx.roleIds,
   };
 }
 
@@ -229,19 +271,26 @@ function toBallotOutcome(
 }
 
 async function runFinalVotesRequest(ctx: BoardAgentsContext): Promise<BallotOutcome[]> {
+  const targets = ctx.roleIds ?? EXEC_MEMBER_ORDER;
   if (!ctx.session.finalMotion) {
-    return allFailed('no_final_motion');
+    return targets.map((roleId) => ({ roleId, status: 'failed' as const, failReason: 'no_final_motion' }));
   }
+  const timeoutMs = timeoutMsFor(ctx);
   let raw: unknown;
   try {
-    raw = await postBoardRequest('/api/board/vote', buildVoteBody(ctx), ctx);
+    raw = await postBoardRequest(
+      '/api/board/vote',
+      buildVoteBody(ctx, timeoutMs),
+      ctx,
+      timeoutMs + TRANSPORT_MARGIN_MS,
+    );
   } catch {
-    return allFailed('timeout');
+    return targets.map((roleId) => ({ roleId, status: 'failed' as const, failReason: 'timeout' }));
   }
   if (!Array.isArray(raw)) {
-    return allFailed('invalid_response');
+    return targets.map((roleId) => ({ roleId, status: 'failed' as const, failReason: 'invalid_response' }));
   }
-  return EXEC_MEMBER_ORDER.map((roleId) => {
+  return targets.map((roleId) => {
     const entry = findEntry(raw, roleId);
     return entry ? toBallotOutcome(roleId, entry, ctx) : { roleId, status: 'failed', failReason: 'invalid_response' };
   });

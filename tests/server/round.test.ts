@@ -2,7 +2,7 @@
 // 준수, 참가자 발언 프롬프트 주입 격리. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
 import { describe, expect, it } from 'vitest';
-import { handleRound, type RoundRequest } from '../../server/handlers/round';
+import { handleRound, roundRequestSchema, type RoundRequest } from '../../server/handlers/round';
 import { createMockProvider } from '../../server/providers/mock';
 import type { ModelProvider } from '../../server/providers/types';
 import { PROMPT_VERSION } from '../../server/prompts/version';
@@ -87,6 +87,7 @@ describe('handleRound with the mock provider', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'FOR',
           },
           modelId: 'fake-model',
         };
@@ -119,5 +120,110 @@ describe('handleRound with the mock provider', () => {
     const provider = createMockProvider('mock-model');
     const input = baseRoundInput({ requestId: 'req-6', scenarioId: 'not-a-scenario' });
     await expect(handleRound(input, { provider })).rejects.toThrow('unknown_scenario');
+  });
+
+  it('roleIds가 있으면 그 역할만 호출하고 응답도 그 역할만큼만 돌아온다("다시 요청", T65)', async () => {
+    const calls: string[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        calls.push(envelope.roleId);
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재요청 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-1', roleIds: ['CFO', 'CAIO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+
+    expect(calls.sort()).toEqual(['CAIO', 'CFO']);
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.roleId).sort()).toEqual(['CAIO', 'CFO']);
+    expect(results.every((r) => r.status === 'answered')).toBe(true);
+  });
+
+  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 12000)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 8000)를 쓴다(T65)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '괜찮습니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+
+    await handleRound(
+      baseRoundInput({ requestId: 'req-timeout-opinions', stage: 'OPINIONS', budgetMs: 999_999, roleIds: ['CEO'] }),
+      { provider: fakeProvider },
+    );
+    await handleRound(
+      baseRoundInput({ requestId: 'req-timeout-reactions', stage: 'REACTIONS', budgetMs: 999_999, roleIds: ['CEO'] }),
+      { provider: fakeProvider },
+    );
+
+    expect(timeoutsSeen).toEqual([8000, 12000]);
+  });
+
+  it('deps.timeouts로 상한을 바꿀 수 있다(T65)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '괜찮습니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    await handleRound(
+      baseRoundInput({
+        requestId: 'req-custom-timeout',
+        stage: 'REACTIONS',
+        budgetMs: 999_999,
+        roleIds: ['CEO'],
+      }),
+      { provider: fakeProvider, timeouts: { roundTimeoutMs: 3000, reactionTimeoutMs: 5000 } },
+    );
+    expect(timeoutsSeen).toEqual([5000]);
+  });
+});
+
+describe('roundRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
+  it('중복 역할·4개 초과는 거부하고, 고유한 1~4개만 받는다', () => {
+    const base = baseRoundInput({ requestId: 'req-schema' });
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CEO'] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CEO'] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: [] }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CFO', 'CAIO'] }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO'] }).success).toBe(true);
   });
 });

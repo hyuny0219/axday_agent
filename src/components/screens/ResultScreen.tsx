@@ -1,68 +1,63 @@
-// 결과 화면: 결론 → 동등한 5석 카드 → 내 원문·반영 조건 → 남은 과제 → AI가 도운 일
-// 순서로 보여준다(docs/SCENARIO_AI_ASSISTANT.md "결과와 AI 효율 체험"). '체험 종료'는
-// 운영자 새 체험(OPERATOR_RESET, 확인 절차 포함) 없이 바로 세션을 초기화하고
-// ATTRACT로 돌아간다. 'AI가 도운 일'은 session.assistantActions(AssistantPanel이 남긴
-// 레이블)이 있을 때만 줄을 보여주고 없으면 미사용 문구만 보여준다(T12). 예전의 고정 줄
-// "자료 4장 자동 정리 데모 표시"는 그 카드가 T52에서 제거된 뒤에도 남아 표시하지 않은
-// 것을 표시했다고 말했으므로 PR #10 Codex 27차 검토(P2)에서 뺐다.
-// T31: 그 레이블은 이제 mode·evidenceIds·applied를 담은 JSON(assistantLog.ts)이라, live
-// 호출은 "(실제 AI 호출)"을 붙이고 scripted는 붙이지 않는다 — describeAdditionalHelp가
-// 그 구분을 전담하므로 이 화면은 여전히 호출만 한다.
-// T30: live 모드 임원 좌석에는 판단 근거(ballot.reason, ≤160자)와 남은 우려를 더하고,
-// UNCAST 좌석은 사유를 함께 보여준다. 응답 장애로 판단이 제한됐으면(tally().limitedBy
-// Unavailable) 공통 안내를 띄운다. scripted 표에는 reason이 없으므로 그대로 조용하다.
-// T45(조종석 배치): 왼쪽 열은 게이지 + "체험 종료" CTA만(무대 위 배지·도장은 StageBand가
-// 그린다), 오른쪽 열은 결론·5석·기록 영역을 담는다(DESIGN_SPEC.md v1.0 6절 표).
-// T48: 기록 영역은 "이사회 한 장 요약"(2/3, result-summary — buildResultSummary가
-// 집계·조건·임원별 이유와 바뀐 표·내 표의 결정력·내 원문을 계산)과 보조 패널(1/3: 남은
-// 과제 + AI가 도운 일)로 나뉜다. 'AI가 도운 일' 하나만 내부 스크롤(overflow-y:auto +
-// 아래쪽 페이드)이고, 요약 패널의 행·원문은 각각 1~2줄로 클램프한다(result.css).
+// 결과 화면: 오른쪽 열은 종이 보고서 한 장이다(T66, docs/design/mockups/C_Result.html·
+// C_Result_Reject.html). 위쪽(result-report__top)은 왼쪽 결론·조건·원문 카드와 오른쪽
+// 200px 도장 칸으로 나뉘고, 아래는 VERDICTS 패널(임원별 판단 5행 + 남은 과제·AI가 도운
+// 일 한 줄씩 + "+6 MONTHS")이 전체 폭을 채운다. T64가 남겼던 동일 크기 5석 카드는
+// 무대 명패(StageBand VoteBadge)가 이미 표 배지를 보여줘 중복이라 이 카드에서 뺐다 —
+// DESIGN_SPEC.md 3장의 그 규칙은 v1.1에서 폐기다(9절 참고). '체험 종료'는 운영자 새
+// 체험(OPERATOR_RESET, 확인 절차 포함) 없이 바로 세션을 초기화하고 ATTRACT로 돌아간다.
+// 'AI가 도운 일'은 session.assistantActions(AssistantPanel이 남긴 레이블)이 있을
+// 때만 항목을 이어붙이고 없으면 미사용 문구만 보여준다(T12). live 모드 VERDICTS 행은
+// 판단 근거(ballot.reason, ≤160자)를 그대로 보여주고, UNCAST 행은 unavailableReason을
+// 함께 보여준다(T30). 응답 장애로 판단이 제한됐으면(tally().limitedByUnavailable) 공통
+// 안내를 띄운다. live 호출 여부는 describeAdditionalHelp가 "(실제 AI 호출)" 접미어로
+// 구분한다(T31).
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Ballot, MemberId, Session } from '../../domain/types';
-import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, tally } from '../../domain/voting';
+import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
 import { buildResultSummary } from '../resultSummary';
-import { SEAT_REVEAL_STEP_SECONDS } from '../resultStamp';
+import { buildMinutes, type RoundLogEntry } from '../minutes';
+import { MinutesPanel } from '../parts/MinutesPanel';
+import {
+  PERSUASION_STAMP_DELAY_SECONDS,
+  STAMP_DELAY_SECONDS,
+  computePersuasion,
+  computeResultStamp,
+} from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
-import { Avatar } from '../parts/Avatar';
-// 결론 도장(result-stamp)은 T44에서 무대 열 우하단으로 옮겨 AppShell이 StageBand에
-// 넘긴다(components/resultStamp.ts computeResultStamp). 이 화면은 더는 도장을
-// 직접 그리지 않는다 — 5석·게이지·기록만 담당한다.
+// 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
+// 스킨)에서 오른쪽 종이 보고서의 전용 칸(200px)으로 옮겼다(docs/design/mockups/README.md
+// "도장은 결과 화면 오른쪽 종이 보고서 우상단에 — 무대에는 표 배지만"). 이 화면이
+// components/resultStamp.ts의 순수 함수를 직접 불러 도장 문구·타이밍을 계산한다.
 import '../../styles/screens/result.css';
 import '../../styles/screens/live.css';
 
 export interface ResultScreenProps {
   scenario: Scenario;
   session: Session;
+  /** 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기")이 buildMinutes에 넘길
+   * 라운드별 임원 응답 기록. App.tsx가 SET_ROLE_STATUS dispatch를 가로채 쌓아 둔다. */
+  roundLog: RoundLogEntry[];
   onReset: () => void;
 }
 
 const SEAT_ORDER: readonly MemberId[] = [...EXEC_MEMBER_ORDER, 'PARTICIPANT'];
 
-function seatLabel(memberId: MemberId): string {
-  if (memberId === 'PARTICIPANT') {
-    return '나 · 특별 이사';
-  }
-  return MEMBER_LABELS[memberId];
-}
-
 const VOTE_TEXT: Record<Ballot['vote'], string> = {
   YES: '찬성',
-  HOLD: '보류',
   NO: '반대',
   UNCAST: '미표결',
 };
 
-// 반대·보류·미표결은 색만으로 구분하지 않고 아이콘을 더한다(DESIGN_SPEC.md 4장
-// "반대·보류·미표결은 색+텍스트+아이콘"). 찬성은 색+텍스트만으로도 구분에 문제가
+// 반대·미표결은 색만으로 구분하지 않고 아이콘을 더한다(DESIGN_SPEC.md 4장
+// "반대·미표결은 색+텍스트+아이콘"). 찬성은 색+텍스트만으로도 구분에 문제가
 // 없어 아이콘을 더하지 않는다. 장식이므로 스크린리더에는 노출하지 않는다
 // (텍스트 라벨이 이미 접근 가능한 이름을 제공한다).
 const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
-  HOLD: '⏸',
   NO: '✕',
   UNCAST: '–',
 };
@@ -72,7 +67,7 @@ const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
   scripted: '사전 구성 시뮬레이션 결과입니다.',
 };
 
-export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) {
+export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
 
   const additionalHelp = useMemo(
@@ -82,29 +77,39 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
 
+  // 결론 도장(T44/T64): PASS·REJECT일 때만 문구가 있다(finalMotion 없으면 null이지만
+  // RESULT는 항상 finalMotion이 있다, 아래 이른 반환 참고).
+  const resultStamp = useMemo(() => computeResultStamp(session), [session]);
+
+  // "설득 도장" 근거 한 줄(T63, v1.0 9절). 참가자 좌석이 UNCAST면(가능한 경우) 계산하지
+  // 않는다(computePersuasion이 null을 돌려준다).
+  const persuasion = useMemo(() => computePersuasion(session), [session]);
+
   const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions), [session.opinions]);
   const includedIds = useMemo(
     () => allConfirmedIds.filter((id) => finalMotion?.effectiveConditionIds.includes(id) ?? false),
     [allConfirmedIds, finalMotion],
   );
 
-  // "이사회 한 장 요약"(v1.0 9절, T48): finalMotion이 있을 때만 계산한다(buildResultSummary는
-  // 없으면 던진다). RESULT는 항상 finalMotion이 있으므로 안전하다(아래 이른 반환 참고).
+  // "이사회 한 장 요약"(v1.0 9절, T48) → VERDICTS 패널(T66): finalMotion이 있을 때만
+  // 계산한다(buildResultSummary는 없으면 던진다). RESULT는 항상 finalMotion이 있으므로
+  // 안전하다(아래 이른 반환 참고).
   const resultSummary = useMemo(
     () => (finalMotion ? buildResultSummary(scenario, session) : null),
     [scenario, session, finalMotion],
   );
 
-  // scripted에서만 계산한다(조건 없는 안건의 임원 표와 실제 표를 비교). live 표는 임원
-  // 에이전트가 실제로 판단한 결과라 "조건 없는 안건" 가정 자체가 성립하지 않는다.
-  const votesChangedByConditions = useMemo(() => {
-    if (session.mode !== 'scripted' || !finalMotion) {
-      return null;
-    }
-    return countVotesChangedByConditions(scenario, finalMotion);
-  }, [session.mode, scenario, finalMotion]);
+  // 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기"): 화면 로컬 상태로 오른쪽
+  // 열의 기록 영역(VERDICTS 패널)만 "이사회 한 장 요약" ↔ 전문으로 바꾼다. 세션
+  // 상태는 건드리지 않는다. 전문 항목은 다른 화면의 "발언 흐름" 패널과 같은 순수
+  // 함수(buildMinutes)로 계산해 항목 수·순서가 어긋나지 않는다.
+  const [showTranscript, setShowTranscript] = useState(false);
+  const transcriptEntries = useMemo(
+    () => buildMinutes(session, scenario, roundLog),
+    [session, scenario, roundLog],
+  );
 
-  // 클릭·키 입력으로 배지·도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
+  // 클릭·키 입력으로 도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
   // 뒤에는 리스너를 더 둘 이유가 없어 정리한다.
   const [skip, setSkip] = useState(false);
   useEffect(() => {
@@ -127,147 +132,228 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
   }
 
   const conclusion =
-    session.outcome === 'PASS'
-      ? scenario.resultCopy.pass
-      : session.outcome === 'REJECT'
-        ? scenario.resultCopy.reject
-        : scenario.resultCopy.hold;
+    session.outcome === 'PASS' ? scenario.resultCopy.pass : scenario.resultCopy.reject;
+
+  // 도장 칸 케이스 태그(장식, T64 "CASE 02"). 안건 사건 번호(incident.caseLabel, 예
+  // "사건 02")에서 숫자만 뽑아 영문 케이스 태그로 바꾼다 — 새 사실을 만들지 않는다.
+  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
+  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
   // 가결은 도장과 같은 기준(반영 조건 유무)으로 pass/passOriginal을 가른다
   // (components/resultEpilogue.ts, PR #8 Codex 2차 검토).
+  const isConditionalPass = session.outcome === 'PASS' && includedIds.length > 0;
+
+  // 도장 글자 줄바꿈 방지(T66 목표 "'조건부 가결' 글자가 원 안에서 줄바꿈돼 깨진다").
+  // resultStamp.text("가결"·"조건부 가결"·"부결", stampText()가 정한 같은 문구)를
+  // 새로 판정하지 않고 표기만 나눈다 — 큰 글자는 "가결"/"부결" 두 글자만, "조건부"는
+  // 위 작은 케이스 줄에 "· 조건부"로 옮긴다.
+  const stampBigText = session.outcome === 'REJECT' ? '부결' : '가결';
+  const stampCaseTag = isConditionalPass ? `${caseTag} · 조건부` : caseTag;
+
   const epilogue = epilogueText(
     session.outcome,
     includedIds.length > 0,
     scenario.resultCopy.sixMonthsLater,
   );
 
+  // "남은 과제"·"AI가 도운 일" 한 줄(T66 item 2 "라벨 + 항목을 '·'로 이어서"). 과제가
+  // 비어 있으면(준비 중 안건) 줄 자체를 그리지 않는다.
+  const remainingTasksLine =
+    scenario.remainingTasks.length > 0 ? scenario.remainingTasks.join(' · ') : null;
+
   return (
     <>
       <div className="app-body__actions screen result-screen__actions">
-        {votesChangedByConditions !== null && (
-          <p className="result-screen__gauge" data-testid="result-gauge">
-            내 조건이 바꾼 표 {votesChangedByConditions}명 / 4명
-          </p>
-        )}
-        {epilogue !== null && (
-          <section className="result-epilogue" data-testid="result-epilogue">
-            <div className="result-epilogue__header">
-              <h3 className="result-epilogue__heading">6개월 뒤</h3>
-              <span className="result-epilogue__badge">체험용 가상 전망</span>
-            </div>
-            <p className="result-epilogue__text">{epilogue}</p>
-          </section>
-        )}
+        {/* TALLY 패널(T64 item 7, Main.html C_Result.html 왼쪽 열 "TALLY · 5석 과반").
+            5칸 막대 + 집계·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
+            계산값을 다시 그린 것이라 aria-hidden으로 중복 낭독을 막는다(무대 띠와
+            같은 규칙, 같은 정보가 오른쪽 열 본문에 접근 가능하게 그대로 있다). */}
+        <section className="result-tally" data-testid="result-tally" aria-hidden="true">
+          <div className="result-tally__head">
+            <span>TALLY · 5석 과반</span>
+            <span>YES {tallyResult.counts.YES} / NO {tallyResult.counts.NO}</span>
+          </div>
+          <div className="result-tally__bars">
+            {SEAT_ORDER.map((memberId) => {
+              const vote = session.ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
+              return (
+                <span
+                  key={memberId}
+                  className={`result-tally__bar result-tally__bar--${vote.toLowerCase()}`}
+                />
+              );
+            })}
+          </div>
+          {persuasion && (
+            <p className="result-tally__caption">
+              이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
+              {persuasion.earned ? ' → 추가 도장 획득' : ' · 추가 도장은 3석부터'}
+              {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
+            </p>
+          )}
+        </section>
         <button type="button" className="cta" onClick={onReset} data-testid="end-session">
           체험 종료
         </button>
+        {/* "회의록 전문 보기"(보조 CTA, T58 흡수 — T64 item 7). 세션 상태는 바꾸지
+            않고 오른쪽 열 기록 영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
+        <button
+          type="button"
+          className="cta cta--secondary"
+          onClick={() => setShowTranscript((previous) => !previous)}
+          aria-pressed={showTranscript}
+          data-testid="result-transcript-toggle"
+        >
+          {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
+        </button>
       </div>
       <div className="app-body__content screen result-screen" data-skip={skip}>
-        <h2 className="result-screen__title" data-testid="result-conclusion">
-          {conclusion}
-        </h2>
-        {session.expiredWithoutMotion && (
-          <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
-            시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
-          </p>
-        )}
-        <p className="result-screen__mode-notice" data-testid="result-mode-notice">
-          {MODE_NOTICE_TEXT[session.mode]}
-        </p>
-        {tallyResult.limitedByUnavailable && (
-          <p className="result-screen__limited-notice" data-testid="result-limited-notice">
-            일부 임원 미표결로 판단이 제한되었습니다.
-          </p>
-        )}
-        {/* 표결 배지 순차 공개(DESIGN_SPEC.md v1.0 3절). 결론 도장은 T44에서 무대 열
-            우하단으로 옮겨 AppShell이 StageBand 안에 렌더한다(같은 STAMP_DELAY_SECONDS를
-            쓴다). 5석 카드 텍스트는 처음부터 그대로 있고, 여기서는 CSS animation-delay로
-            시각 효과만 늦춘다(setTimeout 없음). 클릭·키 입력이 오면 data-skip='true'가
-            붙어 모든 지연·재생 시간을 0에 가깝게 만든다. */}
-        <div className="result-screen__seats">
-          {SEAT_ORDER.map((memberId, index) => {
-            const ballot = session.ballots.find((b) => b.memberId === memberId);
-            const vote = ballot?.vote ?? 'UNCAST';
-            return (
-              <article
-                key={memberId}
-                className={`result-seat result-seat--${vote.toLowerCase()}`}
-                data-testid={`result-seat-${memberId}`}
+        {/* 종이 보고서 머리글(T64→T66, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약").
+            왼쪽은 결론 제목 + YOUR CONDITIONS·YOUR WORDS 두 카드, 오른쪽은 200px
+            도장 칸이다(item 1). */}
+        <div className="result-report__top">
+          <div className="result-report__main">
+            <p className="result-report__eyebrow" aria-hidden="true">
+              <span className="result-report__eyebrow-tag">DEBRIEF 02</span>
+              <span>이사회 한 장 요약</span>
+            </p>
+            <h2 className="result-screen__title" data-testid="result-conclusion">
+              {conclusion}
+            </h2>
+            {session.expiredWithoutMotion && (
+              <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
+                시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
+              </p>
+            )}
+            <p className="result-screen__mode-notice" data-testid="result-mode-notice">
+              {MODE_NOTICE_TEXT[session.mode]}
+            </p>
+            {tallyResult.limitedByUnavailable && (
+              <p className="result-screen__limited-notice" data-testid="result-limited-notice">
+                일부 임원 미표결로 판단이 제한되었습니다.
+              </p>
+            )}
+            {resultSummary && (
+              <div className="result-your-columns">
+                <div className="result-your-card">
+                  <span className="result-your-card__label">YOUR CONDITIONS · 반영 조건</span>
+                  <p className="result-your-card__value" data-testid="result-summary-conditions">
+                    {resultSummary.conditionLabels.length > 0
+                      ? resultSummary.conditionLabels.join(', ')
+                      : '조건 없이 원안 그대로 상정'}
+                  </p>
+                </div>
+                <div className="result-your-card">
+                  <span className="result-your-card__label">YOUR WORDS · 내 원문</span>
+                  <div className="result-mine" data-testid="result-mine">
+                    {resultSummary.quote.map((text, index) => (
+                      <p key={index} className="result-mine__quote">
+                        {text}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* 도장 칸(200px, item 1): 결론 도장은 잉크(붉은 원, multiply) — PASS/REJECT
+              색은 아래 result.css가 --stamp-red 한 색으로 통일한다(4장 규칙: 도장 종류를
+              늘리지 않는다). 설득 도장은 0.4초 뒤 왼쪽 아래에 겹친다. 클릭·키 입력으로
+              건너뛰면(위 skip) 두 도장 모두 지연 없이 바로 보인다. */}
+          {resultStamp && (
+            <div className="result-stamp-box">
+              <div
+                className="result-stamp"
+                data-testid="result-stamp"
+                style={{ animationDelay: `${skip ? 0 : STAMP_DELAY_SECONDS}s` }}
               >
-                <Avatar memberId={memberId} />
-                <h3 className="result-seat__member">{seatLabel(memberId)}</h3>
-                <p
-                  className="result-seat__vote result-seat__vote--reveal"
-                  style={{ animationDelay: `${index * SEAT_REVEAL_STEP_SECONDS}s` }}
-                >
-                  {VOTE_ICON[vote] && (
-                    <span className="result-seat__vote-icon" aria-hidden="true">
-                      {VOTE_ICON[vote]}
+                <span className="result-stamp__case" aria-hidden="true">
+                  {stampCaseTag}
+                </span>
+                <span className="result-stamp__text">{stampBigText}</span>
+                <span className="result-stamp__meta" aria-hidden="true">
+                  {resultStamp.outcome === 'PASS' ? 'APPROVED' : 'REJECTED'} · {tallyResult.counts.YES}:
+                  {tallyResult.counts.NO}
+                </span>
+              </div>
+              {persuasion &&
+                (persuasion.earned ? (
+                  <div
+                    className="result-stamp result-stamp--persuasion"
+                    data-testid="persuasion-stamp"
+                    style={{
+                      animationDelay: `${skip ? 0 : PERSUASION_STAMP_DELAY_SECONDS}s`,
+                    }}
+                  >
+                    <span className="result-stamp__case" aria-hidden="true">
+                      BONUS
                     </span>
-                  )}
-                  {VOTE_TEXT[vote]}
-                </p>
-                {ballot?.reason && (
-                  <p className="result-seat__reason" data-testid={`result-seat-reason-${memberId}`}>
-                    {ballot.reason}
+                    <span className="result-stamp__text">설득 성공</span>
+                    <span className="result-stamp__meta" aria-hidden="true">
+                      같은 표 {persuasion.sameVoteSeats}석
+                    </span>
+                  </div>
+                ) : (
+                  <p className="result-bonus-missed" data-testid="persuasion-stamp-missed">
+                    BONUS 미획득
+                    <br />
+                    같은 표 {persuasion.sameVoteSeats}석 · 3석부터
                   </p>
-                )}
-                {ballot?.remainingConcerns && ballot.remainingConcerns.length > 0 && (
-                  <p className="result-seat__concerns" data-testid={`result-seat-concerns-${memberId}`}>
-                    남은 우려: {ballot.remainingConcerns.join(', ')}
-                  </p>
-                )}
-                {vote === 'UNCAST' && ballot?.unavailableReason && (
-                  <p className="result-seat__unavailable" data-testid={`result-seat-unavailable-${memberId}`}>
-                    {ballot.unavailableReason}
-                  </p>
-                )}
-              </article>
-            );
-          })}
+                ))}
+            </div>
+          )}
         </div>
-        {/* 기록 영역을 "이사회 한 장 요약"(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운
-            일)로 재배치한다(DESIGN_SPEC.md v1.0 9절, T48). 'AI가 도운 일'만 내부
-            스크롤(화면당 유일한 스크롤 패널)이고, 요약 행·내 의견 원문은 클램프로
-            세로 예산을 넘지 않게 한다. */}
-        <div className="result-screen__records">
-          <section className="result-summary" data-testid="result-summary">
-            {/* 머리글과 집계 배지를 한 줄에 둔다 — live 최악 조합(조건 4개 + 160자 근거
-                4행)이 두 해상도 세로 예산 안에 들어가야 한다(PR #9 Codex 1차 검토). */}
-            <div className="result-summary__head">
-              <h3 className="result-screen__section-label">이사회 한 장 요약</h3>
-              {resultSummary && (
+        {/* 회의록 전문 패널(T58 흡수, T64 item 7): 토글이 켜지면 아래 VERDICTS 패널
+            전체를 "발언 흐름"과 같은 순수 함수(buildMinutes)로 계산한 전문으로
+            바꾼다. 무대 아래 "발언 흐름" 패널은 RESULT에서 렌더되지 않으므로
+            전문은 여기서만 읽을 수 있다(원 카드 T58 목표). 다시 누르면 요약으로
+            돌아온다 — 세션 상태는 그대로다. */}
+        {showTranscript ? (
+          <section className="result-transcript" data-testid="result-transcript">
+            <MinutesPanel entries={transcriptEntries} />
+          </section>
+        ) : (
+          resultSummary && (
+            /* VERDICTS · 임원별 판단(T66 item 2, 전체 폭 종이-2 패널): 5행(임원 4+나) +
+               남은 과제·AI가 도운 일 한 줄씩 + "+6 MONTHS". T64의 동일 크기 5석 카드와
+               2/3+1/3 기록 패널을 이 한 패널로 합쳤다 — 표 배지는 무대 명패가 이미
+               보여주고 이 패널이 표를 글자로 다시 적으므로 카드는 중복이었다. */
+            <section className="result-verdicts" data-testid="result-summary">
+              <div className="result-verdicts__head">
+                <h3 className="result-screen__section-label">VERDICTS · 임원별 판단</h3>
                 <p className="result-summary__tally" data-testid="result-summary-tally">
-                  찬성 {resultSummary.tally.counts.YES} · 보류 {resultSummary.tally.counts.HOLD} ·
-                  반대 {resultSummary.tally.counts.NO}
+                  찬성 {resultSummary.tally.counts.YES} · 반대 {resultSummary.tally.counts.NO}
                   {resultSummary.tally.counts.UNCAST > 0 &&
                     ` · 미표결 ${resultSummary.tally.counts.UNCAST}`}
                 </p>
-              )}
-            </div>
-            {resultSummary && (
-              <>
-                <p className="result-summary__conditions" data-testid="result-summary-conditions">
-                  {resultSummary.conditionLabels.length > 0
-                    ? `이사님이 붙인 조건: ${resultSummary.conditionLabels.join(', ')}`
-                    : '조건 없이 원안 그대로 상정'}
-                </p>
-                <ul className="result-summary__rows">
-                  {resultSummary.execRows.map((row) => (
+              </div>
+              <ul className="result-verdicts__rows">
+                {resultSummary.execRows.map((row) => {
+                  const isUncast = row.vote === 'UNCAST';
+                  return (
                     <li
                       key={row.memberId}
-                      className="result-summary__row"
-                      data-testid={`result-summary-row-${row.memberId}`}
+                      className={`result-seat result-seat--${row.vote.toLowerCase()}`}
+                      data-testid={`result-seat-${row.memberId}`}
                     >
-                      <Avatar memberId={row.memberId} size="sm" />
-                      <span className="result-summary__name">{MEMBER_LABELS[row.memberId]}</span>
-                      <span className={`result-summary__vote result-summary__vote--${row.vote.toLowerCase()}`}>
+                      <span className="result-seat__title">{MEMBER_LABELS[row.memberId]}</span>
+                      <span className="result-seat__vote">
                         {VOTE_ICON[row.vote] && (
-                          <span aria-hidden="true">{VOTE_ICON[row.vote]}</span>
+                          <span className="result-seat__vote-icon" aria-hidden="true">
+                            {VOTE_ICON[row.vote]}
+                          </span>
                         )}
                         {VOTE_TEXT[row.vote]}
                       </span>
-                      <span className="result-summary__reason">{row.reason}</span>
+                      {/* live의 UNCAST 행은 "미표결 · 사유"(item 2) — 판단 이유 자리에
+                          unavailableReason을 그대로 보여준다(별도 testid 유지). */}
+                      <span className="result-seat__reason" data-testid={`result-seat-reason-${row.memberId}`}>
+                        {isUncast ? (
+                          <span data-testid={`result-seat-unavailable-${row.memberId}`}>{row.reason}</span>
+                        ) : (
+                          row.reason
+                        )}
+                      </span>
                       {row.changed && (
                         <span
                           className="result-summary__changed"
@@ -277,65 +363,61 @@ export function ResultScreen({ scenario, session, onReset }: ResultScreenProps) 
                         </span>
                       )}
                     </li>
-                  ))}
-                  <li
-                    className="result-summary__row result-summary__row--participant"
-                    data-testid="result-summary-row-PARTICIPANT"
-                  >
-                    <Avatar memberId="PARTICIPANT" size="sm" />
-                    <span className="result-summary__name">나 · 특별 이사</span>
-                    <span
-                      className={`result-summary__vote result-summary__vote--${resultSummary.participant.vote.toLowerCase()}`}
-                    >
-                      {VOTE_ICON[resultSummary.participant.vote] && (
-                        <span aria-hidden="true">{VOTE_ICON[resultSummary.participant.vote]}</span>
-                      )}
-                      {VOTE_TEXT[resultSummary.participant.vote]}
-                    </span>
-                    <span className="result-summary__reason" data-testid="result-summary-decisive">
-                      {resultSummary.participant.decisive
-                        ? '이사님의 한 표가 결과를 정했습니다'
-                        : '결과는 임원 표만으로 정해졌습니다'}
-                    </span>
-                  </li>
-                </ul>
-                <div className="result-mine" data-testid="result-mine">
-                  {resultSummary.quote.map((text, index) => (
-                    <p key={index} className="result-mine__quote">
-                      {text}
-                    </p>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-          <div className="result-screen__side">
-            <section className="result-screen__tasks" data-testid="result-tasks">
-              <h3 className="result-screen__section-label">남은 과제</h3>
-              <ul>
-                {scenario.remainingTasks.map((task) => (
-                  <li key={task}>{task}</li>
-                ))}
+                  );
+                })}
+                <li
+                  className={`result-seat result-seat--${resultSummary.participant.vote.toLowerCase()}`}
+                  data-testid="result-seat-PARTICIPANT"
+                >
+                  <span className="result-seat__title">나 · 특별 이사</span>
+                  <span className="result-seat__vote">
+                    {VOTE_ICON[resultSummary.participant.vote] && (
+                      <span className="result-seat__vote-icon" aria-hidden="true">
+                        {VOTE_ICON[resultSummary.participant.vote]}
+                      </span>
+                    )}
+                    {VOTE_TEXT[resultSummary.participant.vote]}
+                  </span>
+                  <span className="result-seat__reason" data-testid="result-summary-decisive">
+                    {resultSummary.participant.decisive
+                      ? '이사님의 한 표가 결과를 정했습니다'
+                      : '결과는 임원 표만으로 정해졌습니다'}
+                  </span>
+                </li>
               </ul>
-            </section>
-            <section className="result-screen__ai-help" data-testid="result-ai-help">
-              <h3 className="result-screen__section-label">AI가 도운 일</h3>
-              <div className="result-screen__ai-help-scroll">
-                {additionalHelp.length > 0 ? (
-                  <ul className="result-screen__ai-help-list">
-                    {additionalHelp.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="result-screen__ai-help-none" data-testid="result-ai-help-none">
-                    AI 비서실장 도움은 사용하지 않았습니다.
+              {persuasion && (
+                <p className="result-summary__persuasion" data-testid="persuasion-summary">
+                  이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
+                  {persuasion.earned ? ' → 추가 도장' : ' · 추가 도장은 3석부터'}
+                </p>
+              )}
+              <div className="result-verdicts__footer">
+                {remainingTasksLine && (
+                  <p className="result-verdicts__line" data-testid="result-tasks">
+                    남은 과제 · {remainingTasksLine}
+                  </p>
+                )}
+                <p className="result-verdicts__line" data-testid="result-ai-help">
+                  AI가 도운 일 ·{' '}
+                  {additionalHelp.length > 0 ? (
+                    additionalHelp.join(' · ')
+                  ) : (
+                    <span data-testid="result-ai-help-none">AI 비서실장 도움은 사용하지 않았습니다.</span>
+                  )}
+                </p>
+                {epilogue !== null && (
+                  <p
+                    className="result-verdicts__line result-verdicts__epilogue"
+                    data-testid="result-epilogue"
+                  >
+                    <span className="result-verdicts__epilogue-label">+6 MONTHS</span> {epilogue}{' '}
+                    <span className="result-epilogue__badge">체험용 가상 전망</span>
                   </p>
                 )}
               </div>
             </section>
-          </div>
-        </div>
+          )
+        )}
       </div>
     </>
   );

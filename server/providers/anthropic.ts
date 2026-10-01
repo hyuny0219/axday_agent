@@ -4,7 +4,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { ModelCompleteRequest, ModelCompleteResult, ModelProvider } from './types';
-import { ModelRefusalError } from './types';
+import { ModelRefusalError, ProviderCallError } from './types';
 
 /** effort:'low'로 짧게 답하게 하고, 응답 형식은 호출자가 넘긴 JSON schema로 고정한다. */
 export function createAnthropicProvider(opts: {
@@ -32,10 +32,16 @@ export function createAnthropicProvider(opts: {
           { timeout: req.timeoutMs, maxRetries: 0, signal: req.signal },
         );
       } catch (err) {
-        // 타임아웃·중단은 이름을 유지해 mapFailReason이 'timeout'으로 좁힐 수 있게 하고,
-        // API 오류는 상태 코드와 메시지를 붙여 평가 기록(live-eval)에서 원인을 볼 수 있게 한다.
-        if (err instanceof Anthropic.APIError && typeof err.status === 'number') {
-          throw new Error(`anthropic_api_error ${err.status}: ${err.message}`);
+        // API가 실제로 응답한 오류(상태 코드가 있음)와 연결 자체가 안 된 경우(APIConnectionError
+        // 계열, status 없음) 모두 ProviderCallError로 감싸 상태 코드·error.type·SDK 오류 이름을
+        // 보존한다 — handlers/shared.ts의 classifyFailure가 이 정보로 로그의 providerErrorClass·
+        // httpStatus를 채운다(T65). 그 외(계약 검사용으로 우리가 직접 던진 Error 등)는 그대로 둔다.
+        if (err instanceof Anthropic.APIError) {
+          const httpStatus = typeof err.status === 'number' ? err.status : undefined;
+          throw new ProviderCallError(
+            `anthropic_api_error ${httpStatus ?? err.name}: ${err.message}`,
+            { httpStatus, errorType: err.type ?? err.name },
+          );
         }
         throw err;
       }

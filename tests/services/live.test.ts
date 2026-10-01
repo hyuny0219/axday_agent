@@ -8,7 +8,11 @@ import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
 import { EXEC_MEMBER_ORDER } from '../../src/domain/voting';
-import { createLiveBoardAgentsAdapter, MAX_ROUND_TIMEOUT_MS } from '../../src/services/boardAgents/live';
+import {
+  createLiveBoardAgentsAdapter,
+  MAX_ROUND_TIMEOUT_MS,
+  TRANSPORT_MARGIN_MS,
+} from '../../src/services/boardAgents/live';
 import type { BoardAgentsContext } from '../../src/services/boardAgents/types';
 
 function toOpinionsStage(clock: FakeClock): Session {
@@ -69,6 +73,26 @@ function neverSettlesUntilAbort(): ReturnType<typeof vi.fn> {
   });
 }
 
+/** ms 뒤에 payload로 응답하되, 그전에 signal이 abort되면 대신 reject하는 fetch mock. 서버
+ * per-role 타임아웃 직후(클라이언트 abort 여유 안)에 도착하는 부분 실패 응답을 흉내낸다
+ * (PR #11 Codex 24차 P1, TRANSPORT_MARGIN_MS). */
+function delayedResponseFetch(ms: number, payload: unknown): ReturnType<typeof vi.fn> {
+  return vi.fn((_url: string, init?: RequestInit) => {
+    return new Promise((resolve, reject) => {
+      const signal = init?.signal;
+      const timer = setTimeout(() => resolve({ ok: true, json: async () => payload }), ms);
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          reject(new DOMException('요청이 취소되었습니다.', 'AbortError'));
+        },
+        { once: true },
+      );
+    });
+  });
+}
+
 describe('live board agents adapter', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -93,6 +117,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'FOR',
           },
         },
         { roleId: 'CFO', status: 'failed', failReason: 'timeout' },
@@ -106,6 +131,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'UNDECIDED',
           },
         },
         {
@@ -118,6 +144,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'AGAINST',
           },
         },
       ],
@@ -134,6 +161,7 @@ describe('live board agents adapter', () => {
     expect(byRole.CEO?.statement?.text).toBe('자료를 검토했습니다.');
     expect(byRole.CEO?.statement?.stage).toBe('OPINIONS');
     expect(byRole.CEO?.statement?.source).toBe('live');
+    expect(byRole.CEO?.statement?.stance).toBe('FOR');
     expect(byRole.CFO?.status).toBe('failed');
     expect(byRole.CFO?.failReason).toBe('timeout');
   });
@@ -145,11 +173,76 @@ describe('live board agents adapter', () => {
     const adapter = createLiveBoardAgentsAdapter();
 
     const outcomesPromise = adapter.initialOpinions(makeCtx(toOpinionsStage(clock)));
-    await vi.advanceTimersByTimeAsync(MAX_ROUND_TIMEOUT_MS);
+    // 클라이언트 abort 타이머는 서버 예산(MAX_ROUND_TIMEOUT_MS)보다 TRANSPORT_MARGIN_MS만큼
+    // 더 늦게 끊는다(PR #11 Codex 24차 P1) — 그 여유까지 지나야 진짜로 abort된다.
+    await vi.advanceTimersByTimeAsync(MAX_ROUND_TIMEOUT_MS + TRANSPORT_MARGIN_MS);
     const outcomes = await outcomesPromise;
 
     expect(outcomes).toHaveLength(4);
     expect(outcomes.every((o) => o.status === 'failed')).toBe(true);
+  });
+
+  it('서버 예산 직후(여유 안)에 일부만 응답해도(3명 성공+1명 timeout) 그 역할만 failed로 남는다(PR #11 Codex 24차 P1)', async () => {
+    const partialPayload = [
+      {
+        roleId: 'CEO',
+        status: 'answered',
+        statement: {
+          roleId: 'CEO',
+          message: '늦게라도 검토했습니다.',
+          evidenceIds: [],
+          referencedStatementIds: [],
+          concerns: [],
+          suggestedConditionIds: [],
+          stance: 'FOR',
+        },
+      },
+      { roleId: 'CFO', status: 'failed', failReason: 'timeout' },
+      {
+        roleId: 'CAIO',
+        status: 'answered',
+        statement: {
+          roleId: 'CAIO',
+          message: '실행 가능성을 봅시다.',
+          evidenceIds: [],
+          referencedStatementIds: [],
+          concerns: [],
+          suggestedConditionIds: [],
+          stance: 'UNDECIDED',
+        },
+      },
+      {
+        roleId: 'CISO',
+        status: 'answered',
+        statement: {
+          roleId: 'CISO',
+          message: '권한 범위를 확인합시다.',
+          evidenceIds: [],
+          referencedStatementIds: [],
+          concerns: [],
+          suggestedConditionIds: [],
+          stance: 'AGAINST',
+        },
+      },
+    ];
+    // 서버가 MAX_ROUND_TIMEOUT_MS + 500ms(< TRANSPORT_MARGIN_MS)에 응답한다 — 고치기 전
+    // 클라이언트 abort 타이머(MAX_ROUND_TIMEOUT_MS 그대로)였다면 이 응답이 오기 전에 이미
+    // abort돼 4명 모두 failed로 덮였을 시점이다.
+    const fetchMock = delayedResponseFetch(MAX_ROUND_TIMEOUT_MS + 500, partialPayload);
+    vi.stubGlobal('fetch', fetchMock);
+    const clock = fakeClock(0);
+    const adapter = createLiveBoardAgentsAdapter();
+
+    const outcomesPromise = adapter.initialOpinions(makeCtx(toOpinionsStage(clock)));
+    await vi.advanceTimersByTimeAsync(MAX_ROUND_TIMEOUT_MS + 500);
+    const outcomes = await outcomesPromise;
+
+    const byRole = Object.fromEntries(outcomes.map((o) => [o.roleId, o]));
+    expect(byRole.CEO?.status).toBe('answered');
+    expect(byRole.CFO?.status).toBe('failed');
+    expect(byRole.CFO?.failReason).toBe('timeout');
+    expect(byRole.CAIO?.status).toBe('answered');
+    expect(byRole.CISO?.status).toBe('answered');
   });
 
   it('signal이 이미 취소된 상태면 응답을 기다리지 않고 모두 failed로 남는다', async () => {
@@ -205,6 +298,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'AGAINST',
           },
         },
         { roleId: 'CAIO', status: 'failed', failReason: 'invalid_response' },
@@ -218,6 +312,7 @@ describe('live board agents adapter', () => {
             referencedStatementIds: [],
             concerns: [],
             suggestedConditionIds: [],
+            stance: 'UNDECIDED',
           },
         },
       ],
@@ -273,6 +368,48 @@ describe('live board agents adapter', () => {
     expect(outcomes).toHaveLength(4);
     expect(outcomes.every((o) => o.status === 'answered' && o.ballot?.vote === 'YES')).toBe(true);
     expect(outcomes.every((o) => o.ballot?.source === 'live')).toBe(true);
+  });
+
+  it('표 요청도 서버 예산 직후(여유 안)에 일부만 응답하면 그 역할만 failed로 남긴다(PR #11 Codex 24차 P1)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const partialPayload = EXEC_MEMBER_ORDER.map((roleId) =>
+      roleId === 'CFO'
+        ? { roleId, status: 'failed', failReason: 'timeout' }
+        : {
+            roleId,
+            status: 'answered',
+            ballot: {
+              roleId,
+              motionId: motion.id,
+              motionHash: motion.hash,
+              vote: 'YES',
+              reason: '검토 결과 찬성합니다.',
+              evidenceIds: [],
+              remainingConcerns: [],
+            },
+            modelId: 'model-x',
+            promptVersion: 'v1',
+          },
+    );
+    // 표 요청도 라운드 요청과 같은 abort 여유(TRANSPORT_MARGIN_MS)를 쓴다 — 서버 예산
+    // (MAX_ROUND_TIMEOUT_MS) 직후 500ms(< 여유)에 응답이 와도 abort되지 않아야 한다.
+    const fetchMock = delayedResponseFetch(MAX_ROUND_TIMEOUT_MS + 500, partialPayload);
+    vi.stubGlobal('fetch', fetchMock);
+    const adapter = createLiveBoardAgentsAdapter();
+
+    const outcomesPromise = adapter.finalVotes(makeCtx(session));
+    await vi.advanceTimersByTimeAsync(MAX_ROUND_TIMEOUT_MS + 500);
+    const outcomes = await outcomesPromise;
+
+    const byRole = Object.fromEntries(outcomes.map((o) => [o.roleId, o]));
+    expect(byRole.CEO?.status).toBe('answered');
+    expect(byRole.CFO?.status).toBe('failed');
+    expect(byRole.CFO?.failReason).toBe('timeout');
+    expect(byRole.CAIO?.status).toBe('answered');
+    expect(byRole.CISO?.status).toBe('answered');
   });
 
   it('고정된 최종 안건이 없으면 요청을 보내지 않고 모두 failed로 남긴다', async () => {

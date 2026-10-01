@@ -188,8 +188,8 @@ export const aiAssistantScenario: Scenario = {
     CEO: [
       {
         when: { has: 'OPEN_ALL' },
-        vote: 'HOLD',
-        reason: '권한 검토 없이 전체 연결하는 안은 보류',
+        vote: 'NO',
+        reason: '권한 검토 없이 전체 연결하는 안은 갖춰지기 전이라 찬성할 수 없어 반대',
       },
       { when: { always: true }, vote: 'YES', reason: '보고 준비를 줄이는 방향에 찬성' },
     ],
@@ -206,8 +206,8 @@ export const aiAssistantScenario: Scenario = {
       },
       {
         when: { always: true },
-        vote: 'HOLD',
-        reason: '작은 범위로 시작과 준비시간·수정량 확인 후 확대 조건이 함께 있지 않아 보류',
+        vote: 'NO',
+        reason: '작은 범위로 시작과 준비시간·수정량 확인 후 확대 조건이 함께 갖춰지기 전이라 찬성할 수 없어 반대',
       },
     ],
     CAIO: [
@@ -240,21 +240,19 @@ export const aiAssistantScenario: Scenario = {
       },
       {
         when: { has: 'ACCESS' },
-        vote: 'HOLD',
-        reason: '권한·공유 범위 확인은 있으나 담당자 검토 조건이 없어 보류',
+        vote: 'NO',
+        reason: '권한·공유 범위 확인은 있으나 담당자 검토 조건이 갖춰지기 전이라 찬성할 수 없어 반대',
       },
       { when: { always: true }, vote: 'NO', reason: '권한·공유 범위 확인 조건이 없어 반대' },
     ],
   },
   resultCopy: {
     pass: '수정안이 승인되었습니다. 실행 전에 확인할 조건도 함께 기록했습니다.',
-    hold: '추가 검토 후 다시 심의합니다. 이사님의 확인 요청을 기록했습니다.',
     reject: '이번 안건은 부결되었습니다. 주요 우려와 이사님의 의견을 기록했습니다.',
     sixMonthsLater: {
       pass: '주간 보고 초안은 AI 비서가 만들고, 담당자는 확인과 판단에 시간을 씁니다. 이사회가 붙인 조건은 실행 점검표가 되었습니다.',
       passOriginal:
         '주간 보고 초안은 AI 비서가 만들고, 담당자는 확인과 판단에 시간을 씁니다. 권한, 검토 담당자, 확대 기준은 실행하면서 정해야 합니다.',
-      hold: '권한과 검토 절차를 정리한 뒤 안건이 다시 상정됩니다. 그때까지 주간 보고는 지금처럼 손으로 모읍니다.',
       reject: '보고 준비는 지금 방식 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },

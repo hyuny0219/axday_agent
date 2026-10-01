@@ -2,12 +2,14 @@
 // 오른쪽 열 재구성을 확인한다. "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점
 // 목록은 T52에서 없앴다. 진행 스트립이 BRIEFING에서 ①을, DISCUSS에서 ③을 가리키는지도
 // 함께 확인한다.
+// T68(2026-09-30 사용자 요청): 자료 4장은 더 이상 상시 펼침이 아니라 "근거 자료 보기"
+// 버튼 → EvidenceDialog 팝업 안에서만 보인다(오른쪽 열 세로 예산을 줄이려고).
 
 import { test, expect } from './fixtures';
 
 const EVIDENCE_IDS = ['E1', 'E2', 'E3', 'E4'];
 
-test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/미정 → 할 일/최종 결정 → 자료 4장 순으로 보인다', async ({
+test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/미정 → 할 일/최종 결정 → 근거 자료 버튼 순으로 보이고, 팝업에서 자료 4장을 전문으로 본다', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -18,16 +20,31 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  // 최종 결정 한 줄은 승인 쪽으로도 부결 쪽으로도 유도하지 않고 그대로 병기된다.
-  await expect(page.getByTestId('briefing-role')).toContainText('최종 결정: 승인 · 보류 · 부결');
+  // 최종 결정 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다.
+  await expect(page.getByTestId('briefing-role')).toContainText('최종 결정: 찬성 · 반대');
 
   // T52: "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점 목록은 제거됐다.
   await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
   await expect(page.getByTestId('condition-preview')).toHaveCount(0);
 
-  // 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보인다.
+  // T68: 팝업을 열기 전에는 자료 카드가 DOM에 없고, "근거 자료 보기" 버튼과 안내
+  // 한 줄만 보인다.
   for (const id of EVIDENCE_IDS) {
-    const card = page.getByTestId(`evidence-card-${id}`);
+    await expect(page.getByTestId(`evidence-card-${id}`)).toHaveCount(0);
+  }
+  const openEvidence = page.getByTestId('open-evidence');
+  await expect(openEvidence).toBeVisible();
+  await expect(page.locator('.evidence-open-hint')).toContainText('EXHIBIT A–D · 4장');
+
+  await openEvidence.click();
+  const dialog = page.getByTestId('evidence-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute('role', 'dialog');
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+  // 팝업 안에서 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보인다.
+  for (const id of EVIDENCE_IDS) {
+    const card = dialog.getByTestId(`evidence-card-${id}`);
     await expect(card).toBeVisible();
     await expect(card.locator('.evidence-card__insight')).toBeVisible();
     await expect(card.locator('.evidence-card__content')).toBeVisible();
@@ -54,12 +71,17 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
     expect(tail.clamp, `${id} 원문에 줄 클램프가 걸려 있다`).toBe('none');
     expect(tail.glyphHeight, `${id} 원문 마지막 글자가 그려지지 않았다`).toBeGreaterThan(0);
     expect(
-      tail.glyphBottom <= tail.boxBottom + 1 && tail.glyphBottom <= tail.viewportHeight + 1,
-      `${id} 원문 마지막 글자가 잘린다(glyphBottom=${tail.glyphBottom}, boxBottom=${tail.boxBottom}, viewport=${tail.viewportHeight})`,
+      tail.glyphBottom <= tail.boxBottom + 1,
+      `${id} 원문 마지막 글자가 팝업 카드 밖으로 잘린다(glyphBottom=${tail.glyphBottom}, boxBottom=${tail.boxBottom})`,
     ).toBe(true);
   }
-  // 오른쪽 열 어디에도 자료 ID(E1~E4)가 화면 문구로 나오지 않는다.
-  await expect(page.locator('.app-body__content')).not.toContainText(/E[1-4]/);
+  // 팝업 어디에도 자료 ID(E1~E4)가 화면 문구로 나오지 않는다.
+  await expect(dialog).not.toContainText(/E[1-4]/);
+
+  // Esc로 닫으면 팝업이 사라지고 포커스가 연 버튼으로 돌아온다.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(openEvidence).toBeFocused();
 
   // 진행 스트립: BRIEFING에서는 ①이 현재 단계다.
   await expect(page.getByTestId('progress-step-1')).toHaveAttribute('aria-current', 'step');
@@ -71,13 +93,62 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   await expect(page.getByTestId('progress-step-3')).toHaveAttribute('aria-current', 'step');
 });
 
-test('무대 명패 5개가 서로 겹치지 않는다', async ({ page }) => {
+test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법으로 닫히고 그때마다 포커스가 연 버튼으로 돌아온다', async ({
+  page,
+}) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
 
-  const seatIds = ['CEO', 'CFO', 'CAIO', 'CISO', 'PARTICIPANT'];
+  const openEvidence = page.getByTestId('open-evidence');
+  const dialog = page.getByTestId('evidence-dialog');
+
+  // 1) 닫기 버튼. 열리면 닫기 버튼에 포커스가 먼저 간다.
+  await openEvidence.click();
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId('evidence-dialog-close')).toBeFocused();
+  await page.getByTestId('evidence-dialog-close').click();
+  await expect(dialog).toHaveCount(0);
+  await expect(openEvidence).toBeFocused();
+
+  // 2) 딤(배경) 클릭.
+  await openEvidence.click();
+  await expect(dialog).toBeVisible();
+  await page.getByTestId('evidence-dialog-backdrop').click({ position: { x: 4, y: 4 } });
+  await expect(dialog).toHaveCount(0);
+  await expect(openEvidence).toBeFocused();
+
+  // 3) Esc.
+  await openEvidence.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(openEvidence).toBeFocused();
+
+  // 포커스 트랩: 팝업 안에는 닫기 버튼 하나만 포커스 가능하므로 Tab을 눌러도 팝업
+  // 밖(헤더 운영 버튼 등)으로 포커스가 빠져나가지 않는다.
+  await openEvidence.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(page.getByTestId('evidence-dialog-close')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByTestId('evidence-dialog-close')).toBeFocused();
+  await page.getByTestId('evidence-dialog-close').click();
+});
+
+test('무대 명패 4개가 서로 겹치지 않고 참가자 좌석에는 명패가 없다', async ({ page }) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+
+  // 참가자 좌석은 명패 없이 글로우·말풍선·표 배지만 둔다(2026-09-28 사용자).
+  await expect(
+    page.getByTestId('stage-seat-PARTICIPANT').locator('.stage-band__nameplate'),
+  ).toHaveCount(0);
+
+  const seatIds = ['CEO', 'CFO', 'CAIO', 'CISO'];
   const boxes = [];
   for (const seatId of seatIds) {
     const nameplate = page.getByTestId(`stage-seat-${seatId}`).locator('.stage-band__nameplate');

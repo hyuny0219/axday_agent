@@ -1,0 +1,215 @@
+// "다시 요청"(T65) E2E: REACTIONS에서 CFO만 실패 → "응답 없는 임원 다시 요청" → 카드·표정
+// 갱신, VOTE에서 CAIO 미표결 → "미표결 임원 다시 요청" → 결과에 반영. live.spec.ts와 같은
+// mock 서버(8787, MODEL_PROVIDER=mock)를 쓰고, page.route로 /api/board/round·/api/board/vote
+// 응답만 가로챈다(e2e/live.spec.ts의 mockRoleFailure와 같은 방식, 허용 경로가 e2e/뿐이라
+// 서버·클라이언트 코드는 건드리지 않는다).
+
+import { test, expect, type Page, type Route } from './fixtures';
+
+const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
+type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
+
+async function enterAiAssistant(page: Page): Promise<void> {
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+}
+
+function answeredStatementEntry(roleId: ExecRoleId, stage: string) {
+  return {
+    roleId,
+    status: 'answered',
+    statement: {
+      roleId,
+      message: `[mock] ${roleId}의 ${stage} 발언입니다.`,
+      evidenceIds: ['E1'],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      stance: 'FOR',
+    },
+    latencyMs: 10,
+    modelId: 'mock',
+    promptVersion: 'mock',
+  };
+}
+
+/** REACTIONS의 최초(전체) 호출에서만 failingRoleId를 실패로 되돌린다. roleIds가 실린
+ * 요청(=재요청)은 항상 성공으로 돌려줘 "다시 요청" 성공 경로를 결정적으로 재현한다. */
+async function mockReactionsFailureThenRetrySucceeds(page: Page, failingRoleId: ExecRoleId): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string; roleIds?: ExecRoleId[] };
+    const targets = body.roleIds ?? EXEC_ROLE_IDS;
+    const isInitialReactionsCall = body.stage === 'REACTIONS' && !body.roleIds;
+    const json = targets.map((roleId) =>
+      isInitialReactionsCall && roleId === failingRoleId
+        ? { roleId, status: 'failed', failReason: 'timeout', latencyMs: 0, modelId: 'mock', promptVersion: 'mock' }
+        : answeredStatementEntry(roleId, body.stage),
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+/** OPINIONS·REACTIONS는 항상 성공시키고, FOLLOWUP의 최초(전체) 호출에서만 failingRoleId를
+ * 실패로 되돌린다. roleIds가 실린 요청(=재요청)은 항상 성공으로 돌려준다. */
+async function mockFollowupFailureThenRetrySucceeds(page: Page, failingRoleId: ExecRoleId): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string; roleIds?: ExecRoleId[] };
+    const targets = body.roleIds ?? EXEC_ROLE_IDS;
+    const isInitialFollowupCall = body.stage === 'FOLLOWUP' && !body.roleIds;
+    const json = targets.map((roleId) =>
+      isInitialFollowupCall && roleId === failingRoleId
+        ? { roleId, status: 'failed', failReason: 'timeout', latencyMs: 0, modelId: 'mock', promptVersion: 'mock' }
+        : answeredStatementEntry(roleId, body.stage),
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+/** VOTE의 최초(전체) 호출에서만 failingRoleId를 실패로 되돌린다. roleIds가 실린 요청
+ * (="미표결 임원 다시 요청")은 answered로 돌려준다. */
+async function mockVoteFailureThenRetrySucceeds(page: Page, failingRoleId: ExecRoleId): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string; roleIds?: ExecRoleId[] };
+    const targets = body.roleIds ?? EXEC_ROLE_IDS;
+    const json = targets.map((roleId) => answeredStatementEntry(roleId, body.stage));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+
+  await page.route('**/api/board/vote', async (route: Route) => {
+    const body = route.request().postDataJSON() as {
+      motion: { id: string; hash: string };
+      roleIds?: ExecRoleId[];
+    };
+    const targets = body.roleIds ?? EXEC_ROLE_IDS;
+    const isInitialVoteCall = !body.roleIds;
+    const json = targets.map((roleId) =>
+      isInitialVoteCall && roleId === failingRoleId
+        ? { roleId, status: 'failed', failReason: 'timeout', modelId: 'mock', promptVersion: 'mock' }
+        : {
+            roleId,
+            status: 'answered',
+            ballot: {
+              motionId: body.motion.id,
+              motionHash: body.motion.hash,
+              vote: 'YES',
+              reason: `[mock] ${roleId}의 판단 근거입니다.`,
+              evidenceIds: ['E1'],
+              remainingConcerns: [],
+            },
+            modelId: 'mock',
+            promptVersion: 'mock',
+          },
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"으로 카드·표정이 갱신된다', async ({ page }) => {
+  await mockReactionsFailureThenRetrySucceeds(page, 'CFO');
+
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await enterAiAssistant(page);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+
+  // REACTIONS: CFO만 실패, 나머지 3명은 정상 응답.
+  await expect(page.getByTestId('statement-failed-CFO')).toBeVisible({ timeout: 10_000 });
+  const retryButton = page.getByTestId('retry-failed-roles');
+  await expect(retryButton).toBeVisible();
+  await expect(retryButton).toHaveText('응답 없는 임원 다시 요청');
+
+  await retryButton.click();
+
+  // 재요청이 성공하면 CFO도 발언 카드로 바뀌고(표정도 함께), 실패 카드는 사라진다.
+  await expect(page.getByTestId('statement-card-CFO')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('statement-failed-CFO')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4);
+  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('미정');
+
+  // 재요청 성공 후에는 실패한 역할이 없어 버튼 자체가 사라진다.
+  await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
+});
+
+test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 결과에 실제 표가 반영된다', async ({ page }) => {
+  await mockVoteFailureThenRetrySucceeds(page, 'CAIO');
+
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await enterAiAssistant(page);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+  await page.getByTestId('followup-option-2').click();
+  await expect(page.getByTestId('freeze-motion')).toBeEnabled();
+  await page.getByTestId('freeze-motion').click();
+
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+
+  const retryButton = page.getByTestId('retry-failed-roles');
+  await expect(retryButton).toBeVisible({ timeout: 10_000 });
+  await expect(retryButton).toHaveText('미표결 임원 다시 요청');
+  await retryButton.click();
+
+  // 재요청이 성공하면 CAIO도 실제 표(YES)로 집계돼 미표결 안내가 뜨지 않는다.
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
+});
+
+test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답 없는 임원 다시 요청"으로 회의록·표정이 갱신된다', async ({
+  page,
+}) => {
+  await mockFollowupFailureThenRetrySucceeds(page, 'CFO');
+
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await enterAiAssistant(page);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+
+  // REACTIONS: 정상 4명. 조건 제안(옵션 0)을 골라 후속 답을 보내 opinions가 2건이 되게
+  // 해서 FOLLOWUP 라운드를 트리거한다(KEEP_PREVIOUS는 라운드가 돌지 않는다).
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
+
+  // 후속 대기 게이트가 풀려 표결로 진행할 수 있다 — CFO가 실패해도 막히지 않는다.
+  await expect(page.getByTestId('freeze-motion')).toBeEnabled({ timeout: 10_000 });
+  await expect(page.getByTestId('motion-waiting-followup')).toHaveCount(0);
+
+  // 실패한 CFO가 있으므로 재요청 버튼이 최종 안건 화면 오른쪽 열에 남아 있다.
+  const retryButton = page.getByTestId('retry-failed-roles');
+  await expect(retryButton).toBeVisible();
+  await expect(retryButton).toHaveText('응답 없는 임원 다시 요청');
+  await expect(page.getByTestId('minutes-entry-followup-CFO')).toContainText('응답 없음');
+
+  await retryButton.click();
+
+  // 재요청이 성공하면 회의록·표정이 갱신되고 버튼은 사라진다. 표결 진행은 그대로 가능하다.
+  await expect(page.getByTestId('minutes-entry-followup-CFO')).not.toContainText('응답 없음', {
+    timeout: 10_000,
+  });
+  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('미정');
+  await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
+  await expect(page.getByTestId('freeze-motion')).toBeEnabled();
+
+  await page.getByTestId('freeze-motion').click();
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+});

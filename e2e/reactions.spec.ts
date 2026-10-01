@@ -140,3 +140,87 @@ test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
 });
+
+// T67 item7b(2026-09-30 실측, docs/screenshots/desktop-720/reactions.png): 당시
+// max-height + overflow:hidden 수치 예산으로 2줄 클램프를 흉내 냈는데, 아래쪽
+// 패딩만큼 다음 줄이 클립 경계 안으로 들어와 3번째 줄 일부가 그대로 보였다. PR #11
+// Codex 28차 검토(P2)에서 그 예산(패딩·테두리 픽셀 계산)이 틀렸다는 지적을 받아
+// 다시 실측해 보니, 이 예산 자체가 글꼴 힌팅에 따라 1px 안팎으로 흔들리는 아주 좁은
+// 안전 구간이었다(테두리를 더하거나 빼는 어느 쪽으로도 자칫 2번째 줄이 잘리거나
+// 3번째 줄 위쪽이 살짝 드러난다). 그래서 무대 말풍선(stage.css
+// `.stage-band__bubble-text`)과 같은 방식인 `-webkit-line-clamp`로 바꿨다 — 줄 수를
+// 브라우저가 직접 세어 자르므로 픽셀 예산 계산이 필요 없다. 여기서는 그 전환이
+// 실제로 유효한지 두 가지로 확인한다: (1) 300자에 가까운 긴 발언이 실제로 2줄을
+// 넘겨 클램프가 걸리는지(overflow), (2) 클램프된 상자의 콘텐츠 높이가 정확히 2줄
+// line-height만큼인지(글꼴 힌팅 반올림 오차 1px만 허용) — 이 값이 2줄보다 작으면
+// 2번째 줄이 잘린 것이고, 크면 3번째 줄이 새 방식에서도 비집고 들어온 것이다.
+const LONG_OPINION_TEXT =
+  '한 게시판에서 먼저 시범 운영합시다. 게시 전 검수 절차를 두고 시작합시다. ' +
+  '문제가 생기면 작성자를 확인할 수 있게 해 둡시다. 운영 효과를 측정한 뒤 전사로 넓힙시다. ' +
+  '시범 기간에는 게시 건수와 신고 처리 결과를 함께 공유해 신뢰를 쌓고, 확대 여부는 이 기록을 근거로 ' +
+  '다음 이사회에서 다시 판단하겠습니다. 신고 처리 담당자를 먼저 지정하고, 로그 보관 기간을 정한 뒤 ' +
+  '순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
+
+test('내 발언 인용 상자는 2줄을 넘는 내용이 있어도 정확히 2줄 높이로만 클램프된다', async ({ page }) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('draft-editor-textarea').fill(LONG_OPINION_TEXT);
+  await page.getByTestId('submit-opinion').click();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+
+  const quote = page.getByTestId('reactions-quote');
+  // 실제로 2줄보다 많은 내용이 있어야 이 단언이 의미가 있다(클램프가 걸릴 내용인지 확인).
+  const overflowing = await quote.evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+  expect(overflowing, '테스트 문구가 2줄보다 짧아 클램프가 걸리지 않았다').toBe(true);
+
+  const budget = await quote.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    const paddingTop = parseFloat(cs.paddingTop);
+    const paddingBottom = parseFloat(cs.paddingBottom);
+    const lineHeight = parseFloat(cs.lineHeight);
+    return { contentHeight: el.clientHeight - paddingTop - paddingBottom, twoLines: 2 * lineHeight };
+  });
+  // 글꼴 힌팅으로 줄 높이가 소수점 아래에서 반올림되는 여유(최대 1px)만 허용한다 —
+  // 이 폭을 넘으면 2번째 줄이 잘렸거나(작은 쪽) 3번째 줄이 드러난 것이다(큰 쪽).
+  expect(
+    budget.contentHeight,
+    `콘텐츠 높이(${budget.contentHeight}px)가 2줄 line-height(${budget.twoLines}px)와 1px 넘게 어긋난다`,
+  ).toBeGreaterThanOrEqual(budget.twoLines - 1);
+  expect(
+    budget.contentHeight,
+    `콘텐츠 높이(${budget.contentHeight}px)가 2줄 line-height(${budget.twoLines}px)보다 커 3번째 줄이 드러날 수 있다`,
+  ).toBeLessThanOrEqual(budget.twoLines + 1);
+});
+
+test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
+  page,
+}) => {
+  await reachReactionsWithAccessConfirmed(page);
+  const info = page.getByTestId('reactions-info');
+  await expect(info).not.toHaveAttribute('inert', '');
+
+  // 드로어는 직접 답하기 안에 있다 — 편집기를 열어야 "AI 비서실장 열기" 버튼이 보인다.
+  await page.getByTestId('followup-option-0').click();
+  const openAssistant = page.getByRole('button', { name: 'AI 비서실장 열기' });
+  if (!(await openAssistant.isVisible())) {
+    await page.getByRole('button', { name: '직접 답하기' }).click();
+  }
+  await openAssistant.click();
+  await expect(info).toHaveAttribute('inert', '');
+  // inert 안의 요소는 포커스를 받지 못한다.
+  const focusedInside = await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('[data-testid="reactions-info"] button, [data-testid="reactions-info"] [tabindex="0"]');
+    el?.focus();
+    return el ? document.activeElement === el : false;
+  });
+  expect(focusedInside).toBe(false);
+
+  await page.getByRole('button', { name: 'AI 비서실장 숨기기' }).click();
+  await expect(info).not.toHaveAttribute('inert', '');
+});

@@ -1,7 +1,10 @@
-/* 회의록 패널(DESIGN_SPEC.md v1.0 7절, T41). 왼쪽 열 무대·행동 아래 세 번째 grid
-   area(minutes)를 채운다. 페이지·패널 스크롤은 두지 않는다 — 넘치는 옛 항목은
-   .minutes__entry--hidden(sr-only)로 시각적으로만 감춘다(화면에는 최근 N건, 스크린
-   리더에는 전체). */
+/* "발언 흐름" 패널(DESIGN_SPEC.md v1.0 7절, T41). 왼쪽 열 무대·행동 아래 세 번째 grid
+   area(minutes)를 채운다. 2026-09-28 사용자 결정: 모든 항목을 전문 그대로 줄바꿈해 보여주고,
+   넘치면 목록(.minutes__list)만 세로 스크롤한다. 페이지 스크롤 금지는 그대로다 — 패널은
+   그리드 칸 높이(minmax(0, 1fr))에 갇히고 목록이 그 안에서 스크롤한다. */
+/* T64(Main.html TRANSCRIPT 패널): 짙은 회색 판(--transcript-bg/--transcript-border) +
+   타자기 앰버 머리글. 문구·testid는 그대로 두고(카드 preamble "문구 불변") 색·서체만
+   바꾼다. */
 .minutes {
   min-height: 0;
   overflow: hidden;
@@ -9,9 +12,9 @@
   flex-direction: column;
   gap: 4px;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--transcript-border);
   border-radius: var(--radius-card);
-  background-color: var(--panel);
+  background-color: var(--transcript-bg);
 }
 
 .minutes__head {
@@ -25,13 +28,15 @@
   margin: 0;
   font-size: var(--fs-meta);
   font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
+  font-family: var(--font-label);
+  letter-spacing: 0.1em;
+  color: var(--amber);
 }
 
 .minutes__count {
   font-size: 12px;
-  color: var(--text-muted);
+  font-family: var(--font-label);
+  color: #8f8a80;
 }
 
 .minutes__list {
@@ -40,25 +45,44 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  /* 남은 높이가 계산보다 더 빠듯해 그래도 넘칠 때를 대비해 아래쪽(최신)을 붙여 둔다.
-     그러면 잘려 나가는 쪽이 가장 오래된 항목이 된다(T56). */
-  justify-content: flex-end;
-  gap: 4px;
+  gap: 6px;
   min-height: 0;
   flex: 1 1 auto;
+  /* 목록만 스크롤한다. 새 항목이 오면 컴포넌트가 맨 아래(최신)로 내린다. overscroll-behavior는
+     기본값(auto)으로 둔다 — contain으로 막으면 200% 확대 상당(960×540, 문서 스크롤 허용)에서
+     휠이 목록 위에 걸린 채 페이지로 넘어가지 못해 CTA에 닿을 수 없다(e2e/a11y.spec.ts). */
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}
+
+.minutes__list:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .minutes__entry {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-1);
   min-width: 0;
+  flex-shrink: 0;
 }
 
-/* 최근 N건 밖 항목과 "판단 중" 상태 문구: 화면에서는 감추되 스크린리더에는 남긴다
-   (표준 sr-only 기법). 점 세 개는 장식(aria-hidden)이라 상태 문구가 없으면 pending 행이
-   발화자 이름만 읽힌다(PR #7 Codex 2차 검토). */
-.minutes__entry--hidden,
+/* 행 앞 직함 코드(T64, "[mm:ss] CEO" 중 코드 부분 — 도착 시각이 없어 직함만 보여준다).
+   타자기 앰버로 TRANSCRIPT 머리글과 같은 톤을 쓴다. */
+.minutes__tag {
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  white-space: nowrap;
+}
+
+/* "판단 중" 상태 문구: 화면에서는 감추되 스크린리더에는 남긴다(표준 sr-only 기법).
+   점 세 개는 장식(aria-hidden)이라 상태 문구가 없으면 pending 행이 발화자 이름만
+   읽힌다(PR #7 Codex 2차 검토). */
 .minutes__sr-only {
   position: absolute;
   width: 1px;
@@ -86,17 +110,18 @@
   border: 0;
 }
 
+/* 전문을 줄바꿈해 다 보여준다(말줄임 없음, 2026-09-28 사용자). 긴 토큰도 칸 안에서 꺾는다. */
 .minutes__text {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   font-size: 13px;
+  line-height: 1.4;
   color: var(--text);
 }
 
 /* 참가자 항목은 시안 테두리로 강조한다(v1.0 7절 "내 항목은 참가자 색"): 왼쪽 2px
-   시안 선 + 은은한 시안 배경. 행 높이는 다른 항목과 같게 유지한다(창 고정 예산). */
+   시안 선 + 은은한 시안 배경. */
 .minutes__entry--mine {
   box-shadow: inset 2px 0 0 var(--accent);
   background-color: rgba(40, 217, 240, 0.08);
@@ -158,9 +183,9 @@
   }
 }
 
-/* 세로가 너무 빠듯해 한 건도 들어가지 않는 경우(T56: VOTE에서 회의록 행이 14.8px까지
-   줄어든다). 억지로 그리면 머리글부터 잘리므로 화면에서는 감추고, 목록 전체는
-   스크린리더에 남긴다(.minutes__entry--hidden과 같은 규칙). */
+/* 세로가 너무 빠듯해 목록에 한 줄도 못 담는 경우(1568×777 VOTE에서 칸이 32px). 억지로
+   그리면 머리글만 남으므로 화면에서는 감추고, 목록 전체는 스크린리더에 남긴다. 판단은
+   MinutesPanel이 그리드 칸 높이로 한다. */
 .minutes--collapsed {
   position: absolute;
   width: 1px;

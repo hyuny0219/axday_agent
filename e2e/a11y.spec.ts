@@ -96,6 +96,15 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   // 짧은 뷰포트에서는 문서 스크롤이 열려 있어야 한다(DESIGN_SPEC.md 3장·v1.0 6절).
   async function wheelUntilVisible(testId: string) {
     const target = page.getByTestId(testId);
+    // 대상이 다음 화면의 요소면(예: REACTIONS 답변 → 후속 라운드 → MOTION의 freeze-motion)
+    // 화면이 바뀌기 전에 스크롤이 끝나 버리므로 대상이 DOM에 붙은 뒤 문서 맨 위에서 시작한다.
+    await target.waitFor({ state: 'attached' });
+    // 문서 스크롤만 움직인다(window.scrollBy). scrollIntoView는 overflow:hidden 컨테이너도
+    // 프로그램적으로 움직여 잘림을 숨기지만(PR #6 Codex 4차 검토) window.scrollBy는 문서가
+    // 스크롤 가능할 때만 효과가 있어 "짧은 뷰포트에서 문서 스크롤이 열려 있다"는 검증을
+    // 그대로 유지한다. 마우스 휠은 포인터 아래 요소(헤더가 스크롤돼 나간 뒤에는 발언 흐름
+    // 패널 같은 내부 스크롤 영역)가 먼저 소비해 CI 글꼴 차이에 따라 간헐 실패했다.
+    await page.evaluate(() => window.scrollTo(0, 0));
     for (let i = 0; i < 12; i += 1) {
       if (await target.isVisible()) {
         const box = await target.boundingBox();
@@ -104,7 +113,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
           return target;
         }
       }
-      await page.mouse.wheel(0, 300);
+      await page.evaluate(() => window.scrollBy(0, 300));
     }
     await expect(target).toBeInViewport();
     return target;
@@ -141,15 +150,12 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  await page.mouse.wheel(0, -4000);
   const keepPrevious = await wheelUntilVisible('followup-option-2');
   await keepPrevious.click();
 
-  await page.mouse.wheel(0, -4000);
   const freezeMotion = await wheelUntilVisible('freeze-motion');
   await freezeMotion.click();
 
-  await page.mouse.wheel(0, -4000);
   await page.getByTestId('vote-radio-YES').check();
   const confirmVote = await wheelUntilVisible('confirm-vote');
   await expect(confirmVote).toBeEnabled();

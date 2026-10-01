@@ -83,6 +83,8 @@ export interface EvalRow {
   evidenceIds?: string[];
   referencedStatementIds?: string[];
   concernCount?: number;
+  /** T63: 발언 끝에 실린 stance(FOR/AGAINST/UNDECIDED). OPINIONS/REACTIONS 행에만 실린다. */
+  stance?: string;
   latencyMs: number;
   modelId: string;
   promptVersion: string;
@@ -106,6 +108,7 @@ function toRoundRows(
     evidenceIds: result.statement?.evidenceIds,
     referencedStatementIds: result.statement?.referencedStatementIds,
     concernCount: result.statement?.concerns.length,
+    stance: result.statement?.stance,
     latencyMs: result.latencyMs,
     modelId: result.modelId,
     promptVersion: result.promptVersion,
@@ -423,6 +426,80 @@ export function findStyleViolations(rows: EvalRow[]): StyleViolation[] {
   return violations;
 }
 
+export interface EvidenceIdMention {
+  line: number;
+  caseId: string;
+  roleId: string;
+  stage: string;
+  field: 'message' | 'reason';
+  text: string;
+}
+
+const EVIDENCE_ID_PATTERN = /\bE\d+\b/;
+
+/** T54: 발언 문장(message)·표결 이유(reason)에 자료 ID(E1 등)가 그대로 남아있는지 검사한다.
+ * 참가자 화면에서 E1~E4 표기를 없앤 T52 이후에는 이 패턴이 문장에 남으면 참가자가 무엇을
+ * 가리키는지 알 수 없다. evidenceIds 필드는 계속 ID로 채우므로 여기서 검사하지 않는다. */
+export function findEvidenceIdMentions(rows: EvalRow[]): EvidenceIdMention[] {
+  const mentions: EvidenceIdMention[] = [];
+  rows.forEach((row, index) => {
+    for (const field of ['message', 'reason'] as const) {
+      const text = row[field];
+      if (!text) continue;
+      if (EVIDENCE_ID_PATTERN.test(text)) {
+        mentions.push({
+          line: index + 1,
+          caseId: row.caseId,
+          roleId: row.roleId,
+          stage: row.stage,
+          field,
+          text,
+        });
+      }
+    }
+  });
+  return mentions;
+}
+
+/** T63: OPINIONS 단계 stance 누락(schema가 필수라 실제로는 0건이어야 정상, answered 행 기준). */
+export function findMissingStance(rows: EvalRow[]): EvalRow[] {
+  return rows.filter(
+    (row) => (row.stage === 'OPINIONS' || row.stage === 'REACTIONS') && row.status === 'answered' && !row.stance,
+  );
+}
+
+export interface StanceVoteAgreement {
+  /** stance(OPINIONS)·vote(VOTE) 둘 다 answered이고 stance가 FOR/AGAINST인 (caseId,roleId) 수. */
+  comparable: number;
+  /** FOR→YES 또는 AGAINST→NO로 일치한 수. */
+  agree: number;
+}
+
+/** "OPINIONS stance와 최종 표의 일치율"(T63, 기준을 새로 못 박지 않고 관측값만 남긴다).
+ * 같은 케이스·역할의 OPINIONS stance(FOR/AGAINST만, UNDECIDED는 비교 대상에서 뺀다)와 VOTE의
+ * vote(YES/NO)를 비교한다. */
+export function stanceVoteAgreement(rows: EvalRow[]): StanceVoteAgreement {
+  const opinionsByKey = new Map<string, string>();
+  for (const row of rows) {
+    if (row.stage === 'OPINIONS' && row.status === 'answered' && row.stance) {
+      opinionsByKey.set(`${row.caseId}/${row.roleId}`, row.stance);
+    }
+  }
+  let comparable = 0;
+  let agree = 0;
+  for (const row of rows) {
+    if (row.stage !== 'VOTE' || row.status !== 'answered' || !row.vote) continue;
+    const stance = opinionsByKey.get(`${row.caseId}/${row.roleId}`);
+    if (stance !== 'FOR' && stance !== 'AGAINST') continue;
+    comparable += 1;
+    const expectedVote = stance === 'FOR' ? 'YES' : 'NO';
+    if (row.vote === expectedVote) {
+      agree += 1;
+    }
+  }
+  return { comparable, agree };
+}
+
 function readRows(file: string): EvalRow[] {
   return readFileSync(file, 'utf-8')
     .split('\n')
@@ -436,13 +513,25 @@ function runCheck(files: string[]): void {
     const rows = readRows(file);
     const violations = findStyleViolations(rows);
     const affectedRows = new Set(violations.map((v) => v.line)).size;
+    const mentions = findEvidenceIdMentions(rows);
+    const missingStance = findMissingStance(rows);
+    const agreement = stanceVoteAgreement(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
-        ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)`,
+        ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
+        ` · 문장 속 자료 ID(E\\d) 잔존 ${mentions.length}건` +
+        ` · stance 누락 ${missingStance.length}건` +
+        ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}`,
     );
+    for (const row of missingStance) {
+      console.log(`    [stance 누락] ${row.caseId}/${row.roleId}/${row.stage}`);
+    }
     for (const v of violations) {
       console.log(`    ${v.line} ${v.caseId}/${v.roleId}/${v.stage}.${v.field}: ${v.sentence}`);
+    }
+    for (const m of mentions) {
+      console.log(`    [E\\d] ${m.line} ${m.caseId}/${m.roleId}/${m.stage}.${m.field}: ${m.text}`);
     }
   }
 }

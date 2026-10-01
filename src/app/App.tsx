@@ -25,9 +25,10 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import type { SessionAction } from '../domain/session';
-import type { Session } from '../domain/types';
+import type { Session, Stance, StatementStage } from '../domain/types';
+import { liveStances, scriptedStances } from '../domain/stance';
 import { scenarios } from '../content/scenarios';
-import type { Scenario } from '../content/types';
+import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
 import { detectInitialMode } from './mode';
@@ -45,12 +46,10 @@ import { liveAssistantAdapter } from '../services/assistant/live';
 import { scriptedAssistantAdapter } from '../services/assistant/scripted';
 import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
-import { ProgressStrip } from '../components/parts/ProgressStrip';
 import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
-import { computeResultStamp } from '../components/resultStamp';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -82,6 +81,13 @@ interface SessionContextValue {
    * 임원 응답 기록(v1.0 7절 "회의록 패널", T41). AppShell이 buildMinutes에 넘긴다.
    * 공개 payload에는 포함하지 않는다(화면 쪽 상태일 뿐이다). */
   roundLog: RoundLogEntry[];
+  /** 서버 가용성 확인(live/scripted 판정)이 아직 끝나지 않았는가. 첫 마운트와 리셋 직후
+   * true이며, AttractScreen이 "체험 시작"을 잠그는 데 쓴다(PR #11 Codex 7차). */
+  modeCheckPending: boolean;
+  /** 실패한 역할만 같은 stage로 다시 부른다("응답 없는 임원 다시 요청", T65). */
+  retryRound: (stage: StatementStage, roleIds: ExecMemberId[]) => Promise<void>;
+  /** 미표결(실패) 역할만 최종표를 다시 요청한다("미표결 임원 다시 요청", T65). */
+  retryFinalVotes: (roleIds: ExecMemberId[]) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -175,20 +181,33 @@ function SessionProvider({ children }: { children: ReactNode }) {
     [dynamicAdapter, orchestratorStore],
   );
 
-  // 세션 시작 전(ATTRACT·SELECT)에 한 번만 서버 가용성을 확인해 모드를 고정한다
-  // (mode.ts, AGENT_BOARDROOM_SPEC.md 6장). SET_MODE는 ATTRACT·SELECT 단계에서만
-  // 반영되므로 이미 세션이 시작된 뒤 응답이 와도 reducer가 조용히 무시한다.
+  // 세션 시작 전(ATTRACT·SELECT)에 서버 가용성을 확인해 모드를 고정한다(mode.ts,
+  // AGENT_BOARDROOM_SPEC.md 6장). SET_MODE는 ATTRACT·SELECT 단계에서만 반영되므로 이미
+  // 세션이 시작된 뒤 응답이 와도 reducer가 조용히 무시한다. 첫 마운트뿐 아니라 리셋으로
+  // sessionId가 바뀔 때마다 다시 확인한다 — reducer가 리셋 시 mode를 유지하므로 화면은
+  // 즉시 이전 모드로 시작하고, 그 사이 서버가 죽었으면 여기서 scripted로 내려간다.
+  // 확인이 끝나기 전에는 "체험 시작"을 잠근다. 리셋 직후 서버가 죽어 1.5초 타임아웃을
+  // 기다리는 동안 ATTRACT·SELECT를 빠르게 지나가면 늦게 온 SET_MODE(scripted)가 무시돼
+  // 죽은 서버를 향해 live로 고정된 세션이 생긴다(PR #11 Codex 7차). 정상이면 수십 ms라
+  // 체감되지 않는다.
+  // "확인이 끝난 sessionId"를 들고 현재 sessionId와 동기적으로 비교한다. 리셋 직후 새
+  // ATTRACT가 커밋되는 첫 프레임부터 잠겨야 하므로, effect 안에서 뒤늦게 올리는 플래그로는
+  // 부족하다(PR #11 Codex 8차 — effect 전에 들어온 클릭이 SELECT로 새어 나간다).
+  const [modeCheckedSessionId, setModeCheckedSessionId] = useState<string | null>(null);
+  const modeCheckPending = modeCheckedSessionId !== session.sessionId;
   useEffect(() => {
     let cancelled = false;
+    const sessionId = session.sessionId;
     detectInitialMode().then((action) => {
       if (!cancelled) {
         dispatch(action);
+        setModeCheckedSessionId(sessionId);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [dispatch]);
+  }, [dispatch, session.sessionId]);
 
   // live 모드에서만 라운드를 자동으로 돌린다: OPINIONS 진입 시 초기 의견, 참가자 의견
   // 전달 후 REACTIONS, 후속 보완 제출 후 FOLLOWUP(최대 1회 — opinions가 2건이 되는
@@ -247,17 +266,21 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 최종안이 고정되는 즉시(finalMotion이 채워지는 즉시) 임원 최종표를 병렬로 요청한다
   // (스펙 6장 "최종안 고정 후 바로 병렬 요청"). MOTION 화면의 표결 버튼은 FREEZE_MOTION만
   // dispatch하며, 이 효과가 그 결과(finalMotion 반영)를 보고 startFinalVotes를 잇는다.
+  // 가드 키는 sessionId + hash다. 최종안 hash는 조건 조합에서 결정적으로 나오므로, 리셋 뒤 새
+  // 참가자가 같은 조건을 고르면 이전 세션과 hash가 같아 hash만 기억하면 표결 요청을 건너뛰고
+  // VOTE에 영구히 머문다(PR #11 Codex 12차 P1 — 리셋이 mode를 유지하면서 드러난 경합).
   const finalVotesRef = useRef<string | null>(null);
   useEffect(() => {
     if (session.mode !== 'live' || !session.finalMotion) {
       return;
     }
-    if (finalVotesRef.current === session.finalMotion.hash) {
+    const key = `${session.sessionId}:${session.finalMotion.hash}`;
+    if (finalVotesRef.current === key) {
       return;
     }
-    finalVotesRef.current = session.finalMotion.hash;
+    finalVotesRef.current = key;
     void orchestrator.startFinalVotes();
-  }, [session.mode, session.finalMotion, orchestrator]);
+  }, [session.mode, session.sessionId, session.finalMotion, orchestrator]);
 
   // 참가자가 최종 표를 확정한 뒤에만 8초 대기를 시작한다(스펙 6장
   // "참가자 확정과 함께 기다리되 8초를 넘지 않는다").
@@ -270,16 +293,25 @@ function SessionProvider({ children }: { children: ReactNode }) {
     if (!participantVoted) {
       return;
     }
-    if (awaitResultRef.current === session.finalMotion.hash) {
+    const key = `${session.sessionId}:${session.finalMotion.hash}`;
+    if (awaitResultRef.current === key) {
       return;
     }
-    awaitResultRef.current = session.finalMotion.hash;
+    awaitResultRef.current = key;
     void orchestrator.awaitResult();
-  }, [session.mode, session.stage, session.finalMotion, session.ballots, orchestrator]);
+  }, [session.mode, session.stage, session.sessionId, session.finalMotion, session.ballots, orchestrator]);
 
   const value = useMemo<SessionContextValue>(
-    () => ({ session, dispatch, followUpPending, roundLog }),
-    [session, dispatch, followUpPending, roundLog],
+    () => ({
+      session,
+      dispatch,
+      followUpPending,
+      roundLog,
+      modeCheckPending,
+      retryRound: orchestrator.retryRound,
+      retryFinalVotes: orchestrator.retryFinalVotes,
+    }),
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -306,7 +338,8 @@ function useViewportFit(): ViewportFit {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch, followUpPending } = useSession();
+  const { session, dispatch, followUpPending, modeCheckPending, roundLog, retryRound, retryFinalVotes } =
+    useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -316,7 +349,13 @@ function StageRouter() {
 
   switch (session.stage) {
     case 'ATTRACT':
-      return <AttractScreen mode={session.mode} onStart={() => dispatch({ type: 'START' })} />;
+      return (
+        <AttractScreen
+          mode={session.mode}
+          onStart={() => dispatch({ type: 'START' })}
+          startDisabled={modeCheckPending}
+        />
+      );
 
     case 'SELECT':
       return (
@@ -347,7 +386,11 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          stances={stancesFor(session, scenario)}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('OPINIONS', roleIds) : undefined
+          }
         />
       );
 
@@ -360,6 +403,9 @@ function StageRouter() {
           scenario={scenario}
           sessionId={session.sessionId}
           transcript={session.transcript}
+          mode={session.mode}
+          roleStatus={session.roleStatus}
+          stances={stancesFor(session, scenario)}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
@@ -378,11 +424,15 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('REACTIONS', roleIds) : undefined
+          }
         />
       );
 
@@ -393,8 +443,14 @@ function StageRouter() {
       return (
         <MotionScreen
           scenario={scenario}
+          stances={stancesFor(session, scenario)}
           opinions={session.opinions}
           freezeDisabled={session.mode === 'live' && followUpPending}
+          mode={session.mode}
+          roleStatus={session.roleStatus}
+          onRetryFailedRoles={
+            session.mode === 'live' ? (roleIds) => void retryRound('FOLLOWUP', roleIds) : undefined
+          }
           onFreeze={(confirmedConditionIds) =>
             dispatch({ type: 'FREEZE_MOTION', scenario, confirmedConditionIds })
           }
@@ -408,12 +464,15 @@ function StageRouter() {
       return (
         <VoteScreen
           scenario={scenario}
+          stances={stancesFor(session, scenario)}
           motion={session.finalMotion}
           pendingVote={session.pendingVote}
           mode={session.mode}
           execBallotsPending={session.execBallotsPending}
+          roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
+          onRetryFailedRoles={session.mode === 'live' ? (roleIds) => void retryFinalVotes(roleIds) : undefined}
         />
       );
 
@@ -425,6 +484,7 @@ function StageRouter() {
         <ResultScreen
           scenario={scenario}
           session={session}
+          roundLog={roundLog}
           onReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
         />
       );
@@ -450,6 +510,23 @@ function chairLineFor(stage: Session['stage'], scenario: Scenario | null): strin
   return undefined;
 }
 
+const ALL_UNDECIDED_STANCES: Record<ExecMemberId, Stance> = {
+  CEO: 'UNDECIDED',
+  CFO: 'UNDECIDED',
+  CAIO: 'UNDECIDED',
+  CISO: 'UNDECIDED',
+};
+
+/** 임원 4명의 표정(T63): live는 transcript의 가장 최근 발언 stance, scripted는 표결
+ * 규칙표로 미리 계산한다(domain/stance.ts). scenario가 아직 없으면(BRIEFING 이전) 넷
+ * 다 미정으로 둔다. */
+function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMemberId, Stance> {
+  if (!scenario) {
+    return ALL_UNDECIDED_STANCES;
+  }
+  return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
+}
+
 const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'BRIEFING',
   'OPINIONS',
@@ -472,16 +549,16 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
  * 열로 이뤄진 조종석 배치다(DESIGN_SPEC.md v1.0 6절 "조종석 배치와 무스크롤 규칙",
- * T45). ATTRACT·SELECT는 무대가 없어 여전히 1열이다. 도장(result-stamp)은 무대 열
- * 우하단에 겹쳐 찍으므로 StageBand에 resultStamp로 넘긴다(components/resultStamp.ts,
- * ResultScreen과 공유하는 순수 함수).
+ * T45). ATTRACT·SELECT는 무대가 없어 여전히 1열이다. 결론·설득 도장은 T64에서 무대
+ * 열 우하단 겹침 규칙을 폐기하고 오른쪽 종이 보고서 전용 칸으로 옮겼다
+ * (docs/design/mockups/README.md) — ResultScreen이 components/resultStamp.ts를 직접
+ * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
   const { session, dispatch, roundLog } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
-  const resultStamp = session.stage === 'RESULT' ? computeResultStamp(session) : null;
   const fit = useViewportFit();
   const wrapperStyle: CSSProperties | undefined =
     fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;
@@ -496,9 +573,6 @@ function AppShell() {
             session={session}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
           />
-          {session.stage !== 'ATTRACT' && session.stage !== 'SELECT' && (
-            <ProgressStrip stage={session.stage} />
-          )}
           {hasStageBand && scenario ? (
             // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
             // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
@@ -516,18 +590,15 @@ function AppShell() {
                     statements={session.transcript.statements}
                     opinions={session.opinions}
                     scenario={scenario}
+                    stances={stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(session.stage, scenario)}
-                    resultStamp={resultStamp}
                   />
                 </div>
                 {content}
                 {showMinutes && scenario && (
                   <div className="app-body__minutes">
-                    <MinutesPanel
-                      entries={buildMinutes(session, scenario, roundLog)}
-                      stage={session.stage}
-                    />
+                    <MinutesPanel entries={buildMinutes(session, scenario, roundLog)} />
                   </div>
                 )}
               </div>

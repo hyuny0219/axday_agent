@@ -1,17 +1,344 @@
-/* 다른 화면보다 섹션이 많아(5석 두 줄+기록 패널 3개) 기본 .screen gap(24px)만으로도
-   합이 커진다 — 두 해상도 모두 페이지 스크롤 없이 한 화면에 담기 위해 이 화면만
-   살짝 줄인다(v1.0 6절 검수). 오른쪽 열 전체(.app-body__content)를 채우는 flex
-   column이라 min-height:0으로 자식(records)이 내부 스크롤 계산의 기준을 잡게 한다. */
+/* 오른쪽 열 전체를 종이 보고서 한 장으로 그린다(T66, C_Result.html 루트 패널
+   "padding:22px 24px; background:#ece7dc; box-shadow:8px 8px 0 #1f2126"). 안에는
+   위쪽(결론·조건·원문 + 도장 칸)과 VERDICTS 패널 두 덩어리만 있어(5석 카드 제거,
+   T66 item 3) 기본 .screen gap만으로도 두 해상도 모두 페이지 스크롤 없이 들어간다.
+   .app-body__content(그리드 area)와 같은 div라 min-height:0으로 자식(VERDICTS
+   패널)이 내부 예산 계산의 기준을 잡게 한다. */
 .result-screen {
-  gap: var(--space-1);
+  gap: 12px;
   min-height: 0;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--paper);
+  /* 종이 위 기본 글자색(C_Result.html 결론 제목 "color:#1b1a17"). 이 색을 두지
+     않으면 자식이 어두운 테마 기본값(--text, live.css)을 물려받아 종이 위에서
+     흐리게 보인다(실측, 리뷰 지적) — 결론 제목이 대표 사례다. */
+  color: var(--ink);
+  box-shadow: var(--shadow-paper-main);
 }
 
 .result-screen__title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: var(--fs-h2);
   line-height: 1.3;
   text-wrap: balance;
+}
+
+/* 종이 보고서 머리글(T64→T66, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약"). 위쪽을
+   왼쪽(결론·조건·원문)·오른쪽(도장 칸 200px)으로 나눈다(item 1). */
+.result-report__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.result-report__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-report__eyebrow {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--label);
+}
+
+.result-report__eyebrow-tag {
+  padding: 2px 8px;
+  border: 1px solid var(--label);
+}
+
+/* YOUR CONDITIONS · 반영 조건 / YOUR WORDS · 내 원문(T66 item 1, C_Result.html
+   결론 제목 아래 2열 카드). 종이-2 바탕 + 왼쪽 3px 라벨색 선. */
+.result-your-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.result-your-card {
+  box-sizing: border-box;
+  padding: 8px var(--space-1);
+  background-color: var(--paper-2);
+  border-left: 3px solid var(--label);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.result-your-card__label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+.result-your-card__value {
+  margin: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 내 의견 원문(기존 "내 의견" 패널을 흡수, testid 유지): 1줄 클램프(전문은
+   스크린리더·회의 기록에 남는다). */
+.result-mine {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.result-mine__quote {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 도장 칸(200px 폭, item 1 "오른쪽 200px 도장 칸"). 결론 도장 + (있으면) 설득 도장을
+   겹쳐 둔다 — mock(C_Result.html)과 같은 실제 원 크기(150px/108px)를 그대로 쓴다
+   (T66 목표: 줄어든 84px/58px 원 안에서 "조건부 가결"이 줄바꿈돼 깨지던 문제를
+   고쳤다 — 이제 도장 큰 글자는 "가결"/"부결" 두 글자뿐이라 84px에서도 안 깨졌지만,
+   5석 카드를 뺀 만큼 생긴 세로 여유로 mock 크기를 되살렸다, 실측 PR 검토). */
+.result-stamp-box {
+  position: relative;
+  flex-shrink: 0;
+  width: 200px;
+  height: 176px;
+}
+
+/* 결론 도장: 잉크(붉은 원, multiply). 4장 규칙(도장 종류를 늘리지 않는다)에 따라
+   가결·부결 모두 같은 색 하나만 쓴다(문구로 결과를 구분한다). 큰 글자는 "가결"/
+   "부결" 두 글자뿐이라(T66) 원 지름이 커져도 줄바꿈되지 않는다. */
+.result-stamp {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 4px solid var(--stamp-red);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--stamp-red);
+  text-align: center;
+  transform: rotate(-12deg);
+  opacity: 0;
+  mix-blend-mode: multiply;
+  box-shadow: 0 0 0 2px rgba(178, 59, 59, 0.25) inset;
+  animation: result-stamp-in 260ms ease-out both;
+}
+
+.result-stamp__case {
+  font-family: var(--font-label);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+}
+
+.result-stamp__text {
+  font-family: var(--font-display);
+  font-size: 30px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.result-stamp__meta {
+  font-family: var(--font-label);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+/* 설득 도장(T63): 결론 도장 0.4초 뒤 왼쪽 아래에 겹쳐 찍는다(앰버 잉크). */
+.result-stamp--persuasion {
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: auto;
+  width: 92px;
+  height: 92px;
+  border-width: 3px;
+  border-color: var(--stamp-amber);
+  color: var(--stamp-amber);
+  transform: rotate(9deg);
+  box-shadow: none;
+  animation-name: result-stamp-in-persuasion;
+}
+
+.result-stamp--persuasion .result-stamp__text {
+  font-size: 16px;
+}
+
+@keyframes result-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(0.7);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+
+@keyframes result-stamp-in-persuasion {
+  from {
+    opacity: 0;
+    transform: rotate(9deg) scale(0.7);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: rotate(9deg) scale(1);
+  }
+}
+
+.result-screen[data-skip='true'] .result-stamp {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0.01ms !important;
+}
+
+/* 미획득 한 줄(item 1 "BONUS 미획득 · 같은 표 n석 · 3석부터"). 도장이 아니라 점선
+   문구다(가결·부결 도장만 늘 하나뿐이라는 4장 규칙을 지킨다). */
+.result-bonus-missed {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px dashed var(--paper-border);
+  color: var(--ink-muted);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  /* 720에서는 세로 예산이 빠듯해 도장 칸을 한 단계 줄인다(5석 카드를 뺀 뒤에도
+     VERDICTS 5행 + 남은 과제·AI가 도운 일·+6 MONTHS 세 줄이 함께 들어가야 한다,
+     실측). 큰 글자는 여전히 "가결"/"부결" 두 글자뿐이라 이 크기에서도 깨지지 않는다. */
+  .result-stamp-box {
+    width: 140px;
+    height: 128px;
+  }
+
+  .result-stamp {
+    width: 96px;
+    height: 96px;
+    right: 8px;
+    border-width: 3px;
+  }
+
+  .result-stamp__case,
+  .result-stamp__meta {
+    font-size: 8px;
+  }
+
+  .result-stamp__text {
+    font-size: 22px;
+  }
+
+  .result-stamp--persuasion {
+    width: 66px;
+    height: 66px;
+    border-width: 2px;
+  }
+
+  .result-stamp--persuasion .result-stamp__text {
+    font-size: 12px;
+  }
+}
+
+/* TALLY 패널(T64 item 7, Main.html/C_Result.html 왼쪽 열 "TALLY · 5석 과반"). 무대
+   아래 어두운 판 + 5칸 막대 — 오른쪽 종이 보고서와 톤을 맞추지 않고 무대 계열
+   (--transcript-bg 등 어두운 톤)을 쓴다. 값은 모두 오른쪽 열에도 접근 가능한 형태로
+   있어 이 패널 자체는 장식(aria-hidden, ResultScreen.tsx)이다. */
+.result-tally {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid rgba(40, 217, 240, 0.35);
+  background-color: rgba(5, 11, 20, 0.7);
+}
+
+.result-tally__head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--hud-line);
+}
+
+.result-tally__head span:last-child {
+  color: #9fb6cc;
+}
+
+.result-tally__bars {
+  height: 14px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.result-tally__bar {
+  background-color: var(--ink-muted);
+}
+
+.result-tally__bar--yes {
+  background-color: var(--dark-vote-yes);
+  box-shadow: 0 0 10px var(--dark-vote-yes);
+}
+
+.result-tally__bar--no {
+  background-color: var(--dark-vote-no);
+}
+
+.result-tally__caption {
+  margin: 0;
+  font-size: 13px;
+  color: #9fb6cc;
+}
+
+/* 회의록 전문 패널(T58 흡수, T64 item 7). "VERDICTS" 패널 대신 오른쪽 열 아래 영역을
+   통째로 채운다 — MinutesPanel(어두운 TRANSCRIPT 판)을 그대로 재사용한다. */
+.result-transcript {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.result-transcript .minutes {
+  flex: 1;
+  min-height: 0;
 }
 
 .result-screen__expired-notice {
@@ -23,253 +350,34 @@
   color: var(--vote-hold);
 }
 
-/* 무대 열이 본문 폭을 줄여(T44) 5칸을 한 줄에 담기 어려워, 3+2로 감싼다(1280은
-   2+2+1, DESIGN_SPEC.md v1.0 5절 "결과 5석 카드는 3+2(1280에서는 2+2+1)로 감싼다"). */
-.result-screen__seats {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
+/* live.css가 같은 클래스에 어두운 테마 색(--text-muted)을 명시로 걸어 둬(오래된
+   5석 카드 시절 규칙) 위 .result-screen의 상속(--ink)이 먹히지 않는다 — 종이 위에서
+   흐리게 보이던 실측 문제(리뷰 지적)라 여기서 명시로 되돌린다. */
+.result-screen__mode-notice {
+  color: var(--ink-muted);
 }
 
-/* 표결 배지 시각 효과: 텍스트는 처음부터 DOM에 있고(스크린리더는 바로 읽는다),
-   animation-delay만큼 늦게 나타나 보인다(T43, DESIGN_SPEC.md v1.0 3절). */
-.result-seat__vote--reveal {
-  animation: result-seat-reveal 200ms ease-out both;
-}
-
-@keyframes result-seat-reveal {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* 클릭·키 입력으로 즉시 건너뛴다: 지연·재생 시간을 0에 가깝게 만들어 결과가 곧바로
-   보이게 한다(prefers-reduced-motion과 같은 기법, base.css 참고). 결론 도장은 T44에서
-   무대 열(stage.css .stage-band__stamp)로 옮겨 이 선택자 대상이 아니다 — StageBand가
-   useResultStampSkip으로 같은 건너뛰기를 자체 처리한다. */
-.result-screen[data-skip='true'] .result-seat__vote--reveal {
-  animation-duration: 0.01ms !important;
-  animation-delay: 0.01ms !important;
-}
-
-.result-screen__gauge {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
-}
-
-/* "6개월 뒤" 에필로그(T47): 왼쪽 열 게이지 아래·"체험 종료" 위. 수치를 만들지 않는
-   전망 문구라 카드 자체는 작게, 3줄 클램프로 왼쪽 열 CTA 예산을 넘지 않는다
-   (DESIGN_SPEC.md v1.0 8절). */
-.result-epilogue {
+/* VERDICTS · 임원별 판단(T66 item 2·3, 종이-2 패널, 전체 폭). 5행(임원 4+나)이 표를
+   글자로 다시 적으므로(무대 명패가 이미 표 배지를 보여준다) T64가 남긴 동일 크기
+   5석 카드는 뺐다 — DESIGN_SPEC.md 3장 "결과에서는 5명이 같은 크기의 투표 카드"
+   규칙은 v1.1에서 폐기다(9절 참고). */
+.result-verdicts {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-card);
+  color: var(--ink);
   padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-card);
-  border: 1px solid var(--border);
-  background-color: var(--panel-glass);
+  /* mock(C_Result.html)과 같이 이 패널이 남는 세로 공간을 모두 차지한다
+     (flex-grow:1) — 아래 footer가 margin-top:auto로 패널 바닥에 고정된다. */
+  flex: 1 1 auto;
 }
 
-.result-epilogue__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1);
-}
-
-.result-epilogue__heading {
-  margin: 0;
-  font-size: var(--fs-card);
-  color: var(--text);
-}
-
-.result-epilogue__badge {
-  padding: 2px var(--space-1);
-  border-radius: 999px;
-  background-color: rgba(40, 217, 240, 0.12);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.result-epilogue__text {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* 5석은 크기·테두리 굵기를 모두 동일하게 두고, 결론을 상단 색 띠로만 구분한다
-   (DESIGN_SPEC.md "만들 것 · 5석 카드 동일 크기·상단 색 띠"). */
-.result-seat {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  /* 3+2로 두 줄이 되며(T44) 세로 합이 늘어, 5칸이 한 줄이던 때보다 카드 자체
-     높이를 줄여 총합을 맞춘다(1920에서 스크롤 없이 한 화면, v1.0 5절 검수). */
-  min-height: 110px;
-  background-color: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: calc(var(--space-1) + 6px) var(--space-2) var(--space-1);
-  text-align: center;
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-}
-
-.result-seat::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-}
-
-.result-seat__member {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text);
-  text-align: center;
-}
-
-.result-seat__vote {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.result-seat__vote-icon {
-  margin-right: 4px;
-}
-
-.result-seat--yes::before {
-  background-color: var(--accent);
-}
-
-.result-seat--yes .result-seat__vote {
-  color: var(--accent);
-}
-
-.result-seat--hold::before {
-  background-color: var(--vote-hold);
-}
-
-.result-seat--hold .result-seat__vote {
-  color: var(--vote-hold);
-}
-
-.result-seat--no::before {
-  background-color: var(--vote-no);
-}
-
-.result-seat--no .result-seat__vote {
-  color: var(--vote-no);
-}
-
-.result-seat--uncast::before {
-  background-color: var(--vote-uncast);
-}
-
-.result-seat--uncast .result-seat__vote {
-  color: var(--vote-uncast);
-}
-
-/* 기록 영역을 "이사회 한 장 요약"(2/3) + 보조 패널(1/3: 남은 과제 + AI가 도운 일)로
-   나눈다(두 해상도 공통, DESIGN_SPEC.md v1.0 9절, T48). flex:1로 오른쪽 열의 남은
-   세로 공간을 모두 채우고, 두 영역 높이를 맞춘다(align-items:stretch) — 그래야
-   'AI가 도운 일' 하나만 내부 스크롤로 남는 내용을 감당할 수 있다. */
-.result-screen__records {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--space-2);
-  align-items: stretch;
-  flex: 1;
-  min-height: 0;
-}
-
-.result-summary,
-.result-screen__tasks,
-.result-screen__ai-help {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-height: 0;
-  overflow: hidden;
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-2);
-}
-
-/* 오른쪽 보조 패널은 "남은 과제" 위 · "AI가 도운 일" 아래의 세로 스택이다. 과제
-   목록은 내용만큼(flex:0 0 auto), 'AI가 도운 일'만 남는 공간을 모두 차지하고
-   내부 스크롤한다(min-height:0). */
-.result-screen__side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-height: 0;
-}
-
-.result-screen__side .result-screen__tasks {
-  flex: 0 0 auto;
-}
-
-.result-screen__side .result-screen__ai-help {
-  flex: 1;
-  min-height: 0;
-}
-
-/* 기록 패널(AI 사용 이력)만 유리질 패널로 구분한다(DESIGN_SPEC.md "만들 것 · 기록
-   패널(AI 사용 이력)은 --panel-glass"). 화면당 유일한 내부 스크롤 패널이다(v1.0 6절
-   표) — 목록만 overflow-y:auto이고 아래쪽은 페이드로 더 있음을 알린다. */
-.result-screen__ai-help {
-  background-color: var(--panel-glass);
-}
-
-.result-screen__ai-help-scroll {
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 20px), transparent 100%);
-}
-
-.result-screen__section-label {
-  margin: 0;
-  font-size: 18px;
-  color: var(--text-muted);
-}
-
-.result-screen__no-conditions {
-  margin: 0;
-  color: var(--text-muted);
-}
-
-.result-screen__ai-help-placeholder {
-  margin: 0;
-  color: var(--text-muted);
-}
-
-/* "이사회 한 장 요약"(T48): 집계 배지 → 조건 한 줄 → 임원 4행 + 내 행 → 내 의견
-   원문 순서다(DESIGN_SPEC.md v1.0 9절). */
-.result-summary__head {
+.result-verdicts__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -277,23 +385,26 @@
   flex-wrap: wrap;
 }
 
+.result-screen__section-label {
+  margin: 0;
+  font-size: 18px;
+  font-family: var(--font-label);
+  letter-spacing: 0.08em;
+  color: var(--label);
+}
+
 .result-summary__tally {
   margin: 0;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
   font-size: var(--fs-meta);
   white-space: nowrap;
 }
 
-.result-summary__conditions {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
-}
-
-/* 행 목록은 줄어들지 않는다(flex-shrink:0) — 세로가 모자라면 행을 조용히 감추는 대신
-   e2e(noscroll live 케이스)의 요약 패널 잘림 검사가 실패하도록 한다. */
-.result-summary__rows {
+/* 임원·내 행 공통: 직함(타자기 서체, 찬성/반대 색) + 표(색+텍스트+아이콘, 4장 규칙) +
+   판단 이유 1줄 클램프 + 바뀐 표 태그(scripted만). 5석 카드가 하던 역할(표 표시)을
+   이 행이 대신하므로 testid는 result-seat-<id>를 그대로 옮겨 쓴다(T66 item 3). */
+.result-verdicts__rows {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -302,55 +413,64 @@
   flex-shrink: 0;
 }
 
-/* 임원·내 행 공통: 아바타 + 이름 + 표 배지(4장 규칙: 색+텍스트+아이콘) + 판단 이유
-   1줄 클램프 + 바뀐 표 태그(scripted만). */
-.result-summary__row {
+.result-seat {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 4px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 3px 0;
+  border-bottom: 1px solid var(--paper-border);
 }
 
-.result-summary__row:last-child {
+.result-seat:last-child {
   border-bottom: none;
 }
 
-.result-summary__name {
+/* 직함은 코드명이 아니라 전체 직함을 그대로 보여준다(2026-09-30 결정) — 가장 긴
+   "정보보호책임임원(CISO)"이 두 해상도 모두 줄바꿈 없이 들어가도록 폭을 그 직함
+   기준으로 넉넉히 잡는다(고정 96/128px 말줄임은 잘림 원인이라 폐기, Codex 리뷰
+   17차 지적). 5행이 같은 폭을 공유해 표·사유 열이 그대로 정렬된다. */
+.result-seat__title {
   flex: 0 0 auto;
-  color: var(--text);
+  min-width: 168px;
+  font-family: var(--font-label);
   font-size: var(--fs-meta);
   white-space: nowrap;
+  color: var(--ink);
 }
 
-.result-summary__vote {
+.result-seat__vote {
   flex: 0 0 auto;
   font-weight: 700;
   font-size: var(--fs-meta);
   white-space: nowrap;
 }
 
-.result-summary__vote--yes {
-  color: var(--accent);
+.result-seat__vote-icon {
+  margin-right: 4px;
 }
 
-.result-summary__vote--hold {
-  color: var(--vote-hold);
+.result-seat--yes .result-seat__title,
+.result-seat--yes .result-seat__vote {
+  color: var(--paper-vote-yes);
 }
 
-.result-summary__vote--no {
-  color: var(--vote-no);
+.result-seat--no .result-seat__title,
+.result-seat--no .result-seat__vote {
+  color: var(--paper-vote-no);
 }
 
-.result-summary__vote--uncast {
-  color: var(--vote-uncast);
+.result-seat--uncast .result-seat__title,
+.result-seat--uncast .result-seat__vote {
+  color: var(--ink-muted);
 }
 
-/* 판단 이유는 1줄 클램프(v1.0 9절 "판단 이유 한 줄"). */
-.result-summary__reason {
+/* 판단 이유는 1줄 클램프(v1.0 9절 "판단 이유 한 줄"). live의 UNCAST 행은 사유
+   자리에 unavailableReason을 그대로 보여준다(ResultScreen.tsx가 별도 testid로
+   감싼다). */
+.result-seat__reason {
   flex: 1;
   min-width: 0;
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-meta);
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -363,157 +483,112 @@
   flex: 0 0 auto;
   padding: 2px var(--space-1);
   border-radius: 999px;
-  background-color: rgba(40, 217, 240, 0.12);
-  color: var(--accent);
+  background-color: rgba(107, 74, 31, 0.12);
+  color: var(--label);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-/* 내 의견 원문(기존 "내 의견" 패널을 흡수, testid 유지): 2줄 클램프. */
-.result-mine {
+/* "설득 도장" 근거 한 줄(T63, v1.0 9절). 다른 요약 줄과 같은 예산 안에 들도록 1줄
+   클램프한다. */
+.result-summary__persuasion {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-meta);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* VERDICTS 아래 요약 줄 3개(남은 과제·AI가 도운 일·+6 MONTHS, T66 item 2). 위 행
+   목록과 점선으로 구분한다(mock "+6 MONTHS" 줄 구분선과 같은 톤). */
+.result-verdicts__footer {
+  /* mock "+6 MONTHS" 줄 규칙(margin-top:auto) — 패널이 flex-grow:1로 늘어난 만큼
+     이 블록이 패널 바닥에 고정된다. */
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px dashed var(--paper-border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-/* 원문은 1줄 클램프(전문은 스크린리더·회의 기록에 남는다). live 최악 조합의 세로
-   예산 때문에 2줄에서 줄였다(PR #9 Codex 1차 검토). */
-.result-mine__quote {
+.result-verdicts__line {
   margin: 0;
-  color: var(--text);
-  font-size: var(--fs-meta);
+  font-size: 12px;
+  color: var(--ink-muted);
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* 5석은 두 해상도 모두 같은 크기로 둔다(DESIGN_SPEC.md "결과 5석 동일 크기"). 감싸는
-   줄 수만 1280에서 2+2+1로 한 번 더 좁힌다(무대 열이 40%를 차지해 본문 폭이 더
-   줄어든다, v1.0 5절). */
-/* live 판단 근거(reason ≤160자)·남은 우려(길이 제한 없음)는 세로 예산을 넘길 수 있어
-   줄 수를 고정한다(PR #6 Codex 2차 검토). 전문은 스크린리더에 그대로 읽히고, 회의
-   기록에도 남는다. */
-.result-seat__reason,
-.result-seat__concerns,
-.result-seat__unavailable {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: var(--fs-meta);
-  color: var(--text-muted);
+.result-verdicts__epilogue {
+  -webkit-line-clamp: 2;
 }
 
-/* 판단 근거는 두 해상도 모두 1줄(요약 패널이 같은 근거를 한 줄로 다시 보여주고, live
-   최악 조합의 기록 영역 세로 예산을 확보한다 — PR #9 Codex 1차 검토). */
-.result-seat__reason {
-  -webkit-line-clamp: 1;
+.result-verdicts__epilogue-label {
+  font-family: var(--font-label);
+  letter-spacing: 0.14em;
+  color: var(--label);
 }
 
-.result-seat__concerns,
-.result-seat__unavailable {
-  -webkit-line-clamp: 1;
+/* "체험용 가상 전망" 배지(T47, 기존 result-epilogue 카드에서 옮겨 씀). 이제 +6
+   MONTHS 줄 끝에 인라인으로 붙는다. */
+.result-epilogue__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-1);
+  border-radius: 999px;
+  background-color: rgba(40, 217, 240, 0.12);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 @media (max-width: 1280px) {
-  /* 720: 5석을 3+2로 두 줄에 담는다(2+2+1 세 줄은 live 근거가 붙으면 넘친다). */
-  .result-screen__seats {
-    grid-template-columns: repeat(3, 1fr);
+  .result-screen {
+    gap: 8px;
+    padding: var(--space-1) var(--space-2);
   }
 
-  .result-seat__reason {
-    -webkit-line-clamp: 1;
-    font-size: 12px;
+  .result-your-card {
+    padding: 6px 8px;
   }
 
-  .result-seat__concerns,
-  .result-seat__unavailable {
-    font-size: 12px;
-  }
-
-  /* 720: 좌석 아바타를 sm 크기로 줄여 live 근거·우려 두 줄이 붙어도 5석 두 줄이
-     기록 영역을 밀어내지 않게 한다(PR #9 Codex 1차 검토). */
-  .result-seat .avatar--md {
-    width: 36px;
-    height: 36px;
-    font-size: 11px;
-  }
-
-  .result-seat {
-    min-height: 76px;
-    padding: var(--space-1);
-    gap: 4px;
-  }
-
-  .result-seat__member {
-    font-size: 13px;
-  }
-
-  .result-seat__vote {
-    font-size: 16px;
-  }
-
-  .result-screen__records {
-    gap: var(--space-1);
-  }
-
-  .result-summary,
-  .result-screen__tasks,
-  .result-screen__ai-help {
-    padding: var(--space-1);
+  .result-your-card__label {
+    font-size: 10px;
   }
 
   .result-screen__section-label {
     font-size: 14px;
   }
 
-  .result-screen__tasks ul,
-  .result-screen__ai-help-list,
-  .result-screen__ai-help-none,
-  .result-screen__ai-help-placeholder {
-    font-size: 12px;
-  }
-
-  /* 720: 요약 행은 12px로 줄이되 원문은 2줄을 유지한다(DESIGN_SPEC.md v1.0 9절
-     "720에서 요약 행은 12px, 임원 4행+내 행+조건+원문 2줄 = 기록 영역 안"). 아바타도
-     줄여야 5행+조건+원문이 262px 안에 들어간다(행 높이가 아바타 32px에 눌려
-     PR 검토에서 CISO·내 행이 원문과 겹치는 문제가 확인됐다). */
-  .result-summary {
+  .result-verdicts {
+    padding: 4px var(--space-1);
     gap: 4px;
-    line-height: 1.2;
   }
 
-  .result-summary__rows {
-    flex-shrink: 0;
-  }
-
-  .result-summary__row {
+  .result-seat {
     padding: 2px 0;
     gap: 6px;
   }
 
-  .result-summary__row .avatar {
-    width: 16px;
-    height: 16px;
-    font-size: 6px;
-    border-width: 1px;
+  .result-seat__title {
+    min-width: 128px;
   }
 
   .result-summary__tally,
-  .result-summary__name,
-  .result-summary__vote,
-  .result-summary__reason,
-  .result-summary__conditions {
-    font-size: 12px;
-  }
-
-  .result-mine {
-    gap: 2px;
-  }
-
-  .result-mine__quote {
+  .result-seat__title,
+  .result-seat__vote,
+  .result-seat__reason,
+  .result-your-card__value,
+  .result-mine__quote,
+  .result-summary__persuasion,
+  .result-verdicts__line {
     font-size: 12px;
   }
 }

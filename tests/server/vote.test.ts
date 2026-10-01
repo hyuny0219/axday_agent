@@ -2,7 +2,7 @@
 // 포함하지 않음을 확인한다. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
 import { describe, expect, it } from 'vitest';
-import { handleVote, type VoteRequest } from '../../server/handlers/vote';
+import { handleVote, voteRequestSchema, type VoteRequest } from '../../server/handlers/vote';
 import { createMockProvider } from '../../server/providers/mock';
 import type { ModelProvider } from '../../server/providers/types';
 
@@ -38,7 +38,7 @@ describe('handleVote with the mock provider', () => {
       expect(result.status).toBe('answered');
       expect(result.ballot?.motionId).toBe(input.motion.id);
       expect(result.ballot?.motionHash).toBe(input.motion.hash);
-      expect(['YES', 'HOLD', 'NO']).toContain(result.ballot?.vote);
+      expect(['YES', 'NO']).toContain(result.ballot?.vote);
     }
   });
 
@@ -100,7 +100,7 @@ describe('handleVote with the mock provider', () => {
             roleId: envelope.roleId,
             motionId: envelope.motionId,
             motionHash: envelope.motionHash,
-            vote: 'HOLD',
+            vote: 'NO',
             reason: '추가 확인이 필요합니다.',
             evidenceIds: ['E1'],
             remainingConcerns: ['권한 검증'],
@@ -120,11 +120,11 @@ describe('handleVote with the mock provider', () => {
     expect(calls).toHaveLength(4);
     for (const call of calls) {
       // transcript 발언에는 roleId·message만 있고 vote 값이 없으므로, 실제 표 데이터
-      // (YES/HOLD/NO)는 오직 이 역할 자신에게 요청하는 지시문에만 등장해야 한다.
-      expect(call.system).not.toMatch(/참가자[^\n]*(YES|HOLD|NO)/);
+      // (YES/NO)는 오직 이 역할 자신에게 요청하는 지시문에만 등장해야 한다.
+      expect(call.system).not.toMatch(/참가자[^\n]*(YES|NO)/);
       expect(call.system).not.toMatch(/participantVote/i);
       expect(call.user).not.toMatch(/participantVote/i);
-      expect(call.user).not.toMatch(/YES|HOLD|NO/);
+      expect(call.user).not.toMatch(/YES|NO/);
     }
   });
 
@@ -132,5 +132,74 @@ describe('handleVote with the mock provider', () => {
     const provider = createMockProvider('mock-model');
     const input = baseVoteInput({ requestId: 'req-5', scenarioId: 'not-a-scenario' });
     await expect(handleVote(input, { provider })).rejects.toThrow('unknown_scenario');
+  });
+
+  it('roleIds가 있으면 그 역할만 호출한다("미표결 임원 다시 요청", T65)', async () => {
+    const calls: string[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        const envelope = JSON.parse(req.user) as { roleId: string; motionId: string; motionHash: string };
+        calls.push(envelope.roleId);
+        return {
+          json: {
+            roleId: envelope.roleId,
+            motionId: envelope.motionId,
+            motionHash: envelope.motionHash,
+            vote: 'YES',
+            reason: '재요청 판단입니다.',
+            evidenceIds: [],
+            remainingConcerns: [],
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseVoteInput({ requestId: 'req-retry-1', roleIds: ['CAIO'] });
+    const results = await handleVote(input, { provider: fakeProvider });
+
+    expect(calls).toEqual(['CAIO']);
+    expect(results).toHaveLength(1);
+    expect(results[0]?.roleId).toBe('CAIO');
+    expect(results[0]?.status).toBe('answered');
+  });
+
+  it('deps.timeoutMs로 타임아웃 상한을 바꿀 수 있다(T65, 기본은 ROUND_TIMEOUT_MS 8000)', async () => {
+    const timeoutsSeen: number[] = [];
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        timeoutsSeen.push(req.timeoutMs);
+        const envelope = JSON.parse(req.user) as { roleId: string; motionId: string; motionHash: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            motionId: envelope.motionId,
+            motionHash: envelope.motionHash,
+            vote: 'YES',
+            reason: '판단입니다.',
+            evidenceIds: [],
+            remainingConcerns: [],
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    await handleVote(baseVoteInput({ requestId: 'req-timeout-default', budgetMs: 999_999 }), {
+      provider: fakeProvider,
+    });
+    await handleVote(baseVoteInput({ requestId: 'req-timeout-custom', budgetMs: 999_999 }), {
+      provider: fakeProvider,
+      timeoutMs: 3000,
+    });
+    expect(timeoutsSeen[0]).toBe(8000);
+    expect(timeoutsSeen[4]).toBe(3000);
+  });
+});
+
+describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
+  it('중복 역할·4개 초과는 거부하고, 고유한 1~4개만 받는다', () => {
+    const base = baseVoteInput({ requestId: 'req-schema' });
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO', 'CAIO'] }).success).toBe(false);
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CFO'] }).success).toBe(false);
+    expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO'] }).success).toBe(true);
   });
 });

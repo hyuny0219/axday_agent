@@ -18,8 +18,11 @@ import { getScenarioMaterials } from '../scenario-data';
 import { buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
+import { systemClock, type Clock } from '../clock';
+import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
+import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { mapFailReason } from './shared';
+import { classifyFailure, roleIdsSchema } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -46,6 +49,9 @@ export const voteRequestSchema = z.object({
     effectiveConditionIds: z.array(z.enum(CONDITION_IDS)),
     executionMode: z.string().min(1),
   }),
+  /** 미표결(UNCAST) 임원만 다시 호출할 때 쓰는 선택 필드(T65, "미표결 임원 다시 요청").
+   * 없으면 임원 4명 전체를 부른다. */
+  roleIds: roleIdsSchema.optional(),
   /** 테스트/개발 전용: roleId -> mock 장애 주입. 운영 요청에는 없다. */
   mock: z.record(z.string(), z.string()).optional(),
 });
@@ -71,6 +77,9 @@ export interface VoteRoleResult {
 
 export interface VoteHandlerDeps {
   provider: ModelProvider;
+  clock?: Clock;
+  /** OPINIONS·VOTE·probe와 같은 타임아웃(ms, T65). 생략하면 8000이다. */
+  timeoutMs?: number;
 }
 
 function voteJsonSchema(): Record<string, unknown> {
@@ -145,7 +154,9 @@ async function callRoleVote(
   materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   timeoutMs: number,
   provider: ModelProvider,
+  clock: Clock,
 ): Promise<VoteRoleResult> {
+  const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -166,11 +177,26 @@ async function callRoleVote(
       signal: controller.signal,
     });
     const result = await withTimeout(raw, timeoutMs);
+    const latencyMs = clock.now() - start;
     const parsed = voteResponseSchema({
       motionId: input.motion.id,
       motionHash: input.motion.hash,
     }).safeParse(result.json);
     if (!parsed.success || parsed.data.roleId !== roleId) {
+      logCall({
+        ts: new Date(clock.now()).toISOString(),
+        kind: 'vote',
+        sessionId: input.sessionId,
+        stage: 'VOTE',
+        roleId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        timeoutMs,
+        promptVersion: PROMPT_VERSION,
+        modelId: result.modelId,
+      });
       return {
         roleId,
         status: 'failed',
@@ -179,6 +205,18 @@ async function callRoleVote(
         promptVersion: PROMPT_VERSION,
       };
     }
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'vote',
+      sessionId: input.sessionId,
+      stage: 'VOTE',
+      roleId,
+      status: 'answered',
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: result.modelId,
+    });
     return {
       roleId,
       status: 'answered',
@@ -194,10 +232,27 @@ async function callRoleVote(
       promptVersion: PROMPT_VERSION,
     };
   } catch (err) {
+    const latencyMs = clock.now() - start;
+    const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
+    logCall({
+      ts: new Date(clock.now()).toISOString(),
+      kind: 'vote',
+      sessionId: input.sessionId,
+      stage: 'VOTE',
+      roleId,
+      status: 'failed',
+      failReason,
+      providerErrorClass,
+      httpStatus,
+      latencyMs,
+      timeoutMs,
+      promptVersion: PROMPT_VERSION,
+      modelId: '',
+    });
     return {
       roleId,
       status: 'failed',
-      failReason: mapFailReason(err),
+      failReason,
       modelId: '',
       promptVersion: PROMPT_VERSION,
     };
@@ -206,8 +261,9 @@ async function callRoleVote(
   }
 }
 
-/** 임원 4명에게 최종 표를 병렬로 한 번씩 요청한다(재시도 0회). 참가자 표·다른 임원 표는
- * 입력에도 프롬프트에도 포함하지 않는다. */
+/** 임원(기본 4명, roleIds가 있으면 그 역할만)에게 최종 표를 병렬로 한 번씩 요청한다(재시도
+ * 0회). 참가자 표·다른 임원 표는 입력에도 프롬프트에도 포함하지 않는다. roleIds는 미표결
+ * (UNCAST) 임원만 다시 부르는 "다시 요청"(T65)이 쓴다. */
 export async function handleVote(
   input: VoteRequest,
   deps: VoteHandlerDeps,
@@ -216,17 +272,19 @@ export async function handleVote(
   if (!materials) {
     throw new Error(`unknown_scenario:${input.scenarioId}`);
   }
-  const timeoutMs = Math.min(8000, input.budgetMs);
+  const clock = deps.clock ?? systemClock;
+  const timeoutMs = Math.min(deps.timeoutMs ?? DEFAULT_ROUND_TIMEOUT_MS, input.budgetMs);
+  const targets = input.roleIds ?? EXEC_ROLE_IDS;
 
   const settled = await Promise.allSettled(
-    EXEC_ROLE_IDS.map((roleId) => callRoleVote(roleId, input, materials, timeoutMs, deps.provider)),
+    targets.map((roleId) => callRoleVote(roleId, input, materials, timeoutMs, deps.provider, clock)),
   );
 
   return settled.map((result, index) => {
     if (result.status === 'fulfilled') {
       return result.value;
     }
-    const roleId = EXEC_ROLE_IDS[index] as ExecRoleId;
+    const roleId = targets[index] as ExecRoleId;
     return {
       roleId,
       status: 'failed',

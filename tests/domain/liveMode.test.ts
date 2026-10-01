@@ -85,7 +85,7 @@ describe('live 모드 정상 4표 집계', () => {
       CEO: 'YES',
       CFO: 'YES',
       CAIO: 'YES',
-      CISO: 'HOLD',
+      CISO: 'NO',
     });
     expect(session.execBallotsPending).toBe(false);
     expect(session.ballots).toHaveLength(4);
@@ -284,8 +284,8 @@ describe('scripted 모드 결과가 기존과 동일', () => {
 
     expect(session.stage).toBe('RESULT');
     expect(session.ballots).toHaveLength(5);
-    // 대표 경로표: 없음(원안) / YES,HOLD,NO,NO / 참가자 YES → HOLD. (session.test.ts와 동일)
-    expect(session.outcome).toBe('HOLD');
+    // 대표 경로표: 없음(원안) / YES,NO,NO,NO / 참가자 YES → REJECT. (session.test.ts와 동일)
+    expect(session.outcome).toBe('REJECT');
     expect(tally(session.ballots).limitedByUnavailable).toBe(false);
   });
 });
