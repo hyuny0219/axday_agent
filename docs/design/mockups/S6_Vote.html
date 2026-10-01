@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>C안 — 표결(VOTE)</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=Share+Tech+Mono&family=Special+Elite&display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans KR',system-ui,sans-serif;background:#0b0d10;color:#ece7dc}
+a{color:#e0a34a}a:hover{color:#f0c27a}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; box-sizing: border-box; position: relative; overflow: hidden; background: #0b0d10; background-image: radial-gradient(900px circle at 20% 10%, rgba(224,163,74,0.08), transparent 55%), linear-gradient(rgba(224,163,74,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(224,163,74,0.05) 1px, transparent 1px); background-size: auto, 40px 40px, 40px 40px; display: flex; flex-direction: column">
+  <div style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2d33; background: rgba(11,13,16,0.9)">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="font-family: 'Black Han Sans', sans-serif; font-size: 22px; letter-spacing: 0.06em; color: #ece7dc">BOARDROOM 2026</span>
+      <span style="font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 0.14em; color: #e0a34a">CASE FILE No. 02 · SESSION 0042</span>
+    </div>
+    <div style="display: flex; gap: 6px; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.08em"><span style="padding: 6px 12px; border: 1px solid #e0a34a; color: #e0a34a">✓ 01 상황 파악</span><span style="padding: 6px 12px; border: 1px solid #e0a34a; color: #e0a34a">✓ 02 임원 의견</span><span style="padding: 6px 12px; border: 1px solid #e0a34a; color: #e0a34a">✓ 03 내 의견</span><span style="padding: 6px 12px; border: 1px solid #e0a34a; color: #e0a34a">✓ 04 반응에 답하기</span><span style="padding: 6px 12px; background: #ece7dc; color: #0b0d10; border: 1px solid #ece7dc">05 표결</span></div>
+    <div style="display: flex; align-items: center; gap: 12px; font-family: 'Special Elite', monospace; font-size: 13px">
+      <span style="padding: 4px 10px; border: 2px solid #b23b3b; color: #e06b6b; letter-spacing: 0.18em; transform: rotate(-3deg)">LIVE</span>
+      <button type="button" aria-label="운영 메뉴" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #4a4d55; color: #ece7dc; font-family: 'Special Elite', monospace; font-size: 13px; cursor: pointer">운영</button>
+    </div>
+  </div>
+  <div style="flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 20px 24px; display: grid; grid-template-columns: 560px minmax(0, 1fr); gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+      <div style="position: relative; height: 300px; flex-shrink: 0; border: 1px solid rgba(40,217,240,0.55); box-shadow: 0 0 0 1px rgba(5,11,20,1), 0 0 28px rgba(40,217,240,0.18) inset; overflow: hidden">
+        <img src="../assets/stage-render-01.jpg" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; filter: saturate(0.85) contrast(1.05)">
+        <div style="position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 2px, transparent 2px, transparent 5px), linear-gradient(180deg, rgba(5,11,20,0.55) 0%, transparent 30%, transparent 62%, rgba(5,11,20,0.85) 100%)"></div>
+        <div style="position: absolute; top: 8px; left: 8px; width: 22px; height: 22px; border-top: 2px solid #28d9f0; border-left: 2px solid #28d9f0"></div>
+        <div style="position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-top: 2px solid #28d9f0; border-right: 2px solid #28d9f0"></div>
+        <div style="position: absolute; bottom: 8px; left: 8px; width: 22px; height: 22px; border-bottom: 2px solid #28d9f0; border-left: 2px solid #28d9f0"></div>
+        <div style="position: absolute; bottom: 8px; right: 8px; width: 22px; height: 22px; border-bottom: 2px solid #28d9f0; border-right: 2px solid #28d9f0"></div>
+        <div style="position: absolute; top: 12px; left: 40px; display: flex; gap: 10px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.16em; color: #28d9f0"><span>CAM 01 · 표결 중</span><span style="color: #9fb6cc">REC ●</span></div>
+        <div style="position: absolute; top: 12px; right: 40px; padding: 4px 10px; border: 1px solid #ffb457; color: #ffb457; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.2em">CLASSIFIED</div>
+        <div style="position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: space-around; padding: 0 24px">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+            <span style="padding: 3px 10px; background: rgba(5,11,20,0.9); border: 1px solid #28d9f0; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: #28d9f0">CEO</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7ce0b3" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg>
+            <span style="font-size: 11px; color: #9fb6cc">방향 · 찬성 쪽</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+            <span style="padding: 3px 10px; background: rgba(5,11,20,0.9); border: 1px solid #4c8dff; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: #4c8dff">CFO</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7ce0b3" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg>
+            <span style="font-size: 11px; color: #9fb6cc">비용 · 찬성 쪽</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+            <span style="padding: 3px 10px; background: rgba(5,11,20,0.9); border: 1px solid #7ce0b3; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: #7ce0b3">CAIO</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7ce0b3" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg>
+            <span style="font-size: 11px; color: #9fb6cc">시스템 · 찬성 쪽</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+            <span style="padding: 3px 10px; background: rgba(5,11,20,0.9); border: 1px solid #ffb457; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 0.12em; color: #ffb457">CISO</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7ce0b3" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 14c1.2 1.4 2.5 2 4 2s2.8-.6 4-2"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg>
+            <span style="font-size: 11px; color: #9fb6cc">보안 · 찬성 쪽</span>
+          </div>
+        </div>
+      </div>
+      <div style="box-sizing: border-box; padding: 10px 12px; background: #15171b; border: 1px solid #2a2d33; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #28d9f0"><span>BALLOTS · 임원 표</span><span style="color: #9fb6cc">참가자 확정 전 비공개</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px"><div style="box-sizing: border-box; padding: 8px 6px; border: 1px solid #2a2d33; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #28d9f0">CEO</span><span style="width: 36px; height: 36px; border: 2px dashed #4a4d55; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'Special Elite', monospace; font-size: 11px; color: #8f8a80">?</span><span style="font-size: 10px; color: #9fb6cc">봉인</span></div><div style="box-sizing: border-box; padding: 8px 6px; border: 1px solid #2a2d33; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #4c8dff">CFO</span><span style="width: 36px; height: 36px; border: 2px dashed #4a4d55; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'Special Elite', monospace; font-size: 11px; color: #8f8a80">?</span><span style="font-size: 10px; color: #9fb6cc">봉인</span></div><div style="box-sizing: border-box; padding: 8px 6px; border: 1px solid #2a2d33; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #7ce0b3">CAIO</span><span style="width: 36px; height: 36px; border: 2px dashed #4a4d55; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'Special Elite', monospace; font-size: 11px; color: #8f8a80">?</span><span style="font-size: 10px; color: #9fb6cc">봉인</span></div><div style="box-sizing: border-box; padding: 8px 6px; border: 1px solid #2a2d33; display: flex; flex-direction: column; align-items: center; gap: 4px"><span style="font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: #ffb457">CISO</span><span style="width: 36px; height: 36px; border: 2px dashed #4a4d55; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'Special Elite', monospace; font-size: 11px; color: #8f8a80">?</span><span style="font-size: 10px; color: #9fb6cc">봉인</span></div></div>
+        <span style="font-size: 11px; color: #9fb6cc">임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다.</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 10px 14px; background: #15171b; border: 1px solid #2a2d33; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: flex; justify-content: space-between; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #e0a34a"><span>TRANSCRIPT · 발언 흐름</span><span style="color: #8f8a80">2 ENTRIES · 스크롤</span></div>
+        <div style="display: flex; gap: 10px; font-size: 12px; line-height: 1.45"><span style="font-family: 'Special Elite', monospace; color: #e0a34a; flex-shrink: 0">[02:31] CFO</span><span>담당자를 정한다면 시범은 받아들일 수 있습니다.</span></div><div style="display: flex; gap: 10px; font-size: 12px; line-height: 1.45"><span style="font-family: 'Special Elite', monospace; color: #e0a34a; flex-shrink: 0">[02:33] CISO</span><span>추적 가능으로 두면 로그 보관 기간과 열람 권한을 먼저 정해야 합니다.</span></div>
+      </div>
+    </div>
+    <div style="position: relative; box-sizing: border-box; padding: 20px 24px; background: #ece7dc; color: #1b1a17; box-shadow: 8px 8px 0 #1f2126; display: flex; flex-direction: column; gap: 10px; min-height: 0">
+      <div style="position: absolute; top: 14px; right: 18px; padding: 5px 12px; border: 3px solid #b23b3b; color: #b23b3b; font-family: 'Special Elite', monospace; font-size: 16px; letter-spacing: 0.24em; transform: rotate(-8deg); opacity: 0.85">CONFIDENTIAL</div>
+      <div style="display: flex; align-items: baseline; gap: 10px"><span style="padding: 3px 8px; border: 1px solid #6b4a1f; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #6b4a1f">STEP 05 · 2/2</span><h1 style="margin: 0; font-family: 'Black Han Sans', sans-serif; font-size: 26px; line-height: 1.2">최종 투표 · 특별 이사 1표</h1></div>
+      <div style="box-sizing: border-box; padding: 10px 14px; background: #fbf8f1; border-left: 4px solid #6b4a1f; font-size: 14px; line-height: 1.5"><span style="font-family: 'Special Elite', monospace; font-size: 11px; letter-spacing: 0.16em; color: #6b4a1f; margin-right: 8px">MOTION</span>사내 게시판을 익명제로 전환하되, 한 게시판에서 먼저 시범 운영하고 게시 전 검수 절차를 둔다. 문제가 생기면 작성자를 확인할 수 있게 하고, 운영 효과를 측정한 뒤 확대한다.</div>
+      <div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch">
+        <label style="position: relative; box-sizing: border-box; padding: 20px; background: #f3ead6; border: 3px solid #1f8f5f; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer"><input type="radio" name="vote" checked style="position: absolute; opacity: 0; width: 1px; height: 1px"><span style="width: 92px; height: 92px; border-radius: 50%; border: 4px solid #1f8f5f; display: inline-flex; align-items: center; justify-content: center; font-family: 'Black Han Sans', sans-serif; font-size: 34px; color: #1f8f5f; transform: rotate(-6deg)">찬성</span><span style="font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.2em; color: #1f8f5f">APPROVE · 선택됨</span></label>
+        <label style="position: relative; box-sizing: border-box; padding: 20px; background: #fbf8f1; border: 2px solid #c9c2b4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; cursor: pointer"><input type="radio" name="vote" style="position: absolute; opacity: 0; width: 1px; height: 1px"><span style="width: 92px; height: 92px; border-radius: 50%; border: 4px solid #b23b3b; display: inline-flex; align-items: center; justify-content: center; font-family: 'Black Han Sans', sans-serif; font-size: 34px; color: #b23b3b; opacity: 0.5; transform: rotate(-6deg)">반대</span><span style="font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.2em; color: #5c5850">REJECT</span></label>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px"><button type="button" style="height: 56px; flex-shrink: 0; width: 260px; background: #e0a34a; color: #0b0d10; border: 0; font-family: 'Black Han Sans', sans-serif; font-size: 20px; letter-spacing: 0.04em; box-shadow: 6px 6px 0 #3a2a12; cursor: pointer; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))">최종 투표 확정 ▶</button><span style="font-size: 12px; color: #5c5850; line-height: 1.4">확정 버튼으로만 표가 성립합니다. 확정 후 임원 표가 공개되고 결과로 넘어갑니다.<br>5석 중 찬성 3표 이상이면 가결, 그 외는 부결.</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>C안 — 안건 선택(SELECT)</title>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=Share+Tech+Mono&family=Special+Elite&display=swap">
+<style>
+body{margin:0;font-family:'Noto Sans KR',system-ui,sans-serif;background:#0b0d10;color:#ece7dc}
+a{color:#e0a34a}a:hover{color:#f0c27a}
+</style>
+</helmet>
+<div style="width: 1280px; height: 720px; box-sizing: border-box; position: relative; overflow: hidden; background: #0b0d10; background-image: radial-gradient(900px circle at 20% 10%, rgba(224,163,74,0.08), transparent 55%), linear-gradient(rgba(224,163,74,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(224,163,74,0.05) 1px, transparent 1px); background-size: auto, 40px 40px, 40px 40px; display: flex; flex-direction: column">
+  <div style="height: 56px; flex-shrink: 0; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2d33; background: rgba(11,13,16,0.9)">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <span style="font-family: 'Black Han Sans', sans-serif; font-size: 22px; letter-spacing: 0.06em; color: #ece7dc">BOARDROOM 2026</span>
+      <span style="font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 0.14em; color: #e0a34a">CASE FILE No. 02 · SESSION 0042</span>
+    </div>
+    <div style="display: flex; gap: 6px; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.08em"></div>
+    <div style="display: flex; align-items: center; gap: 12px; font-family: 'Special Elite', monospace; font-size: 13px">
+      <span style="padding: 4px 10px; border: 2px solid #b23b3b; color: #e06b6b; letter-spacing: 0.18em; transform: rotate(-3deg)">LIVE</span>
+      <button type="button" aria-label="운영 메뉴" style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #4a4d55; color: #ece7dc; font-family: 'Special Elite', monospace; font-size: 13px; cursor: pointer">운영</button>
+    </div>
+  </div>
+  <div style="position: relative; flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 28px 24px; display: flex; flex-direction: column; gap: 22px; align-items: center; overflow: hidden">
+    <img src="../assets/stage-render-01.jpg" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; filter: saturate(0.6) contrast(1.05) blur(1.5px); opacity: 0.55">
+    <div style="position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 2px, transparent 2px, transparent 5px), linear-gradient(180deg, rgba(5,11,20,0.82) 0%, rgba(5,11,20,0.5) 40%, rgba(5,11,20,0.92) 100%)"></div>
+    <div style="position: absolute; top: 14px; left: 14px; width: 28px; height: 28px; border-top: 2px solid #28d9f0; border-left: 2px solid #28d9f0"></div>
+    <div style="position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border-top: 2px solid #28d9f0; border-right: 2px solid #28d9f0"></div>
+    <div style="position: absolute; bottom: 14px; left: 14px; width: 28px; height: 28px; border-bottom: 2px solid #28d9f0; border-left: 2px solid #28d9f0"></div>
+    <div style="position: absolute; bottom: 14px; right: 14px; width: 28px; height: 28px; border-bottom: 2px solid #28d9f0; border-right: 2px solid #28d9f0"></div>
+    <div style="position: absolute; top: 20px; right: 56px; display: flex; gap: 12px; font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 0.18em; color: #28d9f0"><span>CAM 01 · 회의실 A</span><span style="color: #9fb6cc">STANDBY · 안건 대기</span></div>
+    <div style="position: relative; align-self: flex-start; display: flex; flex-direction: column; gap: 6px">
+      <span style="font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.2em; color: #e0a34a">CASE SELECTION · 안건 선택</span>
+      <h1 style="margin: 0; font-family: 'Black Han Sans', sans-serif; font-size: 34px; line-height: 1.1; color: #ece7dc">안건을 선택해 주세요</h1>
+    </div>
+    <div style="position: relative; display: flex; gap: 40px; margin-top: 8px">
+      <button type="button" disabled style="position: relative; width: 480px; height: 300px; box-sizing: border-box; padding: 24px 26px; background: #ece7dc; color: #1b1a17; border: 0; box-shadow: 8px 8px 0 #1f2126; opacity: 0.55; text-align: left; display: flex; flex-direction: column; gap: 14px; cursor: not-allowed">
+        <div style="position: absolute; top: 16px; right: 18px; padding: 4px 10px; border: 2px solid #6b4a1f; color: #6b4a1f; font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 0.2em; transform: rotate(-6deg)">준비 중</div>
+        <span style="align-self: flex-start; padding: 3px 8px; border: 1px solid #6b4a1f; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #6b4a1f">CASE 01</span>
+        <span style="font-family: 'Black Han Sans', sans-serif; font-size: 30px; line-height: 1.25; color: #1b1a17">다음 안건</span>
+        <span style="margin-top: auto; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #6b4a1f">FILE SEALED · 다음 안건을 준비하고 있습니다</span>
+      </button>
+      <button type="button" aria-pressed="true" style="position: relative; width: 480px; height: 300px; box-sizing: border-box; padding: 24px 26px; background: #ece7dc; color: #1b1a17; border: 0; box-shadow: 8px 8px 0 #1f2126; outline: 3px solid #28d9f0; outline-offset: 4px; text-align: left; display: flex; flex-direction: column; gap: 14px; cursor: pointer">
+        <span style="position: absolute; top: -14px; right: -14px; width: 32px; height: 32px; border-radius: 50%; background: #28d9f0; display: inline-flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0b0d10" stroke-width="3" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+        <div style="position: absolute; top: 16px; right: 18px; padding: 5px 12px; border: 3px solid #b23b3b; color: #b23b3b; font-family: 'Special Elite', monospace; font-size: 15px; letter-spacing: 0.24em; transform: rotate(-8deg); opacity: 0.85">CONFIDENTIAL</div>
+        <span style="align-self: flex-start; padding: 3px 8px; border: 1px solid #6b4a1f; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #6b4a1f">CASE 02</span>
+        <span style="font-family: 'Black Han Sans', sans-serif; font-size: 32px; line-height: 1.25; color: #1b1a17">사내 게시판을 익명제로 바꿀까요?</span>
+        <span style="margin-top: auto; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #6b4a1f">OPEN FILE · 선택하면 이사회에 입장합니다</span>
+      </button>
+    </div>
+    <div style="position: relative; align-self: flex-start; margin-top: auto; display: flex; align-items: center; gap: 18px"><button type="button" style="height: 56px; flex-shrink: 0; width: 240px; background: #e0a34a; color: #0b0d10; border: 0; font-family: 'Black Han Sans', sans-serif; font-size: 20px; letter-spacing: 0.04em; box-shadow: 6px 6px 0 #3a2a12; cursor: pointer; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px))">이사회 입장 ▶</button><span style="font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 0.14em; color: #8f8a80">선택한 안건: CASE 02</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

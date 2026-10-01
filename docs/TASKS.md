@@ -948,17 +948,72 @@
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드가 없고 버튼만 있으며, 팝업이 BRIEFING과 동일하게 열리고 닫힌다. 페이지 스크롤 없음.
 - 크기: S.
 
-## T70 안건 선택 화면 — 카드 2장, 시안(기밀 서류철) 스킨, 문구는 안건 질문만
+## T70 안건 선택 화면 — 시안 S1_Select대로(카드 2장·무대 배경·질문만)
 
-- 목표(2026-10-02 사용자 요청): SELECT 화면을 **카드 2장**으로 줄이고(③ 자리표시 제거), 카드를 다른 화면과 같은 시안(C안 기밀 작전실, `docs/design/mockups/Main.html` 오른쪽 서류철 머리: CASE 칩 + CONFIDENTIAL 도장 + 종이 위 먹색 제목)대로 다시 그린다. 카드 문구는 설명(headline·hook) 대신 **안건 질문 한 줄**(`chairBriefing.question`, 예: "사내 게시판을 익명제로 바꿀까요?")만 보여 한눈에 고르게 한다.
-- 읽을 것: `src/components/screens/SelectScreen.tsx`, `src/styles/screens/select.css`, `src/content/scenarios/index.ts`(레지스트리: ① 자리표시·② anon-board·③ 자리표시), `src/content/types.ts`(Scenario·Incident), `docs/design/mockups/Main.html` 79~84행(CONFIDENTIAL 도장·CASE 칩·h1 서체/색), `src/styles/tokens.css`(paper·ink·label·stamp-red·hud 토큰), `src/styles/screens/briefing.css`(종이 패널 규칙 재사용), `e2e/flow-early.spec.ts`(③ 카드 disabled 검증), `e2e/screenshots.spec.ts`·`noscroll.spec.ts`, `tests/components/*Select*`(있으면), `docs/design/DESIGN_SPEC.md` 3장 SELECT.
-- 만들 것:
-  1. **레지스트리 2장**: `scenarios`를 `[preparingPlaceholder('data-openness', …), anonBoardScenario]`로 줄인다(`prevention` 제거). 자리표시 카드의 라벨은 "사건 01 · 준비 중", 본문은 "다음 안건을 준비하고 있습니다" 한 줄. anon-board는 기존 `caseLabel` "사건 02" 유지. 자리표시 id는 e2e 호환을 위해 그대로 둔다.
-  2. **카드 스킨(시안)**: 카드 = 종이 서류철(`--paper` 배경, `--paper-border`, 시안의 `box-shadow: 8px 8px 0 #1f2126` 계열). 위쪽에 타자기 라벨 행(`CASE 02` 칩 — Special Elite, `--label` 색, 1px 테두리)과 우상단 **CONFIDENTIAL 도장**(`--stamp-red` 3px 테두리, -8° 회전, 0.85 불투명 — Main.html 79행). 제목은 Black Han Sans(`--font-display`) 먹색(`--ink`) 28~34px로 **안건 질문 한 줄**. headline·hook·subtitle은 카드에 쓰지 않는다. 선택 상태 = HUD 시안색(`--hud-line`/accent) 2px 외곽선 + 우상단 체크(기존 `::after` 유지), hover = 살짝 들림. 준비 중 카드 = 종이를 흐리게(opacity 0.55) + 도장 자리에 "준비 중" 타자기 배지, `disabled` 유지.
-  3. **배치**: 2장이 가로로 나란히(1920: 각 최대 720px, 1280: 각 최대 520px, 가운데 정렬), 화면 제목 "안건을 선택해 주세요"는 그대로. CTA "이사회 입장"은 기존 위치·동작 유지(카드 클릭 → 선택 → CTA). 두 해상도 페이지 스크롤 없음.
-  4. **접근성**: 카드 버튼의 접근 이름은 질문 문구가 되게(`aria-label` 불필요하면 본문 그대로), 도장·칩은 `aria-hidden`. 포커스 링 유지.
-  5. **테스트·문서**: `e2e/flow-early.spec.ts`에서 `scenario-card-prevention` 검증 제거(카드 2장·data-openness disabled·anon-board 선택 가능 확인), 카드에 headline/hook 문구가 없고 질문 문구가 있는지 단위 테스트(`tests/components/SelectScreen.test.tsx` 신규), 스크린샷 갱신(select 두 해상도). `src/content/scenarios/index.ts`·`CLAUDE_IMPLEMENTATION.md` 3장 SELECT 행·`docs/design/DESIGN_SPEC.md` 3장 SELECT(v1.2: 2장·서류철 카드·질문만) 갱신. README의 "안건 ①②③" 서술이 있으면 "안건 2개(① 준비 중, ② 익명 게시판)"로.
+- 목표: SELECT 화면을 `docs/design/mockups/S1_Select.html`(미리보기 `preview/S1_Select.png`)과 동일하게. 뒤에 무대 사진(흐림 1.5px·채도 0.6·불투명 0.55 + 스캔라인 + 상하 그라데이션 + 네 모서리 브래킷 + 우상단 "CAM 01 · 회의실 A / STANDBY · 안건 대기" 라벨), 좌상단 "CASE SELECTION · 안건 선택" 타자기 라벨 + "안건을 선택해 주세요" 제목, 가운데 종이 서류철 카드 2장(480×300 비율), 좌하단 "이사회 입장 ▶" CTA + "선택한 안건: CASE 02" 라벨.
+- 카드: 종이(#ece7dc) + `box-shadow 8px 8px 0 #1f2126`, 좌상단 CASE 칩(타자기, 1px #6b4a1f 테두리), 우상단 도장(활성: CONFIDENTIAL 붉은 3px 테두리 -8° 회전 / 준비 중: "준비 중" 갈색 2px 테두리 -6°), 제목은 Black Han Sans 32px 먹색 **안건 질문 한 줄**(`chairBriefing.question`), 바닥에 타자기 한 줄("OPEN FILE · 선택하면 이사회에 입장합니다" / "FILE SEALED · 다음 안건을 준비하고 있습니다"). 선택 = 시안색(#28d9f0) 3px 외곽선(offset 4px) + 우상단 체크 원. 준비 중 = 불투명 0.55 + disabled.
+- 읽을 것: `src/components/screens/SelectScreen.tsx`, `src/styles/screens/select.css`, `src/content/scenarios/index.ts`, `e2e/flow-early.spec.ts`, `docs/design/DESIGN_SPEC.md` 3장 SELECT.
+- 만들 것: 레지스트리를 `[preparingPlaceholder('data-openness', '다음 안건'), anonBoardScenario]` 2장으로(prevention 제거, id 유지). 카드 본문에 headline·hook·subtitle 사용 금지. `tests/components/SelectScreen.test.tsx` 신규(질문 문구만, 준비 중 disabled, 선택 → CTA 활성), e2e flow-early 갱신(prevention 검증 제거), 스크린샷 갱신, DESIGN_SPEC 3장 SELECT 개정, CLAUDE_IMPLEMENTATION 3장 SELECT 행·README "안건 ①②③" 서술 갱신.
 - 허용 경로: `src/components/screens/SelectScreen.tsx`, `src/styles/screens/select.css`, `src/content/scenarios/index.ts`, `tests/`, `e2e/`, `docs/`, `CLAUDE_IMPLEMENTATION.md`, `README.md`.
-- 하지 말 것: anon-board 콘텐츠 변경, 헤더·CTA 동작 변경, 자리표시 id 변경, 선택 → 바로 입장으로 바꾸기(CTA 유지).
-- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 카드 2장이 종이 서류철로 보이고 카드에는 CASE 칩·도장·질문 한 줄만 있다. 페이지 스크롤 없음.
+- 하지 말 것: anon-board 콘텐츠 변경, 선택 즉시 입장(CTA 유지), 헤더 변경.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: S.
+
+## T71 대기 화면 — 시안 S0_Attract대로
+
+- 목표: ATTRACT 화면을 `docs/design/mockups/S0_Attract.html`(`preview/S0_Attract.png`)과 동일하게. 본문 전체가 무대 사진 한 장(상하 그라데이션·스캔라인·28px 브래킷), 좌상단 "CAM 01 · 회의실 A / STANDBY", 우상단 TOP SECRET 도장(붉은 3px, -6°), 가운데 세로 중앙 블록(타자기 "LIVE · 실제 임원 에이전트 · 4분 이사회" → Black Han Sans 72px "BOARDROOM 2026"(시안색 글로우) → 20px "오늘 당신이 이사회의 한 자리를 맡습니다" → 타자기 앰버 "CASE FILE No. 02 · 특별 이사 1석 공석"), 좌하단 "체험 시작 ▶" 앰버 CTA(260px), 우하단 "CEO CFO CAIO CISO + 당신" 타자기 줄. 헤더는 다른 화면과 같은 한 줄(스트립 없음).
+- 읽을 것: `src/components/screens/AttractScreen.tsx`, `src/styles/screens/attract.css`, `e2e/flow-early.spec.ts`·`screenshots.spec.ts`, DESIGN_SPEC 3장 ATTRACT.
+- 만들 것: 컴포넌트·CSS를 시안대로 교체(mode 배지 문구는 세션 모드 그대로: scripted면 "사전 구성 시뮬레이션"), 스크린샷 추가(`attract.png` 두 해상도), DESIGN_SPEC 3장 ATTRACT 개정.
+- 허용 경로: `src/components/screens/AttractScreen.tsx`, `src/styles/screens/attract.css`, `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: S.
+
+## T72 임원 의견 화면 — 시안 S2_Opinions대로
+
+- 목표: OPINIONS 화면을 `docs/design/mockups/S2_Opinions.html`(`preview/S2_Opinions.png`)과 동일하게. 왼쪽: 무대(말풍선 4개·명패·표정) → "내 의견 말하기 ▶" CTA → TRANSCRIPT 패널. 오른쪽 종이: "STEP 02" 칩 + "임원 네 명의 첫 의견" 제목 + CONFIDENTIAL 도장, 안내 한 줄("같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.") 오른쪽에 타자기 집계("찬성 1 · 반대 3 · 미정 0" — 실제 stance로 계산), 발언 카드 2×2(종이-2 배경, 역할색 왼쪽 4px 띠 = 찬성 #1f8f5f / 반대 #b23b3b / 미정 #5c5850, 머리줄 = 타자기 역할 코드 + 직함 굵게 + "찬성 쪽/반대 쪽/미정" + 오른쪽 "발언" 칩, 본문 14px, 아래 "근거 · <자료명>" pill). live·scripted 모두 같은 카드(live 실패 카드는 S4의 CISO 카드 형식: 붉은 테두리 + "응답 없음" 칩 + "응답 지연 · 확인 필요" + "응답 없는 임원 다시 요청" 버튼).
+- 읽을 것: `src/components/screens/OpinionsScreen.tsx`, `src/components/parts/LiveStatementCards.tsx`, `src/styles/screens/opinions.css`·`live.css`, DESIGN_SPEC 3장 OPINIONS.
+- 만들 것: scripted 카드(`.opinion-card`)와 live 카드(`.live-statement`)를 **같은 시안 카드 마크업/CSS**로 통합(testid·상태 유지), 집계 줄 추가, 스크린샷·DESIGN_SPEC 갱신.
+- 허용 경로: `src/components/screens/OpinionsScreen.tsx`, `src/components/parts/LiveStatementCards.tsx`, `src/styles/screens/opinions.css`, `src/styles/screens/live.css`, `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: M.
+
+## T73 내 의견 화면 — 시안 S3_Discuss·S3b_Discuss_Evidence대로(팝업에 임원 발언 포함)
+
+- 목표: DISCUSS 화면을 `S3_Discuss.html`과, 팝업을 `S3b_Discuss_Evidence.html`과 동일하게(미리보기 `preview/`). 왼쪽: 무대(260px 비율, 말풍선 없음) → **HUD 입력 상자**(`#15171b` 배경·시안색 1px 테두리, 머리줄 "MY STATEMENT · 내 발언" + "n / 300자", textarea, "CONDITIONS" 칩 줄 — 확정 조건은 시안색 테두리+✓, 미확정은 회색) → 버튼 줄("AI 비서실장 열기" 보조 + "의견 전달 ▶" 주 CTA). 오른쪽 종이: "STEP 03" + "내 의견 쓰기" + 우측 타자기 "추천 문구 · 여러 개 선택 가능", 안내 한 줄, **추천 문구 6개 2열 체크 카드**(열 높이를 채움, 선택 = #f3ead6 배경·갈색 테두리·체크 박스 채움), 점선 구분선 아래 **"근거 자료 · 임원 발언 보기"** 버튼 + "EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명", 마지막 줄 STANCE 칩 4개(역할 · 찬성/반대 쪽, 실제 stance). 임원 요약 카드 4장은 오른쪽 열에서 **제거**.
+- 팝업(EvidenceDialog 확장): 1040×600 비율 종이, 좌상단 CASE 칩 + "근거 자료 · 임원 발언" 제목 + CONFIDENTIAL 도장 + 우측 원형 "닫기", 본문 2열(왼쪽 "EXHIBIT A–D · 판단에 참고할 자료" 2×2 / 오른쪽 "STATEMENTS · 임원이 한 말(02 임원 의견)" 4행 — 직함·찬성/반대 쪽·"근거 · 자료명"·본문, live면 transcript의 OPINIONS 발언, scripted면 initialOpinions), 바닥 타자기 안내 줄. 열림/닫힘·포커스·스크롤 잠금 동작은 T68 그대로. BRIEFING 팝업도 같은 컴포넌트를 쓰되 BRIEFING에서는 임원 발언이 아직 없으므로 오른쪽 열에 "STATEMENTS · 02 단계에서 임원이 말하면 여기에 쌓입니다" 빈 상태 한 줄.
+- 읽을 것: `DiscussScreen.tsx`, `EvidenceDialog.tsx`, `evidenceDialog.css`, `discuss.css`, `AssistantPanel.tsx`(버튼 줄 배치), T68·T69 카드, DESIGN_SPEC 3장 DISCUSS·v1.2.
+- 허용 경로: `src/components/`, `src/styles/`, `src/app/App.tsx`(팝업에 transcript를 넘길 때만), `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: M.
+
+## T74 반응에 답하기 화면 — 시안 S4_Reactions대로(입력 상자 + 추천 답변 선택)
+
+- 목표: REACTIONS 화면을 `S4_Reactions.html`(`preview/S4_Reactions.png`)과 동일하게. 왼쪽: 무대(262px 비율, 임원 말풍선은 우측 상단, 참가자 말풍선은 좌측 하단 명패 위) → **HUD 입력 상자**("MY REPLY · 내 답변" + "n / 300자", textarea, CONDITIONS 칩 — 기존 확정 조건은 시안색 ✓, 이번 답변에서 새로 제안되는 조건은 앰버 테두리 "+ 새 조건") → 버튼 줄("AI 비서실장 열기" + "답변 전달 ▶"). 오른쪽 종이: "STEP 04" + 제목(22px), 반응 카드 2×2(머리줄에 직함·찬성/반대 쪽·"유지/바뀜/응답 없음" 칩, 본문 12px; 실패 카드는 붉은 테두리 + "응답 없는 임원 다시 요청" 버튼), 점선 상자 "FOLLOW-UP · CFO가 묻습니다" + 질문, 타자기 안내 "추천 답변 · 여러 개 선택 가능 · 고르면 왼쪽 내 답변에 이어 붙습니다", **추천 답변 체크 카드 2열**(후속 질문 options 3개; 고르면 textarea에 이어 붙고 조건 제안도 DISCUSS와 같은 규칙), 점선 아래 "근거 자료 · 임원 발언 보기" 버튼(T73 팝업, STATEMENTS에는 02 발언 + 04 반응 발언을 단계 표시와 함께).
+- 동작 변경: 기존 "직접 답하기 열기 → 빠른 답 3버튼/직접 입력" 구조를 **DISCUSS와 동일한 편집기**로 바꾼다(빠른 답은 체크 선택 → 조합, 직접 입력 가능, 빈 칸/300자 초과 전달 불가). 후속 답변의 조건 유지/해제 규칙(T40·PR #4 Codex)은 그대로: 체크/해제가 조건 칩에 반영된다.
+- 읽을 것: `ReactionsScreen.tsx`, `DiscussScreen.tsx`(편집기·문구 조합 로직 재사용 — 공용 훅/컴포넌트로 추출 권장), `reactions.css`, `e2e/reactions.spec.ts`(여러 테스트가 followup-option-N·followup-textarea·submit-followup testid에 의존 — testid는 유지하되 체크 카드로), `tests/`, DESIGN_SPEC 3장 REACTIONS.
+- 허용 경로: `src/components/`, `src/styles/`, `src/domain/followup*`(조합 규칙은 변경 금지, 읽기만), `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: M.
+
+## T75 최종 안건 화면 — 시안 S5_Motion대로
+
+- 목표: MOTION 화면을 `S5_Motion.html`(`preview/S5_Motion.png`)과 동일하게. 왼쪽: 무대(FOLLOWUP 말풍선) → TRANSCRIPT 패널(남는 높이 채움). 오른쪽 종이: "STEP 05 · 1/2" + "지금 표결할 안건" + DRAFT 도장, "MOTION ON THE TABLE · 수정안" 상자(종이-2, 갈색 왼쪽 4px 띠, 18px 굵게 문안), 2열 상자("CONDITIONS · 반영된 조건 n" 녹색 테두리 pill들 / "NOT INCLUDED · 빠진 것" 회색 설명), 점선 상자 "CHAIR · 의장" 안내, 바닥에 "이 안건으로 표결 ▶" CTA + 타자기 "FREEZE MOTION · 조건 확정". live의 FOLLOWUP 실패 "다시 요청" 버튼은 TRANSCRIPT 패널 머리줄 오른쪽에 작은 보조 버튼으로.
+- 읽을 것: `MotionScreen.tsx`, `motion.css`, `src/domain/motion*`(문안 생성 규칙 변경 금지), DESIGN_SPEC 3장 MOTION.
+- 허용 경로: `src/components/screens/MotionScreen.tsx`, `src/styles/screens/motion.css`, `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
+- 크기: S.
+
+## T76 표결 화면 — 시안 S6_Vote대로
+
+- 목표: VOTE 화면을 `S6_Vote.html`(`preview/S6_Vote.png`)과 동일하게. 왼쪽: 무대(CAM 라벨 "CAM 01 · 표결 중") → "BALLOTS · 임원 표" HUD 패널(4칸, 봉인 "?" 점선 원 + "봉인", 참가자 확정 전 비공개; 확정 뒤에는 표 배지로 바뀜) + 안내 한 줄("임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다." — 실패 시 "미표결 임원 다시 요청" 버튼이 이 줄 자리에) → TRANSCRIPT. 오른쪽 종이: "STEP 05 · 2/2" + "최종 투표 · 특별 이사 1표" + CONFIDENTIAL 도장, MOTION 한 줄 상자, **찬성/반대 큰 선택 2칸**(라디오 label, 선택 = #f3ead6 배경·3px 색 테두리, 원형 도장 글자 Black Han Sans 34px -6° 회전, 아래 타자기 "APPROVE · 선택됨"/"REJECT"), 바닥 "최종 투표 확정 ▶" CTA + 설명 2줄("확정 버튼으로만 표가 성립합니다…", "5석 중 찬성 3표 이상이면 가결, 그 외는 부결.").
+- 읽을 것: `VoteScreen.tsx`, `vote.css`, `src/domain/tally*`(변경 금지), e2e `vote-radio-YES`·`confirm-vote` testid, DESIGN_SPEC 3장 VOTE.
+- 허용 경로: `src/components/screens/VoteScreen.tsx`, `src/styles/screens/vote.css`, `tests/`, `e2e/`, `docs/`.
+- **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
+- 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
 - 크기: S.
