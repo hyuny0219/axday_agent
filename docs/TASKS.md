@@ -947,3 +947,18 @@
 - 하지 말 것: 추천 문구·임원 카드·의견 입력의 동작 변경, 자료 내용 변경, BRIEFING 쪽 동작 변경(공용 스타일 추출은 허용).
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드가 없고 버튼만 있으며, 팝업이 BRIEFING과 동일하게 열리고 닫힌다. 페이지 스크롤 없음.
 - 크기: S.
+
+## T70 안건 선택 화면 — 카드 2장, 시안(기밀 서류철) 스킨, 문구는 안건 질문만
+
+- 목표(2026-10-02 사용자 요청): SELECT 화면을 **카드 2장**으로 줄이고(③ 자리표시 제거), 카드를 다른 화면과 같은 시안(C안 기밀 작전실, `docs/design/mockups/Main.html` 오른쪽 서류철 머리: CASE 칩 + CONFIDENTIAL 도장 + 종이 위 먹색 제목)대로 다시 그린다. 카드 문구는 설명(headline·hook) 대신 **안건 질문 한 줄**(`chairBriefing.question`, 예: "사내 게시판을 익명제로 바꿀까요?")만 보여 한눈에 고르게 한다.
+- 읽을 것: `src/components/screens/SelectScreen.tsx`, `src/styles/screens/select.css`, `src/content/scenarios/index.ts`(레지스트리: ① 자리표시·② anon-board·③ 자리표시), `src/content/types.ts`(Scenario·Incident), `docs/design/mockups/Main.html` 79~84행(CONFIDENTIAL 도장·CASE 칩·h1 서체/색), `src/styles/tokens.css`(paper·ink·label·stamp-red·hud 토큰), `src/styles/screens/briefing.css`(종이 패널 규칙 재사용), `e2e/flow-early.spec.ts`(③ 카드 disabled 검증), `e2e/screenshots.spec.ts`·`noscroll.spec.ts`, `tests/components/*Select*`(있으면), `docs/design/DESIGN_SPEC.md` 3장 SELECT.
+- 만들 것:
+  1. **레지스트리 2장**: `scenarios`를 `[preparingPlaceholder('data-openness', …), anonBoardScenario]`로 줄인다(`prevention` 제거). 자리표시 카드의 라벨은 "사건 01 · 준비 중", 본문은 "다음 안건을 준비하고 있습니다" 한 줄. anon-board는 기존 `caseLabel` "사건 02" 유지. 자리표시 id는 e2e 호환을 위해 그대로 둔다.
+  2. **카드 스킨(시안)**: 카드 = 종이 서류철(`--paper` 배경, `--paper-border`, 시안의 `box-shadow: 8px 8px 0 #1f2126` 계열). 위쪽에 타자기 라벨 행(`CASE 02` 칩 — Special Elite, `--label` 색, 1px 테두리)과 우상단 **CONFIDENTIAL 도장**(`--stamp-red` 3px 테두리, -8° 회전, 0.85 불투명 — Main.html 79행). 제목은 Black Han Sans(`--font-display`) 먹색(`--ink`) 28~34px로 **안건 질문 한 줄**. headline·hook·subtitle은 카드에 쓰지 않는다. 선택 상태 = HUD 시안색(`--hud-line`/accent) 2px 외곽선 + 우상단 체크(기존 `::after` 유지), hover = 살짝 들림. 준비 중 카드 = 종이를 흐리게(opacity 0.55) + 도장 자리에 "준비 중" 타자기 배지, `disabled` 유지.
+  3. **배치**: 2장이 가로로 나란히(1920: 각 최대 720px, 1280: 각 최대 520px, 가운데 정렬), 화면 제목 "안건을 선택해 주세요"는 그대로. CTA "이사회 입장"은 기존 위치·동작 유지(카드 클릭 → 선택 → CTA). 두 해상도 페이지 스크롤 없음.
+  4. **접근성**: 카드 버튼의 접근 이름은 질문 문구가 되게(`aria-label` 불필요하면 본문 그대로), 도장·칩은 `aria-hidden`. 포커스 링 유지.
+  5. **테스트·문서**: `e2e/flow-early.spec.ts`에서 `scenario-card-prevention` 검증 제거(카드 2장·data-openness disabled·anon-board 선택 가능 확인), 카드에 headline/hook 문구가 없고 질문 문구가 있는지 단위 테스트(`tests/components/SelectScreen.test.tsx` 신규), 스크린샷 갱신(select 두 해상도). `src/content/scenarios/index.ts`·`CLAUDE_IMPLEMENTATION.md` 3장 SELECT 행·`docs/design/DESIGN_SPEC.md` 3장 SELECT(v1.2: 2장·서류철 카드·질문만) 갱신. README의 "안건 ①②③" 서술이 있으면 "안건 2개(① 준비 중, ② 익명 게시판)"로.
+- 허용 경로: `src/components/screens/SelectScreen.tsx`, `src/styles/screens/select.css`, `src/content/scenarios/index.ts`, `tests/`, `e2e/`, `docs/`, `CLAUDE_IMPLEMENTATION.md`, `README.md`.
+- 하지 말 것: anon-board 콘텐츠 변경, 헤더·CTA 동작 변경, 자리표시 id 변경, 선택 → 바로 입장으로 바꾸기(CTA 유지).
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공. 두 해상도에서 카드 2장이 종이 서류철로 보이고 카드에는 CASE 칩·도장·질문 한 줄만 있다. 페이지 스크롤 없음.
+- 크기: S.
