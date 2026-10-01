@@ -19,7 +19,7 @@
 // 빠른 답을 hidden으로 숨기되 선택 상태는 유지). .reactions-screen__scroll 내부
 // 스크롤은 없앴다.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
@@ -95,6 +95,15 @@ export function ReactionsScreen({
   );
   // 라운드당 1회(T65) — server/sessionLimit.ts의 호출 상한이 최종 방어선이다.
   const [retryUsed, setRetryUsed] = useState(false);
+  // DISCUSS와 같은 이유로(PR #11 Codex 31·32차) AI 비서실장 드로어가 열린 동안 오른쪽 열을
+  // inert로 만든다 — 특히 live의 "응답 없는 임원 다시 요청"이 드로어 뒤에서 Tab으로 눌려
+  // 유료 재요청이 나가지 않게 한다.
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
+  useEffect(() => {
+    infoRef.current?.toggleAttribute('inert', assistantOpen);
+  }, [assistantOpen]);
 
   function handleRetry() {
     const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
@@ -293,6 +302,7 @@ export function ReactionsScreen({
               transcript={transcript}
               onApplyDraft={handleTextChange}
               onAssistantAction={onAssistantAction}
+              onOpenChange={handleAssistantOpenChange}
               adapter={assistantAdapter}
             />
             <button
@@ -307,7 +317,7 @@ export function ReactionsScreen({
           </div>
         </div>
       </div>
-      <div className="app-body__content screen reactions-screen__info">
+      <div className="app-body__content screen reactions-screen__info" ref={infoRef} data-testid="reactions-info">
         <h2 className="reactions-screen__title">
           이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
         </h2>

@@ -197,3 +197,30 @@ test('내 발언 인용 상자는 2줄을 넘는 내용이 있어도 정확히 2
     `콘텐츠 높이(${budget.contentHeight}px)가 2줄 line-height(${budget.twoLines}px)보다 커 3번째 줄이 드러날 수 있다`,
   ).toBeLessThanOrEqual(budget.twoLines + 1);
 });
+
+test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
+  page,
+}) => {
+  await reachReactionsWithAccessConfirmed(page);
+  const info = page.getByTestId('reactions-info');
+  await expect(info).not.toHaveAttribute('inert', '');
+
+  // 드로어는 직접 답하기 안에 있다 — 편집기를 열어야 "AI 비서실장 열기" 버튼이 보인다.
+  await page.getByTestId('followup-option-0').click();
+  const openAssistant = page.getByRole('button', { name: 'AI 비서실장 열기' });
+  if (!(await openAssistant.isVisible())) {
+    await page.getByRole('button', { name: '직접 답하기' }).click();
+  }
+  await openAssistant.click();
+  await expect(info).toHaveAttribute('inert', '');
+  // inert 안의 요소는 포커스를 받지 못한다.
+  const focusedInside = await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>('[data-testid="reactions-info"] button, [data-testid="reactions-info"] [tabindex="0"]');
+    el?.focus();
+    return el ? document.activeElement === el : false;
+  });
+  expect(focusedInside).toBe(false);
+
+  await page.getByRole('button', { name: 'AI 비서실장 숨기기' }).click();
+  await expect(info).not.toHaveAttribute('inert', '');
+});
