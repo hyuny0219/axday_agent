@@ -19,7 +19,7 @@
 // 로컬 state다(화면 전환·세션 리셋으로 DiscussScreen이 언마운트되면 함께 닫힌다). 자료
 // 카드가 빠지며 생긴 세로 여유는 추천 문구·임원 첫 의견 블록이 자연히 흡수한다.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, SessionMode, Stance, Transcript } from '../../domain/types';
 import {
@@ -95,6 +95,15 @@ export function DiscussScreen({
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
+  // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·임원 카드)은 시각적으로
+  // 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에 닿을 수 있었다
+  // (PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어 포커스·클릭을 막는다.
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
+  useEffect(() => {
+    infoRef.current?.toggleAttribute('inert', assistantOpen);
+  }, [assistantOpen]);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
@@ -224,6 +233,7 @@ export function DiscussScreen({
             transcript={transcript}
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
+            onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
           <button
@@ -240,7 +250,7 @@ export function DiscussScreen({
           빈 칸이거나 300자를 넘으면 전달할 수 없습니다. 축약 표현은 이사님이 직접 정합니다.
         </p>
       </div>
-      <div className="app-body__content screen discuss-screen__info">
+      <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">
         <div className="discuss-screen__phrases">
           <h3 className="discuss-screen__section-label">비서실장 추천 문구 (여러 개 선택 가능)</h3>
           <div className="discuss-screen__phrase-list">

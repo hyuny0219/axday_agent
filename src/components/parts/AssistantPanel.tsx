@@ -53,6 +53,9 @@ export interface AssistantPanelProps {
   onApplyDraft: (text: string) => void;
   /** 결과가 실제로 화면에 표시되거나 적용되었을 때만 호출해 세션에 남긴다. */
   onAssistantAction: (event: AssistantActionEvent) => void;
+  /** 드로어 열림/닫힘을 화면에 알린다(T69 후속, PR #11 Codex 31차). 화면은 드로어가 열린
+   * 동안 가려지는 오른쪽 열을 inert로 만들어 Tab이 숨은 버튼에 닿지 않게 한다. */
+  onOpenChange?: (open: boolean) => void;
   /** 테스트·live 어댑터 교체용. 기본은 사전 구성(scripted) 어댑터. */
   adapter?: AssistantAdapter;
 }
@@ -70,9 +73,13 @@ export function AssistantPanel({
   transcript,
   onApplyDraft,
   onAssistantAction,
+  onOpenChange,
   adapter = scriptedAssistantAdapter,
 }: AssistantPanelProps) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    onOpenChange?.(open);
+  }, [open, onOpenChange]);
   const [activeFeature, setActiveFeature] = useState<FeatureKey | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [summaryResult, setSummaryResult] = useState<SummarizeOpinionsResult | null>(null);

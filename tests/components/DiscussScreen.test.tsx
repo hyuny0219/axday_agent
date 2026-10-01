@@ -161,4 +161,32 @@ describe('DiscussScreen', () => {
     expect(screen.queryByTestId('evidence-dialog')).not.toBeInTheDocument();
     expect(openEvidence).toHaveFocus();
   });
+
+  it('AI 비서실장 드로어가 열린 동안 오른쪽 열은 inert라 숨은 "근거 자료 보기"에 포커스가 가지 않는다(PR #11 Codex 31차)', () => {
+    const roleStatus: Record<ExecMemberId, RoleStatus> = {
+      CEO: 'idle',
+      CFO: 'idle',
+      CAIO: 'idle',
+      CISO: 'idle',
+    };
+    const transcript: Transcript = { revision: 0, statements: [] };
+    render(
+      <DiscussScreen
+        scenario={scenario}
+        sessionId="s1"
+        transcript={transcript}
+        mode="scripted"
+        roleStatus={roleStatus}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+      />,
+    );
+    const info = screen.getByTestId('discuss-info');
+    expect(info.hasAttribute('inert')).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 열기' }));
+    expect(info.hasAttribute('inert')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
+    expect(info.hasAttribute('inert')).toBe(false);
+  });
 });
