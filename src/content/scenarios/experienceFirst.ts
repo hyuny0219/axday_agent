@@ -119,7 +119,15 @@ export const experienceFirstScenario: Scenario = {
     { id: 'SCOPE', label: '전례 없는 상황 한정', keywords: ['전례 없는 상황'] },
     { id: 'RECORD', label: '판단 근거 기록', keywords: ['판단 근거'] },
     { id: 'DATA_VETO', label: '데이터 경고 시 멈춤', keywords: ['경고 시', '잠시 멈추'] },
-    { id: 'REVIEW', label: '결정 결과 복기', keywords: ['복기'] },
+    {
+      id: 'REVIEW',
+      label: '결정 결과 복기',
+      // '복기' 한 단어만 두면 "복기는 누가 합니까?" 같은 정보성 질문에도 걸려 묻지도 않은
+      // 조건이 확정으로 제안된다(PR #13 Codex 1차 검토 P1, ai-approval의 OWNER '책임자'와
+      // 같은 문제). P4 문구의 약속형 어구로 좁힌다. SCOPE·RECORD·DATA_VETO·EXP_ONLY의
+      // 키워드는 이미 2단어 이상 복합구라 같은 문제를 재점검했으나 좁힐 필요가 없었다.
+      keywords: ['결정 결과를 복기'],
+    },
     { id: 'EXP_ONLY', label: '경험 판단 절대 우선', keywords: ['언제나 경험', '절대 우선'] },
   ],
   conflicts: [['DATA_VETO', 'EXP_ONLY']],

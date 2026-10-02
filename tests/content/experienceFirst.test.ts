@@ -124,13 +124,21 @@ describe('조건 키워드 격리(proposeFromText)', () => {
     }
   });
 
-  it('REVIEW("복기")와 RECORD("판단 근거")는 서로의 문구에 걸리지 않는다', () => {
+  it('REVIEW("결정 결과를 복기")와 RECORD("판단 근거")는 서로의 문구에 걸리지 않는다', () => {
     expect(
       proposeFromText(scenario, '결정 결과를 복기해 다음 판단 기준으로 삼읍시다.'),
     ).not.toContain('RECORD');
     expect(
       proposeFromText(scenario, '경험으로 결정할 때는 판단 근거를 기록합시다.'),
     ).not.toContain('REVIEW');
+  });
+
+  // PR #13 Codex 1차 검토 P1: REVIEW 키워드가 '복기' 한 단어였을 때 정보성 질문에도
+  // 걸려 묻지도 않은 조건이 확정으로 제안됐다(ai-approval OWNER '책임자'와 같은 문제).
+  // '결정 결과를 복기'라는 약속형 어구로 좁힌 뒤에는 단순히 누가 하는지 묻는 문장에서
+  // 제안하지 않는다.
+  it('"복기는 누가 합니까?" 같은 정보성 질문은 REVIEW를 제안하지 않는다', () => {
+    expect(proposeFromText(scenario, '복기는 누가 합니까?')).not.toContain('REVIEW');
   });
 });
 

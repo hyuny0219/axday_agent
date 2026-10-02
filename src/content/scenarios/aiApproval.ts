@@ -111,7 +111,14 @@ export const aiApprovalScenario: Scenario = {
     { id: 'LIMIT', label: '결재 금액 한도', keywords: ['금액 한도'] },
     { id: 'LOG', label: '승인 사유 기록', keywords: ['승인 사유'] },
     { id: 'REVIEW', label: '사람 표본 재검토', keywords: ['표본 재검토', '사람이 다시'] },
-    { id: 'OWNER', label: '결재 규칙 책임자', keywords: ['책임자'] },
+    {
+      id: 'OWNER',
+      label: '결재 규칙 책임자',
+      // '책임자' 한 단어만 두면 "현재 책임자가 누구인지 먼저 알려 주세요." 같은 정보성
+      // 질문에도 걸려 ReactionsScreen이 묻지도 않은 조건을 확정으로 제안한다(PR #13 Codex
+      // 1차 검토 P1). 책임자를 "지정하겠다"는 약속형 표현으로 좁힌다.
+      keywords: ['책임자를 지정', '결재 규칙 책임자'],
+    },
     { id: 'FULL_AUTO', label: '사람 검토 전면 생략', keywords: ['전면 생략', '전부 자동'] },
   ],
   conflicts: [['REVIEW', 'FULL_AUTO']],

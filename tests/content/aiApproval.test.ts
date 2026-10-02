@@ -122,6 +122,15 @@ describe('조건 키워드 격리(proposeFromText)', () => {
   it('"검토 없이 공유"류 부정문은 REVIEW를 제안하지 않는다(기존 부정 규칙이 그대로 적용된다)', () => {
     expect(proposeFromText(scenario, '표본 재검토 없이 바로 넘깁시다.')).not.toContain('REVIEW');
   });
+
+  // PR #13 Codex 1차 검토 P1: OWNER 키워드가 '책임자' 한 단어였을 때 정보성 질문에도
+  // 걸려 ReactionsScreen이 묻지도 않은 조건을 확정으로 제안했다. '책임자를 지정'하겠다는
+  // 약속형 표현으로 좁힌 뒤에는 단순히 책임자가 누구인지 묻는 문장에서 제안하지 않는다.
+  it('"현재 책임자가 누구인지" 같은 정보성 질문은 OWNER를 제안하지 않는다', () => {
+    expect(
+      proposeFromText(scenario, '현재 책임자가 누구인지 먼저 알려 주세요.'),
+    ).not.toContain('OWNER');
+  });
 });
 
 describe('findConflicts', () => {

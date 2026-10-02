@@ -64,7 +64,9 @@ T78 구현 시 조건별로 1개씩 작성했다(anonBoard.ts 패턴과 동일, 
 | REVIEW | 결정 결과 복기 |
 | EXP_ONLY | 경험 판단 절대 우선 |
 
-**상충 조건쌍: `DATA_VETO` ↔ `EXP_ONLY`.** 데이터 경고 시 멈춤과 경험 판단 절대 우선은 함께 갈 수 없다. 키워드(조건 추출, T78 구현 최종본 — P1~P5 문구·후속 질문 선택지 모두와 충돌 없이 검증됨, `tests/content/experienceFirst.test.ts`): SCOPE `전례 없는 상황`, RECORD `판단 근거`, DATA_VETO `경고 시`·`잠시 멈추`, REVIEW `복기`, EXP_ONLY `언제나 경험`·`절대 우선`. 부정 판정은 기존 규칙 그대로.
+**상충 조건쌍: `DATA_VETO` ↔ `EXP_ONLY`.** 데이터 경고 시 멈춤과 경험 판단 절대 우선은 함께 갈 수 없다. 키워드(조건 추출, T78 구현 최종본 — P1~P5 문구·후속 질문 선택지 모두와 충돌 없이 검증됨, `tests/content/experienceFirst.test.ts`): SCOPE `전례 없는 상황`, RECORD `판단 근거`, DATA_VETO `경고 시`·`잠시 멈추`, REVIEW `결정 결과를 복기`, EXP_ONLY `언제나 경험`·`절대 우선`. 부정 판정은 기존 규칙 그대로.
+
+**PR #13 Codex 1차 검토(2026-10-02) P1**: REVIEW 키워드를 `복기` 한 단어로 두면 "복기는 누가 합니까?" 같은 정보성 질문에도 걸려 묻지도 않은 조건이 확정으로 제안됐다(ai-approval의 OWNER `책임자`와 같은 문제). P4 문구의 약속형 어구(`결정 결과를 복기`)로 좁혔다. 같은 검토에서 SCOPE·RECORD·DATA_VETO·EXP_ONLY 키워드도 재점검했으나 이미 2단어 이상 복합구라 같은 문제가 없어 그대로 뒀다(`tests/content/experienceFirst.test.ts`).
 
 ## 구현 파일(T78)
 
