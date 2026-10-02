@@ -66,8 +66,8 @@ PPT의 미래적인 이사회 분위기를 실제 조작 가능한 브라우저 
 | 임원 의견 | ~~상단 4열 임원 카드, 중앙 쟁점, 하단 CTA~~(v1.3 T72에서 시안 S2_Opinions 그대로로 재작성 — 오른쪽 열이 종이 한 장, 카드 2×2, 아래 v1.3 3절 참고) | 설명은 순차 영상 대기 없이 읽기 가능 |
 | 의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우 textarea; 하단 AI/전달 | 체크박스와 textarea 모두 실제 입력 요소 |
 | 반응 | 내 발언 카드 아래 임원 반응을 답글형(들여쓰기·연결선)으로, 변한 임원만 강조 → “〈임원〉이 묻습니다” 질문(안건 ② 사내 게시판 익명제에서는 CFO의 신고 처리 담당자 질문) + 빠른 답 3개 → ‘직접 답하기’(접힘) | 빠른 답만으로 마무리 가능. 직접 답하기를 열면 300자 입력과 조건 칩이 나타난다 |
-| 최종 안건 | 중앙 큰 안건 카드·반영 조건·남은 과제 | 이 안건으로 표결 버튼 |
-| 최종 투표 | 안건 카드 아래 찬성/반대 2열 + 별도 확정 CTA | radio 단일 선택, 선택만으로 제출하지 않음 |
+| 최종 안건 | ~~중앙 큰 안건 카드·반영 조건·남은 과제~~(v1.3 T75에서 시안 S5_Motion 그대로로 재작성 — 오른쪽 열이 종이 한 장, MOTION ON THE TABLE·CONDITIONS·NOT INCLUDED·CHAIR, 아래 v1.3 6절 참고) | 이 안건으로 표결 버튼 |
+| 최종 투표 | ~~안건 카드 아래 찬성/반대 2열 + 별도 확정 CTA~~(v1.3 T76에서 시안 S6_Vote 그대로로 재작성 — 왼쪽 열 BALLOTS 봉인 패널, 오른쪽 종이에 큰 원형 도장 라디오 2칸, 아래 v1.3 7절 참고) | radio 단일 선택, 선택만으로 제출하지 않음 |
 | 결과 | 제목→동등한 5인 카드→기록 패널→종료(v1.1 T66에서 종이 보고서 한 장 + VERDICTS 5행으로 재구성, 아래 5절) | 두 결론(가결·부결) 모두 동등한 완결 연출 |
 
 데스크톱 max-width1760px, 좌우 여백48–64px. 1280px에서24–32px. 필수 검수 해상도는1920×1080 및1280×720이다. PC 200% 확대에서 세로 재배치·스크롤을 허용하며 키보드 접근성을 유지한다. 모바일·터치 레이아웃은 별도 확장이다.
@@ -360,7 +360,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - 접근성·테스트: `tests/components/DiscussScreen.test.tsx`에 BriefingScreen.test.tsx와 같은 형태의 테스트(팝업 열기 전 `evidence-card` 없음 → 버튼 클릭 후 4장 → Esc로 닫히고 포커스가 버튼으로 돌아옴)를 추가했다. `e2e/discuss.spec.ts`에 버튼 → 팝업 → Esc 닫힘·포커스 복귀 흐름을 1건 추가하고, `e2e/noscroll.spec.ts`의 DISCUSS 구간(옛 "E4 아코디언 펼침" 단언)을 자료 팝업 열기/닫기 + 비서실장 드로어 열기/닫기 조합으로 다시 썼다. `e2e/screenshots.spec.ts`에 두 해상도의 `discuss.png`(버튼 행만 보이는 상태)를 갱신하고 `discuss-evidence.png`(팝업 연 상태)를 새로 추가했다.
 - 검수: `npm run check && npm run build && npx playwright test -c playwright.local.config.ts`가 통과해야 한다. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드 없이 버튼만 있고(추천 문구·임원 카드와 겹치지 않음) 페이지 스크롤이 없다. 팝업이 BRIEFING과 동일하게 열리고 닫힌다.
 
-## v1.3 승인된 C안 시안(S0~S6) 그대로 — ATTRACT·SELECT·OPINIONS·DISCUSS 재작성 (T70·T71·T72·T73, 2026-10-02)
+## v1.3 승인된 C안 시안(S0~S6) 그대로 — ATTRACT·SELECT·OPINIONS·DISCUSS·REACTIONS·MOTION·VOTE 재작성 (T70~T76, 2026-10-02)
 
 배경(2026-10-02 사용자 지시, "시안 이탈 금지"): `docs/design/mockups/`에 S0~S6·팝업까지 승인된 C안 시안 8장(미리보기 `preview/*.png`)이 자리 잡았다. 지금까지 각 화면은 "기밀 작전실" 스킨의 토큰·부품(브래킷·스캔라인·타자기 라벨·도장)을 썼지만 배치·문구·크기는 화면마다 임의로 다듬어져 있었다. 이번 절부터는 화면을 재작업할 때마다 해당 시안 HTML의 인라인 스타일 값을 그대로 옮긴다 — 구성·순서·문구·색·서체·도장·버튼 모양 중 시안에 없는 것을 더하거나 시안에 있는 것을 빼지 않는다. 시안은 1280×720 캔버스 한 장이고, 1920×1080에서는 같은 배치를 키운 값을 쓴다(아래 각 절의 "두 해상도 값" 참고 — 1280 이하 미디어쿼리는 시안 값 그대로, 1920 기본값은 1.25배로 두 해상도 값의 조합은 tokens.css의 다른 반응형 쌍과 비슷한 비율이다).
 
@@ -407,7 +407,25 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - **2026-10-02 2차 검토(제로 이탈)**: "내 발언 인용" blockquote(`reactions-quote`)는 S4_Reactions 시안에 전혀 없는 요소였다 — 참가자 본인 발언은 이미 무대 참가자 말풍선(`StageBand`, `stage-bubble-PARTICIPANT`)이 보여주므로 중복이었다. 완전히 뺐다(`reactions-screen__quote` CSS도 지웠다) — 이제 REACTIONS는 요소 단위로 시안과 1:1이다. `e2e/stage.spec.ts`의 해당 단언은 `stage-bubble-PARTICIPANT` 쪽으로 옮기고, `e2e/reactions.spec.ts`의 2줄 클램프 테스트는 지웠다. 같은 차수에서 CONDITIONS 칩 cyan/앰버 구분을 실제로 확인하는 e2e(`condition-chip--accepted`·`condition-chip--new` 클래스, "✓"·"+ 새 조건" 문구)도 새로 추가했다.
 - 접근성·테스트: `e2e/reactions.spec.ts`를 새 체크 카드 흐름으로 다시 썼다(옛 "직접 답하기 열기" 토글 테스트 2건을 지우고 "체크 카드만으로 MOTION까지 도달" 1건으로 합쳤다). `e2e/a11y.spec.ts`의 키보드 전용 경로는 `followup-option-2`가 이제 네이티브 체크박스라 Enter 대신 Space로 토글한다(DISCUSS 추천 문구 카드와 같은 규칙). `e2e/flow-full.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/screenshots.spec.ts`의 "직접 답하기 열기" 관련 단언을 textarea 직접 조작으로 바꿨다. `tests/components/LiveStatementCards.test.tsx`를 `variant='reaction'`으로 다시 썼다(옛 `variant='reply'`는 더 쓰는 화면이 없어 타입에서 뺐다). `e2e/screenshots.spec.ts`의 `reactions.png`(두 해상도)를 새 레이아웃으로 갱신했다(다른 화면 스크린샷은 재인코딩 노이즈만 있어 되돌렸다). live mock(CISO 1명 실패)으로 카드 안 재요청 버튼이 잘리지 않는지 별도로 실측했다.
 
-### 6. 검수
+### 6. 최종 안건(MOTION) — 시안 S5_Motion (T75)
 
-`npm run check`(단위 385)·`npm run build`·`npx playwright test -c playwright.local.config.ts`(mock 서버 + 격리 포트, 124건) 모두 통과한다. 두 해상도 모두 페이지 스크롤이 없고, `docs/screenshots/{desktop-1080,desktop-720}/{select,attract,opinions,discuss,discuss-evidence,briefing-evidence,reactions}.png`가 `docs/design/mockups/preview/{S1_Select,S0_Attract,S2_Opinions,S3_Discuss,S3b_Discuss_Evidence,S4_Reactions}.png`와 같은 구성으로 보인다(육안 대조 완료). live mock(CISO 1명 실패)으로 실패 카드 모양도 별도로 확인했다.
+- **왼쪽 열에는 입력 상자가 없다**: 시안은 왼쪽 열이 무대 → TRANSCRIPT뿐이라, `MotionScreen.tsx`의 `app-body__actions`에는 접근성용 `ExecStanceList`(sr-only)와(있을 때만) "응답 없는 임원 다시 요청" 버튼만 남는다. **CTA는 예외적으로 오른쪽 종이 바닥에 둔다** — "모든 CTA는 왼쪽 열"이라는 기존 원칙(6절)은 왼쪽 열에 입력 상자가 있는 화면(DISCUSS·REACTIONS 등) 기준이었고, 이 카드는 "시안 이탈 금지" 지시가 명시적으로 왼쪽 열 구성을 "무대 → TRANSCRIPT"로만 적어 CTA 자리가 없다 — 시안 그대로 오른쪽 종이 바닥(`motion-screen__cta-row`)에 둔다.
+- **"다시 요청" 버튼은 TRANSCRIPT 머리줄이 아니라 그 바로 위**: 카드 문구는 "TRANSCRIPT 패널 머리줄 오른쪽"을 가리키지만, TRANSCRIPT 패널은 공용 `MinutesPanel`(여러 화면이 공유, 이 카드의 허용 경로 밖)이라 내부를 건드릴 수 없다(오케스트레이터 지시) — 대신 그 바로 위 `app-body__actions` 끝에 오른쪽 정렬한 작은 보조 버튼(`.motion-screen__retry`)으로 둔다. testid(`retry-failed-roles`)·동작(1회 제한, 실패한 역할만 재호출)은 그대로다.
+- **MOTION ON THE TABLE은 항상 원문 그대로**: `domain/motion.ts`의 문안 생성 규칙(안건 문구는 항상 `scenario.originalMotion.text`, 조건을 문장에 섞어 새로 쓰지 않는다)은 바꾸지 않는다. 시안 예시 문장은 조건을 자연어로 녹여 썼지만, 그건 이 화면 전용으로 손으로 쓴 예시일 뿐 데이터 모델에 그런 합성 규칙이 없다 — 라벨만 확정 조건 유무로 "원안"/"수정안"을 가른다(`baseConditionIds`가 모든 시나리오에서 항상 `[]`이므로 `freezeMotion`의 `kind` 판정과 같은 결과).
+- **CONDITIONS·NOT INCLUDED 2열**: CONDITIONS는 기존 `motion-conditions`(확정 조건 pill 목록, testid 그대로)를 시안의 녹색 테두리 pill로 다시 그린다 — 시안 원본 hex `#1f8f5f`는 OPINIONS(3절)에서 이미 대비 미달로 폐기된 색이라 `--paper-vote-yes`를 그대로 재사용한다. NOT INCLUDED는 새 계산이다 — `scenario.conditions`에서 확정되지 않은 조건들의 라벨을 그대로 나열한다(새 사실을 만들지 않는다, scenario 데이터만 쓴다).
+- **CHAIR 점선 안내는 시안 문구 그대로**: 임원 수(4명)·절차 설명 모두 시나리오에 매이지 않는 공통 문구라 리터럴로 둔다.
+- **"남은 확인 사항"(remainingTasks) 목록은 뺐다**: 시안에 없는 요소라(제로 이탈 규칙) 더는 이 화면에서 보여주지 않는다 — `scenario.remainingTasks` 데이터 자체는 그대로 있고 RESULT 화면이 계속 쓴다.
+- 접근성·테스트: 기존 testid(`motion-card`·`motion-conditions`·`freeze-motion`·`motion-waiting-followup`·`retry-failed-roles`·`exec-mood-label-<id>`)를 모두 그대로 유지했다. `e2e/screenshots.spec.ts`에 두 해상도 `motion.png` 캡처를 새로 추가했다(이전에는 vote.png만 있고 motion 캡처가 없었다).
+
+### 7. 표결(VOTE) — 시안 S6_Vote (T76)
+
+- **왼쪽 열에 BALLOTS 패널을 끼운다**: 무대 아래, TRANSCRIPT 위에 새 "BALLOTS · 임원 표" HUD 패널(`vote-screen__ballots`)을 둔다 — 임원 표는 참가자가 확정하기 전까지 이 화면에서 절대 보여주지 않는다는 기존 규칙(주석 그대로) 그대로, 임원 4명 모두 항상 봉인 "?" 배지만 그린다(live·scripted 구분 없이 — 표 자체가 안 보이는 건 모드와 무관한 규칙이다). 안내 한 줄("임원 판단을 기다리는 중…")과 "미표결 임원 다시 요청" 버튼은 live에서만, 임원 표가 아직 다 도착하지 않았을 때만 보여준다 — **참가자 자신의 투표 확정 여부와는 무관하게**(`execBallotsPending`만 본다): 기존 코드는 참가자가 먼저 확정해야(`submitted`) 이 문구를 보여줬지만, `execBallotsPending`은 `FREEZE_MOTION` 즉시(live) true로 시작해(`domain/session.ts`) 참가자가 선택하기 전부터 이미 참이다 — 시안 스크린샷도 참가자가 아직 확정하지 않은 상태로 이 줄을 보여준다. 실패한 역할이 있으면 이 줄 자리를 재요청 버튼이 대신한다(시안 그대로 — 둘 다 보이지 않는다).
+- **CTA·선택지는 예외적으로 오른쪽 종이 안**(6절 "MOTION ON THE TABLE은 항상 원문 그대로" 항목과 같은 이유 — 이 화면도 왼쪽 열에 입력 상자가 없다): 찬성/반대 큰 원형 도장 라디오 2칸(`vote-choice`)과 "최종 투표 확정" CTA를 `app-body__content`(오른쪽 종이) 안에 둔다.
+- **원형 도장 라디오 구현**: 네이티브 `<input type="radio">`를 `opacity:0`으로 숨기되 `label` 전체(`inset:0; width/height:100%`)를 덮게 한다 — 1×1px로 줄이면 position:absolute 기본 위치가 원형 도장과 겹쳐 Playwright가 "intercepts pointer events"로 막혔다(실측). 추가로 `z-index:1`을 줘야 같은 stacking 맥락의 `inline-flex` 원형 도장보다 항상 위에서 클릭을 받는다(실측 — 이론상 position:absolute가 나중에 칠해져야 하지만 Chromium 실측 히트테스트는 그렇지 않았다, `document.elementFromPoint`로 확인). "찬성"/"반대"(원형 도장 안 글자)가 라디오의 실제 접근 가능한 이름이고, 영문 타자기 캡션("APPROVE · 선택됨"/"REJECT")은 장식이라 `aria-hidden`이다.
+- **MOTION 한 줄 상자도 문안 생성 규칙을 바꾸지 않는다**: `motion.text`(항상 `scenario.originalMotion.text`와 같다)를 그대로 한 줄로 보여준다 — 시안 예시 문장처럼 조건을 문장에 녹이지 않는다(6절과 같은 이유). 대신 반영 조건 자체가 화면에서 완전히 사라지면 안 되므로, `motion.effectiveConditionIds`를 조건 라벨로 풀어 `vote-screen__sr-only`(화면에는 안 보이고 스크린리더에만 남는 문단, `ExecStanceList`·`vote-screen__sr-only` legend와 같은 기법)로 남긴다 — 시안 모양은 그대로 두면서 정보 손실은 막는다.
+- 접근성·테스트: 기존 testid(`vote-motion-card`·`vote-radio-YES`/`-NO`·`confirm-vote`·`retry-failed-roles`·`exec-mood-label-<id>`)를 모두 그대로 유지했다. `e2e/screenshots.spec.ts`의 `vote.png`(두 해상도)를 새 레이아웃으로 갱신했다.
+
+### 8. 검수
+
+`npm run check`(단위 385)·`npm run build`·`npx playwright test -c playwright.local.config.ts`(mock 서버 + 격리 포트, 126건) 모두 통과한다. 두 해상도 모두 페이지 스크롤이 없고, `docs/screenshots/{desktop-1080,desktop-720}/{select,attract,opinions,discuss,discuss-evidence,briefing-evidence,reactions,motion,vote}.png`가 `docs/design/mockups/preview/{S1_Select,S0_Attract,S2_Opinions,S3_Discuss,S3b_Discuss_Evidence,S4_Reactions,S5_Motion,S6_Vote}.png`와 같은 구성으로 보인다(육안 대조 완료). live mock(CISO 1명 실패)으로 실패 카드 모양도 별도로 확인했다.
 

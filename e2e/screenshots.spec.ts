@@ -143,12 +143,15 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await capture(page, testInfo.project.name, 'reactions');
   await page.getByTestId('followup-option-2').click();
 
-  // MOTION: 확정 조건 4개가 반영된 최종 안건으로 표결을 건다.
+  // MOTION(T75, S5_Motion): 확정 조건 4개가 반영된 MOTION ON THE TABLE·CONDITIONS·
+  // NOT INCLUDED·CHAIR 안내가 모두 보이는 상태를 캡처한 뒤 표결을 건다.
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expect(page.getByTestId('motion-conditions')).toBeVisible();
+  await capture(page, testInfo.project.name, 'motion');
   await page.getByTestId('freeze-motion').click();
 
-  // VOTE: 안건 카드 아래 3열 radio와 별도 확정 CTA가 함께 보이는 초기 상태를 캡처한다.
+  // VOTE(T76, S6_Vote): BALLOTS 봉인 패널(왼쪽)과 MOTION 한 줄·찬성/반대 원형 도장
+  // 2칸·별도 확정 CTA(오른쪽)가 함께 보이는 초기 상태를 캡처한다.
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await capture(page, testInfo.project.name, 'vote');
 
