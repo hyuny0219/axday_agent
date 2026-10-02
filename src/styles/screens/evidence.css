@@ -83,3 +83,71 @@
     font-size: 11px;
   }
 }
+
+/* 요약 카드 변형(T80, docs/design/mockups/Main.html EXHIBIT 2×2 — BRIEFING 오른쪽 열에
+   팝업 없이 상시 노출한다). 배경·테두리(--paper-2·--paper-border)는 기본 변형과
+   같으므로 다시 적지 않는다 — 치수(패딩·간격·글자 크기)만 덮어쓰고, 해석·원문은
+   종이 한 장 안에서 2×2를 다 보여줘야 하므로 각 1~2줄로 클램프한다(기본 변형은
+   EvidenceDialog 팝업 안에서만 쓰여 원문을 클램프하지 않는다 — 그 규칙은 그대로
+   둔다). */
+.evidence-grid--compact {
+  gap: 15px;
+}
+
+@media (max-width: 1280px) {
+  .evidence-grid--compact {
+    gap: 12px;
+  }
+}
+
+.evidence-card--compact {
+  padding: 15px 17.5px;
+  gap: 7.5px;
+}
+
+@media (max-width: 1280px) {
+  .evidence-card--compact {
+    padding: 12px 14px;
+    gap: 6px;
+  }
+}
+
+.evidence-grid--compact .evidence-card__heading {
+  font-size: 13.75px;
+}
+
+@media (max-width: 1280px) {
+  .evidence-grid--compact .evidence-card__heading {
+    font-size: 11px;
+  }
+}
+
+.evidence-grid--compact .evidence-card__insight {
+  font-size: 16.25px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .evidence-grid--compact .evidence-card__insight {
+    font-size: 13px;
+  }
+}
+
+.evidence-grid--compact .evidence-card__meta {
+  font-size: 15px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .evidence-grid--compact .evidence-card__meta {
+    font-size: 12px;
+  }
+}

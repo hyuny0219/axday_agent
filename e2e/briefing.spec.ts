@@ -4,12 +4,16 @@
 // 함께 확인한다.
 // T68(2026-09-30 사용자 요청): 자료 4장은 더 이상 상시 펼침이 아니라 "근거 자료 보기"
 // 버튼 → EvidenceDialog 팝업 안에서만 보인다(오른쪽 열 세로 예산을 줄이려고).
+// T80(2026-10-02, Main.html 시안 그대로): 오른쪽 열이 CONFIDENTIAL 도장 → CASE 칩+사건
+// 한 줄 → 결정 질문 → SITREP·PROPOSAL·UNKNOWN → YOUR ORDERS → EXHIBIT 2×2 요약 카드
+// (팝업 없이 항상 보임, testid `evidence-summary-<id>`) 순서로 바뀌었다 — 전문은 EXHIBIT
+// 머리줄의 "전문 보기"(여전히 testid `open-evidence`)로 연다.
 
 import { test, expect } from './fixtures';
 
 const EVIDENCE_IDS = ['E1', 'E2', 'E3', 'E4'];
 
-test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/미정 → 할 일/최종 결정 → 근거 자료 버튼 순으로 보이고, 팝업에서 자료 4장을 전문으로 본다', async ({
+test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNOWN → YOUR ORDERS → EXHIBIT 요약 카드 순으로 보이고, "전문 보기"로 자료 4장을 전문으로 본다', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -20,21 +24,22 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  // 최종 결정 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다.
-  await expect(page.getByTestId('briefing-role')).toContainText('최종 결정: 찬성 · 반대');
+  // FINAL CALL 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다(시안
+  // "FINAL CALL: 찬성 / 반대").
+  await expect(page.getByTestId('briefing-role')).toContainText('FINAL CALL: 찬성 / 반대');
 
   // T52: "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점 목록은 제거됐다.
   await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
   await expect(page.getByTestId('condition-preview')).toHaveCount(0);
 
-  // T68: 팝업을 열기 전에는 자료 카드가 DOM에 없고, "근거 자료 보기" 버튼과 안내
-  // 한 줄만 보인다.
+  // T80: EXHIBIT 요약 카드 4장은 팝업 없이 항상 보인다(evidence-summary-<id>). 팝업
+  // 전용 전문 카드(evidence-card-<id>)는 "전문 보기" 전에는 DOM에 없다.
   for (const id of EVIDENCE_IDS) {
+    await expect(page.getByTestId(`evidence-summary-${id}`)).toBeVisible();
     await expect(page.getByTestId(`evidence-card-${id}`)).toHaveCount(0);
   }
   const openEvidence = page.getByTestId('open-evidence');
-  await expect(openEvidence).toBeVisible();
-  await expect(page.locator('.evidence-open-hint')).toContainText('EXHIBIT A–D · 4장');
+  await expect(openEvidence).toHaveText('전문 보기');
 
   await openEvidence.click();
   const dialog = page.getByTestId('evidence-dialog');

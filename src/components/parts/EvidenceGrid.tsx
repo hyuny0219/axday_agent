@@ -12,12 +12,22 @@
 // 걸지 않는다(펼칠 컨트롤이 없어 클램프가 뒷부분을 소리 없이 지운다 — PR #10 Codex
 // 29차 검토). 화면 문구(원문·해석)에도 자료 ID를 쓰지 않는다 — "E1과 다르다"처럼
 // 원문 안에서 다른 자료를 가리킬 때는 자료명으로 쓴다(같은 검토).
+//
+// T80(2026-10-02, Main.html EXHIBIT 2×2): BRIEFING 오른쪽 열이 팝업 없이도 자료 요약을
+// 상시 보여줘야 해서(사용자 결정) `variant='compact'`를 더했다 — 마크업은
+// `variant='dialog'`(기본, EvidenceDialog 전용)와 완전히 같고 evidence.css가 치수만
+// 덮어쓴다(해석·원문 각 1~2줄 클램프, 글자 작게). testid만 `evidence-summary-<id>`로
+// 바꿔 팝업 쪽 `evidence-card-<id>`와 겹치지 않게 한다 — 팝업이 열리면 배경의 압축
+// 카드와 팝업 안 전문 카드가 동시에 DOM에 있어야 하기 때문이다.
 
 import type { EvidenceCard as EvidenceCardData } from '../../content/types';
 import '../../styles/screens/evidence.css';
 
 export interface EvidenceGridProps {
   evidence: EvidenceCardData[];
+  /** 'dialog'(기본, EvidenceDialog 팝업 전문 — 원문 클램프 없음) | 'compact'(BRIEFING
+   * 오른쪽 열 상시 요약 카드, Main.html EXHIBIT 2×2 — 해석·원문 각 1~2줄 클램프). */
+  variant?: 'dialog' | 'compact';
 }
 
 // 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록"). 화면 문구에
@@ -25,11 +35,16 @@ export interface EvidenceGridProps {
 // A~D를 매긴다 — evidence-card-{id} 같은 자동화용 값이 아니라 순수 장식이다.
 const EXHIBIT_LETTERS = ['A', 'B', 'C', 'D'] as const;
 
-export function EvidenceGrid({ evidence }: EvidenceGridProps) {
+export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps) {
+  const isCompact = variant === 'compact';
   return (
-    <div className="evidence-grid">
+    <div className={isCompact ? 'evidence-grid evidence-grid--compact' : 'evidence-grid'}>
       {evidence.map((card, index) => (
-        <article key={card.id} className="evidence-card" data-testid={`evidence-card-${card.id}`}>
+        <article
+          key={card.id}
+          className={isCompact ? 'evidence-card evidence-card--compact' : 'evidence-card'}
+          data-testid={isCompact ? `evidence-summary-${card.id}` : `evidence-card-${card.id}`}
+        >
           {/* T73(S3b_Discuss_Evidence 시안): 태그+자료명을 한 줄짜리 타자기 라벨로
               합치고(시안은 둘을 같은 글꼴·색으로 이어 쓴다), 해석(insight)을 본문
               한 줄로, 원문(content)을 그 아래 흐린 메타 줄로 둔다. */}
