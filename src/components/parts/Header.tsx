@@ -6,8 +6,12 @@
 // 본문 위에 따로 있던 ProgressStrip을 헤더 가운데로 올렸다(`docs/design/mockups/
 // Main.html` 헤더 한 줄: 좌 브랜드·케이스 라벨 | 가운데 01~05 탭 | 우 모드 배지·운영).
 // ATTRACT·SELECT는 ProgressStrip이 null을 돌려주므로 가운데가 비고 좌·우만 남는다.
+// T78(2026-10-02, 안건 교체): 케이스 번호를 세션의 안건 caseLabel(01/02)로 바꾼다 —
+// 안건이 아직 없는 ATTRACT·SELECT에서는 scenario가 null이라 "No. --"를 보여준다
+// (시안 Main.html 형식 유지, BriefingScreen·DiscussScreen 등과 같은 caseDigits 규칙).
 
 import type { Session } from '../../domain/types';
+import type { Scenario } from '../../content/types';
 import '../../styles/screens/shell.css';
 import { OperatorMenu } from './OperatorMenu';
 import { ProgressStrip } from './ProgressStrip';
@@ -19,19 +23,21 @@ const MODE_BADGE_TEXT: Record<Session['mode'], string> = {
 
 export interface HeaderProps {
   session: Session;
+  scenario: Scenario | null;
   onOperatorReset: () => void;
 }
 
-export function Header({ session, onOperatorReset }: HeaderProps) {
+export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
+  const caseDigits = scenario?.incident.caseLabel.match(/\d+/)?.[0];
   return (
     <header className="app-header">
       <div className="app-header__left">
         <span className="app-header__brand">BOARDROOM 2026</span>
         {/* "기밀 작전실" 타자기 라벨(T64, Main.html "CASE FILE No. 02 · SESSION 0042").
-            안건마다 바뀌는 케이스 번호가 없어 고정 "02"를 쓰고, sessionId 앞 4자로
-            세션을 구분한다 — 장식용 코드라 sessionId 전체를 노출하지 않는다. */}
+            sessionId 앞 4자로 세션을 구분한다 — 장식용 코드라 sessionId 전체를
+            노출하지 않는다. */}
         <span className="app-header__case-file" aria-hidden="true">
-          CASE FILE No. 02 · SESSION {session.sessionId.slice(0, 4).toUpperCase()}
+          CASE FILE No. {caseDigits ?? '--'} · SESSION {session.sessionId.slice(0, 4).toUpperCase()}
         </span>
       </div>
       <div className="app-header__center">

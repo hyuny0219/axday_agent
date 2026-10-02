@@ -572,6 +572,7 @@ function AppShell() {
         <div className="app-shell">
           <Header
             session={session}
+            scenario={scenario}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
           />
           {hasStageBand && scenario ? (

@@ -1,10 +1,15 @@
 // 임원 roleId -> 역할 프롬프트 빌더 매핑. round·vote 핸들러가 공통으로 쓴다.
 
 import type { ExecRoleId } from '../../validate';
+import type { ScenarioMaterials, ScenarioRoleLens } from '../../scenario-data';
 import { buildRolePrompt as buildCeoPrompt } from './ceo';
 import { buildRolePrompt as buildCfoPrompt } from './cfo';
 import { buildRolePrompt as buildCaioPrompt } from './caio';
 import { buildRolePrompt as buildCisoPrompt } from './ciso';
+
+/** round.ts(OPINIONS/REACTIONS/FOLLOWUP)·vote.ts(VOTE)가 공통으로 넘기는 단계 구분.
+ * assistant.ts(refine·summarize)는 ROLE_PROMPT_BUILDERS를 쓰지 않으므로 이 타입과 무관하다. */
+export type ExecPromptStage = 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP' | 'VOTE';
 
 /**
  * 임원 프롬프트에만 붙는 보고 문체 규칙(T34 튜닝 v2에서 측정된 결함: CEO 발언이 반말체로
@@ -35,13 +40,69 @@ export const EXEC_DECISION_RULE =
   ' AGAINST로 적습니다. UNDECIDED는 제공된 자료로는 어느 쪽도 말할 수 없을 때만 쓰고, 그때는' +
   ' 무엇이 확인돼야 정할 수 있는지를 발언에 적으십시오.';
 
-function withExecStyle(buildRolePrompt: () => string): () => string {
-  return () => [buildRolePrompt(), EXEC_STYLE_RULE, EXEC_DECISION_RULE].join('\n');
+const OPENING_LABEL: Record<ScenarioRoleLens['opening'], string> = {
+  FOR: '찬성',
+  AGAINST: '반대',
+  UNDECIDED: '미정',
+};
+
+function evidenceTitles(materials: ScenarioMaterials, ids: string[]): string {
+  const byId = new Map(materials.evidence.map((item) => [item.id, item.title] as const));
+  return ids.map((id) => byId.get(id) ?? id).join(', ');
 }
 
-export const ROLE_PROMPT_BUILDERS: Record<ExecRoleId, () => string> = {
-  CEO: withExecStyle(buildCeoPrompt),
-  CFO: withExecStyle(buildCfoPrompt),
-  CAIO: withExecStyle(buildCaioPrompt),
-  CISO: withExecStyle(buildCisoPrompt),
+/**
+ * 안건별 임원 렌즈(T79). 모든 발언 단계(OPINIONS/REACTIONS/FOLLOWUP)와 VOTE에 붙는다.
+ * "무겁게 볼 관점·자료"를 알려줄 뿐 발언 문장이나 최종 표를 정하지 않는다 — 정답표 금지
+ * 원칙(AGENT_BOARDROOM_SPEC.md 1·2장)은 그대로 유지하고, 임원은 매 호출 스스로 찬성·반대를
+ * 고른다(EXEC_DECISION_RULE).
+ */
+function buildRoleLensBlock(materials: ScenarioMaterials, lens: ScenarioRoleLens): string {
+  return [
+    '<role_lens>',
+    `당신은 이 안건에서 특히 다음 관점을 무겁게 봅니다: ${lens.lens}`,
+    `이 관점과 관련해 다음 자료를 특히 무겁게 고려하십시오: ${evidenceTitles(materials, lens.evidenceIds)}.`,
+    '</role_lens>',
+  ].join('\n');
+}
+
+/**
+ * 첫 의견(OPINIONS) 단계에 한해서만 붙는 출발 성향(T79). 반응·후속·표결 단계에는 주지
+ * 않는다(카드 지시 "반응·후속·표결 단계에는 출발 성향을 주지 않는다 — 렌즈만"). 출발점일
+ * 뿐 결론이 아니라는 문구를 그대로 넣어 정답표로 오인되지 않게 한다.
+ */
+function buildOpeningStanceBlock(opening: ScenarioRoleLens['opening']): string {
+  return [
+    '<opening_stance>',
+    `당신은 이 안건에 ${OPENING_LABEL[opening]} 쪽으로 기운 채 회의에 들어옵니다. 출발점이지` +
+      ' 결론이 아니며 자료·참가자 조건·논의에 따라 바꿀 수 있습니다.',
+    '</opening_stance>',
+  ].join('\n');
+}
+
+function withExecStyle(
+  buildRolePrompt: () => string,
+  roleId: ExecRoleId,
+): (materials: ScenarioMaterials, stage: ExecPromptStage) => string {
+  return (materials: ScenarioMaterials, stage: ExecPromptStage) => {
+    const parts = [buildRolePrompt(), EXEC_STYLE_RULE, EXEC_DECISION_RULE];
+    const lens = materials.roleLenses?.[roleId];
+    if (lens) {
+      parts.push(buildRoleLensBlock(materials, lens));
+      if (stage === 'OPINIONS') {
+        parts.push(buildOpeningStanceBlock(lens.opening));
+      }
+    }
+    return parts.join('\n');
+  };
+}
+
+export const ROLE_PROMPT_BUILDERS: Record<
+  ExecRoleId,
+  (materials: ScenarioMaterials, stage: ExecPromptStage) => string
+> = {
+  CEO: withExecStyle(buildCeoPrompt, 'CEO'),
+  CFO: withExecStyle(buildCfoPrompt, 'CFO'),
+  CAIO: withExecStyle(buildCaioPrompt, 'CAIO'),
+  CISO: withExecStyle(buildCisoPrompt, 'CISO'),
 };

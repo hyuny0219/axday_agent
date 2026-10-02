@@ -1,6 +1,14 @@
-# 안건 ② — 익명이면 말할 수 있을까 (사내 게시판 익명제)
+# 이전 안건(보존) — 익명이면 말할 수 있을까 (사내 게시판 익명제)
 
-버전 1.0 · 2026-09-23 · 구현 기준: `src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`
+> **2026-10-02(T78) 레지스트리 제외:** 이 안건은 더 이상 활성 안건이 아니다. 2026-10-02에
+> 사용자 확정으로 ① [AI Agent에게 결재권을 부여한다](SCENARIO_AI_APPROVAL.md) · ②
+> [데이터보다 경험이 더 중요하다](SCENARIO_EXPERIENCE_FIRST.md)로 교체됐다. 구현 파일
+> (`src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`의 `ANON_BOARD_MATERIALS`)은
+> 되돌릴 수 있게 그대로 보존했지만 `src/content/scenarios/index.ts`의 `scenarios` 레지스트리와
+> `server/scenario-data.ts`의 `SCENARIOS` 조회표에서는 뺐다. 아래 내용은 그 활성 기간
+> (2026-09-23~2026-10-02)의 구현 기준 기록이다.
+
+버전 1.0 · 2026-09-23 · 구현 기준(보존): `src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`
 
 모든 자료·대사·의결 규칙은 체험용 가상 설정이며 실제 삼성화재 자료나 정책이 아니다. 고정 반응·표결 우선순위·대표 경로의 득표수는 scripted 데모용 테스트 데이터이며 live 에이전트의 정답이 아니다. live에서는 같은 최종안과 실제 논의로 각 임원이 스스로 판단한다.
 

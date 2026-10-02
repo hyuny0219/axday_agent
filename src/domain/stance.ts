@@ -53,6 +53,25 @@ function latestConfirmedConditionIds(opinions: readonly Opinion[]): string[] {
   return result;
 }
 
+/** 참가자가 아직 한 번도 의견을 전달하지 않은 동안(OPINIONS·DISCUSS) scenario의
+ * initialOpinions[].openingStance를 그대로 쓴다. PR #13 Codex 3차 검토: voteRules를
+ * 조건 없음(conditionIds=[])으로 평가한 "else/always" 분기는 표결 시점에 조건이 끝내
+ * 없을 때의 판단이지, 임원이 아직 참가자 말을 듣기도 전에 내는 첫 반응과 같은 개념이
+ * 아니다 — 두 안건의 문서가 CAIO의 첫 stance를 "미정"으로 명시했는데(voteRules의
+ * always 분기는 NO) 예전 코드는 voteRules만으로 OPINIONS 표정을 계산해 이 차이를
+ * 지웠다. opinions가 비어 있는 한(OPINIONS·DISCUSS 모두 해당 — 참가자가 DISCUSS에서야
+ * 비로소 말하므로) 이 값을 쓰고, 참가자가 의견을 전달한 뒤(REACTIONS~)에는 그 시점의
+ * confirmedConditionIds로 voteRules를 그대로 평가한다(조건이 비어 있어도 이 단계부터는
+ * "첫 반응"이 아니라 "그때까지의 판단"이므로 always 분기가 맞다 — 기존 "조건 없이
+ * 진행" 경로 테스트와 일치). */
+function openingStances(scenario: Scenario): Record<ExecMemberId, Stance> {
+  const result: Record<ExecMemberId, Stance> = { ...ALL_UNDECIDED };
+  for (const opinion of scenario.initialOpinions) {
+    result[opinion.memberId] = opinion.openingStance;
+  }
+  return result;
+}
+
 /** scripted 표결 규칙표로 임원 4명의 표정을 미리 계산한다(순수 함수). live와는 무관하다. */
 export function scriptedStances(
   scenario: Scenario,
@@ -60,6 +79,9 @@ export function scriptedStances(
 ): Record<ExecMemberId, Stance> {
   if (!STANCE_COMPUTED_STAGES.has(session.stage)) {
     return ALL_UNDECIDED;
+  }
+  if (session.opinions.length === 0) {
+    return openingStances(scenario);
   }
   const ctx: VoteContext = {
     conditionIds: latestConfirmedConditionIds(session.opinions),

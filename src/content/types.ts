@@ -47,10 +47,22 @@ export interface MotionBreakdown {
   undecidedItems: string[];
 }
 
+/** 임원 "지금 기울어 있는 쪽"의 값 집합(src/domain/types.ts의 Stance와 같은 리터럴).
+ * content가 domain에 의존하지 않도록 여기서 따로 둔다(domain이 content를 쓰는 방향만
+ * 유지, PR #13 Codex 3차 검토). */
+export type OpeningStance = 'FOR' | 'AGAINST' | 'UNDECIDED';
+
 export interface InitialOpinion {
   memberId: ExecMemberId;
   text: string;
   evidenceIds: string[];
+  /** OPINIONS 단계(아직 참가자가 말하지 않은 동안, DISCUSS 포함) "출발 성향"(PR #13
+   * Codex 3차 검토 — server/scenario-data.ts의 roleLenses[role].opening과 같은 값을
+   * 쓴다). domain/stance.ts의 scriptedStances가 조건이 아직 없는 동안 이 값을 그대로
+   * 쓰고, 참가자가 의견을 전달한 뒤(REACTIONS~)에는 voteRules 기반 계산으로 넘어간다 —
+   * 정답표가 아니라 "첫 반응"일 뿐이며 voteRules의 always 분기와 다를 수 있다(의도적,
+   * SCENARIO_AI_APPROVAL.md·SCENARIO_EXPERIENCE_FIRST.md "첫 stance" 열). */
+  openingStance: OpeningStance;
 }
 
 export interface Phrase {

@@ -49,7 +49,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await startCta.click();
 
   await expectNoPageScroll(page, 'SELECT');
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   const enterBoard = page.getByRole('button', { name: '이사회 입장' });
   await expect(enterBoard).toBeInViewport();
   await enterBoard.click();
@@ -139,7 +139,7 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.setViewportSize({ width: 1568, height: 777 });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();

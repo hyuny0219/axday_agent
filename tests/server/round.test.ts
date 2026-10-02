@@ -14,7 +14,7 @@ function baseRoundInput(overrides: Partial<RoundRequest> = {}): RoundRequest {
     mode: 'live',
     stage: 'OPINIONS',
     transcript: { revision: 0, statements: [] },
-    scenarioId: 'anon-board',
+    scenarioId: 'ai-approval',
     budgetMs: 8000,
     ...overrides,
   };
@@ -226,4 +226,83 @@ describe('roundRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
     expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CFO', 'CAIO'] }).success).toBe(true);
     expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO'] }).success).toBe(true);
   });
+});
+
+// PR #13 Codex 1차 검토 P2: CONDITION_IDS는 안건①·②의 합집합이라, 스키마만으로는 다른
+// 안건의 조건(예: 안건①에 SCOPE)도 모양상 통과한다. suggestedConditionIds는 호출한
+// 안건 자신의 조건이어야만 유효하다 — 모델 응답 방향 검증, 모르는 ID와 같이 거절한다.
+function fakeProviderWithConditions(conditionIds: string[]): ModelProvider {
+  return {
+    async complete(req) {
+      const envelope = JSON.parse(req.user) as { roleId: string };
+      return {
+        json: {
+          roleId: envelope.roleId,
+          message: '검토했습니다.',
+          evidenceIds: [],
+          referencedStatementIds: [],
+          concerns: [],
+          suggestedConditionIds: conditionIds,
+          stance: 'FOR',
+        },
+        modelId: 'fake-model',
+      };
+    },
+  };
+}
+
+describe('안건별 suggestedConditionIds 검증(PR #13 Codex 1차 검토 P2)', () => {
+  it('안건①(ai-approval) 응답에 안건②의 조건(SCOPE)이 섞이면 invalid_response로 거절된다', async () => {
+    const input = baseRoundInput({ requestId: 'req-foreign-1', scenarioId: 'ai-approval', roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProviderWithConditions(['SCOPE']) });
+    expect(results[0]?.status).toBe('failed');
+    expect(results[0]?.failReason).toBe('invalid_response');
+  });
+
+  it('안건②(experience-first) 응답에 안건①의 조건(LIMIT)이 섞이면 invalid_response로 거절된다', async () => {
+    const input = baseRoundInput({
+      requestId: 'req-foreign-2',
+      scenarioId: 'experience-first',
+      roleIds: ['CEO'],
+    });
+    const results = await handleRound(input, { provider: fakeProviderWithConditions(['LIMIT']) });
+    expect(results[0]?.status).toBe('failed');
+    expect(results[0]?.failReason).toBe('invalid_response');
+  });
+
+  it('각 안건 자신의 조건 ID만 실으면 채택된다', async () => {
+    const aiApproval = baseRoundInput({
+      requestId: 'req-valid-1',
+      scenarioId: 'ai-approval',
+      roleIds: ['CEO'],
+    });
+    const aiApprovalResults = await handleRound(aiApproval, {
+      provider: fakeProviderWithConditions(['LIMIT', 'REVIEW']),
+    });
+    expect(aiApprovalResults[0]?.status).toBe('answered');
+
+    const experienceFirst = baseRoundInput({
+      requestId: 'req-valid-2',
+      scenarioId: 'experience-first',
+      roleIds: ['CEO'],
+    });
+    const experienceFirstResults = await handleRound(experienceFirst, {
+      provider: fakeProviderWithConditions(['SCOPE', 'REVIEW']),
+    });
+    expect(experienceFirstResults[0]?.status).toBe('answered');
+  });
+
+  // PR #13 Codex 2차 검토 P1: 실제 createMockProvider(server/providers/mock.ts)가 두 안건
+  // 모두에서 임원 4명 전원 answered를 돌려주는지 확인한다(이전에는 experience-first에서
+  // mock이 ai-approval 전용 조건 ID를 고정으로 돌려줘 3명이 invalid_response였다).
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '실제 mock 제공자는 %s에서 임원 4명 모두 answered를 돌려준다',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      const input = baseRoundInput({ requestId: `req-mock-clean-${scenarioId}`, scenarioId });
+      const results = await handleRound(input, { provider });
+      expect(results).toHaveLength(4);
+      expect(results.every((r) => r.status === 'answered')).toBe(true);
+    },
+  );
 });
