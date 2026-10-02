@@ -10,6 +10,9 @@
    구조). 그 안에 시안의 시안색 글로우 테두리 박스(attract-screen__stage)가 남은
    높이를 꽉 채운다. */
 .attract-screen {
+  /* 공용 .screen의 max-width:1760px를 풀어 1920에서도 시안처럼 좌우 24px 여백만 남긴다
+     (reviewer T70·T71 must). */
+  max-width: none;
   position: relative;
   isolation: isolate;
   overflow: hidden;

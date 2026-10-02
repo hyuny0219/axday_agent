@@ -11,6 +11,9 @@
    margin으로 .app-main의 padding을 정확히 상쇄하고 이 화면 자체가 시안 값(28px 24px/
    20px 16px)으로 다시 여백을 준다(AttractScreen도 같은 구조, attract.css 참고). */
 .select-screen {
+  /* 공용 .screen의 max-width:1760px를 풀어 1920에서도 시안처럼 좌우 24px 여백만 남긴다
+     (reviewer T70·T71 must). */
+  max-width: none;
   position: relative;
   isolation: isolate;
   overflow: hidden;
