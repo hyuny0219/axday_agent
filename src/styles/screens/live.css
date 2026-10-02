@@ -13,11 +13,30 @@
 /* 실패한 역할이 있을 때만 나타나는 보조 버튼(T65 "다시 요청"). 카드 그리드 아래, 오른쪽
    정보 열 안에 작게 둔다 — 왼쪽 무대 아래 주 CTA(.cta 단독)와 크기·위계를 구분한다. */
 .live-round__retry {
+  flex-shrink: 0;
   align-self: flex-start;
   margin-top: var(--space-2);
   min-height: 0;
   padding: var(--space-1) var(--space-3);
   font-size: 14px;
+}
+
+/* T72 수정(2라운드): OPINIONS(live)에서 .live-round(카드+다시 요청 버튼)가
+   .opinions-screen__paper의 남은 세로 공간을 채우지 않아, 카드 2×2 아래 빈 종이가
+   남았다 — scripted의 .opinions-screen__cards(flex:1)와 다른 모양이었다. 이 블록을
+   .opinions-screen__paper 조상으로 좁혀 OPINIONS에서만 채운다 — REACTIONS
+   (.live-round__cards--reply)는 자체 세로 예산이 이미 맞춰져 있어 건드리지 않는다. */
+.opinions-screen__paper .live-round {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.opinions-screen__paper .live-round__cards {
+  flex: 1;
+  min-height: 0;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 /* T64 이후 이 카드는 오른쪽 열(종이 서류철) 안에서만 그려진다(OpinionsScreen·
