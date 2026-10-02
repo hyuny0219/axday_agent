@@ -1,5 +1,6 @@
-// BriefingScreen(T68): 자료 카드는 팝업을 열기 전에는 DOM에 없고, "근거 자료 보기"를
-// 누르면 4장이 나타난다.
+// BriefingScreen(T80, Main.html 시안 그대로): EXHIBIT 2×2 요약 카드(evidence-summary-<id>)는
+// 팝업 없이 항상 보이고, 팝업 전용 전문 카드(evidence-card-<id>)는 "전문 보기"를 눌러야
+// 나타난다 — 두 testid가 서로 다르므로 팝업이 열려도 배경 요약 카드와 겹치지 않는다.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -11,25 +12,27 @@ afterEach(() => {
 });
 
 describe('BriefingScreen', () => {
-  it('팝업을 열기 전에는 evidence-card가 없고 "근거 자료 보기" 버튼만 보인다', () => {
+  it('EXHIBIT 요약 카드 4장은 항상 보이고, 팝업 전문 카드는 "전문 보기" 전에는 없다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     for (const card of anonBoardScenario.evidence) {
+      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
       expect(screen.queryByTestId(`evidence-card-${card.id}`)).not.toBeInTheDocument();
     }
     expect(screen.getByTestId('open-evidence')).toBeInTheDocument();
   });
 
-  it('"근거 자료 보기"를 누르면 팝업에 자료 4장이 나타난다', () => {
+  it('"전문 보기"를 누르면 팝업에 자료 4장이 전문으로 나타나고, 배경 요약 카드도 그대로 남는다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     fireEvent.click(screen.getByTestId('open-evidence'));
 
     expect(screen.getByTestId('evidence-dialog')).toBeInTheDocument();
     for (const card of anonBoardScenario.evidence) {
       expect(screen.getByTestId(`evidence-card-${card.id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
     }
   });
 
-  it('팝업 닫기 버튼을 누르면 자료 카드가 다시 사라진다', () => {
+  it('팝업 닫기 버튼을 누르면 전문 카드만 사라지고 요약 카드는 남는다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     fireEvent.click(screen.getByTestId('open-evidence'));
     fireEvent.click(screen.getByTestId('evidence-dialog-close'));
@@ -37,6 +40,22 @@ describe('BriefingScreen', () => {
     expect(screen.queryByTestId('evidence-dialog')).not.toBeInTheDocument();
     for (const card of anonBoardScenario.evidence) {
       expect(screen.queryByTestId(`evidence-card-${card.id}`)).not.toBeInTheDocument();
+      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
+    }
+  });
+
+  // PR #14 Codex 1차 검토(P2): 마지막 UNKNOWN 항목은 글자색을 배경과 같게 해
+  // 시각적으로만 가린다(먹칠) — 평문 텍스트만 읽으면 스크린리더 사용자는 "먹칠된
+  // 상태"를 알 수 없으므로 aria-label로 값과 상태를 함께 읽어 준다.
+  it('마지막 UNKNOWN 항목은 값과 "먹칠 처리된 미정 항목" 상태를 함께 읽는 aria-label을 가진다', () => {
+    render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
+    const items = anonBoardScenario.motionBreakdown.undecidedItems;
+    const lastItem = items[items.length - 1]!;
+    const redacted = screen.getByText(lastItem, { selector: '.briefing-screen__undecided-redacted' });
+    expect(redacted).toHaveAttribute('aria-label', `${lastItem} (먹칠 처리된 미정 항목)`);
+    // 앞선 항목들은 먹칠하지 않고 평문 그대로 보인다.
+    for (const item of items.slice(0, -1)) {
+      expect(screen.getByText(new RegExp(item))).toBeInTheDocument();
     }
   });
 });
