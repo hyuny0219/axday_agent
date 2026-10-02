@@ -348,7 +348,7 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await page.goto('/');
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
