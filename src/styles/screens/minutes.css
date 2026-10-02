@@ -2,40 +2,62 @@
    area(minutes)를 채운다. 2026-09-28 사용자 결정: 모든 항목을 전문 그대로 줄바꿈해 보여주고,
    넘치면 목록(.minutes__list)만 세로 스크롤한다. 페이지 스크롤 금지는 그대로다 — 패널은
    그리드 칸 높이(minmax(0, 1fr))에 갇히고 목록이 그 안에서 스크롤한다. */
-/* T64(Main.html TRANSCRIPT 패널): 짙은 회색 판(--transcript-bg/--transcript-border) +
-   타자기 앰버 머리글. 문구·testid는 그대로 두고(카드 preamble "문구 불변") 색·서체만
-   바꾼다. */
+/* T77: 시안 TRANSCRIPT 패널(S2_Opinions·S5_Motion·S6_Vote 공통, 미리보기
+   preview/S2_Opinions.png·S5_Motion.png) 인라인 스타일 값을 그대로 옮긴다 — 어두운 판
+   (--transcript-bg·--transcript-border, 모서리 각짐) + 타자기 앰버 머리글 "TRANSCRIPT ·
+   발언 흐름" + 행마다 "[mm:ss] 역할" 앰버 태그. 아바타·역할 배지·강조 배경은 시안에 없어
+   모두 뺐다(testid·sr-only·내부 스크롤·follow-bottom·접힘 규칙은 그대로다).
+   시안은 1280×720 캔버스다 — 기본 규칙(1920×1080)은 그 값을 1.25배 키운 값을 쓰고,
+   @media (max-width: 1280px)에서 시안 값 그대로로 되돌린다(opinions.css·motion.css·
+   vote.css와 같은 비율, T72~T76). em 단위 letter-spacing은 font-size를 따라 자동으로
+   커지므로 두 번 적지 않는다. */
 .minutes {
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--space-1) var(--space-2);
+  gap: 7.5px;
+  padding: 12.5px 17.5px;
   border: 1px solid var(--transcript-border);
-  border-radius: var(--radius-card);
   background-color: var(--transcript-bg);
+}
+
+@media (max-width: 1280px) {
+  .minutes {
+    gap: 6px;
+    padding: 10px 14px;
+  }
 }
 
 .minutes__head {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
   flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+}
+
+@media (max-width: 1280px) {
+  .minutes__head {
+    font-size: 12px;
+  }
 }
 
 .minutes__title {
   margin: 0;
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  font-family: var(--font-label);
-  letter-spacing: 0.1em;
-  color: var(--amber);
+  font-size: inherit;
+  font-weight: 400;
+  font-family: inherit;
+  letter-spacing: inherit;
+  color: inherit;
 }
 
 .minutes__count {
-  font-size: 12px;
-  font-family: var(--font-label);
+  font-size: inherit;
+  font-family: inherit;
+  letter-spacing: inherit;
   color: #8f8a80;
 }
 
@@ -45,7 +67,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7.5px;
   min-height: 0;
   flex: 1 1 auto;
   /* 목록만 스크롤한다. 새 항목이 오면 컴포넌트가 맨 아래(최신)로 내린다. overscroll-behavior는
@@ -56,6 +78,12 @@
   padding-right: 4px;
 }
 
+@media (max-width: 1280px) {
+  .minutes__list {
+    gap: 6px;
+  }
+}
+
 .minutes__list:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -63,41 +91,32 @@
 
 .minutes__entry {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
+  gap: 12.5px;
   min-width: 0;
   flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--paper);
 }
 
-/* 행 앞 직함 코드(T64, "[mm:ss] CEO" 중 코드 부분 — 도착 시각이 없어 직함만 보여준다).
-   타자기 앰버로 TRANSCRIPT 머리글과 같은 톤을 쓴다. */
+@media (max-width: 1280px) {
+  .minutes__entry {
+    gap: 10px;
+    font-size: 12px;
+  }
+}
+
+/* 행 머리(시안 "[mm:ss] CEO" 전체 — 세션 시작 기준 경과 시간 + 역할 코드, T77). 행
+   본문과 같은 크기로 타자기 앰버 색만 입힌다(시안에 별도 font-size가 없다). */
 .minutes__tag {
   flex-shrink: 0;
   font-family: var(--font-label);
-  font-size: 11px;
-  letter-spacing: 0.06em;
   color: var(--amber);
   white-space: nowrap;
 }
 
-/* "판단 중" 상태 문구: 화면에서는 감추되 스크린리더에는 남긴다(표준 sr-only 기법).
-   점 세 개는 장식(aria-hidden)이라 상태 문구가 없으면 pending 행이 발화자 이름만
-   읽힌다(PR #7 Codex 2차 검토). */
-.minutes__sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* 발화자 직함은 스크린리더용으로만 남긴다(아바타는 aria-hidden이라 접근 가능한
-   이름은 이 텍스트다). 화면에서는 아바타 이니셜(CEO·CFO·CAIO·CISO·나)이 역할을 보여
-   주므로 긴 직함을 매 행 반복하지 않아 문장 공간이 넓어진다(T47 다듬기). */
+/* 발화자 직함은 스크린리더용으로만 남긴다(시안에 아바타·배지가 없어 화면에는
+   "[mm:ss] 역할" 코드만 보인다, T77). */
 .minutes__speaker {
   position: absolute;
   width: 1px;
@@ -110,77 +129,28 @@
   border: 0;
 }
 
-/* 전문을 줄바꿈해 다 보여준다(말줄임 없음, 2026-09-28 사용자). 긴 토큰도 칸 안에서 꺾는다. */
+/* 전문을 줄바꿈해 다 보여준다(말줄임 없음, 2026-09-28 사용자). 긴 토큰도 칸 안에서 꺾는다.
+   판단 중 행은 시안 그대로 "▌ 대기 중"을 같은 자리에 보여준다(색만 muted, T77). */
 .minutes__text {
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--text);
 }
 
-/* 참가자 항목은 시안 테두리로 강조한다(v1.0 7절 "내 항목은 참가자 색"): 왼쪽 2px
-   시안 선 + 은은한 시안 배경. */
-.minutes__entry--mine {
-  box-shadow: inset 2px 0 0 var(--accent);
-  background-color: rgba(40, 217, 240, 0.08);
-  border-radius: 0 var(--radius-control) var(--radius-control) 0;
-  padding-left: var(--space-1);
+/* 판단 중(응답 대기) 임원 행: 시안 Main.html "[--:--] CFO ▌ 대기 중"처럼 행 전체를
+   muted 회색으로 보여준다(아바타·강조 배경 없음, T77). */
+.minutes__entry--pending {
+  color: var(--ink-muted);
 }
 
-.minutes__entry--mine .minutes__text {
-  color: var(--accent);
+.minutes__entry--pending .minutes__tag {
+  color: inherit;
 }
 
+/* 응답 없음(failed)도 같은 muted 색으로 구분한다(시안에 예시는 없지만 "강조 없음"
+   원칙에 맞춰 진하기만 다르게 둔다, T77). */
 .minutes__entry--failed .minutes__text {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* 판단 중 점 세 개(무대 띠 말풍선과 같은 모양, stage.css의 --dots와 별개로 여기서
-   가볍게 재구현한다 — 이 파일이 minutes 전용 스타일만 담기 때문). */
-.minutes__dots {
-  display: inline-flex;
-  gap: 3px;
-}
-
-.minutes__dots span {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: var(--text-muted);
-  animation: minutes-dot-pulse 1.2s ease-in-out infinite;
-}
-
-.minutes__dots span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.minutes__dots span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes minutes-dot-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-  }
-
-  40% {
-    opacity: 1;
-  }
-}
-
-@media (max-width: 1280px) {
-  .minutes {
-    padding: 4px var(--space-1);
-  }
-
-  .minutes__text {
-    font-size: 12px;
-  }
+  color: var(--ink-muted);
 }
 
 /* 세로가 너무 빠듯해 목록에 한 줄도 못 담는 경우(1568×777 VOTE에서 칸이 32px). 억지로

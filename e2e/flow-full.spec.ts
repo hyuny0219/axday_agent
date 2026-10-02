@@ -65,16 +65,12 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  // REACTIONS: 선택지 버튼 대신 직접 답하기를 키보드로 열고 입력한다.
+  // REACTIONS: 추천 답변 체크 카드 대신 textarea에 직접 입력한다(T74부터 늘 보인다).
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  const openEditor = page.getByTestId('followup-open-editor');
   const followupTextarea = page.getByTestId('followup-textarea');
-  await expect(followupTextarea).toBeHidden();
-  await openEditor.focus();
-  await page.keyboard.press('Enter');
-  await expect(followupTextarea).toBeFocused();
+  await expect(followupTextarea).toBeVisible();
   await followupTextarea.fill('제 의견을 유지하되 진행 상황만 계속 공유해 주세요.');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();

@@ -25,11 +25,21 @@ afterEach(() => {
   cleanup();
 });
 
-const chair: MinutesEntry = { id: 'chair', speaker: 'CEO', text: '상황 요약입니다.', kind: 'speech' };
+const chair: MinutesEntry = {
+  id: 'chair',
+  speaker: 'CEO',
+  text: '상황 요약입니다.',
+  kind: 'speech',
+  timeLabel: '00:00',
+};
 
 describe('MinutesPanel 낭독', () => {
   it('목록은 추가와 텍스트 변경을 모두 알리고, 각 행은 aria-atomic이다', () => {
-    render(<MinutesPanel entries={[chair, { id: 'op-CFO', speaker: 'CFO', text: '', kind: 'pending' }]} />);
+    render(
+      <MinutesPanel
+        entries={[chair, { id: 'op-CFO', speaker: 'CFO', text: '', kind: 'pending', timeLabel: '--:--' }]}
+      />,
+    );
     const list = screen.getByRole('list');
     expect(list).toHaveAttribute('aria-live', 'polite');
     expect(list.getAttribute('aria-relevant')?.split(/\s+/)).toEqual(expect.arrayContaining(['additions', 'text']));
@@ -38,29 +48,31 @@ describe('MinutesPanel 낭독', () => {
     }
   });
 
-  it('판단 중 행이 응답으로 바뀌면 같은 행 안에서 발화자와 문장이 함께 남는다', () => {
+  it('판단 중 행이 응답으로 바뀌면 같은 행 안에서 발화자와 문장이 함께 남는다(시안 "▌ 대기 중" 표시, T77)', () => {
     const { rerender } = render(
-      <MinutesPanel entries={[chair, { id: 'op-CFO', speaker: 'CFO', text: '', kind: 'pending' }]} />,
+      <MinutesPanel
+        entries={[chair, { id: 'op-CFO', speaker: 'CFO', text: '', kind: 'pending', timeLabel: '--:--' }]}
+      />,
     );
     const before = screen.getByTestId('minutes-entry-op-CFO');
-    expect(before.querySelector('.minutes__dots')).not.toBeNull();
-    // 점은 장식(aria-hidden)이라 상태 문구가 접근 가능한 텍스트로 따로 있어야 한다.
-    expect(before).toHaveTextContent('판단 중');
-    expect(before.querySelector('.minutes__dots')).toHaveAttribute('aria-hidden', 'true');
+    expect(before).toHaveTextContent('[--:--] CFO');
+    expect(before).toHaveTextContent('대기 중');
 
     rerender(
       <MinutesPanel
-        entries={[chair, { id: 'op-CFO', speaker: 'CFO', text: '작게 시작합시다.', kind: 'speech' }]}
-       
+        entries={[
+          chair,
+          { id: 'op-CFO', speaker: 'CFO', text: '작게 시작합시다.', kind: 'speech', timeLabel: '00:09' },
+        ]}
       />,
     );
     const after = screen.getByTestId('minutes-entry-op-CFO');
     expect(after).toBe(before);
     expect(after).toHaveAttribute('aria-atomic', 'true');
     expect(after).toHaveTextContent('재무책임임원(CFO)');
+    expect(after).toHaveTextContent('[00:09] CFO');
     expect(after).toHaveTextContent('작게 시작합시다.');
-    expect(after).not.toHaveTextContent('판단 중');
-    expect(after.querySelector('.minutes__dots')).toBeNull();
+    expect(after).not.toHaveTextContent('대기 중');
   });
 });
 
@@ -72,6 +84,7 @@ describe('MinutesPanel 전체 표시·스크롤', () => {
     speaker: index % 2 === 0 ? 'CEO' : 'CFO',
     text: `발언 ${index}. `.repeat(6).trim(),
     kind: 'speech',
+    timeLabel: '00:00',
   }));
 
   it('항목을 하나도 숨기지 않고 전문 그대로 렌더한다', () => {
@@ -81,7 +94,8 @@ describe('MinutesPanel 전체 표시·스크롤', () => {
     expect(panel.querySelectorAll('.minutes__entry--hidden')).toHaveLength(0);
     expect(panel).not.toHaveClass('minutes--collapsed');
     expect(screen.getByTestId('minutes-entry-entry-11')).toHaveTextContent(many[11]!.text);
-    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12건');
+    // 시안 TRANSCRIPT 머리글 건수 배지 형식(T77): "N ENTRIES · 스크롤", 1건은 "1 ENTRY".
+    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12 ENTRIES · 스크롤');
   });
 
   it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "발언 흐름"이다', () => {

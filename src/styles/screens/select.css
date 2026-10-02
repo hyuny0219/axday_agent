@@ -1,135 +1,404 @@
-.select-screen__title {
-  margin: 0;
-  font-size: var(--fs-title);
-  line-height: 1.3;
+/* 안건 선택(SELECT) 화면(T70, docs/design/mockups/S1_Select.html 시안대로, 미리보기
+   preview/S1_Select.png). 시안은 1280×720 캔버스 한 장이다 — 이 파일은 그 값을
+   1280px 이하(실측 해상도 1280×720) 미디어쿼리 쪽에 그대로 옮기고, 기본 규칙(1920×1080)
+   쪽은 같은 배치를 1.25배 키운 값을 쓴다(tokens.css 다른 반응형 쌍, 예: --fs-hero
+   56/40 ≈ 0.71, --fs-title 32/26 ≈ 0.81의 평균과 맞춘 비율). em 단위 letter-spacing은
+   font-size를 따라 자동으로 커지므로 두 번 적지 않는다.
+
+   풀블리드: 이 화면은 .app-main(공통, padding: var(--space-4) var(--space-8) /
+   1280 이하 var(--space-1) var(--space-3) var(--space-2))의 자식이라 기본적으로
+   이중 여백이 생긴다. 시안은 헤더 56px 바로 아래부터 테두리 없이 꽉 차므로, 음수
+   margin으로 .app-main의 padding을 정확히 상쇄하고 이 화면 자체가 시안 값(28px 24px/
+   20px 16px)으로 다시 여백을 준다(AttractScreen도 같은 구조, attract.css 참고). */
+.select-screen {
+  /* 공용 .screen의 max-width:1760px를 풀어 1920에서도 시안처럼 좌우 24px 여백만 남긴다
+     (reviewer T70·T71 must). */
+  max-width: none;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex: 1;
+  align-items: center;
+  gap: 22px;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-8));
+  padding: 35px 30px;
 }
 
+@media (max-width: 1280px) {
+  .select-screen {
+    margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-3)) calc(-1 * var(--space-2));
+    padding: 28px 24px;
+    gap: 22px;
+  }
+}
+
+/* 무대 배경 레이어(시안 "렌더 흐림 1.5px·채도 0.6·불투명 0.55 + 스캔라인 + 상하
+   그라데이션 + 네 모서리 브래킷 + 우상단 CAM 01 라벨"). 장식이라 컨테이너를
+   aria-hidden으로 둔다(AttractScreen·StageBand와 같은 규칙). */
+.select-screen__stage {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.select-screen__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  filter: saturate(0.6) contrast(1.05) blur(1.5px);
+  opacity: 0.55;
+}
+
+.select-screen__scanlines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.22) 0px,
+    rgba(0, 0, 0, 0.22) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+.select-screen__vignette {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    180deg,
+    rgba(5, 11, 20, 0.82) 0%,
+    rgba(5, 11, 20, 0.5) 40%,
+    rgba(5, 11, 20, 0.92) 100%
+  );
+}
+
+.select-screen__bracket {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+}
+
+@media (max-width: 1280px) {
+  .select-screen__bracket {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.select-screen__bracket--tl {
+  top: 18px;
+  left: 18px;
+  border-top: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.select-screen__bracket--tr {
+  top: 18px;
+  right: 18px;
+  border-top: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+.select-screen__bracket--bl {
+  bottom: 18px;
+  left: 18px;
+  border-bottom: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.select-screen__bracket--br {
+  bottom: 18px;
+  right: 18px;
+  border-bottom: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+.select-screen__readout {
+  position: absolute;
+  top: 24px;
+  right: 64px;
+  display: flex;
+  gap: 15px;
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: var(--hud-line);
+}
+
+.select-screen__readout-dim {
+  color: #9fb6cc;
+}
+
+@media (max-width: 1280px) {
+  .select-screen__readout {
+    top: 20px;
+    right: 56px;
+    font-size: 11px;
+  }
+}
+
+/* 좌상단 타자기 라벨 + 제목(시안 "CASE SELECTION · 안건 선택" / "안건을 선택해
+   주세요"). 부모가 align-items:center라 이 블록만 align-self로 왼쪽에 붙인다. */
+.select-screen__heading {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 1280px) {
+  .select-screen__heading {
+    gap: 6px;
+  }
+}
+
+.select-screen__eyebrow {
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+}
+
+.select-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+@media (max-width: 1280px) {
+  .select-screen__eyebrow {
+    font-size: 12px;
+  }
+
+  .select-screen__title {
+    font-size: 34px;
+  }
+}
+
+/* 카드 2장(시안 "가운데 종이 서류철 카드 2장(480×300 비율)"). 부모 align-items:
+   center를 그대로 물려받아 가운데로 모인다(시안도 별도 정렬을 주지 않는다). */
 .select-screen__cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  /* 카드 상단 "안건 ①/②/③" 메타 라벨용 카운터(DESIGN_SPEC.md 9장 안건 번호 표기).
-     시나리오 문구는 그대로 두고 순서를 CSS 카운터로만 붙인다. */
-  counter-reset: agenda-index;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 50px;
+  margin-top: 10px;
 }
 
 @media (max-width: 1280px) {
   .select-screen__cards {
-    gap: var(--space-2);
+    gap: 40px;
+    margin-top: 8px;
   }
-}
-
-/* 시나리오 순서를 그대로 "안건 ①/②/③"으로 표기하는 커스텀 카운터 스타일. */
-@counter-style agenda-circled {
-  system: fixed;
-  symbols: '①' '②' '③';
-  suffix: '';
 }
 
 .scenario-card {
   position: relative;
+  box-sizing: border-box;
+  width: 600px;
+  height: 375px;
+  padding: 30px 32px;
+  background-color: var(--paper);
+  color: var(--ink);
+  border: 0;
+  box-shadow: var(--shadow-paper-main);
   text-align: left;
-  background-color: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: var(--space-4);
-  color: var(--text);
-  cursor: pointer;
-  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
   font-family: inherit;
-  counter-increment: agenda-index;
-  /* 선택 120ms, hover translateY(DESIGN_SPEC.md 4장 "선택120ms"). */
+  cursor: pointer;
   transition:
-    border-color var(--transition-fast) ease,
-    background-color var(--transition-fast) ease,
     transform var(--transition-fast) ease,
-    box-shadow var(--transition-fast) ease;
+    outline-color var(--transition-fast) ease;
 }
 
-/* 카드 머리줄: "안건 ②"(카운터)와 사건 번호 칩을 한 줄에 둔다(T47 다듬기 — 두 줄로
-   쌓이면 라벨만 둘이라 산만하다). 칩은 caseLabel이 있을 때만 렌더된다. */
-.scenario-card::before {
-  content: '안건 ' counter(agenda-index, agenda-circled);
-  display: inline-block;
-  margin-bottom: var(--space-1);
-  margin-right: var(--space-1);
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
-  letter-spacing: 0.02em;
+@media (max-width: 1280px) {
+  .scenario-card {
+    width: 480px;
+    height: 300px;
+    padding: 24px 26px;
+    gap: 14px;
+  }
 }
 
 .scenario-card:hover:not(:disabled) {
-  background-color: var(--panel-active);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
-}
-
-.scenario-card--selected {
-  border-color: var(--accent);
-  box-shadow: var(--glow-accent);
-}
-
-.scenario-card--selected::after {
-  content: '✓' / '';
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--accent);
-  color: var(--bg);
-  font-weight: 700;
-  font-size: var(--fs-meta);
 }
 
 .scenario-card:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* 사건 번호 칩(T47): "안건 ①" 카운터 아래·헤드라인 위에 짧게 표시한다. */
+/* 선택 = 시안색 3px 외곽선(offset 4px, T70 카드 문구 그대로). */
+.scenario-card--selected {
+  outline: 3px solid var(--hud-line);
+  outline-offset: 4px;
+}
+
+/* 우상단 체크 원(시안 svg 체크를 글리프 '✓'로 대체 — 앱 전체가 아이콘 대신
+   유니코드 글리프를 쓰는 기존 관행, old scenario-card--selected::after와 같다). */
+.scenario-card__check {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--hud-line);
+  color: #0b0d10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__check {
+    top: -14px;
+    right: -14px;
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+}
+
+.scenario-card__stamp {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  font-family: var(--font-label);
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__stamp {
+    top: 16px;
+    right: 18px;
+  }
+}
+
+.scenario-card__stamp--confidential {
+  padding: 6px 15px;
+  border: 4px solid var(--stamp-red);
+  color: var(--stamp-red);
+  font-size: 19px;
+  letter-spacing: 0.24em;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+}
+
+.scenario-card__stamp--preparing {
+  padding: 5px 12px;
+  border: 2px solid var(--label);
+  color: var(--label);
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  transform: rotate(-6deg);
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__stamp--confidential {
+    padding: 5px 12px;
+    border-width: 3px;
+    font-size: 15px;
+  }
+
+  .scenario-card__stamp--preparing {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+}
+
 .scenario-card__case {
-  display: inline-block;
-  margin-bottom: var(--space-1);
-  padding: 1px var(--space-1);
-  border-radius: 999px;
-  border: 1px solid rgba(40, 217, 240, 0.45);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  vertical-align: baseline;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
 }
 
+@media (max-width: 1280px) {
+  .scenario-card__case {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
+/* 카드 제목 = 안건 질문 한 줄(chairBriefing.question). 준비 중 카드는 시안에서
+   2px 작다(30px/1280 기준, 32px와 거의 같아 보이는 정도의 미세한 차이). */
 .scenario-card__title {
-  display: block;
-}
-
-.scenario-card__title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-body);
-  font-weight: 700;
-}
-
-/* 갈등 한 줄(hook, T47): 자료 E1~E4에 있는 사실만 담은 문장. 예전 subtitle(원안
-   문장) 자리를 대신한다. */
-.scenario-card__hook {
   margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-card);
+  font-family: var(--font-display);
+  font-size: 40px;
+  line-height: 1.25;
+  color: var(--ink);
 }
 
-.scenario-card__badge {
-  display: inline-block;
-  margin-top: var(--space-2);
-  padding: 4px var(--space-2);
-  border-radius: 999px;
-  background-color: var(--panel-active);
-  color: var(--vote-hold);
-  font-size: var(--fs-meta);
+.scenario-card:disabled .scenario-card__title {
+  font-size: 37px;
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__title {
+    font-size: 32px;
+  }
+
+  .scenario-card:disabled .scenario-card__title {
+    font-size: 30px;
+  }
+}
+
+.scenario-card__footer {
+  margin-top: auto;
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__footer {
+    font-size: 12px;
+  }
+}
+
+/* 좌하단 CTA 줄(시안 "이사회 입장 ▶" + "선택한 안건: CASE 02"). 부모
+   align-items:center를 벗어나 왼쪽에 붙이고 맨 아래로 민다. */
+.select-screen__submit-row {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  margin-top: auto;
+  gap: 22px;
+}
+
+@media (max-width: 1280px) {
+  .select-screen__submit-row {
+    gap: 18px;
+  }
+}
+
+.select-screen__selected-label {
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: #8f8a80;
+}
+
+@media (max-width: 1280px) {
+  .select-screen__selected-label {
+    font-size: 12px;
+  }
 }

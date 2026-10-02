@@ -1,93 +1,295 @@
+/* 임원 의견(OPINIONS) 화면(T72, docs/design/mockups/S2_Opinions.html 시안대로,
+   미리보기 preview/S2_Opinions.png). 시안은 1280×720 한 장이다 — 이 파일은 기본
+   규칙(1920×1080)에 그 값을 1.25배 키운 값을 쓰고, @media (max-width: 1280px)에서
+   시안 값 그대로로 되돌린다(select.css·attract.css와 같은 비율, T70·T71). em 단위
+   letter-spacing은 font-size를 따라 자동으로 커지므로 두 번 적지 않는다. */
+
+/* .opinions-screen(왼쪽 열 actions wrapper)은 CTA 한 개만 담으므로 추가 규칙이 없다
+   — 공용 .app-body__actions.screen이 이미 세로로 쌓는다. */
+
+/* 오른쪽 열(.app-body__content)의 유일한 자식. 시안의 오른쪽 "종이" 그 자체다(한
+   장짜리 서류철 — 개별 카드가 아니라 이 패널이 배경·그림자를 갖는다). */
+.opinions-screen__paper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 25px 30px;
+  background-color: var(--paper);
+  box-shadow: var(--shadow-paper-main);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__paper {
+    gap: 10px;
+    padding: 20px 24px;
+  }
+}
+
+/* 우상단 CONFIDENTIAL 도장(시안, scenario-card__stamp--confidential과 같은 관행). */
+.opinions-screen__stamp {
+  position: absolute;
+  top: 18px;
+  right: 23px;
+  padding: 6px 15px;
+  border: 4px solid var(--stamp-red);
+  color: var(--stamp-red);
+  font-family: var(--font-label);
+  font-size: 20px;
+  letter-spacing: 0.24em;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__stamp {
+    top: 14px;
+    right: 18px;
+    padding: 5px 12px;
+    border-width: 3px;
+    font-size: 16px;
+  }
+}
+
+/* STEP 칩 + 제목 줄. */
+.opinions-screen__head {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__head {
+    gap: 10px;
+  }
+}
+
+.opinions-screen__step {
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__step {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
 .opinions-screen__title {
   margin: 0;
-  font-size: var(--fs-title);
-  line-height: 1.3;
+  font-family: var(--font-display);
+  font-size: 33px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__title {
+    font-size: 26px;
+  }
+}
+
+/* 안내 한 줄 + 타자기 집계("찬성 n · 반대 n · 미정 n", 실제 stance). */
+.opinions-screen__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 13px;
+  font-size: 16px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__meta {
+    gap: 10px;
+    font-size: 13px;
+  }
+}
+
+.opinions-screen__tally {
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 15px;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .opinions-screen__tally {
+    font-size: 12px;
+  }
 }
 
 /* 무대 열이 본문 폭을 줄여(T44) 4열은 좁아지므로 2열로 감싼다(DESIGN_SPEC.md v1.0
    5절 "임원 4열 카드(OPINIONS·DISCUSS 상단)는 2열"). 두 해상도 모두 같은 규칙이다. */
 .opinions-screen__cards {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 13px;
 }
 
-/* T64(오른쪽 열 서류철): 어두운 패널 대신 종이-2 카드 + 잉크 글자. */
+@media (max-width: 1280px) {
+  .opinions-screen__cards {
+    gap: 10px;
+  }
+}
+
+/* 임원 발언 카드(시안): 종이-2 배경 + 1px 테두리 + 역할색 왼쪽 4px 띠. live의
+   live-statement--grid(live.css)와 같은 모양을 낸다 — scripted는 상태가 '발언'
+   하나뿐이라 markup이 더 단순하다. */
 .opinion-card {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 8px;
   background-color: var(--paper-2);
-  border: 2px solid var(--paper-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-2);
+  border: 1px solid var(--paper-border);
+  border-left-width: 4px;
+  border-radius: 0;
+  padding: 13px 15px;
   color: var(--ink);
-  box-shadow: var(--shadow-paper-card);
+}
+
+@media (max-width: 1280px) {
+  .opinion-card {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+}
+
+.opinion-card--for {
+  border-left-color: var(--paper-vote-yes);
+}
+
+.opinion-card--against {
+  border-left-color: var(--stamp-red);
+}
+
+.opinion-card--undecided {
+  border-left-color: var(--ink-muted);
 }
 
 .opinion-card__head {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 10px;
+}
+
+@media (max-width: 1280px) {
+  .opinion-card__head {
+    gap: 8px;
+  }
+}
+
+/* 타자기 역할 코드("CEO", 시안). 머리줄의 직함(아래)이 이미 "대표이사(CEO)"로 같은
+   정보를 담으므로 장식이다. */
+.opinion-card__code {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .opinion-card__code {
+    font-size: 11px;
+  }
 }
 
 .opinion-card__member {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
-/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
+@media (max-width: 1280px) {
+  .opinion-card__member {
+    font-size: 14px;
+  }
+}
+
+/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정") — 색도 역할색
+   띠와 같은 3색을 쓴다(시안). */
 .opinion-card__mood {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--ink-muted);
+  font-size: 14px;
   white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .opinion-card__mood {
+    font-size: 11px;
+  }
+}
+
+.opinion-card--for .opinion-card__mood {
+  color: var(--paper-vote-yes);
+}
+
+.opinion-card--against .opinion-card__mood {
+  color: var(--stamp-red);
+}
+
+.opinion-card--undecided .opinion-card__mood {
+  color: var(--ink-muted);
+}
+
+/* 우측 "발언" 칩(시안). */
+.opinion-card__chip {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .opinion-card__chip {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
 }
 
 .opinion-card__text {
   margin: 0;
-  font-size: var(--fs-card);
-  line-height: 1.5;
-  color: var(--ink-muted);
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ink);
 }
 
-.opinion-card__toggle {
-  align-self: flex-start;
-  min-height: var(--touch-min);
-  min-width: var(--touch-min);
-  background: transparent;
-  border: 2px solid var(--paper-border);
-  border-radius: var(--radius-control);
-  color: var(--label);
-  padding: 0 var(--space-2);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 16px;
-}
-
-.opinion-card__toggle:hover {
-  background-color: var(--paper);
-}
-
-.opinion-card__evidence {
-  margin: 0;
-  padding-left: var(--space-2);
-  color: var(--ink-muted);
-  font-size: 16px;
-}
-
-/* 1280×720(무대 열 40%)에서는 카드 자체가 더 좁아지므로 글자 크기만 줄인다(2열
-   구조는 유지, DESIGN_SPEC.md v1.0 5절). */
 @media (max-width: 1280px) {
-  .opinion-card {
-    padding: var(--space-1);
-  }
-
-  .opinion-card__member {
-    font-size: 16px;
-  }
-
   .opinion-card__text {
-    font-size: 16px;
+    font-size: 14px;
+  }
+}
+
+/* "근거 · <자료명>" pill(시안, 자료 ID는 보여주지 않는다 — T52). */
+.opinion-card__evidence {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border: 1px solid var(--paper-border);
+  border-radius: 13px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .opinion-card__evidence {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
   }
 }

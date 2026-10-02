@@ -1,13 +1,17 @@
-// 최종 안건 화면: 원안 문장, DISCUSS·REACTIONS에서 누적 확정된 조건, 남은 확인
-// 사항을 보여준다. '이 안건으로 표결'을 누르면 지금까지 확정한 조건 전체로
-// FREEZE_MOTION을 낸다(docs/SCENARIO_AI_ASSISTANT.md "최종 안건 화면").
-// T45(조종석 배치): 왼쪽 열은 "이 안건으로 표결" CTA만, 오른쪽 열은 안건 카드·반영
-// 조건·남은 과제를 담는다(DESIGN_SPEC.md v1.0 6절 표).
-// T65(reviewer fix round): FOLLOWUP 라운드는 실패해도 후속 대기 게이트가 풀리는
-// 즉시 CTA가 열려(설계된 대기일 뿐 실패를 막지 않는다) 참가자가 조용히 MOTION을
-// 지나칠 수 있었다. opinions가 2건 이상(FOLLOWUP이 실제로 돌았다는 뜻)이고 그 라운드에
-// 실패한 역할이 있으면 "응답 없는 임원 다시 요청" 버튼을 오른쪽 열에 보여준다 — 표결
-// 진행 자체는 막지 않는다.
+// 최종 안건 화면: 원안 문장, DISCUSS·REACTIONS에서 누적 확정된 조건을 보여준다.
+// '이 안건으로 표결'을 누르면 지금까지 확정한 조건 전체로 FREEZE_MOTION을 낸다
+// (docs/SCENARIO_AI_ASSISTANT.md "최종 안건 화면").
+// T75(docs/design/mockups/S5_Motion.html 시안 그대로): 왼쪽 열은 무대(StageBand,
+// App.tsx가 그린다) 아래 TRANSCRIPT 패널(App.tsx의 MinutesPanel, 남는 높이를 채운다)
+// 뿐이다 — 이 화면의 app-body__actions에는 입력 상자가 없다(ExecStanceList sr-only만
+// 둔다). 오른쪽 종이 한 장에 STEP 05·1/2 + 제목 + DRAFT 도장, "MOTION ON THE TABLE"
+// 상자(원안 문구, domain/motion.ts의 문안 생성 규칙은 바꾸지 않는다 — 항상
+// scenario.originalMotion.text 그대로다), CONDITIONS·NOT INCLUDED 2열, CHAIR 점선
+// 안내, 바닥 CTA를 담는다. CTA는 시안처럼 오른쪽 종이 바닥에 둔다(원래 "CTA는 항상
+// 왼쪽 열" 원칙의 예외 — 이 카드는 왼쪽 열에 입력 상자가 전혀 없다고 명시한다).
+// live의 FOLLOWUP 실패 "다시 요청" 버튼은 TRANSCRIPT 패널 내부(App.tsx의 공용
+// MinutesPanel)를 건드릴 수 없어, 그 바로 위 왼쪽 열(app-body__actions) 끝에 작은
+// 보조 버튼으로 둔다(오케스트레이터 지시 — MinutesPanel 내부는 건드리지 않는다).
 
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
@@ -75,31 +79,26 @@ export function MotionScreen({
     return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
   }
 
+  // "MOTION ON THE TABLE · 원안/수정안"(시안): 확정 조건이 하나도 없으면 원안, 하나라도
+  // 있으면 수정안이다 — domain/motion.ts freezeMotion의 kind 판정(baseConditionIds는
+  // 모든 시나리오에서 항상 [])과 같은 결과를 내는 표시용 계산일 뿐, 문안 생성 규칙 자체는
+  // 건드리지 않는다(문구는 항상 scenario.originalMotion.text 그대로).
+  const motionKindLabel = confirmedConditionIds.length === 0 ? '원안' : '수정안';
+
+  // "NOT INCLUDED · 빠진 것"(시안): 이번에 확정되지 않은 조건들을 그대로 나열한다 — 새
+  // 사실을 만들지 않고 scenario.conditions·확정 목록만으로 계산한다.
+  const notIncludedLabels = scenario.conditions
+    .filter((condition) => !confirmedConditionIds.includes(condition.id))
+    .map((condition) => condition.label);
+
   return (
     <>
       <div className="app-body__actions screen motion-screen">
-        <button
-          type="button"
-          className="cta"
-          disabled={freezeDisabled}
-          onClick={() => onFreeze(confirmedConditionIds)}
-          data-testid="freeze-motion"
-        >
-          이 안건으로 표결
-        </button>
-        {freezeDisabled && (
-          <p className="motion-screen__waiting" data-testid="motion-waiting-followup">
-            임원 후속 판단 중…
-          </p>
-        )}
-      </div>
-      <div className="app-body__content screen motion-screen__info">
-        <h2 className="motion-screen__title">최종 안건</h2>
         <ExecStanceList stances={stances} />
         {onRetryFailedRoles && failedRoleIds.length > 0 && (
           <button
             type="button"
-            className="live-round__retry cta cta--secondary"
+            className="motion-screen__retry cta cta--secondary"
             data-testid="retry-failed-roles"
             disabled={retryUsed}
             onClick={handleRetry}
@@ -107,25 +106,74 @@ export function MotionScreen({
             {retryUsed ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
           </button>
         )}
-        <article className="motion-screen__card" data-testid="motion-card">
-          <p className="motion-screen__original">{scenario.originalMotion.text}</p>
-          <h3 className="motion-screen__section-label">확정 조건</h3>
-          {confirmedConditionIds.length > 0 ? (
-            <ul className="motion-screen__conditions" data-testid="motion-conditions">
-              {confirmedConditionIds.map((id) => (
-                <li key={id}>{conditionLabel(id)}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="motion-screen__no-conditions">확정한 수정 조건이 없어 원안 그대로 표결합니다.</p>
+      </div>
+      <div className="app-body__content screen motion-screen__info">
+        <div className="motion-screen__paper">
+          <span className="motion-screen__stamp" aria-hidden="true">
+            DRAFT
+          </span>
+          <div className="motion-screen__head">
+            <span className="motion-screen__step">STEP 05 · 1/2</span>
+            {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T72와
+                같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
+            <h2 className="motion-screen__title">지금 표결할 안건</h2>
+          </div>
+          <div className="motion-screen__motion-box" data-testid="motion-card">
+            <span className="motion-screen__box-label">MOTION ON THE TABLE · {motionKindLabel}</span>
+            <p className="motion-screen__motion-text">{scenario.originalMotion.text}</p>
+          </div>
+          <div className="motion-screen__cols">
+            <div className="motion-screen__cols-box">
+              <span className="motion-screen__box-label">
+                CONDITIONS · 반영된 조건 {confirmedConditionIds.length}
+              </span>
+              {confirmedConditionIds.length > 0 ? (
+                <ul className="motion-screen__conditions" data-testid="motion-conditions">
+                  {confirmedConditionIds.map((id) => (
+                    <li key={id}>{conditionLabel(id)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="motion-screen__no-conditions">
+                  확정한 수정 조건이 없어 원안 그대로 표결합니다.
+                </p>
+              )}
+            </div>
+            <div className="motion-screen__cols-box">
+              <span className="motion-screen__box-label">NOT INCLUDED · 빠진 것</span>
+              <p className="motion-screen__not-included-text">
+                {notIncludedLabels.length > 0
+                  ? `${notIncludedLabels.join(' · ')}은(는) 이사님이 선택하지 않아 상정하지 않습니다. `
+                  : '이사님이 제안한 조건을 모두 반영해 빠진 것이 없습니다. '}
+                상정은 조건의 효과가 검증됐다는 뜻이 아닙니다.
+              </p>
+            </div>
+          </div>
+          <div className="motion-screen__chair-box">
+            <span className="motion-screen__box-label">CHAIR · 의장</span>
+            <p className="motion-screen__chair-text">
+              이 문안을 고정하고 표결로 넘어갑니다. 고정한 뒤에는 조건을 바꿀 수 없습니다. 임원 네
+              명은 같은 문안을 읽고 각자 표를 정합니다.
+            </p>
+          </div>
+          <div className="motion-screen__cta-row">
+            <button
+              type="button"
+              className="cta"
+              disabled={freezeDisabled}
+              onClick={() => onFreeze(confirmedConditionIds)}
+              data-testid="freeze-motion"
+            >
+              이 안건으로 표결 ▶
+            </button>
+            <span className="motion-screen__cta-hint">FREEZE MOTION · 조건 확정</span>
+          </div>
+          {freezeDisabled && (
+            <p className="motion-screen__waiting" data-testid="motion-waiting-followup">
+              임원 후속 판단 중…
+            </p>
           )}
-          <h3 className="motion-screen__section-label">남은 확인 사항</h3>
-          <ul className="motion-screen__tasks">
-            {scenario.remainingTasks.map((task) => (
-              <li key={task}>{task}</li>
-            ))}
-          </ul>
-        </article>
+        </div>
       </div>
     </>
   );

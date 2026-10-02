@@ -92,7 +92,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
   await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
@@ -140,10 +140,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   ).toBeVisible();
   await expectNoPageScroll(page, 'REACTIONS');
 
-  // 직접 답하기(가장 내용이 많은 경로)를 열고 조건 칩까지 노출한 상태도 확인한다.
-  await page.getByTestId('followup-open-editor').click();
+  // 직접 입력(가장 내용이 많은 경로)으로 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-textarea').fill('신고가 들어온 글에 한해 담당자가 확인할 수 있게 절차를 정합니다.');
-  await expectNoPageScroll(page, 'REACTIONS(직접 답하기 + 조건 칩)');
+  await expectNoPageScroll(page, 'REACTIONS(직접 입력 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
@@ -280,11 +279,18 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
-  // DISCUSS: 임원 카드 본문도 OPINIONS의 실제 120자 발언으로 바뀌었다(Codex 18차 검토
-  // P2). line-clamp로 잘려 보이더라도 카드 높이가 늘어나 페이지 스크롤이 생기면 안 된다.
-  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
   await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
+  // "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS의 실제 120자 발언으로
+  // 바뀌었다(Codex 18차 검토 P2, T73에서 이 카드는 팝업 안으로 옮겼다). 줄 클램프를
+  // 걸지 않으므로 카드 높이가 늘어나도 팝업 안에서만 스크롤하고 페이지 스크롤은 없어야
+  // 한다.
+  const discussOpenEvidence = page.getByTestId('open-evidence');
+  await discussOpenEvidence.click();
+  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
+  await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언, 팝업 열림)');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
   // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
   // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();

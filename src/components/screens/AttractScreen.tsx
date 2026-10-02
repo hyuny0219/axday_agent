@@ -1,7 +1,10 @@
-// 대기 화면: 큰 제목 + 부제 + 단일 CTA. CLAUDE_IMPLEMENTATION.md 3장 ATTRACT 행과
-// 5장 "네트워크가 없으면 모두 scripted" 절의 '사전 구성 시뮬레이션' 표기를 따른다.
-// T30에서 감지된 진행 방식(mode.ts)에 따라 배지 문구를 live/scripted로 바꾼다. 서버
-// 확인이 끝나기 전에는 기본값(scripted)을 보여준다.
+// 대기(ATTRACT) 화면(T71, docs/design/mockups/S0_Attract.html 시안대로, 미리보기
+// preview/S0_Attract.png). 본문 전체가 무대 사진 한 장(시안 글로우 테두리 안에 스캔라인·
+// 상하 그라데이션·28px 브래킷)이고, 가운데 세로 블록(모드 배지 → 큰 제목 → 부제 →
+// 사건 번호 줄) 위에 좌하단 CTA·우상단 TOP SECRET 도장·우하단 임원 로스터를 올린다.
+// T30에서 감지된 진행 방식(mode.ts)에 따라 가운데 모드 배지 문구를 live/scripted로
+// 바꾼다(시안 "LIVE · 실제 임원 에이전트 · 4분 이사회" / scripted는 "사전 구성
+// 시뮬레이션"). 서버 확인이 끝나기 전에는 기본값(scripted)을 보여준다.
 
 import type { SessionMode } from '../../domain/types';
 import stageRender from '../../assets/stage-render-01.jpg';
@@ -15,30 +18,57 @@ export interface AttractScreenProps {
 }
 
 const MODE_BADGE_TEXT: Record<SessionMode, string> = {
-  live: 'LIVE · 실제 임원 에이전트',
+  live: 'LIVE · 실제 임원 에이전트 · 4분 이사회',
   scripted: '사전 구성 시뮬레이션',
 };
 
 export function AttractScreen({ mode, onStart, startDisabled = false }: AttractScreenProps) {
   return (
     <section className="screen attract-screen">
-      <img src={stageRender} alt="" className="attract-screen__bg" />
-      <div className="attract-screen__overlay" aria-hidden="true" />
-      <p className="attract-screen__badge" data-testid="attract-mode-badge">
-        {MODE_BADGE_TEXT[mode]}
-      </p>
-      <h1 className="attract-screen__title">BOARDROOM 2026</h1>
-      <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
-      <button
-        type="button"
-        className="cta"
-        onClick={onStart}
-        disabled={startDisabled}
-        aria-busy={startDisabled || undefined}
-        data-testid="attract-start"
-      >
-        체험 시작
-      </button>
+      <div className="attract-screen__stage">
+        <img src={stageRender} alt="" className="attract-screen__bg" />
+        <div className="attract-screen__scanlines" aria-hidden="true" />
+        <div className="attract-screen__vignette" aria-hidden="true" />
+        <div className="attract-screen__bracket attract-screen__bracket--tl" aria-hidden="true" />
+        <div className="attract-screen__bracket attract-screen__bracket--tr" aria-hidden="true" />
+        <div className="attract-screen__bracket attract-screen__bracket--bl" aria-hidden="true" />
+        <div className="attract-screen__bracket attract-screen__bracket--br" aria-hidden="true" />
+        <div className="attract-screen__readout" aria-hidden="true">
+          <span>CAM 01 · 회의실 A</span>
+          <span className="attract-screen__readout-dim">STANDBY</span>
+        </div>
+        <span className="attract-screen__stamp" aria-hidden="true">
+          TOP SECRET
+        </span>
+
+        <div className="attract-screen__center">
+          <p className="attract-screen__badge" data-testid="attract-mode-badge">
+            {MODE_BADGE_TEXT[mode]}
+          </p>
+          <h1 className="attract-screen__title">BOARDROOM 2026</h1>
+          <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
+          <p className="attract-screen__case-file">CASE FILE No. 02 · 특별 이사 1석 공석</p>
+        </div>
+
+        <button
+          type="button"
+          className="cta attract-screen__cta"
+          onClick={onStart}
+          disabled={startDisabled}
+          aria-busy={startDisabled || undefined}
+          data-testid="attract-start"
+        >
+          체험 시작 ▶
+        </button>
+
+        <div className="attract-screen__roster" aria-hidden="true">
+          <span>CEO</span>
+          <span>CFO</span>
+          <span>CAIO</span>
+          <span>CISO</span>
+          <span className="attract-screen__roster-you">+ 당신</span>
+        </div>
+      </div>
     </section>
   );
 }

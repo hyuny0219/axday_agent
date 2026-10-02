@@ -2,6 +2,10 @@
 // 확인한 것으로 취급한다(CLAUDE_IMPLEMENTATION.md 4장 "자유 입력 처리"). 실제 충돌
 // 판정·확정 여부는 src/domain/conditions.ts가 계산하고, 이 컴포넌트는 그 결과를
 // 보여주고 토글 요청만 상위로 올린다.
+// T74(S4_Reactions 시안 그대로): REACTIONS는 이전에(DISCUSS에서) 이미 확정된 조건과
+// 이번 답변에서 새로 제안된 조건을 구분해 보여준다 — 기존 확정 칩은 시안색(cyan)
+// 테두리 + "✓", 새로 제안된 칩은 확정돼도 앰버 테두리 + "+ 새 조건"이다. 선택적
+// newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
 import type { ConflictPair, Scenario } from '../../content/types';
 
@@ -13,6 +17,9 @@ export interface ConditionChipsProps {
   /** 자유 입력 문장에서 아무 조건도 찾지 못했을 때만 안내 문구를 보여준다. */
   showNoMatchHint: boolean;
   onToggle: (conditionId: string) => void;
+  /** 이번 화면에서 새로 제안된 조건 ID(REACTIONS만 넘긴다). 확정된 칩이 이 목록에
+   * 있으면 "기존 확정"(cyan "✓") 대신 "새 조건"(앰버 "+ 새 조건") 모양을 쓴다. */
+  newlyProposedIds?: string[];
 }
 
 function conditionLabel(scenario: Scenario, conditionId: string): string {
@@ -41,6 +48,7 @@ export function ConditionChips({
   conflictPairs,
   showNoMatchHint,
   onToggle,
+  newlyProposedIds = [],
 }: ConditionChipsProps) {
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
@@ -55,20 +63,26 @@ export function ConditionChips({
 
   return (
     <div className="condition-chips" data-testid="condition-chips">
-      <p className="condition-chips__label">확인할 조건</p>
+      {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안 그대로
+          쓰는 장식 라벨이고(STEP·EXHIBIT 등과 같은 규칙), 확정 칩의 체크는 배지가 아니라
+          시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
+      <p className="condition-chips__label">CONDITIONS</p>
       <div className="condition-chips__list">
         {proposedIds.map((id) => {
           const accepted = acceptedIds.includes(id);
+          const isNew = newlyProposedIds.includes(id);
+          const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
           return (
             <button
               key={id}
               type="button"
-              className={`condition-chip${accepted ? ' condition-chip--accepted' : ''}`}
+              className={`condition-chip${modifier}`}
               aria-pressed={accepted}
               data-testid={`condition-chip-${id}`}
               onClick={() => onToggle(id)}
             >
               {conditionLabel(scenario, id)}
+              {accepted ? (isNew ? ' + 새 조건' : ' ✓') : ''}
             </button>
           );
         })}

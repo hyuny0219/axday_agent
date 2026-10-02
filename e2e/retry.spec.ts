@@ -106,6 +106,65 @@ async function mockVoteFailureThenRetrySucceeds(page: Page, failingRoleId: ExecR
   });
 }
 
+/** REACTIONS의 최초(전체) 호출에서 임원 4명 모두 실패로 되돌린다. roleIds가 실린
+ * 요청(=재요청)은 항상 성공으로 돌려준다(PR #12 Codex 1차 검토 P2-b: 실패가 여럿이어도
+ * 재요청 버튼이 하나만 그려지고 720에서 잘리지 않는지 확인하는 데 쓴다). */
+async function mockAllReactionsFail(page: Page): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage: string; roleIds?: ExecRoleId[] };
+    const targets = body.roleIds ?? EXEC_ROLE_IDS;
+    const isInitialReactionsCall = body.stage === 'REACTIONS' && !body.roleIds;
+    const json = targets.map((roleId) =>
+      isInitialReactionsCall
+        ? { roleId, status: 'failed', failReason: 'timeout', latencyMs: 0, modelId: 'mock', promptVersion: 'mock' }
+        : answeredStatementEntry(roleId, body.stage),
+    );
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하나만 그려지고 720에서 잘리지 않는다(PR #12 Codex 1차 검토 P2-b)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await mockAllReactionsFail(page);
+
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await enterAiAssistant(page);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+
+  // 4명 모두 실패 카드다.
+  for (const roleId of EXEC_ROLE_IDS) {
+    await expect(page.getByTestId(`statement-failed-${roleId}`)).toBeVisible({ timeout: 10_000 });
+  }
+
+  // 같은 testid가 여러 번 생기면 strict 모드 단언이 먼저 깨지므로, 버튼이 정확히
+  // 하나뿐인지부터 확인한다(고정 순서상 CEO 카드 안에 있다).
+  await expect(page.locator('[data-testid="retry-failed-roles"]')).toHaveCount(1);
+  const retryButton = page.getByTestId('retry-failed-roles');
+  await expect(retryButton).toBeVisible();
+
+  // 버튼이 자기 카드(CEO) 테두리 안에 완전히 들어오는지 — 실측(픽셀) 기준으로 확인한다.
+  const buttonBox = await retryButton.boundingBox();
+  const cardBox = await page.getByTestId('live-role-CEO').boundingBox();
+  expect(buttonBox).not.toBeNull();
+  expect(cardBox).not.toBeNull();
+  if (buttonBox && cardBox) {
+    expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height + 1);
+  }
+  // 페이지 자체도 스크롤이 생기지 않는다(T45 무스크롤 규칙).
+  const hasPageScroll = await page.evaluate(
+    () => document.documentElement.scrollHeight > window.innerHeight + 1,
+  );
+  expect(hasPageScroll).toBe(false);
+});
+
 test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"으로 카드·표정이 갱신된다', async ({ page }) => {
   await mockReactionsFailureThenRetrySucceeds(page, 'CFO');
 

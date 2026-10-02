@@ -30,14 +30,18 @@ export function EvidenceGrid({ evidence }: EvidenceGridProps) {
     <div className="evidence-grid">
       {evidence.map((card, index) => (
         <article key={card.id} className="evidence-card" data-testid={`evidence-card-${card.id}`}>
-          <h3 className="evidence-card__title">
+          {/* T73(S3b_Discuss_Evidence 시안): 태그+자료명을 한 줄짜리 타자기 라벨로
+              합치고(시안은 둘을 같은 글꼴·색으로 이어 쓴다), 해석(insight)을 본문
+              한 줄로, 원문(content)을 그 아래 흐린 메타 줄로 둔다. */}
+          <h3 className="evidence-card__heading">
             <span className="evidence-card__tag" aria-hidden="true">
               EXHIBIT {EXHIBIT_LETTERS[index % EXHIBIT_LETTERS.length]}
             </span>
+            {' · '}
             {card.title}
           </h3>
           <p className="evidence-card__insight">{card.insight}</p>
-          <p className="evidence-card__content">{card.content}</p>
+          <p className="evidence-card__meta">{card.content}</p>
         </article>
       ))}
     </div>

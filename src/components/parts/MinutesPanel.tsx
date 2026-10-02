@@ -6,10 +6,9 @@
 // minutes.ts)가 전담하고, 이 컴포넌트는 표시만 담당한다.
 
 import { useEffect, useRef, useState } from 'react';
-import type { MinutesEntry } from '../minutes';
+import { TIME_UNKNOWN, type MinutesEntry } from '../minutes';
 import type { MemberId } from '../../domain/types';
 import { MEMBER_LABELS } from '../memberLabels';
-import { Avatar } from './Avatar';
 import '../../styles/screens/minutes.css';
 
 export interface MinutesPanelProps {
@@ -20,11 +19,18 @@ function speakerLabel(speaker: MemberId): string {
   return speaker === 'PARTICIPANT' ? '나 · 특별 이사' : MEMBER_LABELS[speaker];
 }
 
-/** 행 앞 직함 라벨(장식, T64 "[mm:ss] CEO"). 도착 시각을 세션 데이터에 담지 않아
- * 타임스탬프는 붙이지 않고 직함만 보여준다(카드 "없으면 항목 순서 기준 표시는 하지
- * 않고 직함만"). 아바타가 이미 같은 정보를 시각으로 보여주므로 짧은 코드만 더한다. */
+/** 행 앞 역할 코드(시안 TRANSCRIPT "[mm:ss] CEO" 중 코드 부분, T77). 아바타를 쓰지
+ * 않으므로(시안에 없음) 짧은 코드만 타임스탬프 뒤에 붙인다. */
 function speakerTag(speaker: MemberId): string {
   return speaker === 'PARTICIPANT' ? '나' : speaker;
+}
+
+/** 머리글 오른쪽 건수 배지(시안 TRANSCRIPT "N ENTRIES · 스크롤", 1건은 "1 ENTRY"). */
+function entryCountLabel(count: number): string {
+  if (count <= 1) {
+    return `${count} ENTRY`;
+  }
+  return `${count} ENTRIES · 스크롤`;
 }
 
 export function MinutesPanel({ entries }: MinutesPanelProps) {
@@ -115,9 +121,9 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
       data-testid="minutes-panel"
     >
       <header className="minutes__head">
-        <h2 className="minutes__title">발언 흐름</h2>
+        <h2 className="minutes__title">TRANSCRIPT · 발언 흐름</h2>
         <span className="minutes__count" data-testid="minutes-count">
-          {entries.length}건
+          {entryCountLabel(entries.length)}
         </span>
       </header>
       {/* 새 항목은 물론, live에서 "판단 중" 행이 응답으로 바뀔 때도(같은 key의 행 안에서
@@ -143,28 +149,17 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
             data-testid={`minutes-entry-${entry.id}`}
             aria-atomic="true"
           >
-            <Avatar memberId={entry.speaker} size="sm" />
+            {/* 발화자 전체 직함은 스크린리더용으로만 남긴다(시안에 아바타·배지가 없어
+                화면에는 역할 코드만 보인다, T77). */}
             <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
-            {/* 직함 라벨(장식, T64 "[mm:ss] CEO"). 위 minutes__speaker(sr-only)가 이미
-                전체 직함을 스크린리더에 전한다 — 여기는 화면에 보이는 짧은 코드다. */}
+            {/* 시안 TRANSCRIPT 행 머리(타자기 앰버 "[mm:ss] 역할", T77). 위
+                minutes__speaker(sr-only)가 전체 직함을 이미 전하므로 장식으로 숨긴다. */}
             <span className="minutes__tag" aria-hidden="true">
-              {speakerTag(entry.speaker)}
+              [{entry.timeLabel ?? TIME_UNKNOWN}] {speakerTag(entry.speaker)}
             </span>
-            {entry.kind === 'pending' ? (
-              <>
-                <span className="minutes__dots" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                {/* 점은 장식이므로 상태 문구를 스크린리더용으로 따로 둔다 — pending 행이
-                    추가될 때 발화자와 함께 "판단 중"이 읽힌다(v1.0 7절, PR #7 Codex 2차). */}
-                <span className="minutes__sr-only">판단 중…</span>
-              </>
-            ) : (
-              // 전문을 그대로 넣고 줄바꿈한다(2026-09-28 사용자: 잘리는 문장 없이 모두 보이게).
-              <span className="minutes__text">{entry.text}</span>
-            )}
+            {/* 전문을 그대로 넣고 줄바꿈한다(2026-09-28 사용자: 잘리는 문장 없이 모두 보이게).
+                판단 중인 행은 시안 그대로 "▌ 대기 중"을 보여준다(T77, Main.html 예시). */}
+            <span className="minutes__text">{entry.kind === 'pending' ? '▌ 대기 중' : entry.text}</span>
           </li>
         ))}
       </ol>

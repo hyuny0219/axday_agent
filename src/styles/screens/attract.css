@@ -1,57 +1,278 @@
-/* 대기(ATTRACT) 화면: 무대 렌더 이미지를 전체 배경으로 깔고 어두운 그라데이션
-   오버레이 위에 디스플레이 서체 제목 + 단일 CTA를 올린다(DESIGN_SPEC.md v1.0 2절
-   "대기(ATTRACT): 렌더를 전체 배경으로 깔고(어두운 그라데이션 오버레이), 디스플레이
-   서체 큰 제목 + 단일 CTA"). isolation:isolate로 새 쌓임 맥락을 만들어 배경·오버레이의
-   음수 z-index가 이 섹션 안에만 머물게 한다. */
+/* 대기(ATTRACT) 화면(T71, docs/design/mockups/S0_Attract.html 시안대로, 미리보기
+   preview/S0_Attract.png). 시안은 1280×720 캔버스 한 장이다 — select.css와 같은
+   원칙으로, 이 파일은 그 값을 1280px 이하(실측 해상도 1280×720) 미디어쿼리에 그대로
+   옮기고 기본 규칙(1920×1080)은 1.25배 키운 값을 쓴다(select.css 머리글 설명 참고).
+   em 단위 letter-spacing은 font-size를 따라 자동으로 커지므로 두 번 적지 않는다.
+
+   풀블리드: .app-main의 기본 padding(var(--space-4) var(--space-8) / 1280 이하
+   var(--space-1) var(--space-3) var(--space-2))을 음수 margin으로 상쇄하고, 이
+   화면 자체가 시안 바깥 여백(20px 24px / 25px 30px)을 다시 준다(select.css와 같은
+   구조). 그 안에 시안의 시안색 글로우 테두리 박스(attract-screen__stage)가 남은
+   높이를 꽉 채운다. */
 .attract-screen {
+  /* 공용 .screen의 max-width:1760px를 풀어 1920에서도 시안처럼 좌우 24px 여백만 남긴다
+     (reviewer T70·T71 must). */
+  max-width: none;
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   flex: 1;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
-  border-radius: var(--radius-card);
-  isolation: isolate;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-8));
+  padding: 25px 30px;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen {
+    margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-3)) calc(-1 * var(--space-2));
+    padding: 20px 24px;
+  }
+}
+
+/* 시안색 글로우 프레임(시안 "border:1px solid rgba(40,217,240,.55) + 안쪽 글로우").
+   이 박스 안쪽 좌표계를 기준으로 무대 사진·오버레이·HUD 장식·가운데 텍스트·CTA·
+   로스터를 모두 절대 위치로 올린다(시안 DOM 구조 그대로). */
+.attract-screen__stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(40, 217, 240, 0.55);
+  box-shadow:
+    0 0 0 1px var(--hud-bg),
+    0 0 40px rgba(40, 217, 240, 0.2) inset;
 }
 
 .attract-screen__bg {
   position: absolute;
   inset: 0;
-  z-index: -1;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center 30%;
+  filter: saturate(0.8) contrast(1.05);
 }
 
-/* 위·아래를 더 짙게 눌러 텍스트 대비를 확보한다. 정적 레이어로 애니메이션은 없다
-   (T15 reduced-motion 규칙과 무관하게 항상 정적). */
-.attract-screen__overlay {
+.attract-screen__scanlines {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(180deg, rgba(6, 20, 36, 0.55) 0%, rgba(6, 20, 36, 0.75) 55%, rgba(6, 20, 36, 0.94) 100%),
-    linear-gradient(90deg, rgba(6, 20, 36, 0.35), transparent 40%, transparent 60%, rgba(6, 20, 36, 0.35));
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.18) 0px,
+    rgba(0, 0, 0, 0.18) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+}
+
+.attract-screen__vignette {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    180deg,
+    rgba(5, 11, 20, 0.7) 0%,
+    rgba(5, 11, 20, 0.35) 45%,
+    rgba(5, 11, 20, 0.9) 100%
+  );
+}
+
+.attract-screen__bracket {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__bracket {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.attract-screen__bracket--tl {
+  top: 13px;
+  left: 13px;
+  border-top: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.attract-screen__bracket--tr {
+  top: 13px;
+  right: 13px;
+  border-top: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+.attract-screen__bracket--bl {
+  bottom: 13px;
+  left: 13px;
+  border-bottom: 2px solid var(--hud-line);
+  border-left: 2px solid var(--hud-line);
+}
+
+.attract-screen__bracket--br {
+  bottom: 13px;
+  right: 13px;
+  border-bottom: 2px solid var(--hud-line);
+  border-right: 2px solid var(--hud-line);
+}
+
+.attract-screen__readout {
+  position: absolute;
+  top: 20px;
+  left: 60px;
+  display: flex;
+  gap: 15px;
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: var(--hud-line);
+}
+
+.attract-screen__readout-dim {
+  color: #9fb6cc;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__readout {
+    top: 16px;
+    left: 48px;
+    font-size: 11px;
+  }
+}
+
+.attract-screen__stamp {
+  position: absolute;
+  top: 20px;
+  right: 60px;
+  padding: 6px 15px;
+  border: 4px solid var(--stamp-red);
+  color: var(--dark-vote-no);
+  font-family: var(--font-label);
+  font-size: 17px;
+  letter-spacing: 0.24em;
+  transform: rotate(-6deg);
+  opacity: 0.9;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__stamp {
+    top: 16px;
+    right: 48px;
+    padding: 5px 12px;
+    border-width: 3px;
+    font-size: 14px;
+  }
+}
+
+/* 가운데 세로 블록(시안 "LIVE · 실제 임원 에이전트" → BOARDROOM 2026 → 부제 →
+   사건 번호 줄"). 네 줄 모두 textContent로 남아(장식이 아니다) 스크린 리더가 읽는다. */
+.attract-screen__center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 187px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  text-align: center;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__center {
+    top: 150px;
+    gap: 12px;
+  }
 }
 
 .attract-screen__badge {
   margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: var(--fs-meta);
+  font-family: var(--font-hud);
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  color: var(--hud-line);
 }
 
 .attract-screen__title {
   margin: 0;
-  font-size: var(--fs-hero);
+  font-family: var(--font-display);
+  font-size: 90px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-shadow: 0 0 24px rgba(40, 217, 240, 0.35);
 }
 
 .attract-screen__subtitle {
-  margin: 0 0 var(--space-4);
-  color: var(--text-muted);
-  font-size: var(--fs-body);
+  margin: 0;
+  font-size: 25px;
+  color: #eaf4ff;
+}
+
+.attract-screen__case-file {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__badge {
+    font-size: 12px;
+  }
+
+  .attract-screen__title {
+    font-size: 56px;
+  }
+
+  .attract-screen__subtitle {
+    font-size: 20px;
+  }
+
+  .attract-screen__case-file {
+    font-size: 13px;
+  }
+}
+
+/* 좌하단 CTA(시안 "체험 시작 ▶", 260×56). 모양(채움·깎인 모서리·굵은 그림자)은
+   공용 .cta를 그대로 쓰고, 위치·너비만 이 화면 전용으로 덮어쓴다. */
+.attract-screen__cta {
+  position: absolute;
+  left: 60px;
+  bottom: 55px;
+  width: 325px;
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__cta {
+    left: 48px;
+    bottom: 44px;
+    width: 260px;
+  }
+}
+
+.attract-screen__roster {
+  position: absolute;
+  right: 60px;
+  bottom: 60px;
+  display: flex;
+  gap: 22px;
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: #9fb6cc;
+}
+
+.attract-screen__roster-you {
+  color: var(--amber);
+}
+
+@media (max-width: 1280px) {
+  .attract-screen__roster {
+    right: 48px;
+    bottom: 48px;
+    gap: 18px;
+    font-size: 11px;
+  }
 }

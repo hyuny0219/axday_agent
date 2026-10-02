@@ -60,7 +60,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await expect(hearOpinions).toBeInViewport();
   await hearOpinions.click();
 
-  await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
   const speakOpinion = page.getByRole('button', { name: '내 의견 말하기' });
   await expect(speakOpinion).toBeInViewport();

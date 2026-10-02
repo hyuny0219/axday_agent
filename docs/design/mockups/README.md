@@ -7,6 +7,15 @@
 | `Main.html` | **C안 · 상황 파악(브리핑)** — 채택. 왼쪽 무대 A안 HUD + 오른쪽 서류철 |
 | `C_Result.html` | **C안 · 결과(가결)** — 채택. 종이 보고서 우측 도장 칸(가결 + 설득 성공) |
 | `C_Result_Reject.html` | **C안 · 결과(부결, 내 표와 반대)** — 채택. 도장 칸에 부결 + "BONUS 미획득" 한 줄 |
+| `S0_Attract.html` | **C안 · 대기(ATTRACT)** — 2026-10-02 승인. 무대 전면 + TOP SECRET 도장 + "체험 시작" |
+| `S1_Select.html` | **C안 · 안건 선택(SELECT)** — 승인. 무대 배경(흐림) 위 종이 서류철 카드 2장(CASE 01 준비 중 / CASE 02 질문 한 줄) |
+| `S2_Opinions.html` | **C안 · 02 임원 의견** — 승인. 오른쪽 종이에 발언 카드 4장(역할색 왼쪽 띠·근거 pill) |
+| `S3_Discuss.html` | **C안 · 03 내 의견** — 승인. 왼쪽 HUD 입력 상자(내 발언·조건 칩), 오른쪽 추천 문구 6개 + "근거 자료 · 임원 발언 보기" + STANCE 칩 |
+| `S3b_Discuss_Evidence.html` | **C안 · 03 팝업** — 승인. EXHIBIT A–D + 임원 발언 4개가 한 팝업에 |
+| `S4_Reactions.html` | **C안 · 04 반응에 답하기** — 승인. 왼쪽 "MY REPLY" 입력 상자, 오른쪽 반응 카드 4장 → 후속 질문 → 추천 답변 체크 3개 → 같은 팝업 버튼 |
+| `S5_Motion.html` | **C안 · 05 최종 안건** — 승인. MOTION ON THE TABLE + 반영 조건/빠진 것 + 의장 + "이 안건으로 표결"(DRAFT 도장) |
+| `S6_Vote.html` | **C안 · 05 표결** — 승인. 왼쪽 봉인된 임원 표 4칸, 오른쪽 찬성/반대 도장형 선택 + "최종 투표 확정" |
+| `preview/*.png` | 위 S 시안을 1280×720으로 렌더한 참고 이미지 |
 | `A_Briefing.html` / `A_Result.html` | 참고 · A안 작전실 HUD(이전 시안) |
 | `B_Briefing.html` | 참고 · B안 기밀 도시에(이전 시안) |
 

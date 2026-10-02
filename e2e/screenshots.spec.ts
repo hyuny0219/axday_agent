@@ -43,11 +43,18 @@ async function capture(page: Page, projectName: string, screenName: string) {
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
-test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {
+test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({
+  page,
+}, testInfo) => {
   await page.goto('/?mode=scripted');
+
+  // ATTRACT(T71): 시안(S0_Attract) 그대로 — 무대 풀블리드·제목·CTA.
+  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await capture(page, testInfo.project.name, 'attract');
+
   await page.getByRole('button', { name: '체험 시작' }).click();
 
-  // SELECT: 안건 카드 3열 중 활성 안건을 선택한 상태.
+  // SELECT(T70): 시안(S1_Select) 카드 2장(활성 1 + 준비 중 1) 중 활성 안건을 선택한 상태.
   await page.getByTestId('scenario-card-anon-board').click();
   await expect(page.getByTestId('scenario-card-anon-board')).toHaveAttribute(
     'aria-pressed',
@@ -126,21 +133,25 @@ test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제
 
   await submitOpinion.click();
 
-  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
-  // 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
+  // REACTIONS(T74, S4_Reactions): MY REPLY 입력 상자·조건 칩·반응 카드 2×2·추천 답변
+  // 체크 카드를 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로
+  // 넘긴다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await expect(page.getByTestId('followup-open-editor')).toBeVisible();
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
   // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
   await page.getByTestId('followup-option-2').click();
 
-  // MOTION: 확정 조건 4개가 반영된 최종 안건으로 표결을 건다.
+  // MOTION(T75, S5_Motion): 확정 조건 4개가 반영된 MOTION ON THE TABLE·CONDITIONS·
+  // NOT INCLUDED·CHAIR 안내가 모두 보이는 상태를 캡처한 뒤 표결을 건다.
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expect(page.getByTestId('motion-conditions')).toBeVisible();
+  await capture(page, testInfo.project.name, 'motion');
   await page.getByTestId('freeze-motion').click();
 
-  // VOTE: 안건 카드 아래 3열 radio와 별도 확정 CTA가 함께 보이는 초기 상태를 캡처한다.
+  // VOTE(T76, S6_Vote): BALLOTS 봉인 패널(왼쪽)과 MOTION 한 줄·찬성/반대 원형 도장
+  // 2칸·별도 확정 CTA(오른쪽)가 함께 보이는 초기 상태를 캡처한다.
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await capture(page, testInfo.project.name, 'vote');
 

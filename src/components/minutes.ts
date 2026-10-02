@@ -9,13 +9,31 @@ import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
 import { reactionsFor } from './reactionsFor';
 
-/** 회의록 한 줄. kind는 아바타 강조와 문구 대체 규칙을 정한다:
- * speech=발언 원문, pending=판단 중(점 3개), failed=응답 없음, mine=참가자 발언. */
+/** 시간 표기를 알 수 없을 때 보여주는 자리표시(T77, 시안 TRANSCRIPT "[--:--]"). */
+export const TIME_UNKNOWN = '--:--';
+
+/** 세션 시작(startedAt) 기준 경과 시간을 "mm:ss"로 포맷한다(T77). 시작 시각이나 발생
+ * 시각 중 하나라도 없으면(scripted 각본 항목·아직 응답하지 않은 live 역할) `TIME_UNKNOWN`을
+ * 돌려준다 — 실측되지 않은 시간을 지어내지 않는다. */
+export function formatElapsed(startedAt: number | null, occurredAt: number | undefined): string {
+  if (startedAt === null || occurredAt === undefined) {
+    return TIME_UNKNOWN;
+  }
+  const elapsedSeconds = Math.max(0, Math.floor((occurredAt - startedAt) / 1000));
+  const minutes = Math.floor(elapsedSeconds / 60);
+  const seconds = elapsedSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+/** 회의록 한 줄. kind는 문구 대체 규칙을 정한다:
+ * speech=발언 원문, pending=판단 중(대기 중 표시), failed=응답 없음, mine=참가자 발언.
+ * timeLabel은 "[mm:ss]" 안에 그대로 넣을 문자열(T77, 세션 시작 기준 경과 또는 TIME_UNKNOWN). */
 export interface MinutesEntry {
   id: string;
   speaker: MemberId;
   text: string;
   kind: 'speech' | 'pending' | 'failed' | 'mine';
+  timeLabel: string;
 }
 
 /** App.tsx가 SET_ROLE_STATUS(stage 포함) dispatch만 골라 (stage, roleId) 기준으로
@@ -64,6 +82,8 @@ interface RoundResult {
   roleId: ExecMemberId;
   kind: 'speech' | 'pending' | 'failed';
   text: string;
+  /** 응답 발언의 도착 시각(statement.createdAt). speech가 아니면 없다(T77 타임스탬프 계산용). */
+  createdAt?: number;
 }
 
 /** live 라운드(OPINIONS/REACTIONS/FOLLOWUP) 한 건의 임원 4명 결과를 roundLog(상태) +
@@ -81,7 +101,7 @@ function liveRoundResults(
       const statement = session.transcript.statements.find(
         (item) => item.roleId === roleId && item.stage === stage,
       );
-      return { roleId, kind: 'speech' as const, text: statement?.text ?? '' };
+      return { roleId, kind: 'speech' as const, text: statement?.text ?? '', createdAt: statement?.createdAt };
     }
     if (status === 'failed') {
       return { roleId, kind: 'failed' as const, text: '응답 없음' };
@@ -109,13 +129,17 @@ export function buildMinutes(
   }
 
   const entries: MinutesEntry[] = [];
+  const { startedAt } = session;
 
-  // 1. 의장 브리핑
+  // 1. 의장 브리핑(세션이 시작되며 바로 나오는 각본 문구라 세션 시작 시각 자체를
+  // 경과 시간으로 쓴다 — SELECT_SCENARIO가 BRIEFING 진입과 같은 트랜지션에서
+  // startedAt을 찍는다, domain/session.ts. 시안 Main.html도 "[00:00] CEO"다).
   entries.push({
     id: 'chair-briefing',
     speaker: 'CEO',
     text: scenario.chairBriefing.situation,
     kind: 'speech',
+    timeLabel: formatElapsed(startedAt, startedAt ?? undefined),
   });
 
   // 2. 임원 첫 의견 4건
@@ -127,6 +151,7 @@ export function buildMinutes(
           speaker: result.roleId,
           text: result.text,
           kind: result.kind,
+          timeLabel: formatElapsed(startedAt, result.createdAt),
         });
       }
     } else {
@@ -136,6 +161,7 @@ export function buildMinutes(
           speaker: opinion.memberId,
           text: opinion.text,
           kind: 'speech',
+          timeLabel: TIME_UNKNOWN,
         });
       }
     }
@@ -149,6 +175,7 @@ export function buildMinutes(
       speaker: 'PARTICIPANT',
       text: firstOpinion.originalText,
       kind: 'mine',
+      timeLabel: formatElapsed(startedAt, firstOpinion.createdAt),
     });
 
     // 4. 임원 반응 4건
@@ -159,6 +186,7 @@ export function buildMinutes(
           speaker: result.roleId,
           text: result.text,
           kind: result.kind,
+          timeLabel: formatElapsed(startedAt, result.createdAt),
         });
       }
     } else {
@@ -169,16 +197,18 @@ export function buildMinutes(
           speaker: roleId,
           text: scriptedReactionText(reactions),
           kind: 'speech',
+          timeLabel: TIME_UNKNOWN,
         });
       }
     }
 
-    // 5. CAIO 질문
+    // 5. CAIO 질문(각본 문구, 도착 시각 없음)
     entries.push({
       id: 'caio-question',
       speaker: scenario.followUp.askedBy,
       text: scenario.followUp.question,
       kind: 'speech',
+      timeLabel: TIME_UNKNOWN,
     });
   }
 
@@ -190,6 +220,7 @@ export function buildMinutes(
       speaker: 'PARTICIPANT',
       text: secondOpinion ? secondOpinion.originalText : '앞서 전달한 의견을 유지',
       kind: 'mine',
+      timeLabel: formatElapsed(startedAt, secondOpinion?.createdAt),
     });
 
     if (session.mode === 'live' && session.opinions.length >= 2) {
@@ -199,6 +230,7 @@ export function buildMinutes(
           speaker: result.roleId,
           text: result.text,
           kind: result.kind,
+          timeLabel: formatElapsed(startedAt, result.createdAt),
         });
       }
     }
@@ -208,6 +240,7 @@ export function buildMinutes(
       speaker: 'CEO',
       text: '이 조건으로 안건을 고정합니다',
       kind: 'speech',
+      timeLabel: TIME_UNKNOWN,
     });
   }
 

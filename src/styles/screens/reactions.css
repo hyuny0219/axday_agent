@@ -1,312 +1,383 @@
+/* REACTIONS 화면(T74, docs/design/mockups/S4_Reactions.html 시안대로, 미리보기
+   preview/S4_Reactions.png). 시안은 1280×720 한 장이다 — 기본 규칙(1920×1080)은 그
+   값을 1.25배 키운 값을 쓰고, @media (max-width: 1280px)에서 시안 값 그대로로
+   되돌린다(discuss.css·opinions.css와 같은 비율, T72·T73). em 단위 letter-spacing은
+   font-size를 따라 자동으로 커지므로 두 번 적지 않는다.
+
+   왼쪽 열(app-body__actions)의 무대는 StageBand(App.tsx)가 그린다 — 이 화면은 그
+   아래 HUD 입력 상자 + 버튼 줄만 맡는다. */
+
 .reactions-screen__title {
   margin: 0;
-  font-size: var(--fs-title);
-  line-height: 1.3;
+  font-family: var(--font-display);
+  font-size: 27.5px;
+  line-height: 1.2;
+  color: var(--ink);
 }
 
-/* 내 발언 인용 카드를 왼쪽 열 맨 위, 시안 경계로 강조한다(DESIGN_SPEC.md "만들 것 ·
-   반응 · 내 발언 인용 카드(시안 경계)를 맨 위"). 2줄로 클램프한다(v1.0 6절 표
-   "내 발언 인용(2줄 클램프)"). T67 item7b(2026-09-30 실측, docs/screenshots/
-   desktop-720/reactions.png)에서는 max-height + overflow:hidden 수치 예산으로
-   맞췄으나, PR #11 Codex 28차 검토(P2)에서 그 계산(테두리 2px를 뺀 것)이 틀렸다고
-   지적됐다 — 다시 실측해 보니 이 예산 자체가 화면·글꼴 힌팅에 따라 1px 안팎으로
-   흔들리는 아주 좁은(약 1px) 안전 구간이라(테두리를 더하거나 빼는 어느 쪽으로도
-   실측 경계를 살짝 벗어나면 2번째 줄 아래쪽이 잘리거나 3번째 줄 위쪽이 살짝
-   드러난다, Range.getClientRects() 재실측), px 예산을 정확히 맞추는 대신 무대
-   말풍선(stage.css `.stage-band__bubble-text`)과 같은 방식 — `-webkit-line-clamp`
-   —으로 바꾼다. 줄 수는 브라우저가 실제 줄 상자를 세어 자르므로 테두리·패딩
-   반올림 오차에서 자유롭다(같은 이유로 무대 말풍선도 이 방식을 쓴다). 잘렸을 때
-   말줄임표가 붙는 점은 stageText.ts의 40자 클램프가 이미 쓰는 것과 같은 신호라
-   새 동작이 아니다. */
-.reactions-screen__quote {
-  margin: 0;
-  padding: var(--space-1) var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--accent);
-  border-left-width: 4px;
-  border-radius: var(--radius-control);
-  color: var(--text);
-  font-size: var(--fs-card);
-  box-shadow: var(--shadow-card);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+@media (max-width: 1280px) {
+  .reactions-screen__title {
+    font-size: 22px;
+  }
+}
+
+/* 참가자 본인의 이전 의견(2026-10-02 2차 검토): StageBand 전체가 aria-hidden이고
+   REACTIONS에는 발언 흐름 패널도 없어, 시안에 없는 인용 상자를 그냥 빼기만 하면
+   스크린리더가 이 화면에서 참가자 본인의 이전 의견을 읽을 자리가 사라진다.
+   ExecStanceList(MOTION·VOTE)와 같은 sr-only 기법으로 화면 모양은 그대로 두고
+   MY REPLY 편집기 바로 앞에 숨은 문단 하나만 둔다. */
+.reactions-screen__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* HUD 입력 상자(시안 "MY REPLY · 내 답변" — discuss-screen__hud와 같은 모양·값).
+   DraftEditor·ConditionChips는 discuss.css의 공용 클래스를 그대로 쓴다(컴포넌트
+   재사용, T74). */
+.reactions-screen__hud {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12.5px 15px;
+  background-color: var(--transcript-bg);
+  border: 1px solid var(--hud-line);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__hud {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+}
+
+/* [AI 비서실장 열기][답변 전달 ▶](시안 — discuss-screen__submit-row과 같은 크기). */
+.reactions-screen__submit-row {
+  align-items: center;
+}
+
+.reactions-screen__submit-row .assistant-panel__toggle {
+  min-height: 60px;
+  width: 225px;
+  padding: 0;
+  background-color: transparent;
+  border: 2px solid var(--amber);
+  border-radius: 0;
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 21px;
+  letter-spacing: 0.04em;
+  box-shadow: 4px 4px 0 #3a2a12;
+}
+
+.reactions-screen__submit-row .assistant-panel__toggle:hover {
+  background-color: rgba(224, 163, 74, 0.12);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__submit-row .assistant-panel__toggle {
+    min-height: 48px;
+    width: 180px;
+    font-size: 17px;
+  }
+}
+
+.reactions-screen__submit-row .cta {
+  min-height: 70px;
+  width: 250px;
+  font-size: 25px;
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__submit-row .cta {
+    min-height: 56px;
+    width: 200px;
+    font-size: 20px;
+  }
+}
+
+/* 오른쪽 종이(시안 — discuss-screen__paper·opinions-screen__paper와 같은 패널). */
+.reactions-screen__paper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 25px 30px;
+  background-color: var(--paper);
+  box-shadow: var(--shadow-paper-main);
+  color: var(--ink);
   overflow: hidden;
 }
 
-/* 임원 반응을 내 발언 인용 카드 아래 답글형으로 늘어놓는다(T40, DESIGN_SPEC.md 3장
-   "반응" 행: "들여쓰기·연결선"). T44에서 무대 열이 본문 폭을 줄이며(v1.0 5절) 세로
-   목록 하나로는 1920에서도 한 화면에 담기 어려워, 다른 임원 4열 카드와 같은 원칙으로
-   2열로 감싼다 — 변한 임원만 강조·나머지는 흐리게 보여주는 규칙은 그대로다. 2열에서는
-   개별 들여쓰기·연결선 대신 강조 테두리만으로 "인용에 대한 답"임을 나타낸다.*/
-.reactions-screen__replies {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+@media (max-width: 1280px) {
+  .reactions-screen__paper {
+    gap: 10px;
+    padding: 20px 24px;
+  }
 }
 
-/* T64(오른쪽 열 서류철): 어두운 패널 대신 종이-2 카드 + 잉크 글자. */
-.reaction-reply {
-  position: relative;
+/* STEP 칩 + 제목(시안). */
+.reactions-screen__head {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__head {
+    gap: 10px;
+  }
+}
+
+.reactions-screen__step {
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__step {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
+/* 반응 카드 2×2(scripted, 시안). live는 LiveStatementCards(variant='reaction')가
+   .live-statement--grid·.live-statement--reaction(live.css)로 같은 모양을 그린다 —
+   이 그리드 컨테이너만 공유하고(.opinions-screen__paper .live-round__cards와 같은
+   규칙을 live.css에 REACTIONS용으로 추가해 뒀다), 카드 자체 마크업은 다르다. */
+.reactions-screen__cards {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__cards {
+    gap: 8px;
+  }
+}
+
+.reaction-card {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  gap: 3.75px;
   background-color: var(--paper-2);
   border: 1px solid var(--paper-border);
-  border-radius: var(--radius-card);
-  color: var(--ink);
-  box-shadow: var(--shadow-paper-card);
-}
-
-.reaction-reply--changed {
-  border-color: var(--label);
   border-left-width: 4px;
+  padding: 10px 12.5px;
+  color: var(--ink);
 }
 
-.reaction-reply--muted {
-  opacity: 0.7;
+@media (max-width: 1280px) {
+  .reaction-card {
+    gap: 3px;
+    padding: 8px 10px;
+  }
 }
 
-.reaction-reply__head {
+.reaction-card--for {
+  border-left-color: var(--paper-vote-yes);
+}
+
+.reaction-card--against {
+  border-left-color: var(--stamp-red);
+}
+
+.reaction-card--undecided {
+  border-left-color: var(--ink-muted);
+}
+
+.reaction-card__head {
   display: flex;
-  align-items: center;
-  gap: var(--space-1);
+  align-items: baseline;
+  gap: 10px;
 }
 
-.reaction-reply__member {
+@media (max-width: 1280px) {
+  .reaction-card__head {
+    gap: 8px;
+  }
+}
+
+.reaction-card__member {
   margin: 0;
-  font-size: 20px;
+  font-size: 16.25px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
-/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
-.reaction-reply__mood {
-  margin-left: auto;
-  font-size: 13px;
-  color: var(--ink-muted);
+@media (max-width: 1280px) {
+  .reaction-card__member {
+    font-size: 13px;
+  }
+}
+
+.reaction-card__mood {
+  font-size: 13.75px;
   white-space: nowrap;
 }
 
-.reaction-reply__texts {
+@media (max-width: 1280px) {
+  .reaction-card__mood {
+    font-size: 11px;
+  }
+}
+
+.reaction-card--for .reaction-card__mood {
+  color: var(--paper-vote-yes);
+}
+
+.reaction-card--against .reaction-card__mood {
+  color: var(--stamp-red);
+}
+
+.reaction-card--undecided .reaction-card__mood {
+  color: var(--ink-muted);
+}
+
+/* 우측 "유지"/"바뀜" 칩(시안 — STEP 칩과 같은 라벨색, stance색이 아니다). */
+.reaction-card__badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1.25px 8.75px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .reaction-card__badge {
+    padding: 1px 7px;
+    font-size: 10px;
+  }
+}
+
+.reaction-card__text {
   margin: 0;
-  padding-left: var(--space-2);
+  font-size: 15px;
+  line-height: 1.4;
+  color: #3b3a36;
+}
+
+@media (max-width: 1280px) {
+  .reaction-card__text {
+    font-size: 12px;
+  }
+}
+
+/* 점선 상자 "FOLLOW-UP · <역할>가 묻습니다" + 질문(시안). */
+.reactions-screen__followup {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 3.75px;
+  padding: 12.5px 17.5px;
+  border: 2px dashed var(--label);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__followup {
+    gap: 3px;
+    padding: 10px 14px;
+  }
+}
+
+.reactions-screen__followup-label {
+  font-family: var(--font-label);
+  font-size: 13.75px;
+  letter-spacing: 0.16em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__followup-label {
+    font-size: 11px;
+  }
+}
+
+.reactions-screen__followup-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--ink);
 }
 
-.reaction-reply__maintained {
+@media (max-width: 1280px) {
+  .reactions-screen__followup-text {
+    font-size: 16px;
+  }
+}
+
+/* "추천 답변 · 여러 개 선택 가능 · 고르면 왼쪽 내 답변에 이어 붙습니다"(시안). */
+.reactions-screen__recommend-hint {
   margin: 0;
-  color: var(--ink-muted);
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
 }
 
-/* "기존 의견 유지" pill(DESIGN_SPEC.md "만들 것 · 반응 · '기존 의견 유지' 라벨을
-   pill로"). */
-.reaction-reply__maintained-label {
-  display: block;
-  width: fit-content;
-  padding: 2px 10px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  color: var(--ink-muted);
-  font-size: 13px;
-  margin-bottom: var(--space-1);
+@media (max-width: 1280px) {
+  .reactions-screen__recommend-hint {
+    font-size: 12px;
+  }
 }
 
-.reactions-screen__followup {
-  display: flex;
-  flex-direction: column;
+/* 추천 답변 체크 카드 2열(시안 — followUp.options 3개, PhraseCard 재사용). 열
+   높이를 채운다(DISCUSS 추천 문구와 같은 원칙). */
+.reactions-screen__option-list {
   flex: 1;
   min-height: 0;
-  gap: var(--space-1);
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-content: stretch;
 }
 
-/* 빠른 답 ↔ 직접 답하기가 같은 자리에서 전환하는 슬롯(2026-09-19 T45 검토 반영
-   2a). 내부 스크롤은 두지 않는다 — [비서실장][답변 전달] 행은 형제로 밖에 있어
-   항상 보인다. */
-.reactions-screen__answer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.reactions-screen__submit-row {
-  margin-top: 4px;
-  align-items: center;
-}
-
-.reactions-screen__section-label {
-  margin: 0;
-  font-size: var(--fs-card);
-}
-
-/* CAIO의 후속 질문 블록: 발화자를 아바타와 함께 드러낸다(REVISION_DECISIONS_v0.9.md
-   2-2, "CAIO가 묻습니다"). */
-.reactions-screen__question {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
-}
-
-.reactions-screen__question-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.reactions-screen__asked-by {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.reactions-screen__options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.reactions-screen__options[hidden] {
-  display: none;
-}
-
-/* secondary 버튼: 투명 패널 + 테두리(DESIGN_SPEC.md 4장 "secondary는 투명
-   패널+테두리"). */
-.reactions-screen__option {
-  position: relative;
-  min-height: var(--touch-min);
-  padding: 0 var(--space-2);
-  background-color: transparent;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: var(--fs-meta);
-  text-align: left;
-  transition: border-color var(--transition-fast) ease, background-color var(--transition-fast) ease,
-    color var(--transition-fast) ease;
-}
-
-.reactions-screen__option:hover {
-  background-color: var(--panel-active);
-}
-
-/* 빠른 답 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절, phrase-card와 동일
-   규칙). */
-.reactions-screen__option--selected {
-  padding-right: calc(var(--space-2) + 30px);
-}
-
-.reactions-screen__option--selected::after {
-  content: '✓' / '';
-  position: absolute;
-  top: 50%;
-  right: 10px;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--accent);
-  color: var(--bg);
-  font-size: 12px;
-  font-weight: 700;
-  animation: check-badge-pop-center var(--transition-fast) ease-out both;
-}
-
-.reactions-screen__option--selected {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* 직접 답하기는 기본 접힘이며, 열어야 textarea·글자 수·조건 칩이 나타난다(T40
-   만들 것 2: 빠른 답만으로도 완주 가능, 직접 입력 경로도 유지). 빠른 답과 같은
-   자리를 나눠 쓰므로(hidden 속성) [hidden]이면 그리지 않는다. */
-.reactions-screen__editor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-}
-
-.reactions-screen__editor[hidden] {
-  display: none;
-}
-
-/* 빠른 답 ↔ 직접 답하기 전환 버튼. 기본 버튼 배경·테두리를 지워 이전 <summary>
-   링크처럼 보이게 한다. */
-.reactions-screen__editor-toggle {
-  align-self: flex-start;
-  min-height: var(--touch-min);
-  padding: 0 var(--space-1);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--accent);
-  font-family: inherit;
-  font-size: var(--fs-meta);
-}
-
-.reactions-screen__direct-label {
-  color: var(--text-muted);
-}
-
-.reactions-screen__count {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.reactions-screen__textarea {
-  width: 100%;
-  min-height: 64px;
-  max-height: 110px;
-  resize: vertical;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--fs-meta);
-  line-height: 1.5;
-}
-
-.reactions-screen__textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* 720: 왼쪽 열 세로 예산이 더 빠듯하다(v1.0 6절 "720: 아래 입력 영역 약 330px"). */
 @media (max-width: 1280px) {
-  .reactions-screen__followup {
-    gap: 4px;
-    padding: var(--space-1);
-  }
-
-  .reaction-reply {
-    padding: var(--space-1);
-    gap: 4px;
-  }
-
-  .reaction-reply__member {
-    font-size: var(--fs-card);
-  }
-
-  .reactions-screen__textarea {
-    min-height: 48px;
-    max-height: 72px;
+  .reactions-screen__option-list {
+    gap: 8px;
   }
 }
 
+/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼·안내 자체
+   스타일(.evidence-open-button·.evidence-open-hint)은 evidenceDialog.css의 공용
+   규칙이고, 여기서는 점선 위 경계 + 배치만 맡는다(discuss-screen__evidence-row와
+   같은 값). */
+.reactions-screen__evidence-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--paper-border);
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__evidence-row {
+    gap: 12px;
+    padding-top: 6px;
+  }
+}

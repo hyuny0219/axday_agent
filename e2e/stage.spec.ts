@@ -163,10 +163,9 @@ test.describe('1920×1080에서 무대 열', () => {
 
   test('REACTIONS에서 내 말풍선 텍스트가 내 발언 첫 문장과 일치한다', async ({ page }) => {
     await enterReactions(page);
-    // 본문 인용문(읽어야 할 정보)이 실제 제출한 전문이다.
-    await expect(page.getByTestId('reactions-quote')).toHaveText(MY_OPINION_TEXT);
-    // 무대의 내 말풍선(장식)은 그 첫 문장과 같다 — MY_OPINION_TEXT 자체가 40자
-    // 이내 한 문장이라 자르지 않고 그대로 나온다.
+    // T74 2차 검토(제로 이탈): 시안에 없던 본문 인용 상자(reactions-quote)를 뺐다 —
+    // MY_OPINION_TEXT 자체가 40자 이내 한 문장이라 무대의 내 말풍선(장식)이 자르지
+    // 않고 그대로 보여준다.
     await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText(MY_OPINION_TEXT);
   });
 
