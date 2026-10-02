@@ -1,18 +1,23 @@
+// T78(2026-10-02, 안건 교체): 이 spec은 상충쌍 흐름을 다루므로 안건 ②(experience-first,
+// DATA_VETO ↔ EXP_ONLY)로 옮겼다 — 카드 지시대로 옛 "TRACE then ANON_FULL" 의도를
+// experience-first의 후속 선택지(DATA_VETO/EXP_ONLY)로 그대로 재현한다.
+//
+// REACTIONS 후속 입력에서 이전에 확정한 조건과 새 제안이 충돌할 때 UI가 전달을
+// 막는지 확인한다(T25 만들 것 2: 누적 조건 충돌 재검사).
 import { test, expect, type Page, type Route } from './fixtures';
 
-/**
- * REACTIONS 후속 입력에서 이전에 확정한 조건과 새 제안이 충돌할 때 UI가 전달을
- * 막는지 확인한다(T25 만들 것 2: 누적 조건 충돌 재검사).
- */
-async function reachReactionsWithAccessConfirmed(page: Page) {
+async function enterExperienceFirstReactions(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-experience-first').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+}
 
-  // P3 = TRACE(문제 발생 시 추적 가능)를 확정한 채 첫 의견을 전달한다.
+/** P3 = DATA_VETO(데이터 경고 시 멈춤)를 확정한 채 첫 의견을 전달한다. */
+async function reachReactionsWithDataVetoConfirmed(page: Page) {
+  await enterExperienceFirstReactions(page);
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('submit-opinion').click();
   await expect(
@@ -20,38 +25,48 @@ async function reachReactionsWithAccessConfirmed(page: Page) {
   ).toBeVisible();
 }
 
-test('DISCUSS에서 TRACE 확정 후 REACTIONS에서 ANON_FULL을 함께 확정하려 하면 전달이 막힌다', async ({
+/** P2 = RECORD(판단 근거 기록)를 확정한 채 첫 의견을 전달한다. followUp 체크 카드로
+ * DATA_VETO(새 조건, RECORD와 상충하지 않는다)를 더하는 테스트들이 이 상태에서
+ * 시작한다. */
+async function reachReactionsWithRecordConfirmed(page: Page) {
+  await enterExperienceFirstReactions(page);
+  await page.getByTestId('phrase-card-P2').click();
+  await page.getByTestId('submit-opinion').click();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+}
+
+test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확정하려 하면 전달이 막힌다', async ({
   page,
 }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithDataVetoConfirmed(page);
 
-  // T74부터 "MY REPLY" textarea는 늘 보인다(옛 "직접 답하기 열기" 토글은 없앴다).
-  const textarea = page.getByTestId('followup-textarea');
-  // P5 문장 그대로: ANON_FULL을 새로 제안한다. TRACE는 이전 의견에서 이미 확정돼
+  // followUp.options[1] = EXP_ONLY(새로 제안). DATA_VETO는 이전 의견에서 이미 확정돼
   // 목록에 남아 있으므로 두 조건이 함께 accepted 상태가 된다.
-  await textarea.fill('작성자를 누구도 추적할 수 없는 완전 익명으로 합시다.');
+  await page.getByTestId('followup-option-1').click();
 
   const conflicts = page.getByTestId('condition-chips-conflicts');
   await expect(conflicts).toBeVisible();
   await expect(conflicts).toContainText(
-    "'문제 발생 시 추적 가능'와 '완전 익명 — 추적 불가' 중 하나만 선택해 주세요.",
+    "'데이터 경고 시 멈춤'와 '경험 판단 절대 우선' 중 하나만 선택해 주세요.",
   );
 
   await expect(page.getByTestId('submit-followup')).toBeDisabled();
 
-  // ANON_FULL 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
-  await page.getByTestId('condition-chip-ANON_FULL').click();
+  // EXP_ONLY 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
+  await page.getByTestId('condition-chip-EXP_ONLY').click();
   await expect(conflicts).toBeHidden();
   await expect(page.getByTestId('submit-followup')).toBeEnabled();
 });
 
 test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건에도 함께 남는다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
-  // SCREEN을 새로 제안하는 추천 답변 체크 카드를 고른다. TRACE는 DISCUSS에서 이미
+  // DATA_VETO를 새로 제안하는 추천 답변 체크 카드를 고른다. RECORD는 DISCUSS에서 이미
   // 확정돼 기본값으로 유지된 채 넘어온다(칩을 건드리지 않는다).
   await page.getByTestId('followup-option-0').click();
-  await expect(page.getByTestId('condition-chip-TRACE')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('condition-chip-RECORD')).toHaveAttribute('aria-pressed', 'true');
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -59,20 +74,20 @@ test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건�
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).toContainText('문제 발생 시 추적 가능');
-  await expect(conditions).toContainText('게시 전 검수');
+  await expect(conditions).toContainText('판단 근거 기록');
+  await expect(conditions).toContainText('데이터 경고 시 멈춤');
 });
 
 test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 안건에서 빠진다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
-  // DISCUSS에서 확정한 TRACE가 후속 질문 칩으로 다시 보인다. 여기서 해제하면
+  // DISCUSS에서 확정한 RECORD가 후속 질문 칩으로 다시 보인다. 여기서 해제하면
   // 최종 안건의 누적 목록에서도 빠져야 한다(후속 보완은 누적 조건을 유지·해제한다).
-  // 새로 제안된 SCREEN는 그대로 두어 최종 안건에 남는다.
+  // 새로 제안된 DATA_VETO는 그대로 두어 최종 안건에 남는다.
   await page.getByTestId('followup-option-0').click();
-  await expect(page.getByTestId('condition-chip-TRACE')).toHaveAttribute('aria-pressed', 'true');
-  await page.getByTestId('condition-chip-TRACE').click();
-  await expect(page.getByTestId('condition-chip-TRACE')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('condition-chip-RECORD')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('condition-chip-RECORD').click();
+  await expect(page.getByTestId('condition-chip-RECORD')).toHaveAttribute('aria-pressed', 'false');
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -80,29 +95,25 @@ test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).not.toContainText('문제 발생 시 추적 가능');
-  await expect(conditions).toContainText('게시 전 검수');
+  await expect(conditions).not.toContainText('판단 근거 기록');
+  await expect(conditions).toContainText('데이터 경고 시 멈춤');
 });
 
-// 후속 직접 답변 "작성자를 확인하지 않겠습니다."가 TRACE 키워드 '작성자를 확인'에 걸려
-// 새 제안으로 자동 승인되고, 참가자가 추적을 거부했는데도 최종안에 "문제 발생 시 추적
-// 가능"이 들어가 표결까지 바뀌었다(PR #10 Codex 12차 검토 P1).
+// 후속 직접 답변에서 조건 키워드가 있어도 "-지 않-"으로 거부하면 제안되지 않고, 참가자가
+// 거부한 조건이 최종안에 몰래 들어가지 않는다(PR #10 Codex 12차 검토 P1과 같은 의도).
 test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되지 않고 최종 안건에도 들어가지 않는다', async ({
   page,
 }) => {
-  await page.goto('/?mode=scripted');
-  await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
-  await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
-  // P1 = PILOT만 확정한 채 첫 의견을 전달한다(TRACE는 아직 없다).
+  await enterExperienceFirstReactions(page);
+  // P1 = SCOPE만 확정한 채 첫 의견을 전달한다(DATA_VETO는 아직 없다).
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
 
-  await page.getByTestId('followup-textarea').fill('작성자를 확인하지 않겠습니다.');
-  await expect(page.getByTestId('condition-chip-PILOT')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-TRACE')).toHaveCount(0);
+  await page
+    .getByTestId('followup-textarea')
+    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+  await expect(page.getByTestId('condition-chip-SCOPE')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -110,21 +121,21 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).toContainText('한 게시판에서 시범');
-  await expect(conditions).not.toContainText('문제 발생 시 추적 가능');
+  await expect(conditions).toContainText('전례 없는 상황 한정');
+  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
 });
 
 test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 도달한다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   // T74: textarea는 항상 보이지만 비어 있고, 체크 카드를 고르기 전에는 이전 의견의
-  // 조건(TRACE)을 바꿀 수 없다(PR #4 Codex 검토).
+  // 조건(RECORD)을 바꿀 수 없다(PR #4 Codex 검토).
   await expect(page.getByTestId('followup-textarea')).toBeVisible();
   await expect(page.getByTestId('followup-textarea')).toHaveValue('');
-  await expect(page.getByTestId('condition-chip-TRACE')).toBeHidden();
+  await expect(page.getByTestId('condition-chip-RECORD')).toBeHidden();
 
   await page.getByTestId('followup-option-0').click();
-  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-RECORD')).toBeVisible();
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
   await submitFollowup.click();
@@ -136,10 +147,10 @@ test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 �
 // StageBand 전체가 aria-hidden이라 참가자 본인의 이전 의견을 스크린리더로 읽을
 // 자리가 없어지면 안 된다 — sr-only 문단으로 화면 모양 변화 없이 되돌렸다.
 test('이전 의견이 화면 모양 변화 없이 스크린리더용 sr-only 문단으로 남아 있다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   const prior = page.getByTestId('reactions-prior-opinion');
-  await expect(prior).toHaveText('이사님의 이전 의견: 문제가 생기면 작성자를 확인할 수 있게 해 둡시다.');
+  await expect(prior).toHaveText('이사님의 이전 의견: 경험으로 결정할 때는 판단 근거를 기록합시다.');
   // sr-only 기법(1px·clip·overflow hidden)을 쓰는지 computed style로 직접 확인한다 —
   // 1×1px라 Playwright의 toBeVisible()은 "보임"으로 셀 수 있어 그 대신 실제 크기를 본다.
   await expect(prior).toHaveCSS('position', 'absolute');
@@ -153,38 +164,41 @@ test('이전 의견이 화면 모양 변화 없이 스크린리더용 sr-only �
 test('CONDITIONS 칩이 기존 확정(cyan "✓")과 이번 답변의 새 조건(앰버 "+ 새 조건")을 구분해 보여준다', async ({
   page,
 }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
-  // SCREEN을 새로 제안하는 체크 카드를 고른다. TRACE는 DISCUSS에서 이미 확정돼
+  // DATA_VETO를 새로 제안하는 체크 카드를 고른다. RECORD는 DISCUSS에서 이미 확정돼
   // 넘어온 조건이다.
   await page.getByTestId('followup-option-0').click();
 
-  const traceChip = page.getByTestId('condition-chip-TRACE');
-  await expect(traceChip).toHaveClass(/condition-chip--accepted/);
-  await expect(traceChip).not.toHaveClass(/condition-chip--new/);
-  await expect(traceChip).toContainText('✓');
+  const recordChip = page.getByTestId('condition-chip-RECORD');
+  await expect(recordChip).toHaveClass(/condition-chip--accepted/);
+  await expect(recordChip).not.toHaveClass(/condition-chip--new/);
+  await expect(recordChip).toContainText('✓');
 
-  const screenChip = page.getByTestId('condition-chip-SCREEN');
-  await expect(screenChip).toHaveClass(/condition-chip--new/);
-  await expect(screenChip).not.toHaveClass(/condition-chip--accepted/);
-  await expect(screenChip).toContainText('+ 새 조건');
+  const dataVetoChip = page.getByTestId('condition-chip-DATA_VETO');
+  await expect(dataVetoChip).toHaveClass(/condition-chip--new/);
+  await expect(dataVetoChip).not.toHaveClass(/condition-chip--accepted/);
+  await expect(dataVetoChip).toContainText('+ 새 조건');
 });
 
 // PR #12 Codex 1차 검토 P1-a: 추천 답변을 체크한 뒤 그 조건을 부정하는 문장으로
 // 직접 고치면, 체크 상태만으로 남아 있던 조건 제안이 사라지고 현재 문장을 키워드
 // 규칙으로 다시 찾은 결과만 남아야 한다.
 test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면 조건 제안이 사라진다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   await page.getByTestId('followup-option-0').click();
-  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-DATA_VETO')).toBeVisible();
 
-  // SCREEN 키워드('검수'·'게시 전')는 그대로 있지만 '하지 않겠습니다'로 부정한다 —
-  // proposeFromText의 부정 규칙(NEGATION_MARKERS)에 걸려 더는 제안되지 않아야 한다.
-  await page.getByTestId('followup-textarea').fill('게시 전 검수를 하지 않겠습니다.');
-  await expect(page.getByTestId('condition-chip-SCREEN')).toHaveCount(0);
-  // DISCUSS에서 이미 확정한 TRACE는 체크 카드와 무관하므로 그대로 남는다.
-  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
+  // DATA_VETO 키워드('경고 시'·'잠시 멈추')는 그대로 있지만 '멈추지 않겠습니다'로
+  // 부정한다 — proposeFromText의 부정 규칙(NEGATION_MARKERS)에 걸려 더는 제안되지
+  // 않아야 한다.
+  await page
+    .getByTestId('followup-textarea')
+    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+  await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
+  // DISCUSS에서 이미 확정한 RECORD는 체크 카드와 무관하므로 그대로 남는다.
+  await expect(page.getByTestId('condition-chip-RECORD')).toBeVisible();
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -192,8 +206,8 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).not.toContainText('게시 전 검수');
-  await expect(conditions).toContainText('문제 발생 시 추적 가능');
+  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('판단 근거 기록');
 });
 
 // PR #12 Codex 1차 검토 P1-b: 직접 쓴 내용이 있는 상태에서 추천 답변을 체크하면
@@ -202,7 +216,7 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
 test('직접 쓴 내용이 있을 때 추천 답변을 체크하면 확인 UI가 뜨고 "유지"를 고르면 텍스트가 보존된다', async ({
   page,
 }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   const customText = '제 나름대로 정리한 답변입니다.';
   await page.getByTestId('followup-textarea').fill(customText);
@@ -230,7 +244,7 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크하면 확인 UI가
 test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구성"을 고르면 선택 기준으로 다시 짓는다', async ({
   page,
 }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   await page.getByTestId('followup-textarea').fill('제 나름대로 정리한 답변입니다.');
   await page.getByTestId('followup-option-0').click();
@@ -239,16 +253,16 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구
   await page.getByTestId('rebuild-confirm-rebuild').click();
   await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
   await expect(page.getByTestId('followup-textarea')).toHaveValue(
-    '게시 전 검수 절차를 두고 담당자를 지정합시다.',
+    '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
   );
   // 다시 구성한 뒤에는(dirty가 풀렸으므로) 체크한 옵션의 조건이 다시 제안된다.
-  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-DATA_VETO')).toBeVisible();
 });
 
 // PR #12 Codex 1차 검토 P2-a: 네이티브 체크박스가 1×1px라 기본 포커스 링이 보이지
 // 않았다 — 카드 전체(label)에 :focus-within 테두리를 옮겼는지 확인한다.
 test('추천 답변 체크 카드가 키보드 포커스에서 보이는 테두리를 가진다', async ({ page }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
 
   const checkbox = page.locator('[data-testid="followup-option-0"] input[type="checkbox"]');
   await checkbox.focus();
@@ -260,7 +274,7 @@ test('추천 답변 체크 카드가 키보드 포커스에서 보이는 테두�
 test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
   page,
 }) => {
-  await reachReactionsWithAccessConfirmed(page);
+  await reachReactionsWithRecordConfirmed(page);
   const info = page.getByTestId('reactions-info');
   await expect(info).not.toHaveAttribute('inert', '');
 

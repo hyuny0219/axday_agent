@@ -2,9 +2,9 @@
 // desktop-720)로 캡처한다. UPDATE_SCREENSHOTS=1 일 때만 아래 경로에 저장하고 평소에는 test-results/에 둔다.
 // desktop-720) 프로젝트마다 docs/screenshots/<project>/<screen>.png로 남긴다.
 // DESIGN_SPEC.md 6장 "실제 토론은 시나리오의 P1~P6 체크 카드 6개와 300자 입력창을
-// 제공하고, 안건 ② 대표 경로의 최종 조건 4개를 모두 표시한다"에 맞춰 실제 콘텐츠
-// 분량(추천 문구 6개 표시·직접 입력 300자에 가까운 실문장·확정 조건 4개)을 채운
-// 상태에서 캡처한다.
+// 제공하고, 대표 경로의 최종 조건 4개를 모두 표시한다"에 맞춰 실제 콘텐츠 분량(추천
+// 문구 6개 표시·직접 입력 300자에 가까운 실문장·확정 조건 4개)을 채운 상태에서
+// 캡처한다. T78(2026-10-02, 안건 교체)부터 기본 안건 ①(ai-approval)로 캡처한다.
 
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -13,10 +13,10 @@ import { test, expect, type Page } from './fixtures';
 // P1~P4 문구를 그대로 이어 붙인 뒤, 실제 이사회 발언처럼 이어지는 문장을 더해
 // 300자 제한에 가깝지만 넘지 않는 분량으로 만든다(축약 없이 실제 콘텐츠).
 const DRAFT_TEXT =
-  '한 게시판에서 먼저 시범 운영합시다. 게시 전 검수 절차를 두고 시작합시다. ' +
-  '문제가 생기면 작성자를 확인할 수 있게 해 둡시다. 운영 효과를 측정한 뒤 전사로 넓힙시다. ' +
-  '시범 기간에는 게시 건수와 신고 처리 결과를 함께 공유해 신뢰를 쌓고, 확대 여부는 이 기록을 근거로 ' +
-  '다음 이사회에서 다시 판단하겠습니다. 신고 처리 담당자를 먼저 지정하고, 로그 보관 기간을 정한 뒤 ' +
+  '결재 금액 한도를 정해 소액부터 자동 승인합시다. 자동 승인마다 승인 사유를 기록합시다. ' +
+  '승인 뒤 사람이 표본 재검토를 하도록 합시다. 잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다. ' +
+  '시범 기간에는 자동 승인 건수와 표본 재검토 결과를 함께 공유해 신뢰를 쌓고, 확대 여부는 이 기록을 근거로 ' +
+  '다음 이사회에서 다시 판단하겠습니다. 결재 규칙 책임자를 먼저 지정하고, 한도를 운영하며 점검한 뒤 ' +
   '순차로 넓혀가며 결과를 투명하게 공유하겠습니다.';
 
 // 기본 실행에서는 커밋된 PNG를 덮어쓰지 않도록 임시 폴더에 저장한다.
@@ -55,8 +55,8 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   // SELECT(T70): 시안(S1_Select) 카드 2장(활성 1 + 준비 중 1) 중 활성 안건을 선택한 상태.
-  await page.getByTestId('scenario-card-anon-board').click();
-  await expect(page.getByTestId('scenario-card-anon-board')).toHaveAttribute(
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await expect(page.getByTestId('scenario-card-ai-approval')).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -98,7 +98,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
   // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
-  // 4개(PILOT·SCREEN·TRACE·MEASURE)를 확정하고, 300자에 가까운 직접 입력으로
+  // 4개(LIMIT·LOG·REVIEW·OWNER)를 확정하고, 300자에 가까운 직접 입력으로
   // 덮어써 textarea 분량을 함께 보여준다.
   await expect(page.getByTestId('phrase-card-P6')).toBeVisible();
   await page.getByTestId('phrase-card-P1').click();
@@ -108,10 +108,10 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
 
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill(DRAFT_TEXT);
-  await expect(page.getByTestId('condition-chip-PILOT')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-MEASURE')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-LIMIT')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-LOG')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-REVIEW')).toBeVisible();
+  await expect(page.getByTestId('condition-chip-OWNER')).toBeVisible();
 
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -178,12 +178,12 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('end-session').click();
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
-  // (anonBoard.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·
+  // (aiApproval.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·
   // 반대 3으로 부결이면서 "내 표와 같은 표 2석(CEO)"인 C_Result_Reject.html 조합이
   // 그대로 재현된다(e2e/stance.spec.ts의 "조건 없이 진행" 경로와 같다).
   await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');

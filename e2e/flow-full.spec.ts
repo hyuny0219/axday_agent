@@ -5,7 +5,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -53,7 +53,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -96,24 +96,24 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 });
 
-test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 표의 결정력과 CFO만 바뀐 표가 보인다', async ({
+test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 표의 결정력과 CFO만 바뀐 표가 보인다', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
-  // PILOT(한 게시판에서 시범) + MEASURE(운영 효과 측정 후 확대)만 확정한다.
+  // LIMIT(결재 금액 한도) + REVIEW(사람 표본 재검토)만 확정한다.
   await page.getByTestId('phrase-card-P1').click();
-  await page.getByTestId('phrase-card-P4').click();
+  await page.getByTestId('phrase-card-P3').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  // REACTIONS: 앞선 의견을 유지해 SCREEN 조건을 추가하지 않는다.
+  // REACTIONS: 앞선 의견을 유지해 OWNER 조건을 추가하지 않는다.
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
@@ -129,8 +129,8 @@ test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await confirmVote.click();
 
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
-  // PILOT+MEASURE만 있으면 임원 표는 YES/YES/NO/NO라 참가자 표에 따라 가결/부결이
-  // 갈린다(SCENARIO_ANON_BOARD.md "표결 우선순위") — 내 한 표가 결과를 정한다.
+  // LIMIT+REVIEW만 있으면 임원 표는 YES/YES/NO/NO라 참가자 표에 따라 가결/부결이
+  // 갈린다(docs/SCENARIO_AI_APPROVAL.md "표결 우선순위") — 내 한 표가 결과를 정한다.
   await expect(page.getByTestId('result-summary-decisive')).toContainText(
     '이사님의 한 표가 결과를 정했습니다',
   );
@@ -148,4 +148,46 @@ test('PILOT+MEASURE 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await expect(
     page.getByTestId('result-seat-CISO').getByTestId('result-summary-changed'),
   ).toHaveCount(0);
+});
+
+// T78: 안건 ②(experience-first)도 scripted로 전 구간 완주하는지 각각 확인한다(카드
+// "두 안건 모두 scripted 완주 e2e 1개씩").
+test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터 RESULT까지 완주한다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-experience-first').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+
+  await page.getByTestId('phrase-card-P1').click();
+  const submitOpinion = page.getByTestId('submit-opinion');
+  await expect(submitOpinion).toBeEnabled();
+  await submitOpinion.click();
+
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+  await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  const confirmVote = page.getByTestId('confirm-vote');
+  await expect(confirmVote).toBeEnabled();
+  await confirmVote.click();
+
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CEO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CFO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CAIO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-CISO')).toBeVisible();
+  await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
+
+  await page.getByTestId('end-session').click();
+  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
 });

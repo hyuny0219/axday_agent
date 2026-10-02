@@ -49,10 +49,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
   await expect(
-    page.getByTestId('scenario-card-anon-board').locator('.scenario-card__title'),
+    page.getByTestId('scenario-card-ai-approval').locator('.scenario-card__title'),
   ).toBeInViewport();
 
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
@@ -141,7 +141,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'REACTIONS');
 
   // 직접 입력(가장 내용이 많은 경로)으로 조건 칩까지 노출한 상태도 확인한다.
-  await page.getByTestId('followup-textarea').fill('신고가 들어온 글에 한해 담당자가 확인할 수 있게 절차를 정합니다.');
+  await page.getByTestId('followup-textarea').fill('잘못된 승인이 나오면 책임자가 확인할 수 있게 절차를 정합니다.');
   await expectNoPageScroll(page, 'REACTIONS(직접 입력 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
@@ -205,11 +205,11 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 // 가로채 최대 길이로 채우고, 페이지 스크롤과 오른쪽 열 내부 잘림이 모두 없는지 본다.
 const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 const LONG_STATEMENT =
-  '게시 전 검수를 거친 뒤에만 공개해야 합니다. 신고가 들어온 글은 담당자가 확인할 수 있게 하고 게시 건수와 신고 처리 결과를 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다.';
+  '금액 한도를 정한 뒤에만 자동 승인해야 합니다. 승인 사유는 매번 기록하게 하고, 표본 재검토 결과와 오승인 건수를 매주 기록해 확대 여부를 다음 이사회에서 판단하겠습니다. 책임자도 함께 지정해 주십시오.';
 
 const LONG_REASON =
-  '출처·기준일 표시와 담당자 검토, 권한 확인이 조건으로 들어갔으므로 찬성합니다. 다만 파일럿 기간의 준비시간과 수정량 기록이 실제로 쌓이는지, 확대 판단 전에 이사회가 그 수치를 직접 확인하는지가 남은 관건입니다. 그 절차가 빠지면 재검토가 필요합니다.';
-const LONG_CONCERNS = ['권한 확인 절차의 실제 운영 주체', '검토 담당자 부재 시 대체 절차', '파일럿 성과 측정 기준의 합의'];
+  '금액 한도·승인 사유 기록·표본 재검토가 조건으로 들어갔으므로 찬성합니다. 다만 시범 기간의 처리 건수와 오승인 기록이 실제로 쌓이는지, 확대 판단 전에 이사회가 그 수치를 직접 확인하는지가 남은 관건입니다. 그 절차가 빠지면 재검토가 필요합니다.';
+const LONG_CONCERNS = ['책임자 지정 절차의 실제 운영 주체', '검토 담당자 부재 시 대체 절차', '시범 성과 측정 기준의 합의'];
 
 async function mockLongStatements(page: Page): Promise<void> {
   // 표결 응답도 최대 길이로 채운다: reason 160자 상한(server/validate.ts) + 남은 우려 3개.
@@ -269,7 +269,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });

@@ -13,7 +13,7 @@ import { test, expect, type Page } from './fixtures';
 async function enterOpinions(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
 }
@@ -38,7 +38,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대 쪽');
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
-    // PILOT·SCREEN·TRACE·MEASURE 네 조건을 모두 제안하는 문구 4개를 고른다.
+    // LIMIT·LOG·REVIEW·OWNER 네 조건을 모두 제안하는 문구 4개를 고른다.
     await page.getByTestId('phrase-card-P1').click();
     await page.getByTestId('phrase-card-P2').click();
     await page.getByTestId('phrase-card-P3').click();
@@ -120,7 +120,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남는다(sr-only)', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
@@ -147,7 +147,7 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
 
     await page.getByRole('button', { name: '체험 시작' }).click();
-    await page.getByTestId('scenario-card-anon-board').click();
+    await page.getByTestId('scenario-card-ai-approval').click();
     await page.getByRole('button', { name: '이사회 입장' }).click();
     await page.getByRole('button', { name: '의견 듣기' }).click();
 
