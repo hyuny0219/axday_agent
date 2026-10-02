@@ -28,14 +28,16 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
   }) => {
     await enterOpinions(page);
 
-    // OPINIONS 진입 즉시 넷 다 표정이 채워진다(조건 없는 표결 규칙표 기본값).
+    // OPINIONS 진입 즉시 넷 다 표정이 채워진다(안건 문서의 첫 stance,
+    // initialOpinions[].openingStance — PR #13 Codex 3차 검토. CAIO는 "미정"이다).
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
-    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--against/);
+    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     // 본문 카드(임원 카드의 상태 칩 옆)에도 같은 문구가 접근 가능한 텍스트로 있다.
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
     await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대 쪽');
+    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     // LIMIT·LOG·REVIEW·OWNER 네 조건을 모두 제안하는 문구 4개를 고른다.
@@ -82,6 +84,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
   }) => {
     await enterOpinions(page);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
+    // CAIO의 첫 stance는 "미정"이다(openingStance) — 참가자가 조건 없이 말한 뒤
+    // REACTIONS에서는 voteRules의 always 분기(AGAINST)로 넘어간다(아래).
+    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     // 조건 키워드가 전혀 없는 문장(어떤 조건도 제안하지 않는다).
@@ -90,8 +95,11 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
 
-    // REACTIONS: 확정된 조건이 없어 표정이 OPINIONS와 같게 유지된다(조건 붙일 때와
-    // 다르게 보인다 — 위 테스트에서는 이 시점에 전원 찬성 쪽으로 바뀌었다).
+    // REACTIONS: 확정된 조건이 없어 CEO·CFO·CISO는 OPINIONS와 같게 유지된다(조건 붙일
+    // 때와 다르게 보인다 — 위 테스트에서는 이 시점에 전원 찬성 쪽으로 바뀌었다). CAIO는
+    // "첫 반응(미정)"에서 "참가자가 조건 없이 말을 마친 뒤의 판단(반대)"으로 넘어간다
+    // (PR #13 Codex 3차 검토 — 참가자가 실제로 의견을 전달한 뒤에는 voteRules의 always
+    // 분기를 쓴다).
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--against/);
@@ -151,14 +159,16 @@ test.describe('live mock: 무대 표정', () => {
     await page.getByRole('button', { name: '이사회 입장' }).click();
     await page.getByRole('button', { name: '의견 듣기' }).click();
 
-    // mock 제공자(server/providers/mock.ts ROLE_STANCE)는 CEO·CAIO를 FOR, CFO·CISO를
-    // AGAINST로 고정 응답한다.
+    // OPINIONS의 stance는 mock 제공자가 안건의 roleLenses.opening을 쓴다(PR #13 Codex
+    // 3차 검토, server/providers/mock.ts scenarioAwareOpeningStance) — 안건①(ai-approval)
+    // 문서 기준 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST.
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--for/);
+    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
+    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     await page.getByTestId('phrase-card-P1').click();

@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
+import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
 import { liveStances, persuasionStamp, scriptedStances } from '../../src/domain/stance';
 import type { Ballot, Opinion, Session, Statement } from '../../src/domain/types';
 
@@ -70,6 +72,51 @@ describe('scriptedStances', () => {
     // 필요)는 다시 AGAINST로 돌아간다.
     expect(stances.CAIO).toBe('AGAINST');
     expect(stances.CISO).toBe('AGAINST');
+  });
+});
+
+// PR #13 Codex 3차 검토: voteRules의 조건 없음(always) 분기만으로 OPINIONS 표정을
+// 계산하면, 두 안건의 문서가 명시한 CAIO의 첫 stance("미정")와 어긋났다(voteRules
+// always 분기는 CAIO NO/AGAINST). initialOpinions[].openingStance를 참가자가 아직
+// 말하지 않은 동안(OPINIONS·DISCUSS) 그대로 쓰고, 의견을 전달한 뒤(REACTIONS~)에는
+// 조건이 그 rule을 충족하는 순간 voteRules 기반으로 넘어가 전환되는지 확인한다.
+describe('scriptedStances의 OPINIONS 출발 성향(안건①·②, PR #13 Codex 3차 검토)', () => {
+  const EXPECTED_OPENING = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' } as const;
+
+  it.each([
+    ['ai-approval', aiApprovalScenario],
+    ['experience-first', experienceFirstScenario],
+  ] as const)('%s의 OPINIONS 표정은 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST다', (_label, s) => {
+    expect(scriptedStances(s, sessionAt('OPINIONS', []))).toEqual(EXPECTED_OPENING);
+  });
+
+  it.each([
+    ['ai-approval', aiApprovalScenario],
+    ['experience-first', experienceFirstScenario],
+  ] as const)('%s의 DISCUSS도 OPINIONS와 같은 출발 성향을 유지한다(아직 의견 제출 전)', (_label, s) => {
+    expect(scriptedStances(s, sessionAt('DISCUSS', []))).toEqual(
+      scriptedStances(s, sessionAt('OPINIONS', [])),
+    );
+  });
+
+  it('ai-approval: CAIO의 rule을 만족하는 조건(LOG)을 전달하면 REACTIONS에서 FOR로 바뀐다', () => {
+    const opinions = [opinion(['LOG'])];
+    expect(scriptedStances(aiApprovalScenario, sessionAt('OPINIONS', [])).CAIO).toBe('UNDECIDED');
+    expect(scriptedStances(aiApprovalScenario, sessionAt('REACTIONS', opinions)).CAIO).toBe('FOR');
+  });
+
+  it('experience-first: CAIO의 rule을 만족하는 조건(SCOPE)을 전달하면 REACTIONS에서 FOR로 바뀐다', () => {
+    const opinions = [opinion(['SCOPE'])];
+    expect(scriptedStances(experienceFirstScenario, sessionAt('OPINIONS', [])).CAIO).toBe('UNDECIDED');
+    expect(scriptedStances(experienceFirstScenario, sessionAt('REACTIONS', opinions)).CAIO).toBe('FOR');
+  });
+
+  it('조건을 전달하지 않아도(빈 배열) opinions가 생기면 voteRules의 always 분기로 넘어간다(CAIO AGAINST)', () => {
+    const opinions = [opinion([])];
+    expect(scriptedStances(aiApprovalScenario, sessionAt('REACTIONS', opinions)).CAIO).toBe('AGAINST');
+    expect(scriptedStances(experienceFirstScenario, sessionAt('REACTIONS', opinions)).CAIO).toBe(
+      'AGAINST',
+    );
   });
 });
 

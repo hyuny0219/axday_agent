@@ -66,18 +66,33 @@ export const aiAssistantScenario: Scenario = {
     undecidedItems: ['사용자별 권한', '검토 담당자', '확대 기준'],
   },
   initialOpinions: [
-    { memberId: 'CEO', text: '보고 준비를 줄이고 판단과 실행에 시간을 씁시다.', evidenceIds: ['E3'] },
+    {
+      memberId: 'CEO',
+      text: '보고 준비를 줄이고 판단과 실행에 시간을 씁시다.',
+      evidenceIds: ['E3'],
+      // PR #13 Codex 3차 검토: openingStance가 새로 필수 필드가 됐다. 이 안건은 보존
+      // 안건(레지스트리 밖)이라 T79의 "첫 stance" 개념이 없으므로, 기존 동작을 그대로
+      // 유지하도록 조건 없는 voteRules 결과(always 분기)와 같은 값을 적는다.
+      openingStance: 'FOR',
+    },
     {
       memberId: 'CFO',
       text: '작은 범위에서 준비시간과 수정량을 먼저 확인합시다.',
       evidenceIds: ['E3'],
+      openingStance: 'AGAINST',
     },
     {
       memberId: 'CAIO',
       text: '출처·기준일을 표시하고 담당자가 확인해야 합니다.',
       evidenceIds: ['E1', 'E2'],
+      openingStance: 'AGAINST',
     },
-    { memberId: 'CISO', text: '접근 권한과 공유 범위를 먼저 명확히 해야 합니다.', evidenceIds: ['E4'] },
+    {
+      memberId: 'CISO',
+      text: '접근 권한과 공유 범위를 먼저 명확히 해야 합니다.',
+      evidenceIds: ['E4'],
+      openingStance: 'AGAINST',
+    },
   ],
   phrases: [
     { id: 'P1', text: '주간 보고 초안부터 작은 범위로 시작합시다.', conditionId: 'PILOT' },

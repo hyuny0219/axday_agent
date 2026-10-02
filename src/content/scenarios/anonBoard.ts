@@ -73,21 +73,30 @@ export const anonBoardScenario: Scenario = {
       memberId: 'CEO',
       text: '솔직한 목소리가 올라오는 것은 좋지만, 조직 신뢰가 상하지 않아야 합니다.',
       evidenceIds: ['E1'],
+      // PR #13 Codex 3차 검토: openingStance가 새로 필수 필드가 됐다. 이 안건은 보존
+      // 안건(레지스트리 밖)이라 T79의 "첫 stance" 개념이 없으므로, 기존 동작을 그대로
+      // 유지하도록 조건 없는 voteRules 결과(always 분기)와 같은 값을 적는다 — 새 "미정"
+      // 연출을 추가하지 않는다(docs/SCENARIO_ANON_BOARD.md "표정 배지는 표결 규칙표에서
+      // 미리 계산한 값").
+      openingStance: 'FOR',
     },
     {
       memberId: 'CFO',
       text: '글이 늘면 신고와 검토 공수도 늡니다. 처리 담당자부터 필요합니다.',
       evidenceIds: ['E2', 'E3'],
+      openingStance: 'AGAINST',
     },
     {
       memberId: 'CAIO',
       text: '익명 처리와 중복 계정 차단을 계정 체계와 어떻게 연결할지 정해야 합니다.',
       evidenceIds: ['E2', 'E4'],
+      openingStance: 'AGAINST',
     },
     {
       memberId: 'CISO',
       text: '로그 보관 기간과 추적 권한이 설계되지 않았습니다. 익명 표시와 로그는 별개입니다.',
       evidenceIds: ['E4'],
+      openingStance: 'AGAINST',
     },
   ],
   phrases: [

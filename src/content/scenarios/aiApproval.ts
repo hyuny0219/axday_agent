@@ -73,21 +73,25 @@ export const aiApprovalScenario: Scenario = {
       memberId: 'CEO',
       text: '결재 처리 기록을 보면 사람이 자리를 비울 때 일이 멈춥니다. 이런 결재까지 붙들고 있을 순 없죠. 범위를 정해 맡겨 봅시다.',
       evidenceIds: ['E1'],
+      openingStance: 'FOR',
     },
     {
       memberId: 'CFO',
       text: '시범 자동승인 집계에서 규칙 밖 승인이 4건 나왔습니다. 소액이라고 넘길 순 없죠. 한도와 사후 점검 없이는 반대입니다.',
       evidenceIds: ['E2'],
+      openingStance: 'AGAINST',
     },
     {
       memberId: 'CAIO',
       text: '감사 메모를 보니 승인 이유를 되짚을 수가 없네요. 승인 사유를 남기도록 시스템부터 설계합시다. 그게 되는지 보고 판단하겠습니다.',
       evidenceIds: ['E3'],
+      openingStance: 'UNDECIDED',
     },
     {
       memberId: 'CISO',
       text: '감사 메모에 승인 근거를 재구성할 수 없었다고 돼 있습니다. 이 상태로 결재권부터 줄 수는 없죠. 기록과 책임자부터 정해야 합니다.',
       evidenceIds: ['E3', 'E4'],
+      openingStance: 'AGAINST',
     },
   ],
   phrases: [

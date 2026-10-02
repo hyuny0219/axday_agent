@@ -77,21 +77,25 @@ export const experienceFirstScenario: Scenario = {
       memberId: 'CEO',
       text: '지난 2년 주요 결정 복기를 보면 어느 쪽도 늘 맞지는 않았습니다. 그래도 조직의 방향은 사람이 잡아야죠. 데이터를 살피되 경험을 앞세웁시다.',
       evidenceIds: ['E1'],
+      openingStance: 'FOR',
     },
     {
       memberId: 'CFO',
       text: '실패 사례 메모에 데이터 경고를 무시했다가 손실을 본 건이 있습니다. 경험에 무게를 싣더라도, 숫자가 경고할 때 멈출 수 없다면 반대입니다.',
       evidenceIds: ['E4'],
+      openingStance: 'AGAINST',
     },
     {
       memberId: 'CAIO',
       text: '신규 사업 예측 보고를 보니 전례 없는 상황에서 모델 오차가 커졌습니다. 모델이 약한 상황에 한정한다면 경험을 앞세우는 것도 검토할 만합니다.',
       evidenceIds: ['E2'],
+      openingStance: 'UNDECIDED',
     },
     {
       memberId: 'CISO',
       text: '베테랑 인터뷰 메모를 보니 판단은 빨랐는데 기록이 없네요. 나중에 무슨 근거로 결정했는지 어떻게 확인하죠? 근거를 남기지 않는다면 반대입니다.',
       evidenceIds: ['E3'],
+      openingStance: 'AGAINST',
     },
   ],
   phrases: [
