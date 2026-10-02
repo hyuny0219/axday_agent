@@ -1037,3 +1037,36 @@
 - **시안 이탈 금지**: TRANSCRIPT 블록의 인라인 스타일 값을 그대로 쓴다.
 - 완료 확인: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷을 `preview/S2_Opinions.png`·`S5_Motion.png`의 TRANSCRIPT와 나란히 비교.
 - 크기: S.
+
+## T78 안건 교체 — ① AI Agent 결재권 · ② 데이터보다 경험 (콘텐츠 데이터화)
+
+- 목표(2026-10-02 사용자 확정): 안건을 두 개로 교체한다. 구현 기준 문서는 `docs/SCENARIO_AI_APPROVAL.md`(안건 ①, CASE 01)와 `docs/SCENARIO_EXPERIENCE_FIRST.md`(안건 ②, CASE 02) — **문구·조건 라벨·임원 첫 의견·후속 질문·표결 규칙·결과 문구는 문서 그대로**(사용자·Codex 상의로 확정, 임의 수정 금지). 안건은 토론 명제이며 회사 결정으로 재해석하지 않는다. 설득 성공 규칙(내 표와 같은 쪽 3석 이상)·표결(찬성·반대) 불변.
+- 읽을 것: `src/content/scenarios/anonBoard.ts`(구조 그대로 따를 본보기: evidence·phrases·conditions(키워드)·conflicts·reactions·followUp·voteRules·resultCopy·remainingTasks·baseConditionIds), `src/content/scenarios/index.ts`, `src/content/types.ts`, `src/domain/conditions.ts`(키워드 추출·부정 판정 규칙), `server/scenario-data.ts`(서버용 자료 사본 — scenarioId별), `docs/SCENARIO_ANON_BOARD.md`(문서 형식), `e2e/*.spec.ts`·`tests/**`에서 `anon-board`·`P1~P6`·`TRACE`·`ANON_FULL`·`PILOT`·`SCREEN`·`MEASURE` 사용처, `src/components/parts/Header.tsx`(CASE FILE No. 고정 "02").
+- 만들 것:
+  1. `src/content/scenarios/aiApproval.ts`(id `ai-approval`, caseLabel `사건 01`)·`experienceFirst.ts`(id `experience-first`, caseLabel `사건 02`): 문서의 자료 4장(E1~E4 ID 유지, 자료명·원문·해석), 결정 질문(`chairBriefing.question`), SITREP/PROPOSAL/UNKNOWN, 원안, 첫 의견 4개(+stance), 추천 문구 P1~P6, 조건 5개(라벨·키워드 — 문서의 키워드 표 사용, 부정 판정 규칙 준수, 상충쌍), 후속 질문·선택지 3개, scripted 표결 규칙표, 결과 문구·6개월 뒤·남은 과제. **scripted 반응(reactions)**: anonBoard처럼 조건별 임원 반응 문장을 쓰되 문서의 임원 관점·회의 말투에 맞게 작성하고(각 조건당 1~2개, 상충 조건은 해당 임원의 우려 문장), 문서의 "## 임원별 관점" 아래에 "## scripted 반응" 표로 추가해 둔다(사용자 사후 검토용).
+  2. 레지스트리 `scenarios = [aiApprovalScenario, experienceFirstScenario]`(둘 다 active). anonBoard.ts는 되돌릴 수 있게 파일로 남기되 레지스트리에서 뺀다(aiAssistant.ts와 같은 처리, 주석 갱신). SELECT 카드 2장은 둘 다 선택 가능(T70의 "준비 중" 카드 분기는 status로 남겨 둠).
+  3. `server/scenario-data.ts`: 두 안건의 evidence·원안·조건 라벨을 scenarioId별로 제공(anon-board 항목은 제거 또는 보존 — 서버 테스트에 맞춰). 서버 테스트의 scenarioId 갱신.
+  4. 헤더 `CASE FILE No. NN`을 세션의 안건 caseLabel(01/02)로 표시(SELECT·ATTRACT에서는 "No. --" — 시안 Main.html 형식 유지). BRIEFING 시안의 "CASE 02" 칩도 안건별.
+  5. 테스트: 단위(콘텐츠 검증 테스트가 있으면 두 안건 모두 통과: 키워드가 다른 조건 문구에 걸리지 않는지, 후속 선택지가 정확히 하나의 조건만 제안하는지 — anonBoard의 해당 테스트를 두 안건에 적용), e2e 전부를 새 안건 기준으로 갱신(기본 안건은 ① `ai-approval`; 상충 흐름 테스트는 ②의 DATA_VETO↔EXP_ONLY 또는 ①의 REVIEW↔FULL_AUTO로 의도 유지), 스크린샷 전부 재생성(두 해상도).
+  6. 문서: `docs/SCENARIO_*.md`에 구현 파일 경로·키워드 최종본 반영, `docs/SCENARIO_ANON_BOARD.md`는 "이전 안건(보존)" 표시, README·CLAUDE_IMPLEMENTATION·AGENT_BOARDROOM_SPEC·FACILITATOR_GUIDE의 안건 서술을 두 안건으로, `docs/TASKS.md` 진행 상황.
+- 허용 경로: `src/content/`, `server/scenario-data.ts`, `server/**/*.test.ts`·`tests/`, `src/components/parts/Header.tsx`·`src/components/screens/BriefingScreen.tsx`(CASE 라벨만), `src/styles/`(라벨 폭 조정만), `e2e/`, `docs/`, `README.md`, `CLAUDE_IMPLEMENTATION.md`.
+- 하지 말 것: 문서의 확정 문구 변경, 판정·조건 추출 규칙(src/domain) 변경, 프롬프트 변경(T79), 화면 레이아웃 변경.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공(두 안건 모두 scripted 완주 e2e 1개씩), 두 해상도 페이지 스크롤 없음, 스크린샷 갱신. 문서의 scripted 반응 표 작성.
+- 크기: L.
+
+## T79 live 프롬프트 v8 — 안건별 임원 렌즈 + 첫 의견 출발 성향, 새 평가 세트 실측
+
+- 목표(2026-10-02 사용자 결정): live에서도 임원 네 명의 첫 의견이 **찬성 1 · 반대 2 · 미정 1**로 균형 있게 갈리고 각자 특성이 드러나도록, 안건별 **렌즈(관점·무겁게 보는 자료)** 와 **첫 의견 단계에 한한 출발 성향**을 프롬프트에 준다. 발언 문장·최종 표는 모델이 정한다(정답표 금지 원칙 유지). 반응·후속·표결 단계에는 출발 성향을 주지 않는다(렌즈만).
+- 렌즈·출발 성향(두 안건 공통 배치: CEO 찬성 쪽, CFO 반대 쪽, CAIO 미정, CISO 반대 쪽):
+  - ① CEO: 결재 처리 기록의 대기 2.8일을 "조직이 멈추는 문제"로 본다 / CFO: 시범 집계의 규칙 밖 승인을 전사 규모의 비용 리스크로 본다 / CAIO: 승인 사유를 시스템이 남길 수 있는지가 판단 기준 / CISO: 감사 메모의 기록 부재를 권한 위임의 책임 문제로 본다.
+  - ② CEO: 결정 복기(4:3)를 "어느 쪽도 늘 맞지 않으니 책임지는 사람이 방향을 잡아야"로 본다 / CFO: 실패 사례의 데이터 경고 무시 손실을 통제 실패로 본다 / CAIO: 예측 보고의 전례 없는 상황 오차를 "모델이 약한 범위"로 본다 / CISO: 인터뷰 메모의 기록 부재를 사후 검증 불가 문제로 본다.
+- 읽을 것: `server/prompts/common.ts`·`roles/index.ts`(EXEC_DECISION_RULE)·`roles/*.ts`·`version.ts`, `server/scenario-data.ts`, `server/handlers/round.ts`(stage별 프롬프트 조립), `scripts/eval-set-run.ts`·`docs/eval/tuning-v7.md`(측정 항목·형식), `docs/AGENT_BOARDROOM_SPEC.md` 1·2장(정답표 금지, 역할표).
+- 만들 것:
+  1. `server/scenario-data.ts`에 scenarioId별 `roleLenses: Record<RoleId, { lens: string; evidenceIds: string[]; opening: 'FOR'|'AGAINST'|'UNDECIDED' }>`.
+  2. 프롬프트: 임원 전용 블록에 `<role_lens>`(렌즈 + 무겁게 볼 자료명)를 모든 발언 단계에, `<opening_stance>`는 **OPINIONS 단계에만**("당신은 이 안건에 __ 쪽으로 기운 채 회의에 들어옵니다. 출발점이지 결론이 아니며 자료·참가자 조건·논의에 따라 바꿀 수 있습니다"). 비서실장 refine·summarize 프롬프트에는 새지 않게(EXEC_DECISION_RULE과 같은 위치). `PROMPT_VERSION = 'v8'`, version.ts 이력 한 줄.
+  3. 평가 세트: `scripts/eval-set-run.ts`의 케이스를 두 안건 기준으로 재작성(안건별 경로: 조건 없음 / 조건 보완(각 임원이 찬성하는 조합) / 상충 / 요청형, 변형 2종 — 기존 구조 유지). 측정 항목에 **OPINIONS stance 분포(역할별, 의도한 출발 성향과 일치율)** 와 **조건 보완 경로에서 반대·미정 임원이 돌아서는 비율(VOTE YES)** 추가. 실행은 **1회**(실제 키, `docs/eval/tuning-v8-after.jsonl`), 결과를 `docs/eval/tuning-v8.md`에 기록(before는 크레딧 여유가 있을 때만 v7로 1회, 없으면 after만). 검증 실패 0·stance 누락 0·존댓말 위반 0 기준 유지.
+  4. 문서: AGENT_BOARDROOM_SPEC 2장(렌즈·출발 성향은 정답표가 아님을 명시), README/DEPLOY의 프롬프트 버전, FACILITATOR_GUIDE "임원이 비슷한 말을 할 때" 항목 갱신.
+- 허용 경로: `server/`, `scripts/eval-set-run.ts`, `docs/`, `README.md`, `tests/server/`.
+- 하지 말 것: 발언 문장·최종 표를 프롬프트에 넣기, scripted 표결표 전달, 평가 세트 2회 이상 실행(크레딧), src/domain·화면 변경.
+- 완료 확인: `npm run check && npm run build` 성공, 서버 단위 테스트(렌즈·출발 성향이 OPINIONS에만 들어가고 비서실장 프롬프트에 없음), 실측 문서에 분포표.
+- 크기: M.
