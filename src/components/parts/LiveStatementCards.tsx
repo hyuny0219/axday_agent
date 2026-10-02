@@ -15,10 +15,15 @@
 // T74(S4_Reactions 시안 그대로): variant='reaction'(REACTIONS)은 'grid'와 같은 틀
 // (종이-2 배경·1px 테두리·역할색 왼쪽 4px 띠)을 쓰지만 머리줄은 더 작고 코드 칩·
 // 아바타가 없다(시안에 없다). 상태 칩은 판단 중/응답 없음 대신 유지/바뀜/응답 없음을
-// 보여준다 — "바뀜" 여부는 서버가 따로 내려주지 않으므로 같은 역할의 OPINIONS 발언과
-// 이번 REACTIONS 발언 텍스트가 같은지(trim 비교)로 가른다. 실패 카드는 "응답 없는
-// 임원 다시 요청" 버튼을 (그리드 아래 공용 버튼이 아니라) 카드 안에 그대로 그린다
-// (시안 그대로).
+// 보여준다. 실패 카드는 "응답 없는 임원 다시 요청" 버튼을 (그리드 아래 공용 버튼이
+// 아니라) 카드 안에 그대로 그린다(시안 그대로).
+// PR #12 Codex 3차 검토 1: 같은 역할의 OPINIONS·REACTIONS 발언 "텍스트"가 같은지로
+// 유지/바뀜을 갈랐더니, 입장은 그대로인데 문장만 다시 쓴 경우(거의 항상 — mock
+// 제공자도 단계마다 다른 문구를 낸다)까지 "바뀜"으로 보였다. 두 발언의 stance
+// 필드(T63, live 응답이 그대로 옮겨 싣는 값)를 비교해 같으면 "유지", 다르면 "바뀜"
+// 으로 가른다 — 문장(text)은 더는 유지/바뀜 판정에 쓰지 않고 본문 표시에만 쓴다.
+// 어느 한쪽이라도 stance가 없으면(응답 전·실패) 비교할 근거가 없으므로 "유지"로
+// 본다(기존 관행과 같다 — 변했다는 확증이 없으면 바뀌지 않은 것으로 다룬다).
 // PR #12 Codex 1차 검토(P2-b): 실패 역할이 둘 이상이면 카드마다 버튼을 그려
 // 같은 testid(retry-failed-roles)가 여러 번 나오고(strict 모드 단언이 깨짐), 720에서
 // 4명 모두 실패하면 잘릴 수 있었다. 첫 번째 실패한 카드에만 버튼 하나를 그리고
@@ -119,8 +124,9 @@ export function LiveStatementCards({
         const status = roleStatus[roleId];
         const statement = statements.find((item) => item.roleId === roleId && item.stage === stage);
         const stance = stances[roleId];
-        // REACTIONS만: 같은 역할의 OPINIONS 발언과 텍스트가 같으면(또는 OPINIONS 발언이
-        // 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면 "바뀜"이다.
+        // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
+        // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
+        // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다).
         const opinionStatement = isReaction
           ? statements.find((item) => item.roleId === roleId && item.stage === 'OPINIONS')
           : undefined;
@@ -128,7 +134,9 @@ export function LiveStatementCards({
           isReaction &&
           status === 'answered' &&
           !!statement &&
-          (!opinionStatement || opinionStatement.text.trim() === statement.text.trim());
+          (opinionStatement?.stance == null ||
+            statement.stance == null ||
+            opinionStatement.stance === statement.stance);
 
         return (
           <article

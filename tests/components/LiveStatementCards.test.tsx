@@ -24,11 +24,12 @@ const statements: Statement[] = [
     id: 's0',
     roleId: 'CEO',
     stage: 'OPINIONS',
-    text: '원안에 찬성합니다.',
+    text: '원안에는 반대합니다.',
     evidenceIds: [],
     referencedStatementIds: [],
     concerns: [],
     suggestedConditionIds: [],
+    stance: 'AGAINST',
     source: 'live',
     createdAt: 0,
   },
@@ -36,11 +37,12 @@ const statements: Statement[] = [
     id: 's1',
     roleId: 'CEO',
     stage: 'REACTIONS',
-    text: '작게 시작하는 데 찬성합니다.',
+    text: '조건을 보니 작게 시작하는 데 찬성합니다.',
     evidenceIds: ['E3'],
     referencedStatementIds: [],
     concerns: [],
     suggestedConditionIds: [],
+    stance: 'FOR',
     source: 'live',
     createdAt: 0,
   },
@@ -83,7 +85,7 @@ describe('LiveStatementCards', () => {
     // 컨테이너는 'grid'와 같은 2열 그리드이고, 옛 답글형 클래스는 없다.
     expect(screen.getByTestId('live-round-REACTIONS')).toHaveClass('live-round__cards');
     expect(screen.getByTestId('live-round-REACTIONS')).not.toHaveClass('live-round__cards--reply');
-    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('작게 시작하는 데 찬성합니다.');
+    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('조건을 보니 작게 시작하는 데 찬성합니다.');
     expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
     expect(screen.getByTestId('statement-failed-CAIO')).toHaveTextContent('응답 지연');
     expect(screen.getByTestId('live-role-CEO')).toHaveClass(
@@ -91,11 +93,97 @@ describe('LiveStatementCards', () => {
       'live-statement--grid',
       'live-statement--reaction',
     );
-    // CEO의 OPINIONS 발언과 REACTIONS 발언 텍스트가 다르므로 "바뀜"(유지 아님)으로 본다.
+    // CEO의 OPINIONS stance(AGAINST)와 REACTIONS stance(FOR)가 다르므로 "바뀜"(유지
+    // 아님)으로 본다(PR #12 Codex 3차 검토 1 — 문장이 아니라 stance로 가른다).
     expect(screen.getByTestId('live-role-CEO')).not.toHaveClass('live-statement--maintained');
     expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
     expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('미정');
+  });
+
+  it("variant='reaction'에서 stance가 같으면 문장이 다시 쓰여도 '유지'로 본다(PR #12 Codex 3차 검토 1)", () => {
+    const sameStanceStatements: Statement[] = [
+      {
+        id: 's2',
+        roleId: 'CFO',
+        stage: 'OPINIONS',
+        text: '찬성합니다.',
+        evidenceIds: [],
+        referencedStatementIds: [],
+        concerns: [],
+        suggestedConditionIds: [],
+        stance: 'FOR',
+        source: 'live',
+        createdAt: 0,
+      },
+      {
+        id: 's3',
+        roleId: 'CFO',
+        stage: 'REACTIONS',
+        text: '말씀하신 조건이라면 역시 찬성입니다.',
+        evidenceIds: [],
+        referencedStatementIds: [],
+        concerns: [],
+        suggestedConditionIds: [],
+        stance: 'FOR',
+        source: 'live',
+        createdAt: 1,
+      },
+    ];
+    const answeredRoleStatus: Record<ExecMemberId, RoleStatus> = { ...roleStatus, CFO: 'answered' };
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={answeredRoleStatus}
+        statements={sameStanceStatements}
+        stances={stances}
+        variant="reaction"
+      />,
+    );
+    // 문장은 완전히 다시 쓰였지만 stance(FOR→FOR)가 같으므로 "유지"다.
+    expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--maintained');
+  });
+
+  it("variant='reaction'에서 한쪽이라도 stance가 없으면 '유지'로 본다(비교 근거가 없다)", () => {
+    const noStanceStatements: Statement[] = [
+      {
+        id: 's4',
+        roleId: 'CAIO',
+        stage: 'OPINIONS',
+        text: '검토 중입니다.',
+        evidenceIds: [],
+        referencedStatementIds: [],
+        concerns: [],
+        suggestedConditionIds: [],
+        source: 'live',
+        createdAt: 0,
+      },
+      {
+        id: 's5',
+        roleId: 'CAIO',
+        stage: 'REACTIONS',
+        text: '여전히 검토가 필요합니다.',
+        evidenceIds: [],
+        referencedStatementIds: [],
+        concerns: [],
+        suggestedConditionIds: [],
+        source: 'live',
+        createdAt: 1,
+      },
+    ];
+    const answeredRoleStatus: Record<ExecMemberId, RoleStatus> = { ...roleStatus, CAIO: 'answered' };
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={answeredRoleStatus}
+        statements={noStanceStatements}
+        stances={stances}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-role-CAIO')).toHaveClass('live-statement--maintained');
   });
 
   it("variant='reaction'에서 실패한 역할은 재요청 버튼을 카드 안에 그린다(T74)", () => {

@@ -8,7 +8,7 @@
 //    없으면 "판단 중"으로, 있으면 "응답 지연·확인 필요"로 보여준다.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ReactionsScreen } from '../../src/components/screens/ReactionsScreen';
 import { anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
@@ -146,6 +146,47 @@ describe('ReactionsScreen', () => {
 
     expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent('판단 중');
     expect(screen.queryByTestId('statement-failed-CAIO-opinions')).not.toBeInTheDocument();
+  });
+
+  it('scripted에서도 02(최초 의견) 행은 조건 확정 전 입장을, 04(반응) 행은 현재 입장을 보여준다(PR #12 Codex 3차 검토 2)', () => {
+    // anonBoard의 CFO 표결 규칙: 조건 없음(기본) → 반대, PILOT+MEASURE 확정 → 찬성.
+    const opinions: Opinion[] = [
+      {
+        id: 'op1',
+        originalText: '한 게시판에서 시범 운영하고 효과를 측정합시다.',
+        selectedPhraseIds: ['P1', 'P4'],
+        confirmedConditionIds: ['PILOT', 'MEASURE'],
+        createdAt: 0,
+      },
+    ];
+    // App.tsx가 stancesFor로 계산해 넘기는 "현재" stances — PILOT+MEASURE가 확정된
+    // 뒤라 CFO는 찬성이다.
+    const currentStances: Record<ExecMemberId, Stance> = { ...stances, CFO: 'FOR' };
+
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        opinions={opinions}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={currentStances}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('open-evidence'));
+    const dialog = screen.getByTestId('evidence-dialog');
+
+    // 오른쪽 종이의 .reaction-card도 같은 직함 문구를 쓰므로, 팝업 안으로 범위를
+    // 좁혀 찾는다.
+    const cfoArticles = within(dialog)
+      .getAllByText('재무책임임원(CFO)')
+      .map((el) => el.closest('.evidence-dialog__statement') as HTMLElement);
+    const opinionArticle = cfoArticles.find((el) => el.textContent?.includes('02 임원 의견'));
+    const reactionArticle = cfoArticles.find((el) => el.textContent?.includes('04 반응'));
+    expect(opinionArticle).toHaveTextContent('반대 쪽');
+    expect(reactionArticle).toHaveTextContent('찬성 쪽');
   });
 
   it('02 발언이 없고 roundLog에 그 역할의 OPINIONS 실패 기록이 있으면 "응답 지연·확인 필요"로 보여준다', () => {

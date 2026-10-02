@@ -47,6 +47,11 @@
 // stances를 공유하던 것을 각 발언 자체의 Statement.stance로 바꾸고, 02 발언이 아직
 // 없을 때의 상태를 roundLog(App.tsx, T41)에서 그 역할의 OPINIONS 결과만 찾아 판정하게
 // 했다(자세한 이유는 아래 dialogStatements 바로 위 주석).
+// PR #12 Codex 3차 검토 2: live뿐 아니라 scripted도 같은 문제가 있었다 — 02·04 행이
+// 둘 다 "현재"(참가자가 확정한 조건까지 반영된) stances를 썼다. scripted의 02(최초
+// 의견 단계)는 아직 아무 조건도 확정되지 않았을 때의 입장이어야 하므로,
+// domain/stance.ts의 scriptedStances를 opinions=[]로 다시 불러(조건 없는 표결
+// 규칙표 결과) 02 전용 stance를 따로 계산한다. 04는 그대로 현재 stances를 쓴다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -59,6 +64,7 @@ import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import { reactionsFor } from '../reactionsFor';
+import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -425,12 +431,16 @@ export function ReactionsScreen({
         return [opinionEntry, reactionEntry];
       });
     }
+    // scripted 02(최초 의견) 행은 아직 아무 조건도 확정되지 않았을 때의 입장이어야
+    // 한다 — opinions=[]로 다시 계산해(latestConfirmedConditionIds([])===[]) "지금"
+    // stances(04, 참가자가 확정한 조건까지 반영)와 분리한다(PR #12 Codex 3차 검토 2).
+    const initialStances = scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] });
     return EXEC_MEMBER_ORDER.flatMap((memberId) => {
       const stance = stances[memberId];
       const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
       const opinionEntry: EvidenceDialogStatementView = {
         memberId,
-        stance,
+        stance: initialStances[memberId],
         status: 'answered',
         text: initial?.text ?? '',
         evidenceLabel: initial ? lastEvidenceLabel(scenario, initial.evidenceIds) : null,

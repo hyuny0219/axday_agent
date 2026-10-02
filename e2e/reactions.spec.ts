@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures';
+import { test, expect, type Page, type Route } from './fixtures';
 
 /**
  * REACTIONS 후속 입력에서 이전에 확정한 조건과 새 제안이 충돌할 때 UI가 전달을
@@ -279,4 +279,73 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
 
   await page.getByRole('button', { name: 'AI 비서실장 숨기기' }).click();
   await expect(info).not.toHaveAttribute('inert', '');
+});
+
+// PR #12 Codex 3차 검토 1: 유지/바뀜 배지는 텍스트가 아니라 stance로 가른다 — 같은
+// 역할이 OPINIONS·REACTIONS에서 다른 stance로 답하면 "바뀜", 같은 stance로 답하면
+// (문장이 완전히 다시 쓰여도) "유지"다.
+const REACTION_BADGE_EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
+type ReactionBadgeExecRoleId = (typeof REACTION_BADGE_EXEC_ROLE_IDS)[number];
+
+function reactionBadgeStatementEntry(
+  roleId: ReactionBadgeExecRoleId,
+  stage: string,
+  stance: 'FOR' | 'AGAINST' | 'UNDECIDED',
+) {
+  return {
+    roleId,
+    status: 'answered',
+    statement: {
+      roleId,
+      message: `[mock] ${roleId}의 ${stage} 발언(문구는 매번 다시 씁니다).`,
+      evidenceIds: [],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      stance,
+    },
+    latencyMs: 5,
+    modelId: 'mock',
+    promptVersion: 'mock',
+  };
+}
+
+/** OPINIONS에서는 CEO만 반대, REACTIONS에서는 전원 찬성으로 돌려준다 — CEO는 stance가
+ * 바뀌고(반대→찬성), 나머지는 그대로(찬성 유지)인 조합을 결정적으로 재현한다. */
+async function mockOpinionsAgainstThenReactionsFor(page: Page): Promise<void> {
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as {
+      stage: string;
+      roleIds?: ReactionBadgeExecRoleId[];
+    };
+    const targets = body.roleIds ?? REACTION_BADGE_EXEC_ROLE_IDS;
+    const json = targets.map((roleId) => {
+      const stance = body.stage === 'OPINIONS' && roleId === 'CEO' ? 'AGAINST' : 'FOR';
+      return reactionBadgeStatementEntry(roleId, body.stage, stance);
+    });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같은 stance면 문장이 달라도 "유지"로 표시한다(PR #12 Codex 3차 검토 1)', async ({
+  page,
+}) => {
+  await mockOpinionsAgainstThenReactionsFor(page);
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByTestId('submit-opinion').click();
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+  // CEO는 OPINIONS(반대)→REACTIONS(찬성)로 stance가 바뀌었으므로 "유지" 클래스가 없다.
+  await expect(page.getByTestId('live-role-CEO')).not.toHaveClass(/live-statement--maintained/);
+  // CFO는 두 단계 모두 찬성(stance 동일, 문장은 매번 다시 씀)이므로 "유지"다.
+  await expect(page.getByTestId('live-role-CFO')).toHaveClass(/live-statement--maintained/);
 });
