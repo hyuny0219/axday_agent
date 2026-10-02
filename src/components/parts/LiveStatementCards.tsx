@@ -12,6 +12,11 @@
 // (OpinionsScreen·ReactionsScreen)가 실패한 roleId 목록을 계산해 onRetryFailedRoles로
 // 넘긴다 — 이 컴포넌트는 자동 재시도를 하지 않고, 눌렀을 때만 한 번 부른다(라운드당 1회
 // 제한은 호출부의 상태다).
+// T72(S2_Opinions 시안 그대로): variant='grid'(OPINIONS)는 OpinionsScreen의
+// .opinion-card(scripted)와 같은 시안 카드 모양(타자기 역할 코드·역할색 왼쪽 띠·
+// "근거 · <자료명>" pill 하나)을 쓴다. REACTIONS(variant='reply')는 S4_Reactions가
+// 아직 이 카드를 그대로 쓰므로(T74 이전) markup·CSS를 바꾸지 않는다 — 아래 분기는
+// variant==='grid'일 때만 새 요소를 더한다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
@@ -20,6 +25,14 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import { Avatar } from './Avatar';
 import '../../styles/screens/live.css';
+
+/** 카드 역할색 띠·상태 칩 색에 쓰는 소문자 modifier(live.css가 읽는다). OpinionsScreen의
+ * STANCE_MODIFIER와 같은 값이다. */
+const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
+  FOR: 'for',
+  AGAINST: 'against',
+  UNDECIDED: 'undecided',
+};
 
 export interface LiveStatementCardsProps {
   scenario: Scenario;
@@ -71,6 +84,7 @@ export function LiveStatementCards({
   onRetryFailedRoles,
   retryDisabled = false,
 }: LiveStatementCardsProps) {
+  const isGrid = variant === 'grid';
   const containerClass = `live-round__cards${variant === 'reply' ? ' live-round__cards--reply' : ''}`;
   const hasFailedRole = EXEC_MEMBER_ORDER.some((roleId) => roleStatus[roleId] === 'failed');
   return (
@@ -79,29 +93,55 @@ export function LiveStatementCards({
       {EXEC_MEMBER_ORDER.map((roleId) => {
         const status = roleStatus[roleId];
         const statement = statements.find((item) => item.roleId === roleId && item.stage === stage);
+        const stance = stances[roleId];
 
         return (
           <article
             key={roleId}
-            className={`live-statement live-statement--${status}`}
+            className={`live-statement live-statement--${status}${
+              isGrid ? ` live-statement--grid live-statement--stance-${STANCE_MODIFIER[stance]}` : ''
+            }`}
             data-testid={`live-role-${roleId}`}
           >
             <div className="live-statement__head">
-              <Avatar memberId={roleId} size="sm" />
+              {/* OPINIONS(시안 S2_Opinions)는 아바타 대신 타자기 역할 코드를 쓰고,
+                  REACTIONS(variant='reply')는 기존 아바타를 그대로 쓴다(T74 이전). */}
+              {isGrid ? (
+                <span className="live-statement__code" aria-hidden="true">
+                  {roleId}
+                </span>
+              ) : (
+                <Avatar memberId={roleId} size="sm" />
+              )}
               <h3 className="live-statement__member">{MEMBER_LABELS[roleId]}</h3>
-              <span className="live-statement__mood" data-testid={`exec-mood-label-${roleId}`}>
-                {STANCE_LABEL[stances[roleId]]}
+              <span
+                className={`live-statement__mood${
+                  isGrid ? ` live-statement__mood--${STANCE_MODIFIER[stance]}` : ''
+                }`}
+                data-testid={`exec-mood-label-${roleId}`}
+              >
+                {STANCE_LABEL[stance]}
               </span>
             </div>
             {status === 'answered' && statement ? (
               <div data-testid={`statement-card-${roleId}`}>
                 <p className="live-statement__text">{statement.text}</p>
-                {statement.evidenceIds.length > 0 && (
-                  <ul className="live-statement__evidence">
-                    {statement.evidenceIds.map((id) => (
-                      <li key={id}>{evidenceLabel(scenario, id)}</li>
-                    ))}
-                  </ul>
+                {isGrid ? (
+                  // 시안은 "근거 · <자료명>" pill 하나만 둔다(evidenceIds가 여럿이면
+                  // 마지막 것, OpinionsScreen.lastEvidenceLabel과 같은 규칙).
+                  statement.evidenceIds.length > 0 && (
+                    <span className="live-statement__evidence-pill">
+                      근거 · {evidenceLabel(scenario, statement.evidenceIds[statement.evidenceIds.length - 1]!)}
+                    </span>
+                  )
+                ) : (
+                  statement.evidenceIds.length > 0 && (
+                    <ul className="live-statement__evidence">
+                      {statement.evidenceIds.map((id) => (
+                        <li key={id}>{evidenceLabel(scenario, id)}</li>
+                      ))}
+                    </ul>
+                  )
                 )}
                 {statement.referencedStatementIds.length > 0 && (
                   <p className="live-statement__references">

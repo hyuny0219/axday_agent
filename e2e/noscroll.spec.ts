@@ -92,7 +92,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(evidenceDialog).toHaveCount(0);
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
   await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();

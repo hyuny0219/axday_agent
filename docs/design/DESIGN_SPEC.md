@@ -63,7 +63,7 @@ PPT의 미래적인 이사회 분위기를 실제 조작 가능한 브라우저 
 | 대기 | ~~짙은 회의실 분위기 + 큰 제목 + 단일 CTA~~(v1.3 T71에서 시안 S0_Attract 그대로로 재작성 — 아래 v1.3 절 참고) | 불필요한 설정 없이 시작 |
 | 안건 선택 | ~~3열 대형 카드, 하단 이사회 입장~~(v1.3 T70에서 시안 S1_Select 그대로로 재작성 — 카드 2장, 아래 v1.3 절 참고) | 카드 선택 테두리·체크; 준비 중 명시 |
 | 브리핑 | 진행 스트립 → 의장 브리핑 블록(상황·결정 질문·내 역할) → 상단 안건 → 자료 4장(자료명·해석 한 줄·원문 상시 노출, 자료 ID 미표기). 핵심 쟁점 3개 카드·조건 미리보기 4칩·"체험용 사전 구성" 표기는 T52(2026-09-23)에서 제거 — 현재 배치는 v1.0 6절 | 진행 스트립은 유지(BRIEFING ①). 작은 화면에서는 세로 배치 |
-| 임원 의견 | 상단 4열 임원 카드, 중앙 쟁점, 하단 CTA | 설명은 순차 영상 대기 없이 읽기 가능 |
+| 임원 의견 | ~~상단 4열 임원 카드, 중앙 쟁점, 하단 CTA~~(v1.3 T72에서 시안 S2_Opinions 그대로로 재작성 — 오른쪽 열이 종이 한 장, 카드 2×2, 아래 v1.3 3절 참고) | 설명은 순차 영상 대기 없이 읽기 가능 |
 | 의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우 textarea; 하단 AI/전달 | 체크박스와 textarea 모두 실제 입력 요소 |
 | 반응 | 내 발언 카드 아래 임원 반응을 답글형(들여쓰기·연결선)으로, 변한 임원만 강조 → “〈임원〉이 묻습니다” 질문(안건 ② 사내 게시판 익명제에서는 CFO의 신고 처리 담당자 질문) + 빠른 답 3개 → ‘직접 답하기’(접힘) | 빠른 답만으로 마무리 가능. 직접 답하기를 열면 300자 입력과 조건 칩이 나타난다 |
 | 최종 안건 | 중앙 큰 안건 카드·반영 조건·남은 과제 | 이 안건으로 표결 버튼 |
@@ -360,7 +360,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - 접근성·테스트: `tests/components/DiscussScreen.test.tsx`에 BriefingScreen.test.tsx와 같은 형태의 테스트(팝업 열기 전 `evidence-card` 없음 → 버튼 클릭 후 4장 → Esc로 닫히고 포커스가 버튼으로 돌아옴)를 추가했다. `e2e/discuss.spec.ts`에 버튼 → 팝업 → Esc 닫힘·포커스 복귀 흐름을 1건 추가하고, `e2e/noscroll.spec.ts`의 DISCUSS 구간(옛 "E4 아코디언 펼침" 단언)을 자료 팝업 열기/닫기 + 비서실장 드로어 열기/닫기 조합으로 다시 썼다. `e2e/screenshots.spec.ts`에 두 해상도의 `discuss.png`(버튼 행만 보이는 상태)를 갱신하고 `discuss-evidence.png`(팝업 연 상태)를 새로 추가했다.
 - 검수: `npm run check && npm run build && npx playwright test -c playwright.local.config.ts`가 통과해야 한다. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드 없이 버튼만 있고(추천 문구·임원 카드와 겹치지 않음) 페이지 스크롤이 없다. 팝업이 BRIEFING과 동일하게 열리고 닫힌다.
 
-## v1.3 승인된 C안 시안(S0~S6) 그대로 — ATTRACT·SELECT 재작성 (T70·T71, 2026-10-02)
+## v1.3 승인된 C안 시안(S0~S6) 그대로 — ATTRACT·SELECT·OPINIONS 재작성 (T70·T71·T72, 2026-10-02)
 
 배경(2026-10-02 사용자 지시, "시안 이탈 금지"): `docs/design/mockups/`에 S0~S6·팝업까지 승인된 C안 시안 8장(미리보기 `preview/*.png`)이 자리 잡았다. 지금까지 각 화면은 "기밀 작전실" 스킨의 토큰·부품(브래킷·스캔라인·타자기 라벨·도장)을 썼지만 배치·문구·크기는 화면마다 임의로 다듬어져 있었다. 이번 절부터는 화면을 재작업할 때마다 해당 시안 HTML의 인라인 스타일 값을 그대로 옮긴다 — 구성·순서·문구·색·서체·도장·버튼 모양 중 시안에 없는 것을 더하거나 시안에 있는 것을 빼지 않는다. 시안은 1280×720 캔버스 한 장이고, 1920×1080에서는 같은 배치를 키운 값을 쓴다(아래 각 절의 "두 해상도 값" 참고 — 1280 이하 미디어쿼리는 시안 값 그대로, 1920 기본값은 1.25배로 두 해상도 값의 조합은 tokens.css의 다른 반응형 쌍과 비슷한 비율이다).
 
@@ -381,7 +381,14 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - **풀블리드**: SELECT(1절)와 같은 음수 margin 상쇄 구조 — `.app-main` padding을 없애고 시안 값(20px 24px/1280·25px 30px/1920)으로 다시 준다.
 - 접근성·테스트: `e2e/screenshots.spec.ts`에 `attract.png`(두 해상도) 캡처를 추가했다. 기존 `e2e/live.spec.ts`·`e2e/a11y.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/viewport-fit.spec.ts`의 `attract-mode-badge`·"체험 시작" 단언은 그대로 통과한다(버튼 접근 가능한 이름이 "체험 시작 ▶"로 바뀌었지만 Playwright의 기본 부분일치 규칙상 "체험 시작"으로 여전히 찾아진다).
 
-### 3. 검수
+### 3. 임원 의견(OPINIONS) — 시안 S2_Opinions (T72)
 
-`npm run check && npm run build && npx playwright test -c playwright.local.config.ts`(mock 서버 + 격리 포트) 전체 124건이 통과한다. 두 해상도 모두 페이지 스크롤이 없고, `docs/screenshots/{desktop-1080,desktop-720}/{select,attract}.png`가 `docs/design/mockups/preview/{S1_Select,S0_Attract}.png`와 같은 구성으로 보인다(육안 대조 완료).
+- **오른쪽 열을 "종이 한 장"으로**: 그동안 `.app-body__content`는 배경이 없어 개별 카드만 종이-2였다 — 시안은 오른쪽 열 전체가 종이 한 장(`--paper` 배경 + `--shadow-paper-main`)이다. 새 `.opinions-screen__paper`가 그 패널 자체이고(`OpinionsScreen.tsx`·`opinions.css`), 그 안에 우상단 CONFIDENTIAL 도장(`--stamp-red`, select.css의 scenario-card__stamp--confidential과 같은 관행) + "STEP 02" 칩 + 제목("임원 네 명의 첫 의견", 옛 "임원들의 첫 의견"에서 시안 문구로 수정) + 안내 한 줄과 타자기 집계("찬성 n · 반대 n · 미정 n", `stances` prop을 실제로 합산 — 하드코딩 아니다)를 둔다.
+- **카드를 시안 모양으로 통합**: scripted(`.opinion-card`)·live(`LiveStatementCards`의 `variant='grid'`, 새 `.live-statement--grid`)가 같은 시안 카드를 그린다 — 종이-2 배경, 1px `--paper-border` 테두리 + 역할색 왼쪽 4px 띠(찬성 `--paper-vote-yes`·반대 `--stamp-red`·미정 `--ink-muted`, 시안 hex `#1f8f5f`는 Codex 17차 지적으로 이미 폐기된 색이라 기존 투표 녹색 토큰을 그대로 재사용했다), 머리줄(타자기 역할 코드 + 직함 굵게 + 역할색 stance 텍스트 + 각진 "발언" 칩 — 기존 pill(border-radius 999px)은 시안에 없어 0으로 되돌렸다), 본문, "근거 · <자료명>" pill 하나(evidenceIds가 여럿이면 마지막 것 — 시안 데이터와 대조해 확인한 규칙). live 실패 카드는 S4_Reactions CISO 카드와 같은 조합(전체 테두리만 빨강, 왼쪽 띠는 실제 stance색 그대로, "응답 없음" 칩 + "응답 지연·확인 필요" + 기존 "응답 없는 임원 다시 요청" 버튼은 그대로 — CSS 소스 순서로 border-left-color를 stance 규칙이 다시 덮어쓰게 했다, 실측 `getComputedStyle`로 `borderLeftColor: rgb(92,88,80)`·`borderTopColor: rgb(178,59,59)` 확인).
+- **REACTIONS는 건드리지 않는다**: `LiveStatementCards`의 `variant='reply'`(REACTIONS)는 이 카드를 그대로 쓰므로(T74 이전), 새 규칙은 모두 `.live-statement--grid`로 범위를 좁혔다 — 아바타도 OPINIONS만 타자기 역할 코드로 바꾸고 REACTIONS는 기존 아바타를 그대로 쓴다.
+- 접근성·테스트: `e2e/flow-early.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/viewport-fit.spec.ts`의 제목 단언을 새 문구로 갱신했다. `e2e/screenshots.spec.ts`의 `opinions.png`(두 해상도)를 새 레이아웃으로 갱신했다(다른 화면 스크린샷은 재인코딩 노이즈만 있어 되돌렸다).
+
+### 4. 검수
+
+`npm run check`(단위 384)·`npm run build`·`npx playwright test -c playwright.local.config.ts`(mock 서버 + 격리 포트, 124건) 모두 통과한다. 두 해상도 모두 페이지 스크롤이 없고, `docs/screenshots/{desktop-1080,desktop-720}/{select,attract,opinions}.png`가 `docs/design/mockups/preview/{S1_Select,S0_Attract,S2_Opinions}.png`와 같은 구성으로 보인다(육안 대조 완료). live mock(CISO 1명 실패)으로 실패 카드 모양도 별도로 확인했다.
 

@@ -145,6 +145,160 @@
   font-size: 14px;
 }
 
+/* T72(S2_Opinions 시안 그대로): variant='grid'(OPINIONS)만 시안 카드 모양으로 다시
+   그린다. REACTIONS(variant='reply')는 이 블록 밖의 기존 규칙을 그대로 쓴다(T74
+   이전) — 아래는 모두 .live-statement--grid로 범위를 좁혀 REACTIONS 모양을 건드리지
+   않는다. 시안은 1280×720이다 — 기본 규칙(1920×1080)에 1.25배 값을 쓰고, @media
+   (max-width: 1280px)에서 시안 값 그대로로 되돌린다(opinions.css의 .opinion-card와
+   같은 수치, select.css·attract.css와 같은 비율). */
+.live-statement--grid {
+  border: 1px solid var(--paper-border);
+  border-left-width: 4px;
+  border-radius: 0;
+  padding: 13px 15px;
+  gap: 8px;
+  box-shadow: none;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+}
+
+/* 실패해도(붉은 테두리) 역할색 왼쪽 띠는 그대로 둔다(S4_Reactions CISO 카드와 같은
+   조합 — 아래 stance 규칙이 .live-statement--failed보다 뒤에 와 border-left-color를
+   다시 덮어써야 해서, 소스 순서가 중요하다). */
+.live-statement--grid.live-statement--failed {
+  border-color: var(--stamp-red);
+}
+
+/* 시안 카드는 발언이 와도 테두리가 --paper-border 그대로다(역할색은 왼쪽 띠만 맡는다)
+   — 기존 .live-statement--answered의 --label 테두리(글로우가 끝난 뒤에도 남는 값)는
+   REACTIONS(reply)에서만 쓰고, 이 변형에서는 되돌린다. 1회 glow(box-shadow)는 그대로
+   재생된다(.live-statement--answered의 animation은 바뀌지 않는다). */
+.live-statement--grid.live-statement--answered {
+  border-color: var(--paper-border);
+}
+
+.live-statement--grid.live-statement--stance-for {
+  border-left-color: var(--paper-vote-yes);
+}
+
+.live-statement--grid.live-statement--stance-against {
+  border-left-color: var(--stamp-red);
+}
+
+.live-statement--grid.live-statement--stance-undecided {
+  border-left-color: var(--ink-muted);
+}
+
+.live-statement--grid .live-statement__head {
+  gap: 10px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid .live-statement__head {
+    gap: 8px;
+  }
+}
+
+/* 타자기 역할 코드("CEO", 시안). 머리줄의 직함이 이미 같은 정보를 담으므로 장식이다. */
+.live-statement__code {
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .live-statement__code {
+    font-size: 11px;
+  }
+}
+
+.live-statement--grid .live-statement__member {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid .live-statement__member {
+    font-size: 14px;
+  }
+}
+
+.live-statement--grid .live-statement__mood {
+  font-size: 14px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid .live-statement__mood {
+    font-size: 11px;
+  }
+}
+
+.live-statement__mood--for {
+  color: var(--paper-vote-yes);
+}
+
+.live-statement__mood--against {
+  color: var(--stamp-red);
+}
+
+.live-statement__mood--undecided {
+  color: var(--ink-muted);
+}
+
+/* 상태 칩(판단 중/발언/응답 없음): 시안은 둥근 pill이 아니라 각진 테두리 칩을 쓴다
+   (S2_Opinions·S4_Reactions 모두 border-radius 없음). 내용·색은 위 공용
+   .live-statement__head::after 규칙을 그대로 물려받고, 모양만 여기서 좁힌다. */
+.live-statement--grid .live-statement__head::after {
+  border-radius: 0;
+  font-family: var(--font-label);
+  padding: 3px 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid .live-statement__head::after {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+}
+
+.live-statement--grid .live-statement__text {
+  font-size: 18px;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .live-statement--grid .live-statement__text {
+    font-size: 14px;
+  }
+}
+
+/* "근거 · <자료명>" pill 하나(시안, 자료 ID는 보여주지 않는다 — T52). */
+.live-statement__evidence-pill {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border: 1px solid var(--paper-border);
+  border-radius: 13px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .live-statement__evidence-pill {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+}
+
 .live-statement__status-text {
   margin: 0;
   color: var(--ink-muted);

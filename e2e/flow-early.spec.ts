@@ -17,6 +17,6 @@ test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await briefingNext.click();
 
-  await expect(page.getByRole('heading', { name: '임원들의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
   await expect(page.getByRole('button', { name: '내 의견 말하기' })).toBeVisible();
 });
