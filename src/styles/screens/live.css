@@ -405,16 +405,6 @@
   }
 }
 
-/* VOTE: 참가자 확정 후 임원 판단을 기다리는 동안(최대 8초) 보여주는 문구. */
-.vote-screen__waiting {
-  margin: 0;
-  padding: var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text-muted);
-}
-
 /* RESULT: 역할별 판단 근거·남은 우려·미표결 사유, 그리고 응답 장애로 판단이 제한됐을 때의
    공통 안내. */
 .result-seat__reason,

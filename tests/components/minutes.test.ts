@@ -8,6 +8,8 @@ import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
 import {
   buildMinutes,
+  formatElapsed,
+  TIME_UNKNOWN,
   upsertRoundLogEntry,
   type MinutesEntry,
   type RoundLogEntry,
@@ -236,5 +238,68 @@ describe('upsertRoundLogEntry', () => {
       { stage: 'OPINIONS', roleId: 'CEO', status: 'answered' },
       { stage: 'OPINIONS', roleId: 'CFO', status: 'pending' },
     ]);
+  });
+});
+
+// T77: 시안 TRANSCRIPT "[mm:ss] 역할" 타임스탬프 — 세션 시작(startedAt) 기준 경과 시간이며,
+// 실측되지 않은 각본 문구·아직 응답하지 않은 역할은 지어내지 않고 TIME_UNKNOWN("--:--")이다.
+describe('formatElapsed', () => {
+  it('시작 시각과 발생 시각이 모두 있으면 mm:ss로 돌려준다', () => {
+    expect(formatElapsed(T0, T0 + 9_000)).toBe('00:09');
+    expect(formatElapsed(T0, T0 + 65_000)).toBe('01:05');
+  });
+
+  it('시작 시각이나 발생 시각 중 하나라도 없으면 TIME_UNKNOWN이다', () => {
+    expect(formatElapsed(null, T0)).toBe(TIME_UNKNOWN);
+    expect(formatElapsed(T0, undefined)).toBe(TIME_UNKNOWN);
+  });
+});
+
+describe('buildMinutes — 타임스탬프(T77)', () => {
+  it('scripted 각본 항목(의장 브리핑 등)은 도착 시각이 없어 TIME_UNKNOWN이다', () => {
+    const session = selectScenario('scripted');
+    const entries = buildMinutes(session, scenario, []);
+    expect(entries[0]).toMatchObject({ id: 'chair-briefing', timeLabel: TIME_UNKNOWN });
+  });
+
+  it('live 응답 발언은 세션 시작 기준 경과 시간을, 아직 응답하지 않은 역할은 TIME_UNKNOWN을 보여준다', () => {
+    let session = selectScenario('live'); // startedAt = T0
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
+    session = {
+      ...session,
+      roleStatus: { CEO: 'answered', CFO: 'pending', CAIO: 'pending', CISO: 'pending' },
+      transcript: {
+        revision: 1,
+        statements: [{ ...statementFor('CEO', 'OPINIONS', '발언입니다.'), createdAt: T0 + 9_000 }],
+      },
+    };
+    let roundLog: RoundLogEntry[] = [];
+    roundLog = upsertRoundLogEntry(roundLog, { stage: 'OPINIONS', roleId: 'CEO', status: 'answered' });
+
+    const entries = buildMinutes(session, scenario, roundLog);
+    expect(entries.find((entry) => entry.id === 'opinion-CEO')).toMatchObject({ timeLabel: '00:09' });
+    expect(entries.find((entry) => entry.id === 'opinion-CFO')).toMatchObject({ timeLabel: TIME_UNKNOWN });
+  });
+
+  it('내("나") 발언은 opinions[].createdAt 기준으로 경과 시간을 보여준다', () => {
+    let session = selectScenario('scripted'); // startedAt = T0
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> DISCUSS
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '작은 범위로 먼저 시작합시다.',
+        selectedPhraseIds: ['P1'],
+        confirmedConditionIds: [],
+      },
+      T0 + 20_000,
+    );
+
+    const entries = buildMinutes(session, scenario, []);
+    expect(entries.find((entry) => entry.id === 'my-opinion')).toMatchObject({
+      speaker: 'PARTICIPANT',
+      timeLabel: '00:20',
+    });
   });
 });
