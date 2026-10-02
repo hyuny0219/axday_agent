@@ -160,12 +160,16 @@
   }
 }
 
-/* CONDITIONS · NOT INCLUDED 2열(시안). */
+/* CONDITIONS · NOT INCLUDED 2열(시안 — 내용 높이만큼만 차지한다. 2026-10-02
+   검수 지적: flex:1로 남는 세로 공간을 억지로 채우면 두 상자 안쪽이 텅 비어
+   보인다 — 시안은 이 두 상자를 내용 높이 그대로 두고, 남는 공간은 바로 아래
+   CHAIR 상자와 바닥 CTA 줄 사이(`.motion-screen__cta-row`의
+   `margin-top:auto`)에 모인다). */
 .motion-screen__cols {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: 10px;
 }
 
