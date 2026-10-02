@@ -29,6 +29,19 @@
 // 4명 모두 실패하면 잘릴 수 있었다. 첫 번째 실패한 카드에만 버튼 하나를 그리고
 // (onClick은 이미 실패한 역할 전체를 다시 부른다), 나머지 실패 카드는 상태 문구만
 // 보여준다 — 4명 실패 레이아웃도 e2e로 확인했다.
+// PR #12 Codex 4차 검토: 참가자가 다음 단계로 넘어간 직후(예: REACTIONS 화면이 막
+// 뜬 순간) roleStatus는 아직 이전 라운드 값('answered')을 들고 있을 수 있다 — 새
+// 라운드의 SET_ROLE_STATUS('pending')는 App.tsx의 useEffect가 커밋 뒤에야 보내므로,
+// 그 틈의 렌더 한두 번은 status==='answered'인데 이번 단계 발언(statement)이 아직
+// 없다. 이때 본문은 이미 `status==='answered' && statement`로 올바로 "판단 중…"을
+// 보여주지만, 유지/바뀜 배지는 className의 `live-statement--answered`를 그대로
+// 물려받아(`isMaintained`도 `!!statement`에서 걸려 false) "바뀜"으로 보였다. '이
+// 단계의 발언이 실제로 있어야만 answered로 본다'는 effectiveStatus로 통일해 본문·
+// 배지·testid가 항상 같은 판단을 쓰게 했다. 'failed'는 건드리지 않았다 — 실패는
+// 원래도 발언을 남기지 않으므로 같은 식으로 "발언 없으면 pending"을 적용하면 실제
+// 실패까지 숨겨 T65 "다시 요청"이 깨진다(새 라운드 시작 시 모든 역할을 먼저
+// 'pending'으로 리셋한 뒤에만 개별 'failed'가 쌓이므로, 이전 라운드의 stale
+// 'failed'는 이 틈에서도 생기지 않는다 — orchestrator/runner.ts runRoundNow 참고).
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
@@ -121,12 +134,17 @@ export function LiveStatementCards({
     <div className="live-round">
       <div className="live-round__cards" data-testid={`live-round-${stage}`}>
       {EXEC_MEMBER_ORDER.map((roleId) => {
-        const status = roleStatus[roleId];
+        const rawStatus = roleStatus[roleId];
         const statement = statements.find((item) => item.roleId === roleId && item.stage === stage);
+        // PR #12 Codex 4차 검토: 'answered'인데 이 단계 발언이 없으면(이전 라운드의
+        // stale 값) 이 카드에 한해 'pending'으로 본다(위 모듈 주석 참고). 'failed'는
+        // 그대로 둔다 — 실패는 정상 상태에서도 발언이 없는 게 맞다.
+        const status: RoleStatus = rawStatus === 'answered' && !statement ? 'pending' : rawStatus;
         const stance = stances[roleId];
         // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
         // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
-        // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다).
+        // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다). status가
+        // 위에서 이미 발언 유무로 보정됐으므로 여기서는 그대로 쓴다.
         const opinionStatement = isReaction
           ? statements.find((item) => item.roleId === roleId && item.stage === 'OPINIONS')
           : undefined;

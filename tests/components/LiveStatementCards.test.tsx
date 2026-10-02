@@ -186,6 +186,44 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('live-role-CAIO')).toHaveClass('live-statement--maintained');
   });
 
+  it("variant='reaction'에서 roleStatus가 'answered'여도 이 단계 발언이 없으면 '판단 중'으로 보이고 유지/바뀜 배지도 붙지 않는다(PR #12 Codex 4차 검토)", () => {
+    // 참가자가 막 REACTIONS로 넘어온 직후처럼, roleStatus는 아직 이전 라운드(OPINIONS)의
+    // 'answered'를 들고 있지만 이 단계(REACTIONS)의 발언은 아직 없는 상태를 재현한다.
+    const staleAnsweredRoleStatus: Record<ExecMemberId, RoleStatus> = { ...roleStatus, CFO: 'answered' };
+    const onlyOpinionsStatement: Statement[] = [
+      {
+        id: 's6',
+        roleId: 'CFO',
+        stage: 'OPINIONS',
+        text: '원안에는 반대합니다.',
+        evidenceIds: [],
+        referencedStatementIds: [],
+        concerns: [],
+        suggestedConditionIds: [],
+        stance: 'AGAINST',
+        source: 'live',
+        createdAt: 0,
+      },
+    ];
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={staleAnsweredRoleStatus}
+        statements={onlyOpinionsStatement}
+        stances={stances}
+        variant="reaction"
+      />,
+    );
+    // 본문은 "판단 중"이고(발언 카드가 아니다), 카드 자체도 pending 클래스를 쓴다 —
+    // stale answered를 그대로 믿었다면 발언 카드도 유지/바뀜 배지도 잘못 나왔을 것이다.
+    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
+    expect(screen.queryByTestId('statement-card-CFO')).not.toBeInTheDocument();
+    expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--pending');
+    expect(screen.getByTestId('live-role-CFO')).not.toHaveClass('live-statement--answered');
+    expect(screen.getByTestId('live-role-CFO')).not.toHaveClass('live-statement--maintained');
+  });
+
   it("variant='reaction'에서 실패한 역할은 재요청 버튼을 카드 안에 그린다(T74)", () => {
     render(
       <LiveStatementCards
