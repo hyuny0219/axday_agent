@@ -32,7 +32,7 @@ const transcriptStatementSchema = z.object({
 
 /** 표결 요청 본문. motion은 MOTION 단계에서 참가자 확인 후 고정된 값 그대로 전달된다.
  * 참가자 표나 다른 임원의 표는 여기 필드로 존재하지 않는다 — 의도적으로 없다. */
-export const voteRequestSchema = z.object({
+const voteRequestShape = z.object({
   sessionId: z.string().min(1),
   requestId: z.string().min(1),
   mode: z.enum(['live', 'scripted']),
@@ -55,7 +55,28 @@ export const voteRequestSchema = z.object({
   /** 테스트/개발 전용: roleId -> mock 장애 주입. 운영 요청에는 없다. */
   mock: z.record(z.string(), z.string()).optional(),
 });
-export type VoteRequest = z.infer<typeof voteRequestSchema>;
+
+/** PR #13 Codex 1차 검토 P2: CONDITION_IDS는 모든 활성 안건의 합집합이라, 안건②(SCOPE 등)
+ * 요청에 안건①의 조건(LIMIT 등)을 실어도 형태상으로는 통과한다. motion.effectiveConditionIds는
+ * scenarioId가 가리키는 안건 자신의 조건이어야만 유효하므로, 등록된 안건이면(알 수 없는
+ * scenarioId는 handleVote가 던지는 unknown_scenario로 따로 처리) 그 안건의 conditions에 없는
+ * ID가 섞이면 400 invalid_request로 거절한다. */
+export const voteRequestSchema = voteRequestShape.superRefine((data, ctx) => {
+  const materials = getScenarioMaterials(data.scenarioId);
+  if (!materials) {
+    return;
+  }
+  const validIds = new Set(materials.conditions.map((c) => c.id));
+  const foreignIds = data.motion.effectiveConditionIds.filter((id) => !validIds.has(id));
+  if (foreignIds.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['motion', 'effectiveConditionIds'],
+      message: `'${data.scenarioId}' 안건에 속하지 않는 조건 ID입니다: ${foreignIds.join(', ')}`,
+    });
+  }
+});
+export type VoteRequest = z.infer<typeof voteRequestShape>;
 
 export interface Ballot {
   vote: VoteResponse['vote'];

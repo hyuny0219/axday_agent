@@ -154,7 +154,7 @@ function buildRoundSystemPrompt(
 async function callRole(
   roleId: ExecRoleId,
   input: RoundRequest,
-  materials: ReturnType<typeof getScenarioMaterials>,
+  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   timeoutMs: number,
   provider: ModelProvider,
   clock: Clock,
@@ -182,7 +182,14 @@ async function callRole(
     const result = await withTimeout(raw, timeoutMs);
     const latencyMs = clock.now() - start;
     const parsed = statementResponseSchema(knownStatementIds).safeParse(result.json);
-    if (!parsed.success || parsed.data.roleId !== roleId) {
+    // PR #13 Codex 1차 검토 P2: CONDITION_IDS는 모든 활성 안건의 합집합이라 스키마만으로는
+    // 다른 안건의 조건(예: 안건①에 SCOPE)도 통과한다. 이 안건(materials) 자신의 조건이
+    // 아니면 모르는 ID와 같은 취급으로 응답 전체를 거절한다(정답표 노출·잘못된 라벨 방지).
+    const validConditionIds = new Set(materials.conditions.map((c) => c.id));
+    const hasForeignCondition =
+      parsed.success &&
+      parsed.data.suggestedConditionIds.some((id) => !validConditionIds.has(id));
+    if (!parsed.success || parsed.data.roleId !== roleId || hasForeignCondition) {
       logCall({
         ts: new Date(clock.now()).toISOString(),
         kind: 'round',

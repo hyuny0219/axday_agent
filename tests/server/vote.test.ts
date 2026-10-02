@@ -203,3 +203,83 @@ describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO'] }).success).toBe(true);
   });
 });
+
+// PR #13 Codex 1차 검토 P2: CONDITION_IDS는 안건①·②의 합집합이라, 스키마만으로는 다른
+// 안건의 조건(예: 안건①에 SCOPE)도 모양상 통과한다. motion.effectiveConditionIds는
+// scenarioId가 가리키는 안건 자신의 조건이어야만 유효하다 — 요청 방향 검증.
+describe('voteRequestSchema의 안건별 조건 검증(PR #13 Codex 1차 검토 P2)', () => {
+  it('안건①(ai-approval) 요청에 안건②의 조건(SCOPE)이 섞이면 거부한다', () => {
+    const input = baseVoteInput({
+      requestId: 'req-foreign-1',
+      scenarioId: 'ai-approval',
+      motion: {
+        id: 'm1',
+        hash: 'h1',
+        text: '안건',
+        effectiveConditionIds: ['SCOPE'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    const result = voteRequestSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it('안건②(experience-first) 요청에 안건①의 조건(LIMIT)이 섞이면 거부한다', () => {
+    const input = baseVoteInput({
+      requestId: 'req-foreign-2',
+      scenarioId: 'experience-first',
+      motion: {
+        id: 'm2',
+        hash: 'h2',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    const result = voteRequestSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it('각 안건 자신의 조건 ID만 실으면 통과한다', () => {
+    const aiApproval = baseVoteInput({
+      requestId: 'req-valid-1',
+      scenarioId: 'ai-approval',
+      motion: {
+        id: 'm3',
+        hash: 'h3',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT', 'REVIEW'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(aiApproval).success).toBe(true);
+
+    const experienceFirst = baseVoteInput({
+      requestId: 'req-valid-2',
+      scenarioId: 'experience-first',
+      motion: {
+        id: 'm4',
+        hash: 'h4',
+        text: '안건',
+        effectiveConditionIds: ['SCOPE', 'REVIEW'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(experienceFirst).success).toBe(true);
+  });
+
+  it('알 수 없는 scenarioId는 조건 검증을 건너뛴다(handleVote가 별도로 unknown_scenario를 던진다)', () => {
+    const input = baseVoteInput({
+      requestId: 'req-unknown-scenario',
+      scenarioId: 'not-a-scenario',
+      motion: {
+        id: 'm5',
+        hash: 'h5',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(input).success).toBe(true);
+  });
+});
