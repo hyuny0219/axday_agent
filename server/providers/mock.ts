@@ -7,6 +7,7 @@
 import type { ModelCompleteRequest, ModelCompleteResult, ModelProvider } from './types';
 import { ModelRefusalError } from './types';
 import { getScenarioMaterials } from '../scenario-data';
+import type { ExecRoleId } from '../validate';
 
 export type MockFault = 'timeout' | 'invalid' | 'late' | 'refusal';
 
@@ -40,6 +41,7 @@ export interface MockRequestEnvelope {
   scenarioId?: string;
 }
 
+// 이 고정 맵은 scenarioId를 모를 때만 쓰는 폴백이다(아래 scenarioAwareRoleEvidence 참고).
 const ROLE_EVIDENCE: Record<string, string> = {
   CEO: 'E1',
   CFO: 'E2',
@@ -48,6 +50,19 @@ const ROLE_EVIDENCE: Record<string, string> = {
 };
 
 const EXEC_ROLE_ORDER = ['CEO', 'CFO', 'CAIO', 'CISO'];
+
+/** PR #13 Codex 2차 검토 후속: 역할별 인용 자료도 scenarioAwareRoleCondition과 같은
+ * 원칙으로 안건에 맞춘다 — roleLenses[role].evidenceIds의 첫 자료를 쓴다(그 역할이
+ * 그 안건에서 실제로 무겁게 보는 자료, live-eval.ts의 roleLensEvidenceCited 휴리스틱이
+ * 보는 바로 그 목록). ai-approval의 CISO 렌즈는 E3인데 옛 고정 맵은 E4를 줘서 live-eval
+ * 휴리스틱이 FAIL로 나오던 불일치를 포함해 둘 다 고쳐진다. scenarioId가 없거나
+ * 등록되지 않은 안건이면(예: envelope을 손으로 구성하는 일부 단위 테스트) 위 고정
+ * 맵으로 되돌아간다. */
+function scenarioAwareRoleEvidence(roleId: string, scenarioId: string | undefined): string {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  const lensEvidenceIds = materials?.roleLenses?.[roleId as ExecRoleId]?.evidenceIds;
+  return lensEvidenceIds?.[0] ?? ROLE_EVIDENCE[roleId] ?? 'E1';
+}
 
 // T78(2026-10-02, 안건 교체)에서 validate.ts의 CONDITION_IDS가 현재 활성 안건(ai-approval·
 // experience-first)의 조건 ID로 바뀌었다. 이 고정 맵은 scenarioId를 모를 때만 쓰는
@@ -102,7 +117,7 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
   return {
     roleId,
     message: `[mock] ${roleId}의 ${stage} 단계 발언입니다.`,
-    evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
+    evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     referencedStatementIds: [],
     concerns: [`[mock] ${roleId} 우려사항`],
     suggestedConditionIds: [scenarioAwareRoleCondition(roleId, env.scenarioId)],
@@ -118,7 +133,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     motionHash: env.motionHash ?? '',
     vote: ROLE_VOTE[roleId] ?? 'NO',
     reason: `[mock] ${roleId}의 판단 근거입니다.`,
-    evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
+    evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     remainingConcerns: [],
   };
 }

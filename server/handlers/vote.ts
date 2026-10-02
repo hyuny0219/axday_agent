@@ -187,6 +187,9 @@ async function callRoleVote(
       roleId,
       motionId: input.motion.id,
       motionHash: input.motion.hash,
+      // PR #13 Codex 2차 검토 후속: mock 제공자가 역할별 인용 자료도 안건에 맞게 고르려면
+      // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
+      scenarioId: input.scenarioId,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({

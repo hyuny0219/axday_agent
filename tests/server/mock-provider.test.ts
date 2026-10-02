@@ -162,6 +162,77 @@ describe('createMockProvider fault injection', () => {
   });
 });
 
+// PR #13 Codex 2차 검토 후속: 역할마다 고정 자료 ID(CISO→E4 등)를 돌려주면 그 안건의
+// roleLenses와 어긋날 수 있다(ai-approval의 CISO 렌즈는 E3). envelope의 scenarioId로
+// roleLenses[role].evidenceIds의 첫 자료를 쓰는지 확인한다.
+describe('createMockProvider 안건별 역할 렌즈 자료(PR #13 Codex 2차 검토 후속)', () => {
+  const AI_APPROVAL_ROLE_EVIDENCE: Record<string, string> = {
+    CEO: 'E1',
+    CFO: 'E2',
+    CAIO: 'E3',
+    CISO: 'E3',
+  };
+  const EXPERIENCE_FIRST_ROLE_EVIDENCE: Record<string, string> = {
+    CEO: 'E1',
+    CFO: 'E4',
+    CAIO: 'E2',
+    CISO: 'E3',
+  };
+
+  it.each(['CEO', 'CFO', 'CAIO', 'CISO'] as const)(
+    'ai-approval statement 응답의 %s evidenceIds는 그 역할의 roleLens 자료다',
+    async (roleId) => {
+      const provider = createMockProvider('mock-model');
+      const user = JSON.stringify({ kind: 'statement', roleId, scenarioId: 'ai-approval' });
+      const result = await provider.complete(baseRequest(user));
+      const message = result.json as { evidenceIds: string[] };
+      expect(message.evidenceIds).toEqual([AI_APPROVAL_ROLE_EVIDENCE[roleId]]);
+    },
+  );
+
+  it.each(['CEO', 'CFO', 'CAIO', 'CISO'] as const)(
+    'experience-first statement 응답의 %s evidenceIds는 그 역할의 roleLens 자료다',
+    async (roleId) => {
+      const provider = createMockProvider('mock-model');
+      const user = JSON.stringify({ kind: 'statement', roleId, scenarioId: 'experience-first' });
+      const result = await provider.complete(baseRequest(user));
+      const message = result.json as { evidenceIds: string[] };
+      expect(message.evidenceIds).toEqual([EXPERIENCE_FIRST_ROLE_EVIDENCE[roleId]]);
+    },
+  );
+
+  it.each(['CEO', 'CFO', 'CAIO', 'CISO'] as const)(
+    'vote 응답도 %s의 roleLens 자료를 scenarioId별로 인용한다',
+    async (roleId) => {
+      const provider = createMockProvider('mock-model');
+      const aiApproval = await provider.complete(
+        baseRequest(JSON.stringify({ kind: 'vote', roleId, scenarioId: 'ai-approval' })),
+      );
+      const experienceFirst = await provider.complete(
+        baseRequest(JSON.stringify({ kind: 'vote', roleId, scenarioId: 'experience-first' })),
+      );
+      expect((aiApproval.json as { evidenceIds: string[] }).evidenceIds).toEqual([
+        AI_APPROVAL_ROLE_EVIDENCE[roleId],
+      ]);
+      expect((experienceFirst.json as { evidenceIds: string[] }).evidenceIds).toEqual([
+        EXPERIENCE_FIRST_ROLE_EVIDENCE[roleId],
+      ]);
+    },
+  );
+
+  it('scenarioId가 없거나 알 수 없으면 이전 고정값으로 되돌아간다(기존 테스트 하위 호환)', async () => {
+    const provider = createMockProvider('mock-model');
+    const noScenario = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'statement', roleId: 'CISO' })),
+    );
+    const unknownScenario = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'statement', roleId: 'CISO', scenarioId: 'anon-board' })),
+    );
+    expect((noScenario.json as { evidenceIds: string[] }).evidenceIds).toEqual(['E4']);
+    expect((unknownScenario.json as { evidenceIds: string[] }).evidenceIds).toEqual(['E4']);
+  });
+});
+
 describe('parseMockFault', () => {
   it('accepts known fault names from a header or body value', () => {
     expect(parseMockFault('timeout')).toBe('timeout');
