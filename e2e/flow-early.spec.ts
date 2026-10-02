@@ -6,8 +6,8 @@ test('대기에서 임원 의견까지 도달하고, 준비 중 안건은 선택
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
 
+  // T70: 시안(S1_Select) 카드는 2장뿐이다(활성 1 + 준비 중 1, prevention 카드 제거).
   await expect(page.getByTestId('scenario-card-data-openness')).toBeDisabled();
-  await expect(page.getByTestId('scenario-card-prevention')).toBeDisabled();
 
   await page.getByTestId('scenario-card-anon-board').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
