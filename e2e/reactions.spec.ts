@@ -170,6 +170,89 @@ test('CONDITIONS 칩이 기존 확정(cyan "✓")과 이번 답변의 새 조건
   await expect(screenChip).toContainText('+ 새 조건');
 });
 
+// PR #12 Codex 1차 검토 P1-a: 추천 답변을 체크한 뒤 그 조건을 부정하는 문장으로
+// 직접 고치면, 체크 상태만으로 남아 있던 조건 제안이 사라지고 현재 문장을 키워드
+// 규칙으로 다시 찾은 결과만 남아야 한다.
+test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면 조건 제안이 사라진다', async ({ page }) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  await page.getByTestId('followup-option-0').click();
+  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
+
+  // SCREEN 키워드('검수'·'게시 전')는 그대로 있지만 '하지 않겠습니다'로 부정한다 —
+  // proposeFromText의 부정 규칙(NEGATION_MARKERS)에 걸려 더는 제안되지 않아야 한다.
+  await page.getByTestId('followup-textarea').fill('게시 전 검수를 하지 않겠습니다.');
+  await expect(page.getByTestId('condition-chip-SCREEN')).toHaveCount(0);
+  // DISCUSS에서 이미 확정한 TRACE는 체크 카드와 무관하므로 그대로 남는다.
+  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
+
+  const submitFollowup = page.getByTestId('submit-followup');
+  await expect(submitFollowup).toBeEnabled();
+  await submitFollowup.click();
+
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  const conditions = page.getByTestId('motion-conditions');
+  await expect(conditions).not.toContainText('게시 전 검수');
+  await expect(conditions).toContainText('문제 발생 시 추적 가능');
+});
+
+// PR #12 Codex 1차 검토 P1-b: 직접 쓴 내용이 있는 상태에서 추천 답변을 체크하면
+// DISCUSS와 같은 확인 UI가 뜨고, '직접 쓴 내용 유지'를 고르면 텍스트가 그대로
+// 남는다(조용히 덮어쓰지 않는다).
+test('직접 쓴 내용이 있을 때 추천 답변을 체크하면 확인 UI가 뜨고 "유지"를 고르면 텍스트가 보존된다', async ({
+  page,
+}) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  const customText = '제 나름대로 정리한 답변입니다.';
+  await page.getByTestId('followup-textarea').fill(customText);
+  await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
+
+  await page.getByTestId('followup-option-0').click();
+  const rebuildConfirm = page.getByTestId('rebuild-confirm');
+  await expect(rebuildConfirm).toBeVisible();
+  // 확인 UI가 뜬 동안에는 원문이 조용히 바뀌지 않는다.
+  await expect(page.getByTestId('followup-textarea')).toHaveValue(customText);
+
+  await page.getByTestId('rebuild-confirm-keep').click();
+  await expect(rebuildConfirm).toHaveCount(0);
+  // '유지'를 고른 뒤에도 텍스트는 그대로고, 체크 카드만 선택 표시로 바뀐다.
+  await expect(page.getByTestId('followup-textarea')).toHaveValue(customText);
+  await expect(page.getByTestId('followup-option-0')).toHaveClass(/phrase-card--selected/);
+});
+
+// 같은 흐름에서 '선택 문구로 다시 구성'을 고르면 체크된 옵션 전체 기준으로 답변을
+// 다시 짓는다(DISCUSS의 buildDraftText와 같은 전체 재구성).
+test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구성"을 고르면 선택 기준으로 다시 짓는다', async ({
+  page,
+}) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  await page.getByTestId('followup-textarea').fill('제 나름대로 정리한 답변입니다.');
+  await page.getByTestId('followup-option-0').click();
+  await expect(page.getByTestId('rebuild-confirm')).toBeVisible();
+
+  await page.getByTestId('rebuild-confirm-rebuild').click();
+  await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
+  await expect(page.getByTestId('followup-textarea')).toHaveValue(
+    '게시 전 검수 절차를 두고 담당자를 지정합시다.',
+  );
+  // 다시 구성한 뒤에는(dirty가 풀렸으므로) 체크한 옵션의 조건이 다시 제안된다.
+  await expect(page.getByTestId('condition-chip-SCREEN')).toBeVisible();
+});
+
+// PR #12 Codex 1차 검토 P2-a: 네이티브 체크박스가 1×1px라 기본 포커스 링이 보이지
+// 않았다 — 카드 전체(label)에 :focus-within 테두리를 옮겼는지 확인한다.
+test('추천 답변 체크 카드가 키보드 포커스에서 보이는 테두리를 가진다', async ({ page }) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  const checkbox = page.locator('[data-testid="followup-option-0"] input[type="checkbox"]');
+  await checkbox.focus();
+  const card = page.getByTestId('followup-option-0');
+  await expect(card).toHaveCSS('outline-style', 'solid');
+  await expect(card).toHaveCSS('outline-width', '2px');
+});
+
 test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
   page,
 }) => {

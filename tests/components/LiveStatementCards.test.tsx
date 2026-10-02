@@ -115,4 +115,28 @@ describe('LiveStatementCards', () => {
     expect(screen.getAllByTestId('retry-failed-roles')).toHaveLength(1);
     expect(screen.getByTestId('retry-failed-roles')).toHaveTextContent('응답 없는 임원 다시 요청');
   });
+
+  it("variant='reaction'에서 실패한 역할이 둘 이상이어도 재요청 버튼은 하나만 그린다(PR #12 Codex 1차 검토 P2-b)", () => {
+    const twoFailed: Record<ExecMemberId, RoleStatus> = {
+      ...roleStatus,
+      CFO: 'failed',
+    };
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={twoFailed}
+        statements={statements}
+        stances={stances}
+        variant="reaction"
+        onRetryFailedRoles={() => {}}
+      />,
+    );
+    // CFO·CAIO 둘 다 failed지만 고정 순서상 먼저 나오는 CFO 카드에만 버튼이 있다 —
+    // 같은 testid가 두 번 생기면 strict 모드 단언이 깨진다.
+    expect(screen.getAllByTestId('retry-failed-roles')).toHaveLength(1);
+    expect(screen.getByTestId('live-role-CFO')).toContainElement(
+      screen.getByTestId('retry-failed-roles'),
+    );
+  });
 });

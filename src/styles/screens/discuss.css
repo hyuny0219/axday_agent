@@ -393,6 +393,15 @@
   border-color: var(--label);
 }
 
+/* PR #12 Codex 1차 검토(P2-a): 네이티브 체크박스(.phrase-card__input)가 1×1px라
+   기본 포커스 링이 사실상 보이지 않았다 — 카드 전체(라벨)에 :focus-within으로
+   옮겨 키보드 포커스가 눈에 보이게 한다. REACTIONS의 추천 답변 카드도 같은
+   PhraseCard·CSS를 쓰므로 함께 고쳐진다. */
+.phrase-card:focus-within {
+  outline: 2px solid var(--label);
+  outline-offset: 2px;
+}
+
 .phrase-card__input {
   position: absolute;
   opacity: 0;

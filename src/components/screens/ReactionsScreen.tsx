@@ -30,6 +30,17 @@
 // 화면에서 참가자 본인의 이전 의견을 읽을 자리가 없어진다. 시각은 그대로 두고
 // `ExecStanceList`와 같은 sr-only 기법(`.reactions-screen__sr-only`)으로 MY REPLY
 // 편집기 바로 앞에 숨은 문단 하나만 되돌렸다 — 화면 모양은 전혀 바뀌지 않는다.
+// PR #12 Codex 1차 검토(P1-a·P1-b): 추천 답변 체크 → 직접 수정 → 다시 체크의 편집
+// 손실 방지를 DISCUSS(domain/draft.ts의 dirty 플래그 + RebuildConfirm)와 똑같은
+// 모양으로 맞췄다. `dirty`는 참가자가 textarea를 직접 고친 뒤(handleTextChange) true가
+// 되고, 체크 카드를 눌러 조합을 다시 지을 때(handleToggleOption, dirty=false일 때만
+// 바로 적용)만 false로 돌아간다. (P1-a) dirty인 동안은 체크된 옵션의
+// proposeConditionId를 조건 제안에서 빼 — 직접 고친 문장이 이미 그 조건 문구를
+// 부정했는데도 체크 상태만으로 조건이 남는 일을 막는다(제안은 domain/conditions.ts의
+// 키워드 규칙으로만 다시 찾는다). (P1-b) dirty인 동안 체크 카드를 누르면 바로 덮어쓰지
+// 않고 DISCUSS와 같은 RebuildConfirm("직접 쓴 내용 유지"/"선택 문구로 다시 구성")을
+// 띄운다 — '유지'는 체크만 바꾸고 텍스트는 그대로, '다시 구성'은 전체 선택 기준으로
+// 다시 짓고(domain/draft.ts의 buildDraftText와 같은 전체 재구성 방식) dirty를 푼다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -44,6 +55,7 @@ import { STANCE_LABEL } from '../moodLabel';
 import { reactionsFor } from '../reactionsFor';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
+import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
@@ -155,6 +167,10 @@ export function ReactionsScreen({
   // keepPrevious 옵션은 조합에 끼지 않고 onKeepPrevious를 즉시 부른다(기존 동작).
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [textValue, setTextValue] = useState('');
+  // DISCUSS의 DraftState.dirty와 같은 뜻: textarea를 직접 고친 뒤(아직 체크 카드로
+  // 다시 구성하지 않은 동안) true다. P1-a·P1-b(위 주석) 모두 이 플래그로 가른다.
+  const [dirty, setDirty] = useState(false);
+  const [pendingOptionIndex, setPendingOptionIndex] = useState<number | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
@@ -175,12 +191,17 @@ export function ReactionsScreen({
   );
 
   const newProposedIds = useMemo(() => {
-    const fromOptions = selectedOptionIds
-      .map((idStr) => scenario.followUp.options[Number(idStr)]?.proposeConditionId ?? null)
-      .filter((id): id is string => id !== null);
+    // P1-a: dirty(직접 수정)인 동안은 체크된 옵션의 조건 제안을 쓰지 않는다 — 고친
+    // 문장이 이미 체크 카드 문구와 다를 수 있으므로, 제안은 오직 현재 textValue를
+    // 키워드 규칙(proposeFromText)으로 다시 찾은 것만 믿는다.
+    const fromOptions = dirty
+      ? []
+      : selectedOptionIds
+          .map((idStr) => scenario.followUp.options[Number(idStr)]?.proposeConditionId ?? null)
+          .filter((id): id is string => id !== null);
     const fromText = proposeFromText(scenario, textValue);
     return uniqueInOrder([...fromOptions, ...fromText]);
-  }, [scenario, selectedOptionIds, textValue]);
+  }, [scenario, selectedOptionIds, textValue, dirty]);
 
   const proposedConditionIds = useMemo(
     () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds]),
@@ -235,6 +256,12 @@ export function ReactionsScreen({
       onKeepPrevious();
       return;
     }
+    // P1-b: 직접 고친 내용이 있으면(dirty) 조용히 덮어쓰지 않고 DISCUSS와 같은 확인
+    // UI를 먼저 띄운다.
+    if (dirty) {
+      setPendingOptionIndex(index);
+      return;
+    }
     const idStr = String(index);
     setSelectedOptionIds((previous) => {
       const next = previous.includes(idStr)
@@ -246,8 +273,41 @@ export function ReactionsScreen({
     setDraftRevision((value) => value + 1);
   }
 
+  /** RebuildConfirm '직접 쓴 내용 유지': 체크 상태만 바꾸고 textValue는 그대로 둔다
+   * (dirty 유지). */
+  function handleKeepCustomText() {
+    if (pendingOptionIndex === null) {
+      return;
+    }
+    const idStr = String(pendingOptionIndex);
+    setSelectedOptionIds((previous) =>
+      previous.includes(idStr) ? previous.filter((id) => id !== idStr) : [...previous, idStr],
+    );
+    setPendingOptionIndex(null);
+  }
+
+  /** RebuildConfirm '선택 문구로 다시 구성': 새 선택 전체 기준으로 textValue를 다시
+   * 짓고(domain/draft.ts의 buildDraftText와 같은 전체 재구성) dirty를 푼다. */
+  function handleRebuildFromOptions() {
+    if (pendingOptionIndex === null) {
+      return;
+    }
+    const idStr = String(pendingOptionIndex);
+    setSelectedOptionIds((previous) => {
+      const next = previous.includes(idStr)
+        ? previous.filter((id) => id !== idStr)
+        : [...previous, idStr];
+      setTextValue(composeText(next));
+      return next;
+    });
+    setDirty(false);
+    setDraftRevision((value) => value + 1);
+    setPendingOptionIndex(null);
+  }
+
   function handleTextChange(text: string) {
     setTextValue(text);
+    setDirty(true);
     setDraftRevision((value) => value + 1);
   }
 
@@ -357,6 +417,9 @@ export function ReactionsScreen({
   return (
     <>
       <div className="app-body__actions screen reactions-screen">
+        {pendingOptionIndex !== null && (
+          <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />
+        )}
         <div className="reactions-screen__hud" data-testid="reactions-hud">
           {lastOpinion && (
             <p className="reactions-screen__sr-only" data-testid="reactions-prior-opinion">

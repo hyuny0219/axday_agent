@@ -18,7 +18,12 @@
 // 보여준다 — "바뀜" 여부는 서버가 따로 내려주지 않으므로 같은 역할의 OPINIONS 발언과
 // 이번 REACTIONS 발언 텍스트가 같은지(trim 비교)로 가른다. 실패 카드는 "응답 없는
 // 임원 다시 요청" 버튼을 (그리드 아래 공용 버튼이 아니라) 카드 안에 그대로 그린다
-// (시안 그대로 — 실패가 한 명뿐인 보통 경로에서만 검증했다).
+// (시안 그대로).
+// PR #12 Codex 1차 검토(P2-b): 실패 역할이 둘 이상이면 카드마다 버튼을 그려
+// 같은 testid(retry-failed-roles)가 여러 번 나오고(strict 모드 단언이 깨짐), 720에서
+// 4명 모두 실패하면 잘릴 수 있었다. 첫 번째 실패한 카드에만 버튼 하나를 그리고
+// (onClick은 이미 실패한 역할 전체를 다시 부른다), 나머지 실패 카드는 상태 문구만
+// 보여준다 — 4명 실패 레이아웃도 e2e로 확인했다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
@@ -88,6 +93,9 @@ export function LiveStatementCards({
   const isGrid = variant === 'grid';
   const isReaction = variant === 'reaction';
   const hasFailedRole = EXEC_MEMBER_ORDER.some((roleId) => roleStatus[roleId] === 'failed');
+  // 실패 카드 안 재요청 버튼은 실패한 역할이 여럿이어도 딱 하나만 그린다(P2-b) —
+  // 고정 순서(CEO/CFO/CAIO/CISO)상 맨 처음 실패한 역할의 카드에 둔다.
+  const firstFailedRoleId = EXEC_MEMBER_ORDER.find((roleId) => roleStatus[roleId] === 'failed');
   // REACTIONS(변형 'reaction')는 실패 카드 안에 재요청 버튼을 그대로 그리므로(시안)
   // 그리드 아래 공용 버튼은 그리지 않는다 — 같은 testid가 두 곳에 생겨 strict 모드
   // 단언이 깨지는 것을 막는다.
@@ -177,7 +185,7 @@ export function LiveStatementCards({
                 {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
               </p>
             )}
-            {isReaction && status === 'failed' && onRetryFailedRoles && (
+            {isReaction && status === 'failed' && roleId === firstFailedRoleId && onRetryFailedRoles && (
               <button
                 type="button"
                 className="live-statement__retry cta cta--secondary"
