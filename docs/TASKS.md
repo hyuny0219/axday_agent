@@ -1024,3 +1024,15 @@
 - **시안 이탈 금지(2026-10-02 사용자 지시)**: 구성·순서·문구·색·서체·도장·버튼 모양을 시안과 동일하게 맞춘다. 시안에 없는 요소를 더하거나 시안의 요소를 빼지 않는다. 시안은 1280×720이며 1920×1080에서는 같은 배치로 비율만 커진다(왼쪽 열 560/1280 ≈ 43.75%). 애매하면 시안 HTML의 인라인 스타일 값을 그대로 쓴다. 기존 동작(상태·testid·접근성·세션 규칙)은 유지한다.
 - 완료 확인 공통: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷 갱신 후 `docs/design/mockups/preview/<시안>.png`와 나란히 놓고 구성이 같음을 확인(차이가 있으면 시안 쪽으로 맞춘다).
 - 크기: S.
+
+## T77 발언 흐름 패널 — 시안 TRANSCRIPT 형식(타자기 로그)으로 통일
+
+- 목표: 왼쪽 열의 "발언 흐름" 패널(`MinutesPanel`)을 시안 S2_Opinions·S5_Motion·S6_Vote·Main의 **TRANSCRIPT 패널**과 동일하게. 어두운 패널(`#15171b` 배경, `#2a2d33` 1px 테두리, 패딩 10~12px/14px), 머리줄 = 타자기(Special Elite) 앰버 "TRANSCRIPT · 발언 흐름" + 오른쪽 회색 "N ENTRIES · 스크롤", 항목 = 한 줄에 타자기 앰버 `[mm:ss] 역할`(CEO·CFO·CAIO·CISO·나) + 본문(12~13px, line-height 1.45) — 아바타 원·역할 배지·강조 배경 없음. 대기 중 임원은 `[--:--] CFO ▌ 대기 중`(회색)으로 한 줄. 패널은 열의 남는 높이를 채우고 내부 스크롤(기존 T58 규칙: 전문 표시·follow-bottom 유지).
+- 시간 표기: 세션 시작 기준 경과 `mm:ss`(statement.createdAt 사용, 없으면 `--:--`). "나" 항목도 같은 형식.
+- 읽을 것: `src/components/parts/MinutesPanel.tsx`, `src/styles/screens/minutes.css`, `src/components/minutes.ts`, 시안 HTML의 TRANSCRIPT 블록(`S2_Opinions.html` 등에서 `TRANSCRIPT · 발언 흐름` 검색), `e2e/stage.spec.ts`·`noscroll.spec.ts`·`live.spec.ts`·`retry.spec.ts`의 minutes-entry-* testid 사용처, DESIGN_SPEC 7절(발언 흐름).
+- 만들 것: MinutesPanel 마크업·CSS를 시안대로 교체(testid `minutes-entry-<stage>-<id>`·sr-only·내부 스크롤·follow-bottom·접힘 규칙 유지), 대기 중 행 추가(live에서 pending 역할), BRIEFING·OPINIONS·MOTION·VOTE·RESULT(회의록 전문 보기 포함)에서 같은 모양. 스크린샷 갱신(briefing·opinions·motion·vote·result 두 해상도), DESIGN_SPEC 7절 개정(v1.3).
+- 허용 경로: `src/components/parts/MinutesPanel.tsx`, `src/components/minutes.ts`, `src/styles/screens/minutes.css`, `src/styles/screens/live.css`(죽은 `.vote-screen__waiting` 규칙 제거 포함), `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 회의록 데이터(minutes.ts의 항목 생성 규칙) 변경, 다른 화면 레이아웃 변경.
+- **시안 이탈 금지**: TRANSCRIPT 블록의 인라인 스타일 값을 그대로 쓴다.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공, 두 해상도 페이지 스크롤 없음, 스크린샷을 `preview/S2_Opinions.png`·`S5_Motion.png`의 TRANSCRIPT와 나란히 비교.
+- 크기: S.
