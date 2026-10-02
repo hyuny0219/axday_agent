@@ -94,13 +94,21 @@ async function callAssistant(
   provider: ModelProvider,
   clock: Clock,
   mockFault: string | undefined,
+  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
 ): Promise<AssistantResult> {
   const logKind = kind === 'assistant_refine' ? 'refine' : 'summarize';
   const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const user = JSON.stringify({ kind, draftRevision, mock: parseMockFault(mockFault) });
+    const user = JSON.stringify({
+      kind,
+      draftRevision,
+      // PR #13 Codex 2차 검토 P1: mock 제공자가 안건별로 유효한 조건 ID를 고르려면
+      // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
+      scenarioId: materials.scenarioId,
+      mock: parseMockFault(mockFault),
+    });
     const raw = provider.complete({
       system,
       user,
@@ -112,7 +120,14 @@ async function callAssistant(
     const result = await withTimeout(raw, timeoutMs);
     const latencyMs = clock.now() - start;
     const parsed = assistantResponseSchema({ draftRevision }).safeParse(result.json);
-    if (!parsed.success) {
+    // PR #13 Codex 2차 검토 P2: round.ts와 같은 규칙 — CONDITION_IDS는 안건①·②의
+    // 합집합이라 스키마만으로는 다른 안건의 조건도 통과한다. 이 안건(materials) 자신의
+    // 조건이 아니면 모르는 ID와 같은 취급으로 응답 전체를 거절한다(invalid_response).
+    const validConditionIds = new Set(materials.conditions.map((c) => c.id));
+    const hasForeignCondition =
+      parsed.success &&
+      parsed.data.suggestedConditionIds.some((id) => !validConditionIds.has(id));
+    if (!parsed.success || hasForeignCondition) {
       logCall({
         ts: new Date(clock.now()).toISOString(),
         kind: logKind,
@@ -209,6 +224,7 @@ export async function handleAssistantRefine(
     deps.provider,
     deps.clock ?? systemClock,
     input.mock,
+    materials,
   );
 }
 
@@ -242,5 +258,6 @@ export async function handleAssistantSummarize(
     deps.provider,
     deps.clock ?? systemClock,
     input.mock,
+    materials,
   );
 }
