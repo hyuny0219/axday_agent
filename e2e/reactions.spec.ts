@@ -25,7 +25,7 @@ test('DISCUSS에서 TRACE 확정 후 REACTIONS에서 ANON_FULL을 함께 확정�
 }) => {
   await reachReactionsWithAccessConfirmed(page);
 
-  await page.getByTestId('followup-open-editor').click();
+  // T74부터 "MY REPLY" textarea는 늘 보인다(옛 "직접 답하기 열기" 토글은 없앴다).
   const textarea = page.getByTestId('followup-textarea');
   // P5 문장 그대로: ANON_FULL을 새로 제안한다. TRACE는 이전 의견에서 이미 확정돼
   // 목록에 남아 있으므로 두 조건이 함께 accepted 상태가 된다.
@@ -43,20 +43,13 @@ test('DISCUSS에서 TRACE 확정 후 REACTIONS에서 ANON_FULL을 함께 확정�
   await page.getByTestId('condition-chip-ANON_FULL').click();
   await expect(conflicts).toBeHidden();
   await expect(page.getByTestId('submit-followup')).toBeEnabled();
-
-  // 직접 답하기를 다시 닫아도 입력이 남아 있으면 조건 칩은 계속 보인다(PR #4 Codex
-  // 2차 검토: 제출이 가능한 동안 조건 확인 UI가 사라지면 안 된다).
-  await page.getByTestId('followup-open-editor').click();
-  await expect(textarea).toBeHidden();
-  await expect(page.getByTestId('condition-chip-TRACE')).toBeVisible();
-  await expect(page.getByTestId('submit-followup')).toBeEnabled();
 });
 
 test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건에도 함께 남는다', async ({ page }) => {
   await reachReactionsWithAccessConfirmed(page);
 
-  // SCREEN를 새로 제안하는 선택지를 고른다. TRACE는 DISCUSS에서 이미 확정돼
-  // 기본값으로 유지된 채 넘어온다(칩을 건드리지 않는다).
+  // SCREEN을 새로 제안하는 추천 답변 체크 카드를 고른다. TRACE는 DISCUSS에서 이미
+  // 확정돼 기본값으로 유지된 채 넘어온다(칩을 건드리지 않는다).
   await page.getByTestId('followup-option-0').click();
   await expect(page.getByTestId('condition-chip-TRACE')).toHaveAttribute('aria-pressed', 'true');
 
@@ -107,7 +100,6 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
 
-  await page.getByTestId('followup-open-editor').click();
   await page.getByTestId('followup-textarea').fill('작성자를 확인하지 않겠습니다.');
   await expect(page.getByTestId('condition-chip-PILOT')).toBeVisible();
   await expect(page.getByTestId('condition-chip-TRACE')).toHaveCount(0);
@@ -122,14 +114,13 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
   await expect(conditions).not.toContainText('문제 발생 시 추적 가능');
 });
 
-test('직접 답하기를 열기 전에는 textarea가 보이지 않고, 빠른 답만으로 MOTION까지 도달한다', async ({
-  page,
-}) => {
+test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 도달한다', async ({ page }) => {
   await reachReactionsWithAccessConfirmed(page);
 
-  // T40 만들 것 2: 직접 입력은 접어 두고, 빠른 답 3개만으로도 완주할 수 있다.
-  await expect(page.getByTestId('followup-textarea')).toBeHidden();
-  // 답을 시작하기 전에는 이전 의견의 조건(TRACE)을 바꿀 수 없다(PR #4 Codex 검토).
+  // T74: textarea는 항상 보이지만 비어 있고, 체크 카드를 고르기 전에는 이전 의견의
+  // 조건(TRACE)을 바꿀 수 없다(PR #4 Codex 검토).
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
+  await expect(page.getByTestId('followup-textarea')).toHaveValue('');
   await expect(page.getByTestId('condition-chip-TRACE')).toBeHidden();
 
   await page.getByTestId('followup-option-0').click();
@@ -205,12 +196,9 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
   const info = page.getByTestId('reactions-info');
   await expect(info).not.toHaveAttribute('inert', '');
 
-  // 드로어는 직접 답하기 안에 있다 — 편집기를 열어야 "AI 비서실장 열기" 버튼이 보인다.
+  // T74부터 "AI 비서실장 열기" 버튼은 편집기 토글 없이 늘 보인다.
   await page.getByTestId('followup-option-0').click();
   const openAssistant = page.getByRole('button', { name: 'AI 비서실장 열기' });
-  if (!(await openAssistant.isVisible())) {
-    await page.getByRole('button', { name: '직접 답하기' }).click();
-  }
   await openAssistant.click();
   await expect(info).toHaveAttribute('inert', '');
   // inert 안의 요소는 포커스를 받지 못한다.

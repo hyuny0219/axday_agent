@@ -24,8 +24,11 @@
 /* T72 수정(2라운드): OPINIONS(live)에서 .live-round(카드+다시 요청 버튼)가
    .opinions-screen__paper의 남은 세로 공간을 채우지 않아, 카드 2×2 아래 빈 종이가
    남았다 — scripted의 .opinions-screen__cards(flex:1)와 다른 모양이었다. 이 블록을
-   .opinions-screen__paper 조상으로 좁혀 OPINIONS에서만 채운다 — REACTIONS
-   (.live-round__cards--reply)는 자체 세로 예산이 이미 맞춰져 있어 건드리지 않는다. */
+   .opinions-screen__paper 조상으로 좁혀 OPINIONS에서만 채운다. REACTIONS는 카드 아래에
+   FOLLOW-UP 상자·추천 답변 목록(.reactions-screen__option-list가 이미 flex:1)이 더
+   있어 카드 자체를 강제로 늘리면 실패 카드 안 재요청 버튼이 좁아진 행 높이 밖으로
+   살짝 넘쳤다(T74 실측) — REACTIONS는 이 규칙을 적용하지 않고 카드를 내용 높이
+   그대로 둔다. */
 .opinions-screen__paper .live-round {
   flex: 1;
   min-height: 0;
@@ -329,77 +332,76 @@
   font-style: normal;
 }
 
-/* REACTIONS 답글형(T40, DESIGN_SPEC.md 3장 "반응" 행: 들여쓰기·연결선). scripted의
-   .reaction-reply와 같은 들여쓰기·연결선을 live 카드에 적용한다. 발언이 온 임원은
-   시안 왼쪽 굵은 테두리로 강조하고, 판단 중인 임원은 흐리게 둔다. 실패 카드는
-   확인이 필요하므로 흐리지 않는다(PR #4 Codex 검토). */
-/* T45 이후 오른쪽 열은 고정 높이(overflow:hidden)라 세로 스택은 720에서 잘린다.
-   scripted 답글(.reactions-screen__replies)과 같은 2열 그리드로 둔다(PR #6 Codex 검토). */
-.live-round__cards--reply {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-}
-
-.live-round__cards--reply .live-statement {
-  position: relative;
-  margin-left: var(--space-3);
-}
-
-.live-round__cards--reply .live-statement::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: calc(-1 * var(--space-3));
-  width: var(--space-3);
-  height: 1px;
-  background-color: var(--paper-border);
-}
-
-.live-round__cards--reply .live-statement--answered {
-  border-left-width: 4px;
-}
-
-.live-round__cards--reply .live-statement--idle,
-.live-round__cards--reply .live-statement--pending {
-  opacity: 0.7;
+/* REACTIONS 카드(T74, S4_Reactions 시안 그대로): .live-statement--grid와 같은 틀
+   (종이-2 배경·1px 테두리·역할색 왼쪽 4px 띠)을 쓰되 머리줄은 더 작게(코드 칩 없음),
+   상태 칩은 유지/바뀜/응답 없음을 보여준다(아래 ::after 재정의, 소스 순서상 위
+   .live-statement--grid 규칙보다 뒤에 와야 이긴다). 1280 기준값, 1920은 ×1.25. */
+.live-statement--reaction {
+  gap: 5px;
 }
 
 @media (max-width: 1280px) {
-  .live-round__cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .live-round__cards--reply .live-statement {
-    margin-left: var(--space-2);
-  }
-
-  .live-round__cards--reply .live-statement::before {
-    left: calc(-1 * var(--space-2));
-    width: var(--space-2);
-  }
-
-  /* 720 세로 예산: 발언 120자는 3줄로 자르고, 근거 칩·인용은 한 줄로 접는다. 전문은
-     RESULT 판단 근거와 회의 기록에 그대로 남는다. */
-  .live-round__cards--reply .live-statement {
-    padding: var(--space-1) var(--space-2);
+  .live-statement--reaction {
     gap: 4px;
   }
+}
 
-  .live-round__cards--reply .live-statement__text {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-size: var(--fs-meta);
+.live-statement--reaction .live-statement__head {
+  gap: 10px;
+}
+
+.live-statement--reaction .live-statement__member {
+  font-size: 16px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement--reaction .live-statement__member {
+    font-size: 13px;
   }
+}
 
-  .live-round__cards--reply .live-statement__evidence,
-  .live-round__cards--reply .live-statement__references {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-wrap: nowrap;
+.live-statement--reaction .live-statement__mood {
+  font-size: 14px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement--reaction .live-statement__mood {
+    font-size: 11px;
+  }
+}
+
+.live-statement--reaction .live-statement__text {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .live-statement--reaction .live-statement__text {
+    font-size: 12px;
+  }
+}
+
+/* 상태 칩 문구(시안 "유지"/"바뀜"/"응답 없음") — .live-statement--grid의 공용
+   판단 중/발언/응답 없음 규칙보다 선택자가 더 구체적이라 이긴다. */
+.live-statement--reaction.live-statement--answered.live-statement--maintained .live-statement__head::after {
+  content: '유지' / '';
+}
+
+.live-statement--reaction.live-statement--answered:not(.live-statement--maintained) .live-statement__head::after {
+  content: '바뀜' / '';
+}
+
+/* 실패 카드 안 재요청 버튼(시안 — 그리드 아래 공용 버튼 대신 카드 안에 바로 둔다). */
+.live-statement__retry {
+  align-self: flex-start;
+  min-height: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: 13px;
+}
+
+@media (max-width: 1280px) {
+  .live-statement__retry {
+    font-size: 11px;
   }
 }
 

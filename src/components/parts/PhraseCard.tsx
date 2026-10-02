@@ -6,20 +6,26 @@
 // T73(S3_Discuss 시안 그대로): 네이티브 체크박스를 화면에서는 숨기고(옵션 자체는 그대로
 // 토글 가능하게 둔다), 시안의 커스텀 체크 박스(테두리 사각형 + 체크 SVG)를 별도 span으로
 // 그린다.
+// T74(S4_Reactions 시안 그대로): REACTIONS의 추천 답변 체크 카드도 같은 모양이라
+// ReactionsScreen이 이 컴포넌트를 그대로 재사용한다 — phrase는 id·text만 읽으므로 전체
+// Phrase가 아니라 그 둘만 받고(FollowUpOption에는 conditionId가 없다), testId를 주면
+// 기본 `phrase-card-<id>` 대신 그 값을 쓴다(REACTIONS는 기존 `followup-option-<n>`을
+// 그대로 유지해야 e2e가 깨지지 않는다).
 
 import type { Phrase } from '../../content/types';
 
 export interface PhraseCardProps {
-  phrase: Phrase;
+  phrase: Pick<Phrase, 'id' | 'text'>;
   selected: boolean;
   onToggle: () => void;
+  testId?: string;
 }
 
-export function PhraseCard({ phrase, selected, onToggle }: PhraseCardProps) {
+export function PhraseCard({ phrase, selected, onToggle, testId }: PhraseCardProps) {
   return (
     <label
       className={`phrase-card${selected ? ' phrase-card--selected' : ''}`}
-      data-testid={`phrase-card-${phrase.id}`}
+      data-testid={testId ?? `phrase-card-${phrase.id}`}
     >
       <input
         type="checkbox"

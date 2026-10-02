@@ -37,10 +37,12 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await submitOpinion.focus();
   await page.keyboard.press('Enter');
 
-  // REACTIONS: '앞선 의견 유지' 선택지로 후속 입력 없이 마무리한다.
+  // REACTIONS: '앞선 의견 유지' 체크 카드(T74, 네이티브 체크박스)로 후속 입력 없이
+  // 마무리한다 — 체크박스는 Space로 토글한다(DISCUSS 추천 문구 카드와 같은 규칙).
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await page.getByTestId('followup-option-2').focus();
-  await page.keyboard.press('Enter');
+  const keepPreviousCheckbox = page.locator('[data-testid="followup-option-2"] input[type="checkbox"]');
+  await keepPreviousCheckbox.focus();
+  await page.keyboard.press('Space');
 
   // MOTION
   const freezeMotion = page.getByTestId('freeze-motion');

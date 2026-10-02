@@ -267,6 +267,24 @@
   gap: 10px;
 }
 
+/* 단계 태그(T74, REACTIONS만 — "02 임원 의견"/"04 반응"). */
+.evidence-dialog__statement-stage {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .evidence-dialog__statement-stage {
+    padding: 1px 6px;
+    font-size: 10px;
+  }
+}
+
 .evidence-dialog__statement-member {
   margin: 0;
   font-size: 16px;

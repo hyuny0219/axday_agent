@@ -133,10 +133,11 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
 
   await submitOpinion.click();
 
-  // REACTIONS(v0.9, T40): 답글형 임원 반응·"CAIO가 묻습니다" 질문·빠른 답 3개·접힌 직접 입력을
-  // 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로 넘긴다.
+  // REACTIONS(T74, S4_Reactions): MY REPLY 입력 상자·조건 칩·반응 카드 2×2·추천 답변
+  // 체크 카드를 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로
+  // 넘긴다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await expect(page.getByTestId('followup-open-editor')).toBeVisible();
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
   // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');

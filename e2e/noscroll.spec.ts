@@ -140,10 +140,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   ).toBeVisible();
   await expectNoPageScroll(page, 'REACTIONS');
 
-  // 직접 답하기(가장 내용이 많은 경로)를 열고 조건 칩까지 노출한 상태도 확인한다.
-  await page.getByTestId('followup-open-editor').click();
+  // 직접 입력(가장 내용이 많은 경로)으로 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-textarea').fill('신고가 들어온 글에 한해 담당자가 확인할 수 있게 절차를 정합니다.');
-  await expectNoPageScroll(page, 'REACTIONS(직접 답하기 + 조건 칩)');
+  await expectNoPageScroll(page, 'REACTIONS(직접 입력 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
