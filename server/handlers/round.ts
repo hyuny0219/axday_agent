@@ -169,6 +169,9 @@ async function callRole(
       kind: 'statement',
       roleId,
       stage: input.stage,
+      // PR #13 Codex 2차 검토 P1: mock 제공자가 안건별로 유효한 조건 ID를 고르려면
+      // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
+      scenarioId: input.scenarioId,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({

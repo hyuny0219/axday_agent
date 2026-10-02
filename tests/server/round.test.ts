@@ -291,4 +291,18 @@ describe('안건별 suggestedConditionIds 검증(PR #13 Codex 1차 검토 P2)', 
     });
     expect(experienceFirstResults[0]?.status).toBe('answered');
   });
+
+  // PR #13 Codex 2차 검토 P1: 실제 createMockProvider(server/providers/mock.ts)가 두 안건
+  // 모두에서 임원 4명 전원 answered를 돌려주는지 확인한다(이전에는 experience-first에서
+  // mock이 ai-approval 전용 조건 ID를 고정으로 돌려줘 3명이 invalid_response였다).
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '실제 mock 제공자는 %s에서 임원 4명 모두 answered를 돌려준다',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      const input = baseRoundInput({ requestId: `req-mock-clean-${scenarioId}`, scenarioId });
+      const results = await handleRound(input, { provider });
+      expect(results).toHaveLength(4);
+      expect(results.every((r) => r.status === 'answered')).toBe(true);
+    },
+  );
 });

@@ -49,6 +49,78 @@ describe('createMockProvider deterministic responses', () => {
   });
 });
 
+// PR #13 Codex 2차 검토 P1: 역할마다 고정 조건 ID(LIMIT 등)를 돌려주면 ai-approval이
+// 아닌 안건(experience-first)에서는 그 ID가 유효하지 않아 매 라운드 invalid_response로
+// 떨어졌다. envelope의 scenarioId로 그 안건 자신의 조건 목록에서 고르는지 확인한다.
+describe('createMockProvider 안건별 조건 ID(PR #13 Codex 2차 검토 P1)', () => {
+  const AI_APPROVAL_CONDITION_IDS = new Set(['LIMIT', 'LOG', 'REVIEW', 'OWNER', 'FULL_AUTO']);
+  const EXPERIENCE_FIRST_CONDITION_IDS = new Set([
+    'SCOPE',
+    'RECORD',
+    'DATA_VETO',
+    'REVIEW',
+    'EXP_ONLY',
+  ]);
+
+  it.each(['CEO', 'CFO', 'CAIO', 'CISO'] as const)(
+    'ai-approval statement 응답의 %s suggestedConditionIds는 안건① 자신의 조건이다',
+    async (roleId) => {
+      const provider = createMockProvider('mock-model');
+      const user = JSON.stringify({ kind: 'statement', roleId, scenarioId: 'ai-approval' });
+      const result = await provider.complete(baseRequest(user));
+      const message = result.json as { suggestedConditionIds: string[] };
+      expect(message.suggestedConditionIds).toHaveLength(1);
+      expect(AI_APPROVAL_CONDITION_IDS.has(message.suggestedConditionIds[0]!)).toBe(true);
+    },
+  );
+
+  it.each(['CEO', 'CFO', 'CAIO', 'CISO'] as const)(
+    'experience-first statement 응답의 %s suggestedConditionIds는 안건② 자신의 조건이다',
+    async (roleId) => {
+      const provider = createMockProvider('mock-model');
+      const user = JSON.stringify({ kind: 'statement', roleId, scenarioId: 'experience-first' });
+      const result = await provider.complete(baseRequest(user));
+      const message = result.json as { suggestedConditionIds: string[] };
+      expect(message.suggestedConditionIds).toHaveLength(1);
+      expect(EXPERIENCE_FIRST_CONDITION_IDS.has(message.suggestedConditionIds[0]!)).toBe(true);
+    },
+  );
+
+  it('assistant 응답(역할 없음)도 scenarioId별로 그 안건 자신의 조건을 돌려준다', async () => {
+    const provider = createMockProvider('mock-model');
+    const aiApprovalResult = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'assistant_refine', draftRevision: 0, scenarioId: 'ai-approval' })),
+    );
+    const experienceFirstResult = await provider.complete(
+      baseRequest(
+        JSON.stringify({ kind: 'assistant_refine', draftRevision: 0, scenarioId: 'experience-first' }),
+      ),
+    );
+    expect(
+      (aiApprovalResult.json as { suggestedConditionIds: string[] }).suggestedConditionIds,
+    ).toEqual(['LIMIT']);
+    expect(
+      (experienceFirstResult.json as { suggestedConditionIds: string[] }).suggestedConditionIds,
+    ).toEqual(['SCOPE']);
+  });
+
+  it('scenarioId가 없거나 알 수 없으면 이전 고정값으로 되돌아간다(기존 테스트 하위 호환)', async () => {
+    const provider = createMockProvider('mock-model');
+    const noScenario = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'statement', roleId: 'CFO' })),
+    );
+    const unknownScenario = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'statement', roleId: 'CFO', scenarioId: 'anon-board' })),
+    );
+    expect((noScenario.json as { suggestedConditionIds: string[] }).suggestedConditionIds).toEqual([
+      'OWNER',
+    ]);
+    expect(
+      (unknownScenario.json as { suggestedConditionIds: string[] }).suggestedConditionIds,
+    ).toEqual(['OWNER']);
+  });
+});
+
 describe('createMockProvider fault injection', () => {
   it('throws ModelRefusalError for the refusal fault', async () => {
     const provider = createMockProvider();

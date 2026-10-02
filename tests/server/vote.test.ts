@@ -283,3 +283,30 @@ describe('voteRequestSchema의 안건별 조건 검증(PR #13 Codex 1차 검토 
     expect(voteRequestSchema.safeParse(input).success).toBe(true);
   });
 });
+
+// PR #13 Codex 2차 검토 P1: 실제 createMockProvider(server/providers/mock.ts)가 두 안건
+// 모두에서 임원 4명 전원 answered를 돌려주는지 확인한다. 표결 응답에는 조건 ID가 없어
+// (evidenceIds만 있고 둘 다 E1~E4 공유) round만큼 깨지기 쉽지 않았지만, 카드 지시대로
+// round와 같이 명시적으로 확인해 둔다.
+describe('실제 mock 제공자가 두 안건 모두에서 깨끗하게 동작하는지(PR #13 Codex 2차 검토 P1)', () => {
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '%s에서 임원 4명 모두 answered를 돌려준다',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      const input = baseVoteInput({
+        requestId: `req-mock-clean-${scenarioId}`,
+        scenarioId,
+        motion: {
+          id: `m-${scenarioId}`,
+          hash: `h-${scenarioId}`,
+          text: '안건',
+          effectiveConditionIds: [],
+          executionMode: 'DEFAULT',
+        },
+      });
+      const results = await handleVote(input, { provider });
+      expect(results).toHaveLength(4);
+      expect(results.every((r) => r.status === 'answered')).toBe(true);
+    },
+  );
+});

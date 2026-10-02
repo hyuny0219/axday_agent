@@ -6,6 +6,7 @@
 
 import type { ModelCompleteRequest, ModelCompleteResult, ModelProvider } from './types';
 import { ModelRefusalError } from './types';
+import { getScenarioMaterials } from '../scenario-data';
 
 export type MockFault = 'timeout' | 'invalid' | 'late' | 'refusal';
 
@@ -34,6 +35,9 @@ export interface MockRequestEnvelope {
   motionHash?: string;
   draftRevision?: number;
   mock?: MockFault;
+  /** PR #13 Codex 2차 검토 P1: 역할별 조건 ID를 안건에 맞게 고르려면 어느 안건인지
+   * 알아야 한다(server/handlers/round.ts·assistant.ts가 envelope에 실어 보낸다). */
+  scenarioId?: string;
 }
 
 const ROLE_EVIDENCE: Record<string, string> = {
@@ -43,16 +47,38 @@ const ROLE_EVIDENCE: Record<string, string> = {
   CISO: 'E4',
 };
 
+const EXEC_ROLE_ORDER = ['CEO', 'CFO', 'CAIO', 'CISO'];
+
 // T78(2026-10-02, 안건 교체)에서 validate.ts의 CONDITION_IDS가 현재 활성 안건(ai-approval·
-// experience-first)의 조건 ID로 바뀌어, 옛 anon-board 조건(PILOT 등)은 더는 스키마를
-// 통과하지 못한다 — 이 mock 응답도 유효한 ID로 맞춘다(둘 다 scenario-agnostic이라
-// 특정 안건의 조건일 필요는 없다).
+// experience-first)의 조건 ID로 바뀌었다. 이 고정 맵은 scenarioId를 모를 때만 쓰는
+// 폴백이다(아래 scenarioAwareRoleCondition 참고) — ai-approval의 ID라 그 안건에서는
+// 그대로 유효하다.
 const ROLE_CONDITION: Record<string, string> = {
   CEO: 'LIMIT',
   CFO: 'OWNER',
   CAIO: 'LOG',
   CISO: 'REVIEW',
 };
+
+/** PR #13 Codex 2차 검토 P1: 이전에는 역할마다 고정 조건 ID(LIMIT 등)를 돌려줘
+ * ai-approval이 아닌 안건(예: experience-first)에서는 매 라운드 셋 중 셋이 유효하지
+ * 않은 ID라 invalid_response로 떨어졌다. envelope에 scenarioId가 있으면 그 안건 자신의
+ * conditions 목록에서 역할 순서(CEO·CFO·CAIO·CISO)대로 하나씩 골라 항상 유효한 ID를
+ * 쓴다. scenarioId가 없거나 등록되지 않은 안건이면(예: 이 모듈을 직접 호출해 envelope을
+ * 손으로 구성하는 일부 단위 테스트) 위 고정 맵으로 되돌아간다. */
+function scenarioAwareRoleCondition(roleId: string, scenarioId: string | undefined): string {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  const index = EXEC_ROLE_ORDER.indexOf(roleId);
+  const byIndex = materials && index >= 0 ? materials.conditions[index] : undefined;
+  return byIndex?.id ?? ROLE_CONDITION[roleId] ?? 'LIMIT';
+}
+
+/** 비서실장(assistant)은 역할이 없는 단일 호출이라 안건의 첫 조건을 쓴다 — ai-approval은
+ * LIMIT(기존과 동일), experience-first는 SCOPE. */
+function scenarioAwareFirstCondition(scenarioId: string | undefined): string {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  return materials?.conditions[0]?.id ?? 'LIMIT';
+}
 
 const ROLE_VOTE: Record<string, 'YES' | 'NO'> = {
   CEO: 'YES',
@@ -79,7 +105,7 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
     referencedStatementIds: [],
     concerns: [`[mock] ${roleId} 우려사항`],
-    suggestedConditionIds: [ROLE_CONDITION[roleId] ?? 'LIMIT'],
+    suggestedConditionIds: [scenarioAwareRoleCondition(roleId, env.scenarioId)],
     stance: ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
@@ -102,7 +128,7 @@ function buildAssistantJson(env: MockRequestEnvelope): unknown {
     draftRevision: env.draftRevision ?? 0,
     draftText: '[mock] 참가자 발언을 짧게 정리한 문장입니다.',
     evidenceIds: ['E1'],
-    suggestedConditionIds: ['LIMIT'],
+    suggestedConditionIds: [scenarioAwareFirstCondition(env.scenarioId)],
   };
 }
 
