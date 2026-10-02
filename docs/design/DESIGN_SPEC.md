@@ -60,8 +60,8 @@ PPT의 미래적인 이사회 분위기를 실제 조작 가능한 브라우저 
 
 | 화면 | 데스크톱 배치 | 중요 동작 |
 | --- | --- | --- |
-| 대기 | 짙은 회의실 분위기 + 큰 제목 + 단일 CTA | 불필요한 설정 없이 시작 |
-| 안건 선택 | 3열 대형 카드, 하단 이사회 입장 | 카드 선택 테두리·체크; 준비 중 명시 |
+| 대기 | ~~짙은 회의실 분위기 + 큰 제목 + 단일 CTA~~(v1.3 T71에서 시안 S0_Attract 그대로로 재작성 — 아래 v1.3 절 참고) | 불필요한 설정 없이 시작 |
+| 안건 선택 | ~~3열 대형 카드, 하단 이사회 입장~~(v1.3 T70에서 시안 S1_Select 그대로로 재작성 — 카드 2장, 아래 v1.3 절 참고) | 카드 선택 테두리·체크; 준비 중 명시 |
 | 브리핑 | 진행 스트립 → 의장 브리핑 블록(상황·결정 질문·내 역할) → 상단 안건 → 자료 4장(자료명·해석 한 줄·원문 상시 노출, 자료 ID 미표기). 핵심 쟁점 3개 카드·조건 미리보기 4칩·"체험용 사전 구성" 표기는 T52(2026-09-23)에서 제거 — 현재 배치는 v1.0 6절 | 진행 스트립은 유지(BRIEFING ①). 작은 화면에서는 세로 배치 |
 | 임원 의견 | 상단 4열 임원 카드, 중앙 쟁점, 하단 CTA | 설명은 순차 영상 대기 없이 읽기 가능 |
 | 의견 작성 | 상단 임원 4열; 아래 좌 추천 문구·우 textarea; 하단 AI/전달 | 체크박스와 textarea 모두 실제 입력 요소 |
@@ -236,7 +236,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 안건이 딱딱하다는 진단(2026-09-19)에 대한 카피 보강이다. 표결 규칙·조건·자료 수치는 그대로이고, 새 수치·절감률·확정 사실을 만들지 않는다(SCENARIO_AI_ASSISTANT.md "검증되지 않은 수치 금지"). 모든 문구는 시나리오 데이터(`Scenario.incident`, `resultCopy.sixMonthsLater`)에서 읽고 화면은 하드코딩하지 않는다.
 
-- 사건 카드(SELECT): 안건 카드의 제목을 원안 문장 대신 **사건 헤드라인**으로 바꾼다. 구성 = 사건 번호 칩(`incident.caseLabel`, 예 "사건 02") + 헤드라인(`incident.headline`, 한 문장, 서술형) + 갈등 한 줄(`incident.hook`, 자료 E1~E4에 이미 있는 사실만). 원안 문장(`subtitle`)은 카드에서 빼고 BRIEFING 상단 안건 제목이 그대로 담당한다. 준비 중 안건은 헤드라인 = 제목, hook = "준비 중인 안건입니다."
+- ~~사건 카드(SELECT): 안건 카드의 제목을 원안 문장 대신 **사건 헤드라인**으로 바꾼다. 구성 = 사건 번호 칩(`incident.caseLabel`, 예 "사건 02") + 헤드라인(`incident.headline`, 한 문장, 서술형) + 갈등 한 줄(`incident.hook`, 자료 E1~E4에 이미 있는 사실만). 원안 문장(`subtitle`)은 카드에서 빼고 BRIEFING 상단 안건 제목이 그대로 담당한다. 준비 중 안건은 헤드라인 = 제목, hook = "준비 중인 안건입니다."~~(v1.3 T70에서 폐기 — 시안 S1_Select 카드는 헤드라인·hook 대신 `chairBriefing.question`만 쓴다. incident.headline·hook은 BRIEFING eyebrow 등 다른 화면에서 여전히 쓰여 데이터는 그대로다. 아래 v1.3 절 참고.)
 - 사건 표기(BRIEFING): 안건 제목 위에 한 줄 eyebrow "사건 02 · {headline}"(testid `briefing-incident`). 720 세로 예산 안(한 줄, 메타 서체).
 - "6개월 뒤" 에필로그(RESULT): 왼쪽 열 게이지 아래·"체험 종료" 위에 카드 하나(testid `result-epilogue`). 머리글 "6개월 뒤" + 배지 "체험용 가상 전망" + 결과(PASS/REJECT, T62: 보류 제거)별 두 문장(`resultCopy.sixMonthsLater.{pass,passOriginal,reject}`). 가결은 도장과 같은 기준으로 나눈다 — 참가자가 확정한 조건이 최종안에 반영됐으면 `pass`, 없으면(원안 그대로, live에서 임원 표로 가능) 조건을 전제하지 않는 `passOriginal`(PR #8 Codex 2차 검토). 시간 만료로 원안이 집계된 경우도 outcome·반영 조건 기준으로 같은 규칙을 쓴다. 3줄 클램프. 두 해상도 무스크롤 유지.
 - 문구 원칙: 미래 서술은 "~합니다"의 현재형 묘사로 쓰되 수치·비율·금액을 넣지 않는다. 가결 문구는 붙인 조건이 실행 점검표가 된다는 뜻을, 부결은 이사님의 우려가 다음 안건의 출발점이 된다는 뜻을 담는다.
@@ -359,4 +359,29 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - **EvidenceGrid 단순화**: 팝업 전용 컴포넌트가 됐으므로 더 이상 쓰이지 않는 아코디언(`variant='accordion'`, `<details>`/`<summary>`, 펼침 상태 로컬 state, 관련 임원 아바타 행)을 없애고 펼침 형태(옛 `variant='expanded'`) 하나만 남겼다 — `variant` prop 자체를 없앴다. `evidence.css`에서 아코디언 전용 규칙(`.evidence-card__summary`·`::-webkit-details-marker`·`.evidence-card__avatars`)과 `--expanded` 수식 클래스를 지우고, 펼침 형태의 동작(원문 클램프 없음, 1280에서 `fs-meta`로 줄임)을 기본값으로 병합했다 — BRIEFING 쪽 렌더 결과는 바뀌지 않는다. `EvidenceDialog`도 `<EvidenceGrid evidence={evidence} />`로 호출부를 맞췄다.
 - 접근성·테스트: `tests/components/DiscussScreen.test.tsx`에 BriefingScreen.test.tsx와 같은 형태의 테스트(팝업 열기 전 `evidence-card` 없음 → 버튼 클릭 후 4장 → Esc로 닫히고 포커스가 버튼으로 돌아옴)를 추가했다. `e2e/discuss.spec.ts`에 버튼 → 팝업 → Esc 닫힘·포커스 복귀 흐름을 1건 추가하고, `e2e/noscroll.spec.ts`의 DISCUSS 구간(옛 "E4 아코디언 펼침" 단언)을 자료 팝업 열기/닫기 + 비서실장 드로어 열기/닫기 조합으로 다시 썼다. `e2e/screenshots.spec.ts`에 두 해상도의 `discuss.png`(버튼 행만 보이는 상태)를 갱신하고 `discuss-evidence.png`(팝업 연 상태)를 새로 추가했다.
 - 검수: `npm run check && npm run build && npx playwright test -c playwright.local.config.ts`가 통과해야 한다. 두 해상도에서 DISCUSS 오른쪽 열에 자료 카드 없이 버튼만 있고(추천 문구·임원 카드와 겹치지 않음) 페이지 스크롤이 없다. 팝업이 BRIEFING과 동일하게 열리고 닫힌다.
+
+## v1.3 승인된 C안 시안(S0~S6) 그대로 — ATTRACT·SELECT 재작성 (T70·T71, 2026-10-02)
+
+배경(2026-10-02 사용자 지시, "시안 이탈 금지"): `docs/design/mockups/`에 S0~S6·팝업까지 승인된 C안 시안 8장(미리보기 `preview/*.png`)이 자리 잡았다. 지금까지 각 화면은 "기밀 작전실" 스킨의 토큰·부품(브래킷·스캔라인·타자기 라벨·도장)을 썼지만 배치·문구·크기는 화면마다 임의로 다듬어져 있었다. 이번 절부터는 화면을 재작업할 때마다 해당 시안 HTML의 인라인 스타일 값을 그대로 옮긴다 — 구성·순서·문구·색·서체·도장·버튼 모양 중 시안에 없는 것을 더하거나 시안에 있는 것을 빼지 않는다. 시안은 1280×720 캔버스 한 장이고, 1920×1080에서는 같은 배치를 키운 값을 쓴다(아래 각 절의 "두 해상도 값" 참고 — 1280 이하 미디어쿼리는 시안 값 그대로, 1920 기본값은 1.25배로 두 해상도 값의 조합은 tokens.css의 다른 반응형 쌍과 비슷한 비율이다).
+
+### 1. 안건 선택(SELECT) — 시안 S1_Select (T70)
+
+- **카드 2장만 둔다**: `src/content/scenarios/index.ts`의 레지스트리를 `[preparingPlaceholder('data-openness', '다음 안건'), anonBoardScenario]`로 줄였다 — 옛 3번째 준비 중 카드(`prevention`)는 시안이 카드 2장만 보여주므로 뺐다(별도 시나리오 파일이 없어 인라인 placeholder만 지웠다). `preparingPlaceholder`는 `title` 인자를 `chairBriefing.question`에 그대로 넣는다(아래 항목 참고).
+- **카드 본문 = 안건 질문 한 줄**: `SelectScreen.tsx`가 카드 제목에 `scenario.incident.headline`(옛 "사건 헤드라인") 대신 `scenario.chairBriefing.question`을 쓴다. `incident.headline`·`incident.hook`·`subtitle`은 카드에서 더는 읽지 않지만 데이터 자체는 그대로 둔다 — `incident.headline`은 BRIEFING eyebrow(`사건 02 · {headline}`)가 계속 쓴다(anon-board 콘텐츠는 손대지 않는다, "하지 말 것" 규칙).
+- **CASE 칩은 배열 순서로만 매긴다**: 좌상단 칩("CASE 01"/"CASE 02")은 `scenario.incident.caseLabel`(예 "사건 02")을 읽지 않고 카드 배열 인덱스(`index+1`을 두 자리로)로만 만든다 — caseLabel 필드는 BRIEFING 등 다른 화면이 그대로 쓰므로 건드리지 않는다.
+- **카드 스킨**: 종이(`--paper`) + `--shadow-paper-main`(8px 8px 0 #1f2126, 토큰 그대로), 테두리 없음(`border:0`). 좌상단 CASE 칩(`--font-label`, 1px `--label` 테두리), 우상단 도장 — 활성 카드는 "CONFIDENTIAL"(`--stamp-red` 3px/1280·4px/1920 테두리, -8°), 준비 중 카드는 "준비 중"(`--label` 2px 테두리, -6°). 제목은 `--font-display` 32px/1280·40px/1920(준비 중은 30px/37px, 시안 인라인 값 그대로). 바닥 한 줄(`--font-label`)은 "OPEN FILE · 선택하면 이사회에 입장합니다"/"FILE SEALED · 다음 안건을 준비하고 있습니다". 선택 시 `--hud-line`(#28d9f0) 3px 외곽선(offset 4px) + 우상단 체크 원(글리프 `✓`, 기존 `scenario-card--selected::after` 관행과 같다).
+- **무대 배경·풀블리드**: SELECT는 `.app-main`(공통 padding)의 자식이라 시안의 "헤더 바로 아래부터 꽉 참" 구성과 어긋났다 — `select.css`가 음수 margin으로 `.app-main`의 padding을 정확히 상쇄하고(두 해상도 값 모두) 시안 값(28px 24px/1280·35px 30px/1920)으로 다시 여백을 준다(`AttractScreen`도 같은 구조, 아래 2절). 그 안에 흐린 무대 사진(블러 1.5px·채도 0.6·불투명 0.55) + 스캔라인 + 상하 그라데이션 + 네 모서리 브래킷 + 우상단 "CAM 01 · 회의실 A / STANDBY · 안건 대기" 라벨을 절대 위치로 깐다(장식, `aria-hidden`).
+- 접근성·테스트: `tests/components/SelectScreen.test.tsx`(질문 문구만 보이고 headline·hook·subtitle은 없음, 준비 중 카드 disabled, 선택 후 CTA 활성화 + `onEnter` 호출). `e2e/flow-early.spec.ts`에서 `prevention` 카드 단언을 뺐다(카드 자체가 없다). `e2e/screenshots.spec.ts`의 `select.png`(두 해상도)를 새 레이아웃으로 갱신했다.
+
+### 2. 대기(ATTRACT) — 시안 S0_Attract (T71)
+
+- **본문 전체가 무대 사진 한 장**: `AttractScreen.tsx`를 시안 DOM 순서 그대로 다시 짰다 — 시안색 글로우 테두리 박스(`attract-screen__stage`, `border:1px solid rgba(40,217,240,.55)` + 안쪽 글로우) 안에 무대 사진(채도 0.8·대비 1.05, 블러 없음) + 스캔라인 + 상하 그라데이션 + 네 모서리 브래킷(28px/1280·35px/1920) + 좌상단 "CAM 01 · 회의실 A / STANDBY" + 우상단 "TOP SECRET" 도장(`--stamp-red` 테두리, `--dark-vote-no` 글자색 — 시안 hex #e06b6b와 토큰 값이 그대로 일치한다)을 절대 위치로 올린다.
+- **가운데 세로 블록**: 모드 배지(`--font-hud`, live는 "LIVE · 실제 임원 에이전트 · 4분 이사회", scripted는 "사전 구성 시뮬레이션" — `MODE_BADGE_TEXT`가 바뀌었지만 testid `attract-mode-badge`와 scripted 쪽 정확한 문구는 그대로라 `e2e/live.spec.ts`의 기존 단언이 깨지지 않는다) → `<h1>` "BOARDROOM 2026"(`--font-display` 56px/1280·90px/1920, 시안색 글로우 text-shadow) → 부제("오늘 당신이 이사회의 한 자리를 맡습니다") → 사건 번호 줄("CASE FILE No. 02 · 특별 이사 1석 공석", 장식이 아닌 실제 문구라 `aria-hidden`을 주지 않는다 — 헤더의 같은 문구와 달리 중복이 아니다).
+- **CTA·로스터**: 좌하단 "체험 시작 ▶"는 공용 `.cta`(채움·깎인 모서리·굵은 그림자)를 그대로 쓰고 위치·너비(260px/1280·325px/1920)만 `.attract-screen__cta`로 덮어쓴다. 우하단 "CEO CFO CAIO CISO + 당신" 줄은 장식(`aria-hidden`)이다.
+- **풀블리드**: SELECT(1절)와 같은 음수 margin 상쇄 구조 — `.app-main` padding을 없애고 시안 값(20px 24px/1280·25px 30px/1920)으로 다시 준다.
+- 접근성·테스트: `e2e/screenshots.spec.ts`에 `attract.png`(두 해상도) 캡처를 추가했다. 기존 `e2e/live.spec.ts`·`e2e/a11y.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/viewport-fit.spec.ts`의 `attract-mode-badge`·"체험 시작" 단언은 그대로 통과한다(버튼 접근 가능한 이름이 "체험 시작 ▶"로 바뀌었지만 Playwright의 기본 부분일치 규칙상 "체험 시작"으로 여전히 찾아진다).
+
+### 3. 검수
+
+`npm run check && npm run build && npx playwright test -c playwright.local.config.ts`(mock 서버 + 격리 포트) 전체 124건이 통과한다. 두 해상도 모두 페이지 스크롤이 없고, `docs/screenshots/{desktop-1080,desktop-720}/{select,attract}.png`가 `docs/design/mockups/preview/{S1_Select,S0_Attract}.png`와 같은 구성으로 보인다(육안 대조 완료).
 

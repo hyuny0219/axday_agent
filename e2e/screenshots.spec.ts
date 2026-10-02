@@ -43,11 +43,18 @@ async function capture(page: Page, projectName: string, screenName: string) {
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
-test('선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({ page }, testInfo) => {
+test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({
+  page,
+}, testInfo) => {
   await page.goto('/?mode=scripted');
+
+  // ATTRACT(T71): 시안(S0_Attract) 그대로 — 무대 풀블리드·제목·CTA.
+  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await capture(page, testInfo.project.name, 'attract');
+
   await page.getByRole('button', { name: '체험 시작' }).click();
 
-  // SELECT: 안건 카드 3열 중 활성 안건을 선택한 상태.
+  // SELECT(T70): 시안(S1_Select) 카드 2장(활성 1 + 준비 중 1) 중 활성 안건을 선택한 상태.
   await page.getByTestId('scenario-card-anon-board').click();
   await expect(page.getByTestId('scenario-card-anon-board')).toHaveAttribute(
     'aria-pressed',
