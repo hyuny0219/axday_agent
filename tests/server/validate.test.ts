@@ -17,7 +17,7 @@ function validStatement() {
     evidenceIds: ['E1'],
     referencedStatementIds: [],
     concerns: ['도입 속도'],
-    suggestedConditionIds: ['PILOT'],
+    suggestedConditionIds: ['LIMIT'],
     stance: 'FOR',
   };
 }
@@ -158,7 +158,7 @@ describe('assistantResponseSchema', () => {
     draftRevision: 2,
     draftText: '정리된 발언입니다.',
     evidenceIds: ['E2'],
-    suggestedConditionIds: ['MEASURE'],
+    suggestedConditionIds: ['OWNER'],
   };
 
   it('accepts a well-formed assistant response', () => {

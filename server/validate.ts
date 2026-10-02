@@ -10,11 +10,26 @@ export type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 export const REQUEST_ROLE_IDS = [...EXEC_ROLE_IDS, 'PARTICIPANT'] as const;
 
-/** 현재 시나리오(anon-board)의 근거 카드 ID. */
+/** 현재 활성 안건(ai-approval·experience-first, T78)의 근거 카드 ID. 두 안건 모두
+ * E1~E4라 공유된다. */
 export const EVIDENCE_IDS = ['E1', 'E2', 'E3', 'E4'] as const;
 
-/** 현재 시나리오(anon-board)의 조건 ID. */
-export const CONDITION_IDS = ['PILOT', 'SCREEN', 'TRACE', 'MEASURE', 'ANON_FULL'] as const;
+/** 현재 활성 안건(ai-approval·experience-first, T78)의 조건 ID 합집합. 안건마다 다른
+ * 조건 집합을 쓰므로 여기서는 두 안건의 ID를 모두 허용만 하고(REVIEW는 양쪽에 모두
+ * 있어 한 번만 적는다), 실제로 어떤 조건이 그 안건에 속하는지는
+ * src/content/scenarios/*.ts(Condition.id)가 가른다 — 이 enum은 "알 수 없는 ID
+ * 거절" 용도일 뿐 안건별 유효성까지 검증하지 않는다. */
+export const CONDITION_IDS = [
+  'LIMIT',
+  'LOG',
+  'REVIEW',
+  'OWNER',
+  'FULL_AUTO',
+  'SCOPE',
+  'RECORD',
+  'DATA_VETO',
+  'EXP_ONLY',
+] as const;
 
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;
 export const REQUEST_STAGES = [...STATEMENT_STAGES, 'VOTE', 'ASSISTANT'] as const;

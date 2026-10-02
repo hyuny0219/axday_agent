@@ -11,7 +11,7 @@ function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
     sessionId: 'session-1',
     requestId: 'req-vote-default',
     mode: 'live',
-    scenarioId: 'anon-board',
+    scenarioId: 'ai-approval',
     budgetMs: 8000,
     transcript: {
       revision: 1,
@@ -21,7 +21,7 @@ function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
       id: 'work-assistant-original',
       hash: 'motion-hash-1',
       text: '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다.',
-      effectiveConditionIds: ['PILOT'],
+      effectiveConditionIds: ['LIMIT'],
       executionMode: 'pilot',
     },
     ...overrides,

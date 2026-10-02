@@ -43,11 +43,15 @@ const ROLE_EVIDENCE: Record<string, string> = {
   CISO: 'E4',
 };
 
+// T78(2026-10-02, 안건 교체)에서 validate.ts의 CONDITION_IDS가 현재 활성 안건(ai-approval·
+// experience-first)의 조건 ID로 바뀌어, 옛 anon-board 조건(PILOT 등)은 더는 스키마를
+// 통과하지 못한다 — 이 mock 응답도 유효한 ID로 맞춘다(둘 다 scenario-agnostic이라
+// 특정 안건의 조건일 필요는 없다).
 const ROLE_CONDITION: Record<string, string> = {
-  CEO: 'PILOT',
-  CFO: 'MEASURE',
-  CAIO: 'SCREEN',
-  CISO: 'TRACE',
+  CEO: 'LIMIT',
+  CFO: 'OWNER',
+  CAIO: 'LOG',
+  CISO: 'REVIEW',
 };
 
 const ROLE_VOTE: Record<string, 'YES' | 'NO'> = {
@@ -75,7 +79,7 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     evidenceIds: [ROLE_EVIDENCE[roleId] ?? 'E1'],
     referencedStatementIds: [],
     concerns: [`[mock] ${roleId} 우려사항`],
-    suggestedConditionIds: [ROLE_CONDITION[roleId] ?? 'PILOT'],
+    suggestedConditionIds: [ROLE_CONDITION[roleId] ?? 'LIMIT'],
     stance: ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
@@ -98,7 +102,7 @@ function buildAssistantJson(env: MockRequestEnvelope): unknown {
     draftRevision: env.draftRevision ?? 0,
     draftText: '[mock] 참가자 발언을 짧게 정리한 문장입니다.',
     evidenceIds: ['E1'],
-    suggestedConditionIds: ['PILOT'],
+    suggestedConditionIds: ['LIMIT'],
   };
 }
 

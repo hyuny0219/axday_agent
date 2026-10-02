@@ -16,7 +16,7 @@ function baseRefineInput(overrides: Partial<AssistantRefineRequest> = {}): Assis
     sessionId: 'session-1',
     requestId: 'req-refine-default',
     mode: 'live',
-    scenarioId: 'anon-board',
+    scenarioId: 'ai-approval',
     budgetMs: 5000,
     draftText: '아직 검증되지 않아 바로 진행하지 않겠습니다.',
     draftRevision: 0,
@@ -29,7 +29,7 @@ function baseSummarizeInput(overrides: Partial<AssistantSummarizeRequest> = {}):
     sessionId: 'session-1',
     requestId: 'req-summarize-default',
     mode: 'live',
-    scenarioId: 'anon-board',
+    scenarioId: 'ai-approval',
     budgetMs: 5000,
     transcript: {
       revision: 2,

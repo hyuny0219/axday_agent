@@ -26,7 +26,7 @@ describe('createMockProvider deterministic responses', () => {
     const message = first.json as { roleId: string; evidenceIds: string[]; suggestedConditionIds: string[] };
     expect(message.roleId).toBe('CEO');
     expect(message.evidenceIds).toEqual(['E1']);
-    expect(message.suggestedConditionIds).toEqual(['PILOT']);
+    expect(message.suggestedConditionIds).toEqual(['LIMIT']);
   });
 
   it('varies deterministically by role for vote responses', async () => {
