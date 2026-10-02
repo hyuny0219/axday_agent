@@ -100,7 +100,7 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 
 - **P1** — 레지스트리에 없는 세 번째 안건 자리의 관람 뷰(원문·AI 초안·미확정 표 미전송, 재접속·연결 끊김 처리), 서기 입력 확인 리허설. 카드: `docs/TASKS.md`의 T18~T22(옛 안건 ①·③ 초안은 `docs/SCENARIO_CUSTOMER_SUPPORT.md`·`SCENARIO_PREVENTION.md`에 보존, T70에서 두 카드만 남기며 레지스트리에서 뺐다).
 - **P2** — 실제 모델 응답 비용·지연 튜닝(임원 에이전트 고도화 2차), 결과 출력(프린터) 선택 확장. 카드: T23·T24·T34·T35.
-- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. T54(v4 기준선 → v5)·T62(v6)·T63(v7)의 프롬프트 튜닝(`docs/eval/tuning-v5~v7.md`)은 **이전 안건(anon-board)** 콘텐츠 기준이라 2026-10-02 T78의 안건 교체 이후로는 활성 콘텐츠를 대표하지 않습니다. 같은 날 T79가 새 안건 2개 기준으로 프롬프트 v8을 재측정했습니다(`docs/eval/tuning-v8.md`, 190/192 응답). T35(비서실장 별도 평가)는 아직 남아 있습니다.
+- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. T54(v4 기준선 → v5)·T62(v6)·T63(v7)의 프롬프트 튜닝(`docs/eval/tuning-v5~v7.md`)은 **이전 안건(anon-board)** 콘텐츠 기준이라 2026-10-02 T78의 안건 교체 이후로는 활성 콘텐츠를 대표하지 않습니다. 같은 날 T79가 새 안건 2개 기준으로 프롬프트 v8을 재측정했습니다(`docs/eval/tuning-v8.md`, 190/192 응답). PR #13 Codex 1차 검토(P1)에서 `npm run eval:live`가 레지스트리에서 빠진 `anon-board`를 그대로 가리켜 호출 전에 `unknown_scenario`로 멈추던 결함을 고쳐, `--scenario`(기본 `ai-approval`, `experience-first`도 가능)로 안건을 고를 수 있게 했습니다(`docs/LIVE_EVAL.md`). T35(비서실장 별도 평가)는 아직 남아 있습니다.
 
 ## 현장 미검증 목록
 
