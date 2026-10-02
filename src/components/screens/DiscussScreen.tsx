@@ -6,18 +6,14 @@
 // AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
 // (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
 // AssistantPanel에 추가로 넘긴다.
-// T45(조종석 배치): 왼쪽 열(app-body__actions)은 내 행동만 — 입력창·조건 칩(한 줄)·
-// [비서실장][의견 전달]. 오른쪽 열(app-body__content)은 회의 정보 — "비서실장 추천
-// 문구" 2×3 + 근거 2×2(압축) + 임원 첫 의견(2026-09-19 T45 검토 반영: 세로 예산을
-// 넘기지 않도록 추천 문구를 오른쪽으로 옮겼다, DESIGN_SPEC.md v1.0 6절 2a). 추천 문구는
-// 오른쪽 열로 옮겨도 클릭 동작·testid(phrase-card-*)·선택 상태는 그대로다. AssistantPanel은
-// 토글이 왼쪽에 남고, 열렸을 때의 드로어 본문은 assistant.css가 오른쪽 열 위에 절대
-// 위치로 겹쳐 그린다(position:absolute, DOM은 그대로 왼쪽 트리 안이지만 .app-body가
-// 위치 기준점이다). 왼쪽 열은 더 이상 내부 스크롤하지 않는다(discuss-screen__scroll 제거).
-// T69(2026-10-01 사용자 결정): 근거 2×2(압축) 상시 카드는 BRIEFING(T68)과 같은
-// "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다. 팝업 열림 상태는 이 화면의
-// 로컬 state다(화면 전환·세션 리셋으로 DiscussScreen이 언마운트되면 함께 닫힌다). 자료
-// 카드가 빠지며 생긴 세로 여유는 추천 문구·임원 첫 의견 블록이 자연히 흡수한다.
+// T73(docs/design/mockups/S3_Discuss.html·S3b_Discuss_Evidence.html 시안 그대로): 왼쪽
+// 열은 무대(StageBand, App.tsx가 그린다) 아래 HUD 입력 상자(discuss-screen__hud —
+// "MY STATEMENT" 머리줄 + textarea + "CONDITIONS" 칩 줄을 하나의 패널로 묶는다) +
+// 버튼 줄([AI 비서실장 열기][의견 전달])이다. 오른쪽 열은 종이 한 장(STEP 03 + 추천
+// 문구 2×3 + 근거 자료·임원 발언 버튼 + STANCE 칩 4개)이고, 예전에 상시 보이던 임원
+// 첫 의견 카드 2×2는 빠졌다 — 그 내용(live면 transcript의 OPINIONS 발언, scripted면
+// initialOpinions)은 EvidenceDialog 팝업의 STATEMENTS 열로 옮겼다(BRIEFING과 같은
+// 컴포넌트를 함께 쓴다).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -38,10 +34,7 @@ import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
-import { Avatar } from '../parts/Avatar';
-import { EvidenceDialog } from '../parts/EvidenceDialog';
-import { STATUS_TEXT } from '../parts/LiveStatementCards';
-import { MEMBER_LABELS } from '../memberLabels';
+import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -54,16 +47,15 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. live 모드에서는
-   * 아래 임원 4장 카드의 본문도 이 transcript의 OPINIONS 발언에서 그대로 가져온다(Codex
-   * 18차 검토 P2 — 실제 발언과 다른 각본 문장을 나란히 보여주면 안 된다). */
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록이자, 근거 자료
+   * 팝업의 STATEMENTS 열(live)이 보여줄 02 임원 의견 발언의 원천이다. */
   transcript: Transcript;
-  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. 임원 카드 본문을 실제
-   * 발언(live)으로 보여줄지 각본 문장(scripted)으로 보여줄지 가른다. */
+  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. STATEMENTS 열 본문을
+   * 실제 발언(live)으로 보여줄지 각본 문장(scripted)으로 보여줄지 가른다. */
   mode: SessionMode;
   /** live 모드에서 임원별 OPINIONS 라운드 응답 상태(아직 응답 전/실패 포함). */
   roleStatus: Record<ExecMemberId, RoleStatus>;
-  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
+  /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63)이자 오른쪽 열 STANCE 칩의 근거다. */
   stances: Record<ExecMemberId, Stance>;
   onSubmit: (payload: DiscussSubmitPayload) => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
@@ -71,6 +63,14 @@ export interface DiscussScreenProps {
   /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
   assistantAdapter?: AssistantAdapter;
 }
+
+/** STANCE 칩 왼쪽 띠·글자색에 쓰는 소문자 modifier(OpinionsScreen의 STANCE_MODIFIER와
+ * 같은 값). */
+const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
+  FOR: 'for',
+  AGAINST: 'against',
+  UNDECIDED: 'undecided',
+};
 
 function uniqueInOrder(ids: string[]): string[] {
   const result: string[] = [];
@@ -80,6 +80,17 @@ function uniqueInOrder(ids: string[]): string[] {
     }
   }
   return result;
+}
+
+/** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52). evidenceIds가 여럿이면 가장 마지막 것
+ * (OpinionsScreen.lastEvidenceLabel과 같은 규칙). */
+function lastEvidenceLabel(scenario: Scenario, evidenceIds: string[]): string | null {
+  const lastId = evidenceIds[evidenceIds.length - 1];
+  if (!lastId) {
+    return null;
+  }
+  const card = scenario.evidence.find((item) => item.id === lastId);
+  return card ? card.title : lastId;
 }
 
 export function DiscussScreen({
@@ -95,9 +106,10 @@ export function DiscussScreen({
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
-  // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·임원 카드)은 시각적으로
-  // 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에 닿을 수 있었다
-  // (PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어 포커스·클릭을 막는다.
+  // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·STANCE 칩)은
+  // 시각적으로 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에
+  // 닿을 수 있었다(PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어
+  // 포커스·클릭을 막는다.
   const [assistantOpen, setAssistantOpen] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
   const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
@@ -150,6 +162,51 @@ export function DiscussScreen({
 
   const showNoMatchHint = draft.draftText.trim() !== '' && proposedConditionIds.length === 0;
   const canSubmit = pendingPhraseId === null && isSubmittable(draft);
+
+  // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
+  // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
+  // scripted면 scenario.initialOpinions 각본 문장이다.
+  const dialogStatements = useMemo<EvidenceDialogStatementView[]>(() => {
+    if (mode === 'live') {
+      return EXEC_MEMBER_ORDER.map((memberId) => {
+        const status = roleStatus[memberId];
+        const statement = transcript.statements.find(
+          (item) => item.roleId === memberId && item.stage === 'OPINIONS',
+        );
+        if (status === 'answered' && statement) {
+          return {
+            memberId,
+            stance: stances[memberId],
+            status: 'answered' as const,
+            text: statement.text,
+            evidenceLabel: lastEvidenceLabel(scenario, statement.evidenceIds),
+            testable: true,
+          };
+        }
+        return {
+          memberId,
+          stance: stances[memberId],
+          status: status === 'failed' ? ('failed' as const) : ('pending' as const),
+          text: '',
+          evidenceLabel: null,
+          testable: true,
+        };
+      });
+    }
+    return scenario.initialOpinions.map((opinion) => ({
+      memberId: opinion.memberId,
+      stance: stances[opinion.memberId],
+      status: 'answered' as const,
+      text: opinion.text,
+      evidenceLabel: lastEvidenceLabel(scenario, opinion.evidenceIds),
+      testable: false,
+    }));
+  }, [mode, roleStatus, transcript, stances, scenario]);
+
+  // CASE 칩(시안 "CASE 02"): scenario.incident.caseLabel("사건 02")의 숫자만 뽑는다
+  // (ResultScreen·BriefingScreen의 caseTag 계산과 같은 규칙).
+  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
+  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
   function handleTogglePhrase(phraseId: string) {
     const result = togglePhrase(draft, scenario, phraseId);
@@ -206,13 +263,8 @@ export function DiscussScreen({
   return (
     <>
       <div className="app-body__actions screen discuss-screen">
-        <div className="discuss-screen__editor">
-          <h3 className="discuss-screen__section-label discuss-screen__section-label--mine">
-            <Avatar memberId="PARTICIPANT" size="sm" />내 발언
-          </h3>
-          {pendingPhraseId !== null && (
-            <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />
-          )}
+        {pendingPhraseId !== null && <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />}
+        <div className="discuss-screen__hud" data-testid="discuss-hud">
           <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
           <ConditionChips
             scenario={scenario}
@@ -243,16 +295,23 @@ export function DiscussScreen({
             onClick={handleSubmit}
             data-testid="submit-opinion"
           >
-            의견 전달
+            의견 전달 ▶
           </button>
         </div>
-        <p className="discuss-screen__submit-hint">
-          빈 칸이거나 300자를 넘으면 전달할 수 없습니다. 축약 표현은 이사님이 직접 정합니다.
-        </p>
       </div>
       <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">
-        <div className="discuss-screen__phrases">
-          <h3 className="discuss-screen__section-label">비서실장 추천 문구 (여러 개 선택 가능)</h3>
+        <div className="discuss-screen__paper">
+          <div className="discuss-screen__head">
+            <span className="discuss-screen__step">STEP 03</span>
+            {/* 시안 원본은 <h1>이지만, 이 화면은 ATTRACT의 페이지 <h1>("BOARDROOM 2026")
+                아래 중첩되는 화면 제목이라 다른 조종석 화면과 같은 <h2> 위계를 쓴다 —
+                글자 크기·굵기는 시안 값 그대로다. */}
+            <h2 className="discuss-screen__title">내 의견 쓰기</h2>
+            <span className="discuss-screen__phrase-hint">추천 문구 · 여러 개 선택 가능</span>
+          </div>
+          <p className="discuss-screen__guide">
+            문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
+          </p>
           <div className="discuss-screen__phrase-list">
             {scenario.phrases.map((phrase) => (
               <PhraseCard
@@ -263,73 +322,42 @@ export function DiscussScreen({
               />
             ))}
           </div>
-        </div>
-        <div className="discuss-screen__evidence-row">
-          <button
-            type="button"
-            className="evidence-open-button"
-            onClick={() => setEvidenceOpen(true)}
-            data-testid="open-evidence"
-          >
-            근거 자료 보기
-          </button>
-          <span className="evidence-open-hint">EXHIBIT A–D · 4장</span>
-        </div>
-        <div className="discuss-screen__execs" data-testid="discuss-exec-row">
-          {mode === 'live'
-            ? EXEC_MEMBER_ORDER.map((memberId) => {
-                const status = roleStatus[memberId];
-                // DISCUSS는 OPINIONS 라운드가 끝난 뒤 화면이라 여기서 보여줄 실제 발언도
-                // stage:'OPINIONS'다(OpinionsScreen·LiveStatementCards와 같은 근거).
-                const statement = transcript.statements.find(
-                  (item) => item.roleId === memberId && item.stage === 'OPINIONS',
-                );
-                return (
-                  <article key={memberId} className="discuss-exec-card">
-                    <Avatar memberId={memberId} size="sm" />
-                    <div className="discuss-exec-card__body">
-                      <div className="discuss-exec-card__head">
-                        <h3 className="discuss-exec-card__member">{MEMBER_LABELS[memberId]}</h3>
-                        <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${memberId}`}>
-                          {STANCE_LABEL[stances[memberId]]}
-                        </span>
-                      </div>
-                      {status === 'answered' && statement ? (
-                        <p className="discuss-exec-card__text" data-testid={`statement-card-${memberId}`}>
-                          {statement.text}
-                        </p>
-                      ) : (
-                        <p
-                          className="discuss-exec-card__text"
-                          data-testid={
-                            status === 'failed' ? `statement-failed-${memberId}` : `statement-pending-${memberId}`
-                          }
-                        >
-                          {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
-                        </p>
-                      )}
-                    </div>
-                  </article>
-                );
-              })
-            : scenario.initialOpinions.map((opinion) => (
-                <article key={opinion.memberId} className="discuss-exec-card">
-                  <Avatar memberId={opinion.memberId} size="sm" />
-                  <div className="discuss-exec-card__body">
-                    <div className="discuss-exec-card__head">
-                      <h3 className="discuss-exec-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
-                      <span className="discuss-exec-card__mood" data-testid={`exec-mood-label-${opinion.memberId}`}>
-                        {STANCE_LABEL[stances[opinion.memberId]]}
-                      </span>
-                    </div>
-                    <p className="discuss-exec-card__text">{opinion.text}</p>
-                  </div>
-                </article>
-              ))}
+          <div className="discuss-screen__evidence-row">
+            <button
+              type="button"
+              className="evidence-open-button"
+              onClick={() => setEvidenceOpen(true)}
+              data-testid="open-evidence"
+            >
+              근거 자료 · 임원 발언 보기
+            </button>
+            <span className="evidence-open-hint">EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명</span>
+          </div>
+          <div className="discuss-screen__stance-row" data-testid="discuss-stance-row">
+            <span className="discuss-screen__stance-label">STANCE</span>
+            {EXEC_MEMBER_ORDER.map((memberId) => {
+              const stance = stances[memberId];
+              return (
+                <span
+                  key={memberId}
+                  className={`discuss-screen__stance-chip discuss-screen__stance-chip--${STANCE_MODIFIER[stance]}`}
+                >
+                  <span aria-hidden="true">{memberId}</span>
+                  {' · '}
+                  <span data-testid={`exec-mood-label-${memberId}`}>{STANCE_LABEL[stance]}</span>
+                </span>
+              );
+            })}
+          </div>
         </div>
       </div>
       {evidenceOpen && (
-        <EvidenceDialog evidence={scenario.evidence} onClose={() => setEvidenceOpen(false)} />
+        <EvidenceDialog
+          evidence={scenario.evidence}
+          caseTag={caseTag}
+          statements={dialogStatements}
+          onClose={() => setEvidenceOpen(false)}
+        />
       )}
     </>
   );

@@ -55,7 +55,10 @@ export function ConditionChips({
 
   return (
     <div className="condition-chips" data-testid="condition-chips">
-      <p className="condition-chips__label">확인할 조건</p>
+      {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안 그대로
+          쓰는 장식 라벨이고(STEP·EXHIBIT 등과 같은 규칙), 확정 칩의 체크는 배지가 아니라
+          시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
+      <p className="condition-chips__label">CONDITIONS</p>
       <div className="condition-chips__list">
         {proposedIds.map((id) => {
           const accepted = acceptedIds.includes(id);
@@ -69,6 +72,7 @@ export function ConditionChips({
               onClick={() => onToggle(id)}
             >
               {conditionLabel(scenario, id)}
+              {accepted ? ' ✓' : ''}
             </button>
           );
         })}

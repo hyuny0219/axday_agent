@@ -76,6 +76,10 @@ describe('DiscussScreen', () => {
       />,
     );
 
+    // T73: 임원 발언은 더 이상 화면에 상시 보이지 않고, "근거 자료 · 임원 발언 보기"
+    // 팝업의 STATEMENTS 열에서 본다.
+    fireEvent.click(screen.getByTestId('open-evidence'));
+
     // 실제 발언이 있고 answered인 임원은 그 발언 텍스트가 그대로 보인다(각본 문장 아님).
     expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('[live] CEO의 실제 발언입니다.');
     expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent('[live] CFO의 실제 발언입니다.');
@@ -114,9 +118,14 @@ describe('DiscussScreen', () => {
       />,
     );
 
+    // T73: scripted 각본 문장도 "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS
+    // 열에서 본다(화면에 상시 보이지 않는다).
+    fireEvent.click(screen.getByTestId('open-evidence'));
     for (const opinion of scenario.initialOpinions) {
       expect(screen.getByText(opinion.text)).toBeInTheDocument();
     }
+    // scripted 각본 문장은 live 전용 statement-card- testid를 쓰지 않는다(OpinionsScreen의
+    // scripted .opinion-card와 같은 규칙).
     expect(screen.queryAllByTestId(/^statement-card-/)).toHaveLength(0);
   });
 

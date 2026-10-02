@@ -12,6 +12,9 @@
 // 차지해 720에서 잘렸다 — 그 자리를 "근거 자료 보기" 버튼 하나로 바꾸고, 누르면
 // EvidenceDialog 팝업에서 4장을 전문으로 본다. 팝업 열림 상태는 이 화면의 로컬
 // state다(화면 전환·세션 리셋으로 BriefingScreen이 언마운트되면 함께 닫힌다).
+// T73(S3b_Discuss_Evidence 시안 공용 컴포넌트): EvidenceDialog가 CASE 칩 + STATEMENTS
+// 열을 더했다. BRIEFING은 아직 02 임원 의견 단계 전이라 임원 발언이 없으므로
+// statements를 빈 배열로 넘겨 EvidenceDialog가 안내 한 줄만 보여주게 한다.
 
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -25,6 +28,10 @@ export interface BriefingScreenProps {
 
 export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // CASE 칩(시안 "CASE 02"): scenario.incident.caseLabel("사건 02")의 숫자만 뽑는다
+  // (ResultScreen의 caseTag 계산과 같은 규칙).
+  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
+  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
   return (
     <>
@@ -79,7 +86,12 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
         </div>
       </div>
       {evidenceOpen && (
-        <EvidenceDialog evidence={scenario.evidence} onClose={() => setEvidenceOpen(false)} />
+        <EvidenceDialog
+          evidence={scenario.evidence}
+          caseTag={caseTag}
+          statements={[]}
+          onClose={() => setEvidenceOpen(false)}
+        />
       )}
     </>
   );

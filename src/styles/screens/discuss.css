@@ -1,228 +1,108 @@
-.discuss-screen__section-label {
-  margin: 0 0 4px;
-  font-size: var(--fs-meta);
-  color: var(--text-muted);
-}
+/* DISCUSS 화면(T73, docs/design/mockups/S3_Discuss.html 시안대로, 미리보기
+   preview/S3_Discuss.png). 시안은 1280×720 한 장이다 — 기본 규칙(1920×1080)은 그
+   값을 1.25배 키운 값을 쓰고, @media (max-width: 1280px)에서 시안 값 그대로로
+   되돌린다(select.css·opinions.css와 같은 비율, T70·T72). em 단위 letter-spacing은
+   font-size를 따라 자동으로 커지므로 두 번 적지 않는다.
 
-/* 내 좌석 명패(DESIGN_SPEC.md "만들 것 · 내 좌석 · '나 · 특별 이사' 명패"). 왼쪽 열
-   자체가 더는 스크롤되지 않아(T45) sticky는 필요 없다 — 일반 흐름의 pill로 남긴다. */
-.discuss-screen__section-label--mine {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  width: fit-content;
-  color: var(--text);
-  font-size: var(--fs-card);
-  padding: 4px var(--space-2) 4px var(--space-1);
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  background-color: var(--panel-glass);
-}
+   왼쪽 열(app-body__actions)의 무대는 StageBand(App.tsx)가 그린다 — 이 화면은 그
+   아래 HUD 입력 상자 + 버튼 줄만 맡는다. */
 
-/* 오른쪽(회의 정보) 열의 임원 첫 의견 4장. 무대 열이 본문 폭을 줄여(T44) 4열은
-   좁아지므로 2열로 감싼다(DESIGN_SPEC.md v1.0 6절 표 "임원 첫 의견 4줄"). */
-.discuss-screen__execs {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.discuss-exec-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 0;
-  overflow: hidden;
-  background-color: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-1) var(--space-2);
-  box-shadow: var(--shadow-card);
-}
-
-.discuss-exec-card__body {
-  min-width: 0;
-}
-
-.discuss-exec-card__head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-1);
-}
-
-.discuss-exec-card__member {
-  margin: 0;
-  font-size: var(--fs-meta);
-  color: var(--text-muted);
-}
-
-/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정"). */
-.discuss-exec-card__mood {
-  margin-left: auto;
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-/* 임원 첫 의견은 4줄로 클램프한다(v1.0 6절 표 "임원 첫 의견 4줄") — 패널 자체는
-   스크롤하지 않는다. */
-.discuss-exec-card__text {
-  margin: 0;
-  font-size: var(--fs-meta);
-  color: var(--text);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* 추천 문구 패널(2026-09-19 T45 검토 반영: 오른쪽 "회의 정보" 열로 옮겼다,
-   DESIGN_SPEC.md v1.0 6절 2a). 내부 스크롤은 두지 않는다 — 왼쪽 열의 입력·CTA가
-   화면당 유일한 스크롤 후보 자리를 대신 쓰지 않으므로 오른쪽 열도 세로 예산 안에서
-   그대로 보여야 한다. */
-.discuss-screen__phrases {
+/* HUD 입력 상자(시안 "#15171b 배경 + 시안색 1px 테두리"). textarea·CONDITIONS 칩
+   줄을 하나의 패널로 묶는다 — transcript-bg·transcript-border는 이미 TRANSCRIPT
+   패널(minutes.css)이 쓰는 같은 HUD 어두운 판 톤이지만 테두리는 시안색(hud-line)으로
+   강조한다. */
+.discuss-screen__hud {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+  padding: 12.5px 15px;
+  background-color: var(--transcript-bg);
+  border: 1px solid var(--hud-line);
 }
 
-/* 추천 문구 6개는 2열로 감싼다(DESIGN_SPEC.md v1.0 6절 표 "추천 문구 2×3"). */
-.discuss-screen__phrase-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
-}
-
-/* 근거 자료 보기 버튼 행(T69, 2026-10-01). 근거 2×2(압축) 상시 카드를 없애고
-   BRIEFING(T68)과 같은 버튼 + EvidenceDialog 팝업으로 연다 — 버튼·안내 한 줄 자체
-   스타일(`.evidence-open-button`·`.evidence-open-hint`)은 evidenceDialog.css의 공용
-   규칙이고, 여기서는 추천 문구 아래·임원 첫 의견 위에 놓는 배치만 맡는다. */
-.discuss-screen__evidence-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-/* 내 발언 영역: 시안 왼쪽 4px 경계로 참가자 좌석임을 표시한다(DESIGN_SPEC.md
-   "만들 것 · 내 좌석"). */
-.discuss-screen__editor {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-left: 4px solid var(--accent);
-  padding-left: var(--space-2);
-}
-
-.phrase-card {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-height: var(--touch-min);
-  background-color: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-1) var(--space-2);
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-  font-size: var(--fs-meta);
-  /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
-  transition:
-    border-color var(--transition-fast) ease,
-    background-color var(--transition-fast) ease;
-}
-
-.phrase-card:hover {
-  background-color: var(--panel-active);
-}
-
-.phrase-card--selected {
-  border-color: var(--accent);
-  box-shadow: var(--glow-accent);
-}
-
-/* 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절 "추천 문구·빠른 답·조건 칩:
-   ... 선택 시 체크 배지가 튀어나오는120ms 스케일 애니메이션"). */
-.phrase-card--selected::after {
-  content: '✓' / '';
-  position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--accent);
-  color: var(--bg);
-  font-size: 13px;
-  font-weight: 700;
-  animation: check-badge-pop var(--transition-fast) ease-out both;
-}
-
-.phrase-card__checkbox {
-  width: 24px;
-  height: 24px;
-  accent-color: var(--accent);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.phrase-card__text {
-  color: var(--text);
+@media (max-width: 1280px) {
+  .discuss-screen__hud {
+    gap: 8px;
+    padding: 10px 12px;
+  }
 }
 
 .draft-editor {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 10px;
 }
 
-/* 3줄 높이(v1.0 6절 표 "입력창 3줄") — 왼쪽 열 세로 예산에 맞춰 크게 줄였다. 텍스트
-   전체는 필요하면 입력창 자체 내부 스크롤로 본다(resize:vertical로 참가자가 늘릴 수도
-   있다). */
-.draft-editor__textarea {
-  width: 100%;
-  min-height: 72px;
-  max-height: 120px;
-  resize: vertical;
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--fs-meta);
-  line-height: 1.5;
+@media (max-width: 1280px) {
+  .draft-editor {
+    gap: 8px;
+  }
 }
 
-.draft-editor__textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.draft-editor__meta {
+/* 머리줄 "MY STATEMENT · 내 발언" + "n / 300자"(시안). */
+.draft-editor__head {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-hud);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: var(--hud-line);
+}
+
+@media (max-width: 1280px) {
+  .draft-editor__head {
+    font-size: 11px;
+  }
+}
+
+.draft-editor__label {
+  white-space: nowrap;
 }
 
 .draft-editor__count {
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
+  color: #9fb6cc;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .draft-editor__count--over {
   color: var(--vote-no);
 }
 
+/* 3줄 높이(시안 64px/720) — resize는 시안대로 막는다(HUD 입력 상자가 고정 높이다). */
+.draft-editor__textarea {
+  width: 100%;
+  min-height: 80px;
+  box-sizing: border-box;
+  resize: none;
+  padding: 10px 12.5px;
+  background-color: var(--skin-bg);
+  border: 1px solid var(--transcript-border);
+  color: #eaf4ff;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1280px) {
+  .draft-editor__textarea {
+    min-height: 64px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+.draft-editor__textarea:focus-visible {
+  outline: 2px solid var(--hud-line);
+  outline-offset: 2px;
+}
+
 .draft-editor__error {
   margin: 0;
   color: var(--vote-no);
+  font-size: var(--fs-meta);
 }
 
 .rebuild-confirm {
@@ -257,9 +137,20 @@
   font-family: inherit;
 }
 
+/* CONDITIONS 칩 줄(시안 — DISCUSS·REACTIONS 공용, ConditionChips.tsx). 확정 칩은
+   시안색 테두리 + 라벨 끝에 붙는 "✓"(배지가 아니라 글자), 미확정은 회색. */
 .condition-chips__label {
-  margin: 0 0 var(--space-1);
-  color: var(--text-muted);
+  margin: 0;
+  font-family: var(--font-hud);
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  color: #9fb6cc;
+}
+
+@media (max-width: 1280px) {
+  .condition-chips__label {
+    font-size: 10px;
+  }
 }
 
 .condition-chips__list {
@@ -270,44 +161,30 @@
 
 .condition-chip {
   min-height: var(--touch-min);
-  padding: 4px var(--space-2);
-  border-radius: 999px;
-  border: 2px solid var(--border);
+  padding: 5px 12.5px;
+  border-radius: 18px;
+  border: 1px solid #4a4d55;
   background: transparent;
-  color: var(--text);
+  color: #8f8a80;
   cursor: pointer;
   font-family: inherit;
-  font-size: var(--fs-meta);
-  position: relative;
+  font-size: 15px;
   transition:
     border-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
 }
 
-.condition-chip--accepted {
-  border-color: var(--accent);
-  color: var(--accent);
-  padding-right: calc(var(--space-2) + 22px);
+@media (max-width: 1280px) {
+  .condition-chip {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+  }
 }
 
-/* 선택 체크 배지 120ms 스케일 등장(DESIGN_SPEC.md v1.0 2절, phrase-card와 동일 규칙). */
-.condition-chip--accepted::after {
-  content: '✓' / '';
-  position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background-color: var(--accent);
-  color: var(--bg);
-  font-size: 11px;
-  font-weight: 700;
-  animation: check-badge-pop-center var(--transition-fast) ease-out both;
+.condition-chip--accepted {
+  border-color: var(--hud-line);
+  color: var(--hud-line);
 }
 
 .condition-chips__conflicts {
@@ -317,146 +194,306 @@
 }
 
 .condition-chips__hint {
-  color: var(--text-muted);
+  color: #9fb6cc;
 }
 
-/* [비서실장][의견 전달]을 나란히 둔다(DESIGN_SPEC.md v1.0 6절 표 "[비서실장][의견
-   전달]"). screen__submit-row(shell.css)가 flex-wrap을 이미 주므로 너비가 부족하면
-   줄바꿈된다. */
+/* [AI 비서실장 열기][의견 전달 ▶](시안 — amber 보조 버튼 + amber 채움 주 CTA).
+   screen__submit-row(shell.css)가 flex-wrap을 이미 주므로 너비가 부족하면
+   줄바꿈된다. 두 버튼 모두 이 화면에서만 쓰는 크기라 .assistant-panel__toggle·.cta의
+   공용 규칙(다른 화면이 함께 쓴다)을 덮어쓰지 않고 이 행 안에서만 덮어쓴다. */
 .discuss-screen__submit-row {
   align-items: center;
 }
 
-.discuss-screen__submit-hint {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--fs-meta);
+.discuss-screen__submit-row .assistant-panel__toggle {
+  min-height: 60px;
+  width: 225px;
+  padding: 0;
+  background-color: transparent;
+  border: 2px solid var(--amber);
+  border-radius: 0;
+  color: var(--amber);
+  font-family: var(--font-display);
+  font-size: 21px;
+  letter-spacing: 0.04em;
+  box-shadow: 4px 4px 0 #3a2a12;
 }
 
-/* 720(무대 열 36vw)에서는 왼쪽 열 세로 예산이 더 빠듯해(v1.0 6절 "720: 아래 입력
-   영역 약 330px") 임원 카드를 한 줄 요약(아바타+이름+문구 한 줄)으로 접는다. 글자
-   크기는 tokens.css의 720 스케일(--fs-meta 12px 등)을 그대로 따른다. */
+.discuss-screen__submit-row .assistant-panel__toggle:hover {
+  background-color: rgba(224, 163, 74, 0.12);
+}
+
 @media (max-width: 1280px) {
-  .discuss-screen__execs {
-    gap: 4px;
-  }
-
-  .discuss-exec-card {
-    min-width: 0;
-    overflow: hidden;
-    padding: 4px var(--space-1);
-    min-height: 40px;
-    gap: 6px;
-  }
-
-  .discuss-exec-card__body {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .discuss-exec-card__member {
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-
-  .discuss-exec-card__text {
-    -webkit-line-clamp: 1;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .discuss-screen__phrases {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  /* 720 세로 예산 안에서 조건 칩(56px 터치 목표, 축소 예외 없음)까지 담으려면
-     추천 문구를 2행(3열×2행)으로 눕혀야 한다 — 열이 3개라 칸이 좁아지는 만큼
-     문구는 1줄로 자른다(.phrase-card__text 아래). */
-  /* T45 이후 추천 문구는 오른쪽 열(세로 여유 충분)에 있으므로 2열 3행, 문구 2줄. */
-  .discuss-screen__phrase-list {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-  }
-
-  .phrase-card {
+  .discuss-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
-    padding: 4px 6px;
+    width: 180px;
+    font-size: 17px;
   }
+}
 
-  .draft-editor {
-    gap: 4px;
+.discuss-screen__submit-row .cta {
+  min-height: 70px;
+  width: 250px;
+  font-size: 25px;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__submit-row .cta {
+    min-height: 56px;
+    width: 200px;
+    font-size: 20px;
   }
+}
 
-  .discuss-screen__editor {
-    gap: 4px;
+/* 오른쪽 종이(시안 — 왼쪽 열과 같은 "paper" 패널, opinions.css와 같은 그림자·배경). */
+.discuss-screen__paper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 25px 30px;
+  background-color: var(--paper);
+  box-shadow: var(--shadow-paper-main);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__paper {
+    gap: 10px;
+    padding: 20px 24px;
   }
+}
 
-  .discuss-screen__section-label {
-    margin-bottom: 0;
+/* STEP 칩 + 제목 + 우측 "추천 문구 · 여러 개 선택 가능" 라벨(시안). */
+.discuss-screen__head {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__head {
+    gap: 10px;
   }
+}
 
-  .discuss-screen__section-label--mine {
-    padding: 2px var(--space-1);
-    font-size: var(--fs-meta);
+.discuss-screen__step {
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__step {
+    padding: 3px 8px;
+    font-size: 12px;
   }
+}
 
-  /* 아바타는 장식(aria-hidden)이라 720 세로 예산이 빠듯할 때는 빼고 글자만 남긴다. */
-  .discuss-screen__section-label--mine .avatar {
-    display: none;
+.discuss-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 33px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__title {
+    font-size: 26px;
   }
+}
 
-  /* 카드 폭이 좁아 2줄로 꺾이면 최소 높이(48px, 720 예외)를 넘기기 쉬워 1줄로
-     자른다 — 전체 문구는 카드 클릭 전에도 이미 브리핑·근거에서 다뤘다. */
-  .phrase-card__text {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+.discuss-screen__phrase-hint {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 15px;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__phrase-hint {
+    font-size: 12px;
   }
+}
 
-  .draft-editor__meta {
-    display: none;
-  }
+.discuss-screen__guide {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--ink-muted);
+}
 
-  .condition-chips__label {
-    margin: 0;
-    font-size: 11px;
-  }
-
-  /* 조건 칩은 56px 터치 목표를 그대로 유지한다(예외 없음) — 대신 라벨 폭을
-     줄여(ellipsis) 한 줄에 더 들어가게 한다. 내부 스크롤은 두지 않는다(v1.0 6절
-     2a) — 전체 라벨은 오른쪽 열·MOTION 화면에서 다시 확인할 수 있다. */
-  .condition-chip {
-    min-height: var(--touch-min);
-    padding: 4px var(--space-1);
+@media (max-width: 1280px) {
+  .discuss-screen__guide {
     font-size: 13px;
   }
+}
 
-  /* 위 padding 단축 속성이 선택된 칩의 오른쪽 여백(체크 배지 자리)까지 덮어쓰므로
-     여기서 다시 준다 — 안 그러면 배지가 라벨 끝 글자 위에 겹친다. */
-  .condition-chip--accepted {
-    padding-right: calc(var(--space-1) + 22px);
-  }
+/* 추천 문구 6개 2열(시안 — 열 높이를 채운다). */
+.discuss-screen__phrase-list {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  align-content: stretch;
+}
 
-  /* 720에서는 rows=3(JSX)보다도 낮춰, 남는 텍스트는 입력창 자체 내부 스크롤로 본다
-     (DraftEditor는 resize:vertical도 허용한다). */
-  .draft-editor__textarea {
-    min-height: 32px;
-    max-height: 40px;
+@media (max-width: 1280px) {
+  .discuss-screen__phrase-list {
+    gap: 10px;
   }
+}
 
-  .discuss-screen__editor {
-    gap: 2px;
-  }
+.phrase-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  box-sizing: border-box;
+  padding: 17.5px;
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--ink);
+  cursor: pointer;
+  /* 선택 120ms(DESIGN_SPEC.md 4장 "선택120ms"). */
+  transition:
+    border-color var(--transition-fast) ease,
+    background-color var(--transition-fast) ease;
+}
 
-  /* 720 세로 예산(v1.0 6절 "아래 입력 영역 약 330px")에 맞추려면 안내 문구까지 담을
-     여유가 없다 — 전달 규칙(빈 칸·300자)은 조건 칩·글자 수 카운터로도 이미 드러난다. */
-  .discuss-screen__submit-hint {
-    display: none;
+@media (max-width: 1280px) {
+  .phrase-card {
+    gap: 10px;
+    padding: 14px;
+    font-size: 14px;
   }
+}
+
+.phrase-card--selected {
+  background-color: #f3ead6;
+  border-color: var(--label);
+}
+
+.phrase-card__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.phrase-card__checkbox {
+  width: 25px;
+  height: 25px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid var(--paper-border);
+  background-color: var(--paper-2);
+  color: var(--paper);
+}
+
+@media (max-width: 1280px) {
+  .phrase-card__checkbox {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.phrase-card--selected .phrase-card__checkbox {
+  border-color: var(--label);
+  background-color: var(--label);
+}
+
+.phrase-card__text {
+  color: var(--ink);
+}
+
+/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼·안내 자체
+   스타일(.evidence-open-button·.evidence-open-hint)은 evidenceDialog.css의 공용
+   규칙이고, 여기서는 점선 위 경계 + 배치만 맡는다. */
+.discuss-screen__evidence-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--paper-border);
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__evidence-row {
+    gap: 12px;
+    padding-top: 6px;
+  }
+}
+
+/* 마지막 줄 STANCE 칩 4개(시안 — 실제 stance, 역할 코드 + 찬성/반대 쪽). */
+.discuss-screen__stance-row {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__stance-row {
+    gap: 8px;
+  }
+}
+
+.discuss-screen__stance-label {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__stance-label {
+    font-size: 11px;
+  }
+}
+
+.discuss-screen__stance-chip {
+  padding: 4px 11px;
+  border-radius: 15px;
+  font-size: 15px;
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__stance-chip {
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+}
+
+.discuss-screen__stance-chip--for {
+  border: 1px solid var(--paper-vote-yes);
+  color: var(--paper-vote-yes);
+}
+
+.discuss-screen__stance-chip--against {
+  border: 1px solid var(--stamp-red);
+  color: var(--stamp-red);
+}
+
+.discuss-screen__stance-chip--undecided {
+  border: 1px solid var(--ink-muted);
+  color: var(--ink-muted);
 }

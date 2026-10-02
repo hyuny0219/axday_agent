@@ -47,13 +47,13 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → 현재 상황/제안/
     const card = dialog.getByTestId(`evidence-card-${id}`);
     await expect(card).toBeVisible();
     await expect(card.locator('.evidence-card__insight')).toBeVisible();
-    await expect(card.locator('.evidence-card__content')).toBeVisible();
+    await expect(card.locator('.evidence-card__meta')).toBeVisible();
     // 카드 안 어디에도 자료 ID가 없다 — 접두("E1 · ")뿐 아니라 원문 속 언급("E1과 다르다")도
     // 참가자에게 ID를 노출한다(PR #10 Codex 29차 검토 P2).
     await expect(card).not.toContainText(/E[1-4]/);
     // 원문은 줄 클램프 없이 마지막 글자까지 카드 안·뷰포트 안에 보인다. visibility·overflow
     // 검사는 CSS line-clamp가 지운 뒷부분을 잡지 못하므로 마지막 글자의 사각형을 직접 본다.
-    const tail = await card.locator('.evidence-card__content').evaluate((el) => {
+    const tail = await card.locator('.evidence-card__meta').evaluate((el) => {
       const text = el.firstChild as Text;
       const range = document.createRange();
       range.setStart(text, text.length - 1);
