@@ -25,6 +25,11 @@
 // S4_Reactions 시안에 없어 뺐다 — 참가자 본인 발언은 이미 무대 참가자 말풍선
 // (StageBand)이 보여주므로 중복이었다. 그 testid·2줄 클램프에 기대던 e2e 단언은
 // 모두 지우거나 다른 신호로 바꿨다.
+// 2026-10-02 2차 검토 반영: 다만 StageBand 전체가 aria-hidden(장식)이고 REACTIONS는
+// 발언 흐름 패널도 없어(DISCUSS와 같은 이유), 인용문을 빼기만 하면 스크린리더가 이
+// 화면에서 참가자 본인의 이전 의견을 읽을 자리가 없어진다. 시각은 그대로 두고
+// `ExecStanceList`와 같은 sr-only 기법(`.reactions-screen__sr-only`)으로 MY REPLY
+// 편집기 바로 앞에 숨은 문단 하나만 되돌렸다 — 화면 모양은 전혀 바뀌지 않는다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -353,6 +358,11 @@ export function ReactionsScreen({
     <>
       <div className="app-body__actions screen reactions-screen">
         <div className="reactions-screen__hud" data-testid="reactions-hud">
+          {lastOpinion && (
+            <p className="reactions-screen__sr-only" data-testid="reactions-prior-opinion">
+              이사님의 이전 의견: {lastOpinion.originalText}
+            </p>
+          )}
           <DraftEditor
             value={textValue}
             onChange={handleTextChange}

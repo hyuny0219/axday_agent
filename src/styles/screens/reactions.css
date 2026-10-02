@@ -21,6 +21,23 @@
   }
 }
 
+/* 참가자 본인의 이전 의견(2026-10-02 2차 검토): StageBand 전체가 aria-hidden이고
+   REACTIONS에는 발언 흐름 패널도 없어, 시안에 없는 인용 상자를 그냥 빼기만 하면
+   스크린리더가 이 화면에서 참가자 본인의 이전 의견을 읽을 자리가 사라진다.
+   ExecStanceList(MOTION·VOTE)와 같은 sr-only 기법으로 화면 모양은 그대로 두고
+   MY REPLY 편집기 바로 앞에 숨은 문단 하나만 둔다. */
+.reactions-screen__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* HUD 입력 상자(시안 "MY REPLY · 내 답변" — discuss-screen__hud와 같은 모양·값).
    DraftEditor·ConditionChips는 discuss.css의 공용 클래스를 그대로 쓴다(컴포넌트
    재사용, T74). */

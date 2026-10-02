@@ -132,6 +132,22 @@ test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 �
   await expect(page.getByTestId('motion-card')).toBeVisible();
 });
 
+// 2026-10-02 2차 검토: 시안에 없는 "내 발언 인용" 상자는 뺐지만(제로 이탈),
+// StageBand 전체가 aria-hidden이라 참가자 본인의 이전 의견을 스크린리더로 읽을
+// 자리가 없어지면 안 된다 — sr-only 문단으로 화면 모양 변화 없이 되돌렸다.
+test('이전 의견이 화면 모양 변화 없이 스크린리더용 sr-only 문단으로 남아 있다', async ({ page }) => {
+  await reachReactionsWithAccessConfirmed(page);
+
+  const prior = page.getByTestId('reactions-prior-opinion');
+  await expect(prior).toHaveText('이사님의 이전 의견: 문제가 생기면 작성자를 확인할 수 있게 해 둡시다.');
+  // sr-only 기법(1px·clip·overflow hidden)을 쓰는지 computed style로 직접 확인한다 —
+  // 1×1px라 Playwright의 toBeVisible()은 "보임"으로 셀 수 있어 그 대신 실제 크기를 본다.
+  await expect(prior).toHaveCSS('position', 'absolute');
+  await expect(prior).toHaveCSS('width', '1px');
+  await expect(prior).toHaveCSS('height', '1px');
+  await expect(prior).toHaveCSS('overflow', 'hidden');
+});
+
 // S4_Reactions 시안: DISCUSS에서 이미 확정한 조건은 cyan "✓", 이번 답변이 새로
 // 제안한 조건은 앰버 "+ 새 조건"으로 구분해 보여준다(2026-10-02 2차 검토).
 test('CONDITIONS 칩이 기존 확정(cyan "✓")과 이번 답변의 새 조건(앰버 "+ 새 조건")을 구분해 보여준다', async ({
