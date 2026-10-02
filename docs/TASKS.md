@@ -1070,3 +1070,14 @@
 - 하지 말 것: 발언 문장·최종 표를 프롬프트에 넣기, scripted 표결표 전달, 평가 세트 2회 이상 실행(크레딧), src/domain·화면 변경.
 - 완료 확인: `npm run check && npm run build` 성공, 서버 단위 테스트(렌즈·출발 성향이 OPINIONS에만 들어가고 비서실장 프롬프트에 없음), 실측 문서에 분포표.
 - 크기: M.
+
+## T80 상황 파악 화면 — 시안 Main.html대로(종이 서류철 + SITREP/YOUR ORDERS + 자료 요약 카드 2×2 + 팝업)
+
+- 목표(2026-10-02 사용자 지적·결정): 이사회 입장 직후 화면(BRIEFING)이 시안 `docs/design/mockups/Main.html`(`preview/Main.png`)과 다르다. 시안대로 재작성한다. 자료 영역은 사용자 결정대로 **시안의 요약 카드 2×2 + T68 팝업 유지**: 종이 하단에 EXHIBIT A–D 요약 카드(자료명 타자기 라벨, 해석 한 줄 13px, 보조 한 줄 12px 회색 — 각 줄 1~2줄 클램프)를 두고, 전문은 기존 "근거 자료 보기" 팝업(EvidenceDialog, STATEMENTS 빈 상태 줄 포함)으로 본다. 팝업 버튼은 EXHIBIT 블록 머리줄 오른쪽에 작은 보조 버튼("전문 보기")으로 — 시안에 없는 유일한 추가 요소이며, 다른 요소는 추가·삭제 금지.
+- 시안 구성(오른쪽 종이): CONFIDENTIAL 도장(우상단) → CASE 칩("CASE 01/02", 안건 caseLabel) + 사건 한 줄(headline) → h1 결정 질문(Black Han Sans 34px/1280) → SITREP·PROPOSAL·UNKNOWN 상자(종이-2, 갈색 왼쪽 3px 띠, 타자기 라벨; UNKNOWN은 붉은 라벨, 미정 항목 ` · ` 연결 — 시안의 먹칠(redaction)은 마지막 항목에만 적용) → YOUR ORDERS 점선 상자(라벨 "YOUR ORDERS · 특별 이사", 굵은 역할 문장, "FINAL CALL: 찬성 / 반대" 타자기 녹·적) → EXHIBIT 2×2(남는 높이 채움). 왼쪽: 무대(의장 말풍선) → "의견 듣기 ▶" CTA(240px) → TRANSCRIPT 패널(남는 높이 채움, T77 형식).
+- 읽을 것: `src/components/screens/BriefingScreen.tsx`, `src/styles/screens/briefing.css`, `src/components/parts/EvidenceGrid.tsx`(expanded 변형 — 요약 카드용 compact 변형 추가 가능), `EvidenceDialog.tsx`, T68·T70~T77 카드, DESIGN_SPEC 3장 BRIEFING, `e2e/briefing.spec.ts`·`noscroll.spec.ts`·`screenshots.spec.ts`, `tests/components/BriefingScreen.test.tsx`.
+- 허용 경로: `src/components/screens/BriefingScreen.tsx`, `src/components/parts/EvidenceGrid.tsx`, `src/styles/screens/briefing.css`·`evidence.css`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 팝업 동작 변경, 다른 화면 변경, 콘텐츠 변경.
+- **시안 이탈 금지**: Main.html 인라인 스타일 값을 그대로 쓴다(1280 기준, 1920은 비율 확대). 1920×1080·1280×720 페이지 스크롤 없음.
+- 완료 확인: `npm run check && npm run build && npx playwright test` 성공, briefing·briefing-evidence 스크린샷 갱신 후 `preview/Main.png`와 나란히 비교, DESIGN_SPEC 3장 BRIEFING 개정(v1.3).
+- 크기: S.
