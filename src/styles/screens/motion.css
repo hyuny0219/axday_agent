@@ -1,73 +1,339 @@
-.motion-screen__title {
-  margin: 0;
-  font-size: var(--fs-title);
+/* MOTION 화면(T75, docs/design/mockups/S5_Motion.html 시안대로, 미리보기
+   preview/S5_Motion.png). 시안은 1280×720 한 장이다 — 기본 규칙(1920×1080)은 그 값을
+   1.25배 키운 값을 쓰고, @media (max-width: 1280px)에서 시안 값 그대로로 되돌린다
+   (opinions.css·discuss.css·reactions.css와 같은 비율, T72·T73·T74). em 단위
+   letter-spacing은 font-size를 따라 자동으로 커지므로 두 번 적지 않는다.
+
+   왼쪽 열(app-body__actions)의 무대·TRANSCRIPT는 App.tsx(StageBand·MinutesPanel)가
+   그린다 — 이 화면은 그 사이에 끼는 입력 상자가 없다(ExecStanceList sr-only + 조건부
+   재요청 버튼만). CTA는 다른 화면과 달리 오른쪽 종이 바닥에 둔다(시안 그대로 — 이
+   화면은 왼쪽 열에 입력 상자가 전혀 없다). */
+
+/* 왼쪽 열 끝(TRANSCRIPT 패널 바로 위)에 작게 두는 재요청 보조 버튼. MinutesPanel
+   내부(머리줄)는 다른 화면과 공유하는 컴포넌트라 건드리지 않고, 그 바로 앞 그리드
+   영역에서 오른쪽 정렬해 가장 가깝게 둔다. */
+.motion-screen__retry {
+  align-self: flex-end;
+  min-height: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: 13px;
 }
 
-/* 후속 대기 게이트(T46): CTA 아래에 보이는 "임원 후속 판단 중…" 문구. vote-screen__waiting과
-   같은 규칙(DESIGN_SPEC.md v1.0 7절)이며, 64px CTA 자체 높이는 그대로 두고 .app-body__actions
-   의 gap(var(--space-2))만으로 세로 예산 안에 들어간다. */
-.motion-screen__waiting {
-  margin: 0;
-  padding: var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text-muted);
-}
-
-/* 최종 안건 카드: 중앙 정렬 + max-width960px(DESIGN_SPEC.md "만들 것 · 최종 안건·투표
-   · 안건 카드 중앙 max-width960px"). T64(오른쪽 열 서류철): 종이-2 카드 + 잉크 글자. */
-.motion-screen__card {
+/* 오른쪽 종이(시안 — opinions-screen__paper·discuss-screen__paper·
+   reactions-screen__paper와 같은 패널). */
+.motion-screen__paper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  background-color: var(--paper-2);
-  border: 2px solid var(--paper-border);
-  border-radius: var(--radius-card);
-  padding: var(--space-3);
-  max-width: 960px;
-  width: 100%;
-  margin: 0 auto;
+  gap: 13px;
+  padding: 25px 30px;
+  background-color: var(--paper);
+  box-shadow: var(--shadow-paper-main);
   color: var(--ink);
-  box-shadow: var(--shadow-paper-card);
+  overflow: hidden;
 }
 
-.motion-screen__original {
-  margin: 0;
-  font-size: var(--fs-card);
-  color: var(--ink);
+@media (max-width: 1280px) {
+  .motion-screen__paper {
+    gap: 10px;
+    padding: 20px 24px;
+  }
 }
 
-.motion-screen__section-label {
-  margin: var(--space-2) 0 0;
-  font-size: 18px;
+/* 우상단 DRAFT 도장(시안 — opinions-screen__stamp와 같은 모양, 문구만 다르다). */
+.motion-screen__stamp {
+  position: absolute;
+  top: 18px;
+  right: 23px;
+  padding: 6px 15px;
+  border: 4px solid var(--stamp-red);
+  color: var(--stamp-red);
   font-family: var(--font-label);
-  letter-spacing: 0.1em;
+  font-size: 20px;
+  letter-spacing: 0.24em;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__stamp {
+    top: 14px;
+    right: 18px;
+    padding: 5px 12px;
+    border-width: 3px;
+    font-size: 16px;
+  }
+}
+
+/* STEP 칩 + 제목 줄. */
+.motion-screen__head {
+  display: flex;
+  align-items: baseline;
+  gap: 13px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__head {
+    gap: 10px;
+  }
+}
+
+.motion-screen__step {
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
   color: var(--label);
 }
 
-/* 실행 방식·조건 목록을 pill로 보여준다(DESIGN_SPEC.md "만들 것 · 실행 방식/조건
-   목록 pill"). */
-.motion-screen__conditions,
-.motion-screen__tasks {
+@media (max-width: 1280px) {
+  .motion-screen__step {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
+.motion-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 33px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__title {
+    font-size: 26px;
+  }
+}
+
+/* "MOTION ON THE TABLE · 원안/수정안" 상자(시안 — 종이-2 + 갈색 왼쪽 4px 띠). */
+.motion-screen__motion-box {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 17.5px 20px;
+  background-color: var(--paper-2);
+  border-left: 5px solid var(--label);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__motion-box {
+    gap: 8px;
+    padding: 14px 16px;
+  }
+}
+
+/* 상자 라벨 공용(시안 — MOTION ON THE TABLE·CONDITIONS·NOT INCLUDED·CHAIR 모두 같은
+   타자기 라벨 모양). */
+.motion-screen__box-label {
+  font-family: var(--font-label);
+  font-size: 13.75px;
+  letter-spacing: 0.16em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__box-label {
+    font-size: 11px;
+  }
+}
+
+.motion-screen__motion-text {
+  margin: 0;
+  font-size: 22.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__motion-text {
+    font-size: 18px;
+  }
+}
+
+/* CONDITIONS · NOT INCLUDED 2열(시안). */
+.motion-screen__cols {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__cols {
+    gap: 8px;
+  }
+}
+
+.motion-screen__cols-box {
+  box-sizing: border-box;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7.5px;
+  padding: 12.5px 15px;
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__cols-box {
+    gap: 6px;
+    padding: 10px 12px;
+  }
+}
+
+/* CONDITIONS pill 목록(시안 — 녹색 테두리, WCAG 대비를 위해 --paper-vote-yes를 쓴다.
+   tokens.css: 원본 #1f8f5f는 대비 미달로 이미 다른 화면에서도 교체됐다). */
+.motion-screen__conditions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: 7.5px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.motion-screen__conditions li,
-.motion-screen__tasks li {
-  padding: 6px 14px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  color: var(--ink);
-  font-size: var(--fs-meta);
+@media (max-width: 1280px) {
+  .motion-screen__conditions {
+    gap: 6px;
+  }
+}
+
+.motion-screen__conditions li {
+  padding: 3.75px 11px;
+  border: 1px solid var(--paper-vote-yes);
+  border-radius: 15px;
+  font-size: 15px;
+  color: var(--paper-vote-yes);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__conditions li {
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
 }
 
 .motion-screen__no-conditions {
   margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__no-conditions {
+    font-size: 12px;
+  }
+}
+
+.motion-screen__not-included-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__not-included-text {
+    font-size: 12px;
+  }
+}
+
+/* CHAIR · 의장 점선 안내(시안 — reactions-screen__followup과 같은 점선 상자). */
+.motion-screen__chair-box {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12.5px 15px;
+  border: 2px dashed var(--label);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__chair-box {
+    gap: 4px;
+    padding: 10px 12px;
+  }
+}
+
+.motion-screen__chair-text {
+  margin: 0;
+  font-size: 17.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__chair-text {
+    font-size: 14px;
+  }
+}
+
+/* 바닥 CTA 줄(시안 — "이 안건으로 표결 ▶" + 타자기 "FREEZE MOTION · 조건 확정"). */
+.motion-screen__cta-row {
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__cta-row {
+    gap: 16px;
+  }
+}
+
+.motion-screen__cta-row .cta {
+  min-height: 70px;
+  width: 325px;
+  font-size: 25px;
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__cta-row .cta {
+    min-height: 56px;
+    width: 260px;
+    font-size: 20px;
+  }
+}
+
+.motion-screen__cta-hint {
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .motion-screen__cta-hint {
+    font-size: 12px;
+  }
+}
+
+/* 후속 대기 게이트(T46, live 전용): 시안에는 없는 동적 상태라 CTA 줄 아래에 작게
+   덧붙인다(vote-screen__waiting과 같은 규칙, DESIGN_SPEC.md v1.0 7절). */
+.motion-screen__waiting {
+  flex-shrink: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  color: var(--ink-muted);
+  font-size: 14px;
 }
