@@ -213,12 +213,16 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크하면 확인 UI가
   await expect(rebuildConfirm).toBeVisible();
   // 확인 UI가 뜬 동안에는 원문이 조용히 바뀌지 않는다.
   await expect(page.getByTestId('followup-textarea')).toHaveValue(customText);
+  // PR #12 Codex 2차 검토 1: 확인 UI가 뜬 동안에는 전달 버튼도 막혀 있어야 한다 —
+  // 그렇지 않으면 참가자가 요청한 체크 변경을 건너뛰고 조용히 전달될 수 있다.
+  await expect(page.getByTestId('submit-followup')).toBeDisabled();
 
   await page.getByTestId('rebuild-confirm-keep').click();
   await expect(rebuildConfirm).toHaveCount(0);
   // '유지'를 고른 뒤에도 텍스트는 그대로고, 체크 카드만 선택 표시로 바뀐다.
   await expect(page.getByTestId('followup-textarea')).toHaveValue(customText);
   await expect(page.getByTestId('followup-option-0')).toHaveClass(/phrase-card--selected/);
+  await expect(page.getByTestId('submit-followup')).toBeEnabled();
 });
 
 // 같은 흐름에서 '선택 문구로 다시 구성'을 고르면 체크된 옵션 전체 기준으로 답변을

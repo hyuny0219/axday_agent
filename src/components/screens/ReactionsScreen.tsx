@@ -41,6 +41,12 @@
 // 않고 DISCUSS와 같은 RebuildConfirm("직접 쓴 내용 유지"/"선택 문구로 다시 구성")을
 // 띄운다 — '유지'는 체크만 바꾸고 텍스트는 그대로, '다시 구성'은 전체 선택 기준으로
 // 다시 짓고(domain/draft.ts의 buildDraftText와 같은 전체 재구성 방식) dirty를 푼다.
+// PR #12 Codex 2차 검토: (1) canSubmit도 pendingOptionIndex === null을 요구하게 해
+// RebuildConfirm이 뜬 동안 요청한 체크 변경을 건너뛰고 조용히 전달되는 일을 막았다.
+// (2)·(3) 근거 자료 팝업 STATEMENTS의 02(OPINIONS) 행이 04(REACTIONS)와 같은 최신
+// stances를 공유하던 것을 각 발언 자체의 Statement.stance로 바꾸고, 02 발언이 아직
+// 없을 때의 상태를 roundLog(App.tsx, T41)에서 그 역할의 OPINIONS 결과만 찾아 판정하게
+// 했다(자세한 이유는 아래 dialogStatements 바로 위 주석).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -53,6 +59,7 @@ import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import { reactionsFor } from '../reactionsFor';
+import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -75,6 +82,11 @@ export interface ReactionsScreenProps {
   mode: 'live' | 'scripted';
   roleStatus: Record<ExecMemberId, RoleStatus>;
   statements: Statement[];
+  /** 라운드별 임원 응답 기록(T41, App.tsx가 SET_ROLE_STATUS dispatch를 가로채 쌓는다).
+   * roleStatus는 "지금" 라운드(REACTIONS)만 담아 OPINIONS 결과를 덮어쓰므로, 근거 자료
+   * 팝업의 02 임원 의견 행이 아직 응답 전인지(판단 중)·끝내 실패했는지(응답 없음)를
+   * 가리려면 이 기록이 필요하다(PR #12 Codex 2차 검토 3). */
+  roundLog: RoundLogEntry[];
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
   /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
@@ -126,6 +138,7 @@ export function ReactionsScreen({
   mode,
   roleStatus,
   statements,
+  roundLog,
   stances,
   transcriptRevision,
   onSubmitFollowup,
@@ -244,8 +257,14 @@ export function ReactionsScreen({
   // 조건 확인은 답을 시작한 뒤(추천 답변 체크, 직접 입력)에만 보여준다. 이전 의견의
   // 조건은 그 전까지 그대로 유지된다(PR #4 Codex 2차 검토).
   const hasStartedAnswer = selectedOptionIds.length > 0 || textValue.trim() !== '';
+  // PR #12 Codex 2차 검토 1: RebuildConfirm이 뜬 동안(pendingOptionIndex !== null)은
+  // 참가자가 요청한 체크 변경이 아직 반영되지 않았으므로 전달을 막는다 — DiscussScreen의
+  // `pendingPhraseId === null && isSubmittable(draft)`와 같은 규칙이다.
   const canSubmit =
-    textValue.trim() !== '' && textValue.length <= DRAFT_MAX_LENGTH && conflictPairs.length === 0;
+    pendingOptionIndex === null &&
+    textValue.trim() !== '' &&
+    textValue.length <= DRAFT_MAX_LENGTH &&
+    conflictPairs.length === 0;
 
   function handleToggleOption(index: number) {
     const option = scenario.followUp.options[index];
@@ -336,8 +355,17 @@ export function ReactionsScreen({
   const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
   // 근거 자료 팝업의 STATEMENTS 열(T74): DISCUSS는 02 임원 의견만 보여줬지만 REACTIONS는
-  // 02 의견 + 04 반응을 함께(단계 태그로 구분) 보여준다. live는 02가 이미 끝난 단계라
-  // 발언이 없으면 실패로, 04는 이 화면의 roleStatus(REACTIONS 라운드)를 그대로 쓴다.
+  // 02 의견 + 04 반응을 함께(단계 태그로 구분) 보여준다.
+  // PR #12 Codex 2차 검토 2: 두 행이 같은 stances[memberId](현재·최신 stance)를 쓰면
+  // REACTIONS에서 입장이 바뀐 임원의 02 행까지 덩달아 다시 라벨된다 — 각 발언이 실제로
+  // 실린 Statement.stance(live 응답이 그대로 옮겨 싣는 값, T63)를 먼저 쓰고, 그 발언
+  // 자체가 없을 때만(응답 전·실패) 현재 stances로 근사한다.
+  // PR #12 Codex 2차 검토 3: 02 발언이 없다고 바로 "실패"로 보여주면, 참가자가 OPINIONS
+  // 라운드가 아직 끝나기 전에 다음 단계로 넘어간 경우에도 "응답 지연·확인 필요"로 잘못
+  // 보인다. roleStatus(REACTIONS용)로는 OPINIONS 단계의 실제 결과를 알 수 없으므로,
+  // App.tsx가 SET_ROLE_STATUS(stage 포함)를 가로채 쌓아 둔 roundLog(T41, 회의록 패널과
+  // 같은 근거)에서 그 역할의 OPINIONS 결과만 찾아 실패일 때만 "실패", 그 밖에는(아직
+  // 기록이 없음 포함) "판단 중"으로 둔다.
   const dialogStatements = useMemo<EvidenceDialogStatementView[]>(() => {
     if (mode === 'live') {
       return EXEC_MEMBER_ORDER.flatMap((memberId) => {
@@ -345,27 +373,40 @@ export function ReactionsScreen({
         const opinionStatement = statements.find(
           (item) => item.roleId === memberId && item.stage === 'OPINIONS',
         );
+        const opinionStance = opinionStatement?.stance ?? stance;
+        const opinionRoundStatus = roundLog.find(
+          (entry) => entry.stage === 'OPINIONS' && entry.roleId === memberId,
+        )?.status;
         const opinionEntry: EvidenceDialogStatementView = opinionStatement
           ? {
               memberId,
-              stance,
+              stance: opinionStance,
               status: 'answered',
               text: opinionStatement.text,
               evidenceLabel: lastEvidenceLabel(scenario, opinionStatement.evidenceIds),
               testable: true,
               stage: 'OPINIONS',
             }
-          : { memberId, stance, status: 'failed', text: '', evidenceLabel: null, testable: true, stage: 'OPINIONS' };
+          : {
+              memberId,
+              stance: opinionStance,
+              status: opinionRoundStatus === 'failed' ? 'failed' : 'pending',
+              text: '',
+              evidenceLabel: null,
+              testable: true,
+              stage: 'OPINIONS',
+            };
 
         const reactionStatus = roleStatus[memberId];
         const reactionStatement = statements.find(
           (item) => item.roleId === memberId && item.stage === 'REACTIONS',
         );
+        const reactionStance = reactionStatement?.stance ?? stance;
         const reactionEntry: EvidenceDialogStatementView =
           reactionStatus === 'answered' && reactionStatement
             ? {
                 memberId,
-                stance,
+                stance: reactionStance,
                 status: 'answered',
                 text: reactionStatement.text,
                 evidenceLabel: lastEvidenceLabel(scenario, reactionStatement.evidenceIds),
@@ -374,7 +415,7 @@ export function ReactionsScreen({
               }
             : {
                 memberId,
-                stance,
+                stance: reactionStance,
                 status: reactionStatus === 'failed' ? 'failed' : 'pending',
                 text: '',
                 evidenceLabel: null,
@@ -412,7 +453,7 @@ export function ReactionsScreen({
       };
       return [opinionEntry, reactionEntry];
     });
-  }, [mode, roleStatus, statements, stances, scenario, previousConfirmedIds]);
+  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds]);
 
   return (
     <>

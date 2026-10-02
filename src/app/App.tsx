@@ -424,6 +424,7 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
+          roundLog={roundLog}
           stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
