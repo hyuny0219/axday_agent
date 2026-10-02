@@ -11,6 +11,10 @@
 // MOTION 한 줄 상자, 찬성/반대 큰 원형 도장 라디오 2칸, 바닥 CTA를 담는다. CTA·라디오는
 // 시안처럼 오른쪽 종이 안에 둔다(원래 "CTA는 항상 왼쪽 열" 원칙의 예외 — 이 화면은
 // 왼쪽 열에 입력 상자가 전혀 없고 판단 요소 자체가 오른쪽 종이 한 장이다).
+// PR #12 Codex 5차 검토(P1): MOTION 상자 문장 아래에 반영 조건을(있을 때만) 눈에
+// 보이는 pill로 더했다 — motion.text는 원안 그대로라 반영 조건이 화면에 안 보이면
+// 임원 표가 조건에 따라 갈려도(domain/voting.ts) 투표자가 그 이유를 볼 수 없었다.
+// 같은 정보를 숨겨 두던 옛 sr-only 문단은 더 이상 필요 없어 뺐다.
 
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
@@ -156,18 +160,27 @@ export function VoteScreen({
                 항상 같은 값이지만, "지금 표결 중인 바로 그 안건"을 가리키는 쪽은
                 motion이다). */}
             <span className="vote-screen__motion-text">{motion.text}</span>
-            {/* 시안의 MOTION 한 줄 상자는 반영 조건을 문장에 녹여 쓰지만(문안 생성
-                규칙 변경 금지, motion.text는 항상 원안 그대로다), 이 화면에서 반영
-                조건 자체가 안 보이면 안 된다 — 화면 모양은 그대로 두고 스크린리더
-                에만 조건 목록을 남긴다(ExecStanceList·vote-screen__sr-only와 같은
-                sr-only 기법). */}
-            <span className="vote-screen__sr-only">
-              {motion.effectiveConditionIds.length > 0
-                ? `반영된 조건: ${motion.effectiveConditionIds
-                    .map((id) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id)
-                    .join(', ')}`
-                : '원안 그대로 표결합니다.'}
-            </span>
+            {/* PR #12 Codex 5차 검토(P1): 시안의 MOTION 한 줄 상자는 반영 조건을
+                문장에 녹여 쓰지만(문안 생성 규칙 변경 금지, motion.text는 항상 원안
+                그대로다), 반영 조건 자체가 화면에 안 보이면 투표자가 원안만 보고
+                판단하게 된다 — 조건에 따라 표가 갈릴 수 있으므로(domain/voting.ts)
+                sr-only로는 부족하다. MOTION 상자 자체는 새 패널 없이 그대로 두고,
+                문장 아래 줄에 MotionScreen의 CONDITIONS 칩과 같은 모양(초록 테두리
+                pill)으로 실제로 보이게 둔다 — 조건이 없으면(원안 그대로) 아무것도
+                더하지 않는다. 이 줄이 이미 눈에 보이는 실제 텍스트라 스크린리더도
+                그대로 읽으므로, 옛 sr-only 문단은 완전히 대체돼 뺐다. */}
+            {motion.effectiveConditionIds.length > 0 && (
+              <div className="vote-screen__motion-conditions" data-testid="vote-motion-conditions">
+                <span className="vote-screen__motion-conditions-label">반영 조건</span>
+                <ul className="vote-screen__motion-conditions-list">
+                  {motion.effectiveConditionIds.map((id) => (
+                    <li key={id}>
+                      {scenario.conditions.find((condition) => condition.id === id)?.label ?? id}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <fieldset className="vote-screen__choices" disabled={submitted}>
             <legend className="vote-screen__sr-only">이사님의 최종 표를 선택해 주세요</legend>

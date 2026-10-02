@@ -52,6 +52,16 @@
 // 의견 단계)는 아직 아무 조건도 확정되지 않았을 때의 입장이어야 하므로,
 // domain/stance.ts의 scriptedStances를 opinions=[]로 다시 불러(조건 없는 표결
 // 규칙표 결과) 02 전용 stance를 따로 계산한다. 04는 그대로 현재 stances를 쓴다.
+// PR #12 Codex 5차 검토: (P2-a) scripted 반응 카드의 유지/바뀜 배지가 "반응 문구가
+// 있는지"(reactionsFor 결과)로 갈렸는데, 조건 하나만으로는 표가 안 바뀌어도 그
+// 조건에 묶인 반응 문구가 있으면 "바뀜"으로, 반대로 표가 바뀌어도 그 전환을 설명하는
+// 반응 문구가 시나리오 데이터에 없으면 "유지"로 잘못 보였다. scriptedBaselineStances
+// (조건 없는 기준 입장) vs 현재 stances로 가르게 바꿨다 — 반응 문구는 본문 표시에만
+// 쓴다. (P2-b) RebuildConfirm이 뜬 동안에도 추천 답변 카드가 그대로 눌려, 그중
+// "앞서 전달한 의견을 유지하겠습니다"(onKeepPrevious로 즉시 다음 단계로 넘어간다)를
+// 누르면 확인을 건너뛰고 직접 쓴 답변을 버린 채 넘어갔다. handleToggleOption 맨
+// 앞에서 pendingOptionIndex !== null이면 바로 멈추고, PhraseCard에도 disabled를
+// 넘겨 시각적으로도 잠근다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -273,6 +283,14 @@ export function ReactionsScreen({
     conflictPairs.length === 0;
 
   function handleToggleOption(index: number) {
+    // PR #12 Codex 5차 검토 P2: RebuildConfirm이 뜬 동안(pendingOptionIndex !== null)은
+    // 아직 "직접 쓴 내용 유지/다시 구성"을 고르지 않았으므로 추천 답변 카드를 모두
+    // 잠근다 — 특히 "앞서 전달한 의견을 유지하겠습니다"(keepPrevious)는 onKeepPrevious로
+    // 즉시 다음 단계로 넘어가므로, 이 가드가 없으면 확인을 건너뛰고 직접 쓴 답변을
+    // 그대로 버리게 된다. PhraseCard에도 disabled를 넘겨 시각적으로도 잠근다(이중 방어).
+    if (pendingOptionIndex !== null) {
+      return;
+    }
     const option = scenario.followUp.options[index];
     if (!option) {
       return;
@@ -360,6 +378,15 @@ export function ReactionsScreen({
   const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
   const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
+  // scripted 전용 "기준" 입장(아직 아무 조건도 확정되지 않았을 때의 stance) —
+  // 반응 카드 유지/바뀜 배지(아래 .reaction-card)와 근거 자료 팝업 02 행이 함께
+  // 쓴다(PR #12 Codex 5차 검토 P2: dialogStatements의 scripted 02 stance 계산을
+  // 여기로 끌어올려 두 곳이 같은 값을 쓰게 했다).
+  const scriptedBaselineStances = useMemo(
+    () => scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] }),
+    [scenario],
+  );
+
   // 근거 자료 팝업의 STATEMENTS 열(T74): DISCUSS는 02 임원 의견만 보여줬지만 REACTIONS는
   // 02 의견 + 04 반응을 함께(단계 태그로 구분) 보여준다.
   // PR #12 Codex 2차 검토 2: 두 행이 같은 stances[memberId](현재·최신 stance)를 쓰면
@@ -432,15 +459,14 @@ export function ReactionsScreen({
       });
     }
     // scripted 02(최초 의견) 행은 아직 아무 조건도 확정되지 않았을 때의 입장이어야
-    // 한다 — opinions=[]로 다시 계산해(latestConfirmedConditionIds([])===[]) "지금"
-    // stances(04, 참가자가 확정한 조건까지 반영)와 분리한다(PR #12 Codex 3차 검토 2).
-    const initialStances = scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] });
+    // 한다 — "지금" stances(04, 참가자가 확정한 조건까지 반영)와 분리한다(PR #12
+    // Codex 3차 검토 2, 값 자체는 scriptedBaselineStances로 위에서 미리 계산한다).
     return EXEC_MEMBER_ORDER.flatMap((memberId) => {
       const stance = stances[memberId];
       const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
       const opinionEntry: EvidenceDialogStatementView = {
         memberId,
-        stance: initialStances[memberId],
+        stance: scriptedBaselineStances[memberId],
         status: 'answered',
         text: initial?.text ?? '',
         evidenceLabel: initial ? lastEvidenceLabel(scenario, initial.evidenceIds) : null,
@@ -463,7 +489,7 @@ export function ReactionsScreen({
       };
       return [opinionEntry, reactionEntry];
     });
-  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds]);
+  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds, scriptedBaselineStances]);
 
   return (
     <>
@@ -549,8 +575,16 @@ export function ReactionsScreen({
               {EXEC_MEMBER_ORDER.map((memberId) => {
                 const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
                 const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
-                const changed = reactions.length > 0;
                 const stance = stances[memberId];
+                // PR #12 Codex 5차 검토 P2: 유지/바뀜 배지는 반응 문구가 있는지가
+                // 아니라 실제 stance가 바뀌었는지로 가른다 — 조건 하나만으로는 표가
+                // 안 바뀌는데 그 조건에 묶인 반응 문구만 있어 "바뀜"으로 잘못 보이거나
+                // (예: PILOT만 확정해도 CFO는 그대로 반대지만 PILOT에 묶인 반응 문구가
+                // 있다), 반대로 표는 바뀌었는데 그 전환을 설명하는 반응 문구가 시나리오
+                // 데이터에 없어 "유지"로 잘못 보이는 경우(예: ANON_FULL이 CEO를 찬성→
+                // 반대로 돌리지만 CEO에 연결된 반응 문구가 없다)를 모두 막는다. 반응
+                // 문구(reactions)는 본문 표시에만 쓴다(아래 .reaction-card__text).
+                const changed = scriptedBaselineStances[memberId] !== stance;
                 return (
                   <article
                     key={memberId}
@@ -567,7 +601,9 @@ export function ReactionsScreen({
                       </span>
                     </div>
                     <p className="reaction-card__text">
-                      {changed ? reactions.map((reaction) => reaction.text).join(' ') : `기존 의견 유지 — ${initial?.text ?? ''}`}
+                      {reactions.length > 0
+                        ? reactions.map((reaction) => reaction.text).join(' ')
+                        : `기존 의견 유지 — ${initial?.text ?? ''}`}
                     </p>
                   </article>
                 );
@@ -591,6 +627,7 @@ export function ReactionsScreen({
                 selected={selectedOptionIds.includes(String(index))}
                 onToggle={() => handleToggleOption(index)}
                 testId={`followup-option-${index}`}
+                disabled={pendingOptionIndex !== null}
               />
             ))}
           </div>

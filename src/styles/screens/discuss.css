@@ -393,6 +393,18 @@
   border-color: var(--label);
 }
 
+/* PR #12 Codex 5차 검토(P2): RebuildConfirm이 뜬 동안 REACTIONS 추천 답변 카드를
+   잠글 때 쓴다 — 선택 상태는 그대로 보여주되(배경색은 그대로 두고) 잠겼다는 것을
+   흐림·커서로 알린다. */
+.phrase-card--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.phrase-card--disabled .phrase-card__input {
+  cursor: not-allowed;
+}
+
 /* PR #12 Codex 1차 검토(P2-a): 네이티브 체크박스(.phrase-card__input)가 1×1px라
    기본 포커스 링이 사실상 보이지 않았다 — 카드 전체(라벨)에 :focus-within으로
    옮겨 키보드 포커스가 눈에 보이게 한다. REACTIONS의 추천 답변 카드도 같은

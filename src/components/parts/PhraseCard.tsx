@@ -11,6 +11,11 @@
 // Phrase가 아니라 그 둘만 받고(FollowUpOption에는 conditionId가 없다), testId를 주면
 // 기본 `phrase-card-<id>` 대신 그 값을 쓴다(REACTIONS는 기존 `followup-option-<n>`을
 // 그대로 유지해야 e2e가 깨지지 않는다).
+// PR #12 Codex 5차 검토(P2): 선택적 disabled를 더했다 — REACTIONS가 RebuildConfirm이
+// 뜬 동안(아직 "직접 쓴 내용 유지/다시 구성"을 고르지 않은 동안) 추천 답변 카드를
+// 모두 잠가, 그중 "앞서 전달한 의견을 유지하겠습니다"(onKeepPrevious로 즉시 다음
+// 단계로 넘어가는 카드)를 눌러 확인을 건너뛰고 그대로 넘어가는 경로를 막는다.
+// 기본값은 false라 DISCUSS 호출부는 바뀌지 않는다.
 
 import type { Phrase } from '../../content/types';
 
@@ -19,12 +24,15 @@ export interface PhraseCardProps {
   selected: boolean;
   onToggle: () => void;
   testId?: string;
+  disabled?: boolean;
 }
 
-export function PhraseCard({ phrase, selected, onToggle, testId }: PhraseCardProps) {
+export function PhraseCard({ phrase, selected, onToggle, testId, disabled = false }: PhraseCardProps) {
   return (
     <label
-      className={`phrase-card${selected ? ' phrase-card--selected' : ''}`}
+      className={`phrase-card${selected ? ' phrase-card--selected' : ''}${
+        disabled ? ' phrase-card--disabled' : ''
+      }`}
       data-testid={testId ?? `phrase-card-${phrase.id}`}
     >
       <input
@@ -32,6 +40,7 @@ export function PhraseCard({ phrase, selected, onToggle, testId }: PhraseCardPro
         className="phrase-card__input"
         checked={selected}
         onChange={onToggle}
+        disabled={disabled}
       />
       <span className="phrase-card__checkbox" aria-hidden="true">
         {selected && (
