@@ -119,20 +119,48 @@ export const experienceFirstScenario: Scenario = {
       tag: 'request',
     },
   ],
+  // PR #13 Codex 4차 검토: REVIEW의 '복기' 단독 키워드가 정보성 질문에도 걸리던
+  // 문제(1차 검토 P1)를 SCOPE·RECORD·DATA_VETO·EXP_ONLY에서도 전수 점검했다 — 이전에는
+  // "이미 2단어 이상 복합구라 괜찮다"고 판단했지만("전례 없는 상황"·"판단 근거"·
+  // "경고 시"·"언제나 경험"·"절대 우선"), 명사·시점구만 있고 동사·어간이 없으면 역시
+  // "~이란 무엇입니까"·"~는 어떻게 받습니까" 같은 질문에 걸린다. 모든 조건의 모든
+  // 키워드를 약속형 어구로 좁혔다(docs/SCENARIO_EXPERIENCE_FIRST.md에 같은 근거 기록,
+  // tests/content/experienceFirst.test.ts에 조건별 정보성 질문 음성 케이스 추가).
   conditions: [
-    { id: 'SCOPE', label: '전례 없는 상황 한정', keywords: ['전례 없는 상황'] },
-    { id: 'RECORD', label: '판단 근거 기록', keywords: ['판단 근거'] },
-    { id: 'DATA_VETO', label: '데이터 경고 시 멈춤', keywords: ['경고 시', '잠시 멈추'] },
+    {
+      id: 'SCOPE',
+      label: '전례 없는 상황 한정',
+      // "전례 없는 상황이란 무엇입니까?"는 제외하고 "~상황에 한정해/한정합시다"만 잡는다.
+      keywords: ['상황에 한정'],
+    },
+    {
+      id: 'RECORD',
+      label: '판단 근거 기록',
+      // "판단 근거는 어디에 있습니까?"는 제외한다.
+      keywords: ['판단 근거를 기록'],
+    },
+    {
+      id: 'DATA_VETO',
+      label: '데이터 경고 시 멈춤',
+      // "데이터 경고는 어떻게 받습니까?"는 제외하고 "경고 시 … 잠시 멈추고"처럼 경고와
+      // 멈춤을 한 어구로 묶어야 "경고 시 조치는 무엇입니까?" 같은 질문도 함께 피한다.
+      keywords: ['경고 시 결정을 잠시 멈추'],
+    },
     {
       id: 'REVIEW',
       label: '결정 결과 복기',
       // '복기' 한 단어만 두면 "복기는 누가 합니까?" 같은 정보성 질문에도 걸려 묻지도 않은
       // 조건이 확정으로 제안된다(PR #13 Codex 1차 검토 P1, ai-approval의 OWNER '책임자'와
-      // 같은 문제). P4 문구의 약속형 어구로 좁힌다. SCOPE·RECORD·DATA_VETO·EXP_ONLY의
-      // 키워드는 이미 2단어 이상 복합구라 같은 문제를 재점검했으나 좁힐 필요가 없었다.
+      // 같은 문제). P4 문구의 약속형 어구로 좁힌다.
       keywords: ['결정 결과를 복기'],
     },
-    { id: 'EXP_ONLY', label: '경험 판단 절대 우선', keywords: ['언제나 경험', '절대 우선'] },
+    {
+      id: 'EXP_ONLY',
+      label: '경험 판단 절대 우선',
+      // "경험 판단이란 무엇입니까?"는 제외한다. '절대 우선'도 "절대 우선으로"까지 묶어
+      // "절대 우선이 무엇을 뜻합니까?" 같은 질문을 피한다.
+      keywords: ['언제나 경험 판단', '절대 우선으로'],
+    },
   ],
   conflicts: [['DATA_VETO', 'EXP_ONLY']],
   reactions: [

@@ -140,6 +140,21 @@ describe('조건 키워드 격리(proposeFromText)', () => {
   it('"복기는 누가 합니까?" 같은 정보성 질문은 REVIEW를 제안하지 않는다', () => {
     expect(proposeFromText(scenario, '복기는 누가 합니까?')).not.toContain('REVIEW');
   });
+
+  // PR #13 Codex 4차 검토: REVIEW와 같은 문제(명사·시점구만 있는 키워드가 정보성
+  // 질문에도 걸림)를 SCOPE·RECORD·DATA_VETO·EXP_ONLY에서도 전수 점검해 약속형 어구로
+  // 좁혔다. 각 조건의 라벨 명사를 그대로 쓴 정보성 질문이 제안되지 않는지 확인한다.
+  it('조건마다 명사만 묻는 정보성 질문은 아무 조건도 제안하지 않는다(PR #13 Codex 4차 검토)', () => {
+    const informationalQuestions = [
+      '전례 없는 상황이란 무엇입니까?',
+      '판단 근거는 어디에 있습니까?',
+      '데이터 경고는 어떻게 받습니까?',
+      '경험 판단이란 무엇입니까?',
+    ];
+    for (const text of informationalQuestions) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+  });
 });
 
 describe('findConflicts', () => {

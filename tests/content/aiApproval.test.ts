@@ -131,6 +131,21 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       proposeFromText(scenario, '현재 책임자가 누구인지 먼저 알려 주세요.'),
     ).not.toContain('OWNER');
   });
+
+  // PR #13 Codex 4차 검토: OWNER와 같은 문제(명사만 있는 키워드가 정보성 질문에도
+  // 걸림)를 LIMIT·LOG·REVIEW·FULL_AUTO에서도 전수 점검해 약속형 어구로 좁혔다.
+  // 각 조건의 라벨 명사를 그대로 쓴 정보성 질문이 제안되지 않는지 확인한다.
+  it('조건마다 명사만 묻는 정보성 질문은 아무 조건도 제안하지 않는다(PR #13 Codex 4차 검토)', () => {
+    const informationalQuestions = [
+      '금액 한도가 얼마입니까?',
+      '승인 사유가 무엇인지 알려 주세요.',
+      '표본 재검토는 누가 합니까?',
+      '전면 생략이 무슨 뜻입니까?',
+    ];
+    for (const text of informationalQuestions) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+  });
 });
 
 describe('findConflicts', () => {

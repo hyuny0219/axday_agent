@@ -111,10 +111,32 @@ export const aiApprovalScenario: Scenario = {
       tag: 'request',
     },
   ],
+  // PR #13 Codex 4차 검토: OWNER의 '책임자' 단독 키워드가 정보성 질문에도 걸리던
+  // 문제(1차 검토 P1)를 LIMIT·LOG·REVIEW·FULL_AUTO에서도 전수 점검했다 — 명사만 있는
+  // 키워드는 "~가 무엇입니까"·"~는 누가 합니까" 같은 질문에도 걸려 ReactionsScreen이
+  // 묻지도 않은 조건을 확정으로 제안한다. 모든 조건의 모든 키워드를 "하겠다/합시다"
+  // 동사·어간을 포함한 약속형 어구로 좁혔다(docs/SCENARIO_AI_APPROVAL.md에 같은 근거
+  // 기록, tests/content/aiApproval.test.ts에 조건별 정보성 질문 음성 케이스 추가).
   conditions: [
-    { id: 'LIMIT', label: '결재 금액 한도', keywords: ['금액 한도'] },
-    { id: 'LOG', label: '승인 사유 기록', keywords: ['승인 사유'] },
-    { id: 'REVIEW', label: '사람 표본 재검토', keywords: ['표본 재검토', '사람이 다시'] },
+    {
+      id: 'LIMIT',
+      label: '결재 금액 한도',
+      // "금액 한도가 얼마입니까?" 같은 질문은 제외하고 "금액 한도를 정해/정합시다"처럼
+      // 실제로 한도를 정하겠다는 문장만 잡는다.
+      keywords: ['금액 한도를 정'],
+    },
+    {
+      id: 'LOG',
+      label: '승인 사유 기록',
+      // "승인 사유가 무엇인지도 먼저 알려 주세요." 같은 질문은 제외한다.
+      keywords: ['승인 사유를 기록'],
+    },
+    {
+      id: 'REVIEW',
+      label: '사람 표본 재검토',
+      // "표본 재검토는 누가 합니까?"는 제외하고 "표본 재검토를 하도록/하겠습니다"만 잡는다.
+      keywords: ['표본 재검토를 하', '사람이 다시 보도록'],
+    },
     {
       id: 'OWNER',
       label: '결재 규칙 책임자',
@@ -123,7 +145,14 @@ export const aiApprovalScenario: Scenario = {
       // 1차 검토 P1). 책임자를 "지정하겠다"는 약속형 표현으로 좁힌다.
       keywords: ['책임자를 지정', '결재 규칙 책임자'],
     },
-    { id: 'FULL_AUTO', label: '사람 검토 전면 생략', keywords: ['전면 생략', '전부 자동'] },
+    {
+      id: 'FULL_AUTO',
+      label: '사람 검토 전면 생략',
+      // "전면 생략이 무슨 뜻입니까?"는 제외한다. '검토를 전면 생략'은 "검토를"까지
+      // 묶어야 "전면 생략이란" 같은 질문에 걸리지 않는다. '전부 자동'도 '승인'까지
+      // 묶어 "전부 자동이 뭔가요?" 같은 질문을 피한다.
+      keywords: ['검토를 전면 생략', '전부 자동 승인'],
+    },
   ],
   conflicts: [['REVIEW', 'FULL_AUTO']],
   reactions: [
