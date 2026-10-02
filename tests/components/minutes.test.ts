@@ -256,10 +256,31 @@ describe('formatElapsed', () => {
 });
 
 describe('buildMinutes — 타임스탬프(T77)', () => {
-  it('scripted 각본 항목(의장 브리핑 등)은 도착 시각이 없어 TIME_UNKNOWN이다', () => {
-    const session = selectScenario('scripted');
+  it('의장 브리핑은 세션 시작 시각 자체라 00:00이다(시안 Main.html "[00:00] CEO")', () => {
+    const session = selectScenario('scripted'); // startedAt = T0(SELECT_SCENARIO가 BRIEFING 진입과 같은 트랜지션에서 찍는다)
     const entries = buildMinutes(session, scenario, []);
-    expect(entries[0]).toMatchObject({ id: 'chair-briefing', timeLabel: TIME_UNKNOWN });
+    expect(entries[0]).toMatchObject({ id: 'chair-briefing', timeLabel: '00:00' });
+  });
+
+  it('그 외 scripted 각본 항목(의장 안건 고정 등)은 도착 시각이 없어 TIME_UNKNOWN이다', () => {
+    let session = selectScenario('scripted');
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> DISCUSS
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '작은 범위로 먼저 시작합시다.',
+        selectedPhraseIds: ['P1'],
+        confirmedConditionIds: [],
+      },
+      T0,
+    );
+    session = reduce(session, { type: 'KEEP_PREVIOUS' }, T0);
+
+    const entries = buildMinutes(session, scenario, []);
+    expect(entries.find((entry) => entry.id === 'chair-motion')).toMatchObject({ timeLabel: TIME_UNKNOWN });
+    expect(entries.find((entry) => entry.id === 'caio-question')).toMatchObject({ timeLabel: TIME_UNKNOWN });
   });
 
   it('live 응답 발언은 세션 시작 기준 경과 시간을, 아직 응답하지 않은 역할은 TIME_UNKNOWN을 보여준다', () => {

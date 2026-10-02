@@ -131,13 +131,15 @@ export function buildMinutes(
   const entries: MinutesEntry[] = [];
   const { startedAt } = session;
 
-  // 1. 의장 브리핑(각본 문구라 도착 시각이 없다 — 세션 시작을 직접 가리키지 않는다).
+  // 1. 의장 브리핑(세션이 시작되며 바로 나오는 각본 문구라 세션 시작 시각 자체를
+  // 경과 시간으로 쓴다 — SELECT_SCENARIO가 BRIEFING 진입과 같은 트랜지션에서
+  // startedAt을 찍는다, domain/session.ts. 시안 Main.html도 "[00:00] CEO"다).
   entries.push({
     id: 'chair-briefing',
     speaker: 'CEO',
     text: scenario.chairBriefing.situation,
     kind: 'speech',
-    timeLabel: TIME_UNKNOWN,
+    timeLabel: formatElapsed(startedAt, startedAt ?? undefined),
   });
 
   // 2. 임원 첫 의견 4건

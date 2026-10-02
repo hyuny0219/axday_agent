@@ -215,22 +215,24 @@ BRIEFING~REACTIONS를 한 개의 스크롤 타임라인으로 그린다. 상단 
 v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정의한다. 회의록은 "지금까지 누가 무엇을 말했는가"를 한 줄씩 쌓는 **창 고정 패널**이고, 페이지·패널 스크롤은 없다.
 
 > **2026-09-28 개정(사용자, 두 차례):** (1) 화면 제목·aria-label을 **"발언 흐름"**으로 바꾼다("회의록"은 전문을 약속하는 이름이라 기대와 어긋났다). (2) 같은 날 다시 결정 — 창 고정(최근 N건)과 한 줄 말줄임을 없애고 **모든 항목을 전문 그대로 줄바꿈해 보여주며, 넘치면 이 패널의 목록만 세로 스크롤한다.** 페이지 스크롤 금지(6절)는 유지하고, 패널 내부 스크롤만 이 절의 예외로 허용한다. 새 항목이 오면 목록을 맨 아래(최신)로 내리고, 목록은 tabIndex=0으로 키보드 스크롤이 된다. 아래 "한 항목 = … 한 줄"·"창 고정: 1080은 최근 6건…" 규칙과 T56의 남은 높이 건수 계산은 이 개정으로 폐기됐다. **결과 화면의 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기")이 그 기록을 맡는다** — 별도 결과 보고서 화면은 두지 않는다. 아래 본문의 "회의록 패널"은 이 패널을 가리키는 설계 용어로 그대로 둔다.
+>
+> **2026-10-02 개정(T77, 시안 TRANSCRIPT 형식):** 아래 본문 중 아바타·"내 항목" 강조·`aria-label="회의록"`·"판단 중…(점 3개)"·"`[mm:ss]` 타임스탬프는 붙이지 않는다" 서술은 더 이상 맞지 않는다 — 시안(S2_Opinions·S5_Motion·S6_Vote·Main) TRANSCRIPT 블록 그대로 다시 그리며 아바타·강조 배경을 빼고, `aria-label`은 실제로 "발언 흐름"이며, pending 행은 "▌ 대기 중" 평문, 세션 시작 기준 실측 `[mm:ss]`를 붙인다. 해당 문장에 취소선을 긋고 각주를 달았다 — 최신 규칙은 v1.3 8절 참고.
 
 - 위치: 왼쪽 열 무대·행동(CTA) 아래 네 번째 grid area(`'stage info' / 'actions info' / 'minutes info'`, rows `auto auto 1fr`). AppShell이 **BRIEFING·OPINIONS·MOTION·VOTE**에서만 렌더한다. DISCUSS·REACTIONS는 입력이 왼쪽 열을 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. 각 Screen 컴포넌트는 바꾸지 않는다.
 - 항목(시간순, 순수 함수 `buildMinutes(session, scenario, roundLog)`가 세션 상태에서 매번 계산):
   1. 의장 브리핑 — CEO · `chairBriefing.situation`
-  2. 임원 첫 의견 4건 — scripted는 `scenario.initialOpinions`, live는 transcript의 OPINIONS 발언. live 미도착은 "판단 중…"(점 3개 + 스크린리더용 상태 문구), 실패는 "응답 없음"(roundLog 기준, 뒤 라운드가 roleStatus를 덮어도 남는다)
+  2. 임원 첫 의견 4건 — scripted는 `scenario.initialOpinions`, live는 transcript의 OPINIONS 발언. live 미도착은 ~~"판단 중…"(점 3개 + 스크린리더용 상태 문구)~~(v1.3 T77에서 폐기 — 시안 그대로 "▌ 대기 중" 평문, 8절 참고), 실패는 "응답 없음"(roundLog 기준, 뒤 라운드가 roleStatus를 덮어도 남는다)
   3. 내 발언 — `opinions[0].originalText`
   4. 임원 반응 4건 — scripted는 `scenario.reactions`를 첫 의견의 확정 조건으로 고른 것(ReactionsScreen의 `reactionsFor` 규칙을 공용 함수로 뽑아 같이 쓴다. 해당 반응이 없는 임원은 "기존 의견 유지"), live는 REACTIONS 발언
   5. 후속 질문 — 시나리오 `followUp.askedBy`가 묻는 `followUp.question` (REACTIONS 이후, 안건 ②는 CFO)
   6. 내 답 — `opinions[1].originalText`, 유지를 골랐으면 "앞서 전달한 의견을 유지"
-  7. 임원 후속 4건 — live에서 `opinions.length >= 2`일 때만. FOLLOWUP 발언 / "판단 중…" / "응답 없음"
+  7. 임원 후속 4건 — live에서 `opinions.length >= 2`일 때만. FOLLOWUP 발언 / ~~"판단 중…"~~(v1.3 T77 "▌ 대기 중", 8절) / "응답 없음"
   8. 의장 — "이 조건으로 안건을 고정합니다" (MOTION 이후)
-- 한 항목 = 아바타(sm, 이니셜이 역할을 보여준다) + 발화자 직함(스크린리더용, 화면에서는 숨김) + 전문을 한 줄에 넣고 넘치는 만큼만 CSS 말줄임(2026-09-28: 40자 JS 자르기 `firstSentenceClipped`를 이 패널에서는 없앴다 — 1920은 한 줄에 50자쯤 들어가 더 보이고 스크린리더는 전문을 읽는다). 내 항목은 참가자 색(시안 왼쪽 선). 패널은 내용 높이만 차지한다(1건뿐인 BRIEFING에서 빈 틀이 아래까지 늘어나지 않음, T47 다듬기).
-- 창 고정: 1080은 최근 6건, 720은 최근 4건(VOTE는 3건)만 보이고 더 오래된 항목은 시각적으로만 숨긴다(sr-only — 스크린리더에는 전체가 남는다). 머리글 "회의록"과 총 건수 배지. 페이지·패널 스크롤 금지(6절 예산 규칙 유지, `e2e/noscroll.spec.ts`가 두 해상도에서 단언).
-- 접근성: `<section aria-label="회의록">` + `<ol aria-live="polite" aria-relevant="additions text">`, 각 행 `<li aria-atomic="true">`. 새 항목이 도착하거나 live의 "판단 중" 행이 같은 행 안에서 응답으로 바뀔 때 발화자와 첫 문장을 한 덩어리로 읽어 준다(PR #7 Codex 1차 검토). 포커스는 옮기지 않는다(입력 블록이 없다).
+- ~~한 항목 = 아바타(sm, 이니셜이 역할을 보여준다) + 발화자 직함(스크린리더용, 화면에서는 숨김) + 전문을 한 줄에 넣고 넘치는 만큼만 CSS 말줄임(2026-09-28: 40자 JS 자르기 `firstSentenceClipped`를 이 패널에서는 없앴다 — 1920은 한 줄에 50자쯤 들어가 더 보이고 스크린리더는 전문을 읽는다). 내 항목은 참가자 색(시안 왼쪽 선).~~(v1.3 T77에서 폐기 — 시안 TRANSCRIPT 형식은 아바타·"내 항목" 강조 배경이 없다. 한 항목 = 타자기 앰버 `[mm:ss] 역할` 태그 + 본문, 발화자 직함은 sr-only로만 남는다. 8절 참고.) 패널은 내용 높이만 차지한다(1건뿐인 BRIEFING에서 빈 틀이 아래까지 늘어나지 않음, T47 다듬기).
+- 창 고정: 1080은 최근 6건, 720은 최근 4건(VOTE는 3건)만 보이고 더 오래된 항목은 시각적으로만 숨긴다(sr-only — 스크린리더에는 전체가 남는다). ~~머리글 "회의록"과 총 건수 배지.~~(2026-09-28 개정으로 머리글은 "발언 흐름"이 됐고, v1.3 T77에서 건수 배지도 시안 영문 형식 "N ENTRIES · 스크롤"로 바뀌었다 — 8절 참고.) 페이지·패널 스크롤 금지(6절 예산 규칙 유지, `e2e/noscroll.spec.ts`가 두 해상도에서 단언).
+- 접근성: ~~`<section aria-label="회의록">`~~(2026-09-28 개정으로 실제 aria-label은 "발언 흐름"이다 — 위 개정 메모 참고) + `<ol aria-live="polite" aria-relevant="additions text">`, 각 행 `<li aria-atomic="true">`. 새 항목이 도착하거나 live의 ~~"판단 중" 행이 같은 행 안에서 응답으로 바뀔 때~~(v1.3 T77에서 "▌ 대기 중" 행이 같은 행 안에서 응답 문장으로 바뀔 때로 표시만 바뀌었다, 동작은 그대로) 발화자와 첫 문장을 한 덩어리로 읽어 준다(PR #7 Codex 1차 검토). 포커스는 옮기지 않는다(입력 블록이 없다).
 - 라운드별 기록(roundLog): `SET_ROLE_STATUS`에 선택 필드 `stage?: StatementStage`를 더하고 runner가 채운다(reducer는 읽지 않음, 동작 불변). App이 stage가 있는 SET_ROLE_STATUS만 `{stage, roleId, status}`로 upsert해 보관하고 sessionId가 바뀌면 비운다. 공개 payload에는 넣지 않는다.
-- 후속 대기 게이트(live, T46): 후속 답을 제출하면 reducer는 지금처럼 MOTION으로 넘어가되, App이 "이 세션의 `runRound('FOLLOWUP')` promise가 settle됐는가"만 상태로 들고 게이트는 세션 상태에서 동기적으로 계산해(`isFollowUpGateActive`, MOTION 첫 프레임부터 잠김) **settle 전에는 "이 안건으로 표결" CTA를 비활성**으로 두고 CTA 아래에 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머로 열지 않는다(앞 라운드가 사슬에 남아 있으면 8초 상한은 그 뒤에 시작한다). scripted와 '의견 유지'(후속 라운드 없음)는 게이트가 없다. 회의록 패널의 7번 항목이 같은 상태를 "판단 중…"으로 보여준다.
+- 후속 대기 게이트(live, T46): 후속 답을 제출하면 reducer는 지금처럼 MOTION으로 넘어가되, App이 "이 세션의 `runRound('FOLLOWUP')` promise가 settle됐는가"만 상태로 들고 게이트는 세션 상태에서 동기적으로 계산해(`isFollowUpGateActive`, MOTION 첫 프레임부터 잠김) **settle 전에는 "이 안건으로 표결" CTA를 비활성**으로 두고 CTA 아래에 "임원 후속 판단 중…"을 보여준다. 벽시계 타이머로 열지 않는다(앞 라운드가 사슬에 남아 있으면 8초 상한은 그 뒤에 시작한다). scripted와 '의견 유지'(후속 라운드 없음)는 게이트가 없다. 회의록 패널의 7번 항목이 같은 상태를 ~~"판단 중…"~~(v1.3 T77 "▌ 대기 중", 8절)으로 보여준다.
 
 ### 8. 안건 사건화와 "6개월 뒤" 에필로그 — 2026-09-20 (T47)
 
@@ -290,7 +292,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 ### 3. 발언 흐름과 오른쪽 열(서류철)
 
-- `minutes.css`·`MinutesPanel.tsx`: 패널은 어두운 판(`--transcript-bg #15171b`, `--transcript-border`), 머리글 "발언 흐름"(타자기 앰버) + "n건". 각 행 앞에 직함 코드(`minutes__tag`, 예: "CEO")를 장식으로 붙인다 — 발언 도착 시각을 세션 데이터에 담지 않으므로 `[mm:ss]` 타임스탬프는 붙이지 않는다(카드 조건). 전문·내부 스크롤·바닥 따라가기 규칙은 v1.0 7절 그대로다.
+- `minutes.css`·`MinutesPanel.tsx`: 패널은 어두운 판(`--transcript-bg #15171b`, `--transcript-border`), 머리글 "발언 흐름"(타자기 앰버) + ~~"n건"~~(v1.3 T77에서 시안 영문 형식 "N ENTRIES · 스크롤"로 바뀌었다, 8절). ~~각 행 앞에 직함 코드(`minutes__tag`, 예: "CEO")를 장식으로 붙인다 — 발언 도착 시각을 세션 데이터에 담지 않으므로 `[mm:ss]` 타임스탬프는 붙이지 않는다(카드 조건).~~(v1.3 T77에서 폐기 — 세션 시작 기준 실측 경과 시간을 계산해 `[mm:ss] 역할` 형식으로 붙인다, 실측 불가하면 `--:--`. 8절 참고.) 전문·내부 스크롤·바닥 따라가기 규칙은 v1.0 7절 그대로다.
 - 오른쪽 열은 종이 패널(`--paper-2` 바탕, `4px 4px 0 #1f2126` 카드 그림자 · 메인 패널은 `8px 8px 0 #1f2126`)로 통일한다. 브리핑의 SITREP·PROPOSAL·UNKNOWN·"YOUR ORDERS"(점선 상자)와 자료 카드 "EXHIBIT A~D"(장식 태그, 자료 ID는 여전히 화면에 쓰지 않는다), 임원 의견·반응·안건·표결 카드 모두 같은 종이 패널·타자기 라벨 체계를 쓴다.
 
 ### 4. 결과 화면 — 도장 이동과 회의록 전문 패널(T58 흡수)
@@ -428,7 +430,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 ### 8. 발언 흐름(TRANSCRIPT) 패널 — 시안 공통(S2_Opinions·S5_Motion·S6_Vote·Main) (T77)
 
 - **아바타·역할 배지·강조 배경을 모두 뺐다**: `MinutesPanel.tsx`가 그리던 `Avatar`(이니셜 원)와 "내 항목"(`.minutes__entry--mine`) 강조 배경(시안색 테두리+배경)을 뺐다 — 네 시안 모두 TRANSCRIPT 행이 `[mm:ss] 역할` 앰버 태그 + 본문 두 요소뿐이라(아바타·배지·강조 없음) "시안 이탈 금지" 규칙상 더 그릴 수 없다. 발화자 전체 직함(`speakerLabel`)은 `minutes__speaker`로 스크린리더용으로만 남긴다.
-- **타임스탬프는 세션 시작 기준 실측 경과 시간**: `components/minutes.ts`에 순수 함수 `formatElapsed(startedAt, occurredAt)`을 더해 `session.startedAt`과 발생 시각의 차를 `mm:ss`로 돌려준다 — 둘 중 하나라도 없으면(시작 전, 혹은 아직 응답 안 함) `TIME_UNKNOWN`("--:--")이다. `MinutesEntry`에 `timeLabel: string` 필드를 더했다(`buildMinutes`의 항목 생성 규칙·순서·문구는 전혀 바꾸지 않았다 — 카드 "하지 말 것"). 출처: live 응답(`speech`)은 `Statement.createdAt`(`liveRoundResults`가 `RoundResult.createdAt`으로 실어 나른다), "나" 항목(`mine`)은 `Opinion.createdAt`, 그 외(의장 브리핑·CAIO 질문·scripted 각본 의견/반응/안건 고정, pending·failed)는 각본 문구이거나 아직 응답이 없어 실측 시각이 없으므로 모두 `TIME_UNKNOWN`이다 — 새 수치를 지어내지 않는다.
+- **타임스탬프는 세션 시작 기준 실측 경과 시간**: `components/minutes.ts`에 순수 함수 `formatElapsed(startedAt, occurredAt)`을 더해 `session.startedAt`과 발생 시각의 차를 `mm:ss`로 돌려준다 — 둘 중 하나라도 없으면(시작 전, 혹은 아직 응답 안 함) `TIME_UNKNOWN`("--:--")이다. `MinutesEntry`에 `timeLabel: string` 필드를 더했다(`buildMinutes`의 항목 생성 규칙·순서·문구는 전혀 바꾸지 않았다 — 카드 "하지 말 것"). 출처: 의장 브리핑은 `formatElapsed(startedAt, startedAt)`으로 항상 "00:00"이다(`SELECT_SCENARIO`가 BRIEFING 진입과 같은 트랜지션에서 `startedAt`을 찍는다, `domain/session.ts` — 시안 Main.html도 "[00:00] CEO"다), live 응답(`speech`)은 `Statement.createdAt`(`liveRoundResults`가 `RoundResult.createdAt`으로 실어 나른다), "나" 항목(`mine`)은 `Opinion.createdAt`, 그 외(CAIO 질문·scripted 각본 의견/반응/안건 고정, pending·failed)는 각본 문구이거나 아직 응답이 없어 실측 시각이 없으므로 `TIME_UNKNOWN`이다 — 새 수치를 지어내지 않는다.
 - **판단 중(pending) 행은 시안 그대로 "▌ 대기 중"**: 기존 점 세 개 애니메이션(`minutes__dots`)과 전용 sr-only 상태 문구를 걷어내고, Main.html TRANSCRIPT 예시(`[--:--] CFO ▌ 대기 중`)와 같은 평문을 `minutes__text`에 그대로 넣는다 — 이제 화면에 보이는 문구 자체가 접근 가능한 이름이라 별도 sr-only 복제가 필요 없다. 행 전체를 `--ink-muted`로 낮춰 구분한다(`failed`도 같은 톤 — 시안에 예시는 없지만 "강조 없음" 원칙에 맞춰 밝기만 다르게 뒀다).
 - **머리글 건수 배지를 시안 영문 형식으로**: "n건" 대신 `entryCountLabel`이 1건이면 "1 ENTRY"(Main.html과 동일, 스크롤 불필요), 그 외에는 "N ENTRIES · 스크롤"(S2·S5·S6과 동일)을 돌려준다. `minutes-count` testid와 "N건" 패턴이 아니라 숫자만 뽑아 쓰는 기존 e2e(`e2e/minutes.spec.ts`)는 그대로 통과한다.
 - **패널·행 치수는 시안 인라인 값 그대로**: `minutes.css`를 전면 재작성 — 어두운 판(`--transcript-bg #15171b`·`--transcript-border #2a2d33`, 모서리 각짐)에 시안의 1280 캔버스 값(패딩 10px 14px·행 간격 6px·행 내부 간격 10px·본문 12px/line-height 1.45)을 `@media (max-width: 1280px)`로 두고, 기본(1920) 규칙은 그 값의 1.25배를 쓴다 — opinions.css·motion.css·vote.css(T72~T76)와 같은 두 해상도 비율이다. 테두리 반경·아바타 관련 규칙은 모두 지웠다.

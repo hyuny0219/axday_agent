@@ -153,12 +153,6 @@
   color: var(--ink-muted);
 }
 
-@media (max-width: 1280px) {
-  .minutes__text {
-    font-size: 12px;
-  }
-}
-
 /* 세로가 너무 빠듯해 목록에 한 줄도 못 담는 경우(1568×777 VOTE에서 칸이 32px). 억지로
    그리면 머리글만 남으므로 화면에서는 감추고, 목록 전체는 스크린리더에 남긴다. 판단은
    MinutesPanel이 그리드 칸 높이로 한다. */
