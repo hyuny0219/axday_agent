@@ -131,7 +131,7 @@ function buildRoundSystemPrompt(
   if (!materials) {
     throw new Error(`unknown_scenario:${input.scenarioId}`);
   }
-  const rolePrompt = ROLE_PROMPT_BUILDERS[roleId]();
+  const rolePrompt = ROLE_PROMPT_BUILDERS[roleId](materials, input.stage);
   const meetingRecord = buildMeetingRecordBlock({
     scenarioId: materials.scenarioId,
     originalMotionText: materials.originalMotionText,

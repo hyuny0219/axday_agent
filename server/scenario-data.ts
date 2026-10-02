@@ -4,6 +4,8 @@
 // 않는다 — live 프롬프트의 정답표로 쓰지 않기 위해서다(AGENT_BOARDROOM_SPEC.md 1장).
 // 시나리오 데이터가 바뀌면 이 파일도 함께 갱신해야 한다.
 
+import type { ExecRoleId } from './validate';
+
 export interface ScenarioEvidence {
   id: string;
   title: string;
@@ -15,12 +17,29 @@ export interface ScenarioCondition {
   label: string;
 }
 
+/**
+ * 안건별 임원 렌즈(T79, 2026-10-02 사용자 결정). lens는 이 임원이 안건에서 특히 무겁게
+ * 보는 관점 한 줄, evidenceIds는 그 관점과 함께 무겁게 볼 자료, opening은 OPINIONS
+ * 단계에만 주는 "출발 성향"이다. 이 값들은 정답표가 아니다 — 발언 문장·최종 표는 여전히
+ * 모델이 매 호출 스스로 정한다(AGENT_BOARDROOM_SPEC.md 1·2장, server/prompts/roles/index.ts의
+ * buildOpeningStanceBlock이 "출발점이지 결론이 아니며" 문구로 이 원칙을 프롬프트에도 남긴다).
+ */
+export interface ScenarioRoleLens {
+  lens: string;
+  evidenceIds: string[];
+  opening: 'FOR' | 'AGAINST' | 'UNDECIDED';
+}
+
 export interface ScenarioMaterials {
   scenarioId: string;
   originalMotionId: string;
   originalMotionText: string;
   evidence: ScenarioEvidence[];
   conditions: ScenarioCondition[];
+  /** 활성 안건(ai-approval·experience-first)만 채운다. 보존용 안건(anon-board)은 레지스트리
+   * 밖이라 비워 둬도 호출 경로에 영향이 없다 — roles/index.ts가 없으면 렌즈·출발 성향
+   * 블록을 건너뛴다. */
+  roleLenses?: Record<ExecRoleId, ScenarioRoleLens>;
 }
 
 const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
@@ -60,6 +79,30 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     { id: 'OWNER', label: '결재 규칙 책임자' },
     { id: 'FULL_AUTO', label: '사람 검토 전면 생략' },
   ],
+  // T79(2026-10-02 사용자 결정): CEO 찬성 쪽·CFO 반대 쪽·CAIO 미정·CISO 반대 쪽으로 네 명이
+  // 갈리게 한다. 문구는 docs/TASKS.md T79 카드에 적힌 그대로 옮긴다.
+  roleLenses: {
+    CEO: {
+      lens: '결재 처리 기록의 대기 2.8일을 조직이 멈추는 문제로 봅니다.',
+      evidenceIds: ['E1'],
+      opening: 'FOR',
+    },
+    CFO: {
+      lens: '시범 자동승인 집계의 규칙 밖 승인을 전사 규모의 비용 리스크로 봅니다.',
+      evidenceIds: ['E2'],
+      opening: 'AGAINST',
+    },
+    CAIO: {
+      lens: '승인 사유를 시스템이 남길 수 있는지를 판단 기준으로 봅니다.',
+      evidenceIds: ['E3'],
+      opening: 'UNDECIDED',
+    },
+    CISO: {
+      lens: '감사 메모의 기록 부재를 권한 위임의 책임 문제로 봅니다.',
+      evidenceIds: ['E3'],
+      opening: 'AGAINST',
+    },
+  },
 };
 
 const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
@@ -99,6 +142,29 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     { id: 'REVIEW', label: '결정 결과 복기' },
     { id: 'EXP_ONLY', label: '경험 판단 절대 우선' },
   ],
+  // T79(2026-10-02 사용자 결정): 안건①과 같은 배치(CEO 찬성·CFO 반대·CAIO 미정·CISO 반대).
+  roleLenses: {
+    CEO: {
+      lens: '결정 복기(4:3)를 어느 쪽도 늘 맞지 않으니 책임지는 사람이 방향을 잡아야 하는 문제로 봅니다.',
+      evidenceIds: ['E1'],
+      opening: 'FOR',
+    },
+    CFO: {
+      lens: '실패 사례의 데이터 경고 무시 손실을 통제 실패로 봅니다.',
+      evidenceIds: ['E4'],
+      opening: 'AGAINST',
+    },
+    CAIO: {
+      lens: '예측 보고의 전례 없는 상황 오차를 모델이 약한 범위로 봅니다.',
+      evidenceIds: ['E2'],
+      opening: 'UNDECIDED',
+    },
+    CISO: {
+      lens: '인터뷰 메모의 기록 부재를 사후 검증 불가 문제로 봅니다.',
+      evidenceIds: ['E3'],
+      opening: 'AGAINST',
+    },
+  },
 };
 
 // 이전 안건(보존, T78에서 레지스트리 제거 — src/content/scenarios/anonBoard.ts와 같은

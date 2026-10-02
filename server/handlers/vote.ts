@@ -120,7 +120,7 @@ function buildVoteSystemPrompt(
   materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   input: VoteRequest,
 ): string {
-  const rolePrompt = ROLE_PROMPT_BUILDERS[roleId]();
+  const rolePrompt = ROLE_PROMPT_BUILDERS[roleId](materials, 'VOTE');
   const meetingRecord = buildMeetingRecordBlock({
     scenarioId: materials.scenarioId,
     originalMotionText: materials.originalMotionText,

@@ -18,4 +18,11 @@
 // stance는 "첫 의견부터 방향을 밝히라"로 한 번 더 손봤다(after3). 최종 문구로 144행 전수
 // 재측정해 실패 0·stance 누락 0을 확보했다(첫 실행은 크레딧 소진으로 중단, 두 번째는 실패 5행이
 // 있어 세 번째 기록을 최종으로 삼는다). 전후 비교는 docs/eval/tuning-v7.md.
-export const PROMPT_VERSION = 'v7';
+// v8(2026-10-02, T79): 2026-10-02 안건 교체(T78, ai-approval·experience-first) 이후 안건별
+// 임원 렌즈(<role_lens>, 모든 발언·표결 단계)와 첫 의견 전용 출발 성향(<opening_stance>,
+// OPINIONS 단계만)을 임원 프롬프트에 추가했다(server/scenario-data.ts의 roleLenses,
+// prompts/roles/index.ts). 발언 문장·최종 표는 여전히 모델이 정하고(정답표 금지 유지),
+// 비서실장 refine·summarize에는 EXEC_DECISION_RULE과 같은 위치에 둬 새지 않는다. 응답
+// 스키마는 바뀌지 않았지만 시스템 프롬프트 본문이 바뀌므로 버전을 올린다. 전후 비교는
+// docs/eval/tuning-v8.md.
+export const PROMPT_VERSION = 'v8';
