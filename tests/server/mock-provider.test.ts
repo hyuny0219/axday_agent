@@ -233,6 +233,61 @@ describe('createMockProvider 안건별 역할 렌즈 자료(PR #13 Codex 2차 �
   });
 });
 
+// PR #13 Codex 3차 검토: OPINIONS의 stance를 고정 ROLE_STANCE(CAIO 항상 FOR)로만
+// 주면 안건 문서가 명시한 CAIO "미정"과 어긋났다. envelope의 scenarioId로
+// roleLenses[role].opening을 쓰는지, REACTIONS·FOLLOWUP은 여전히 고정 맵을 쓰는지
+// 확인한다.
+describe('createMockProvider 안건별 OPINIONS 출발 성향(PR #13 Codex 3차 검토)', () => {
+  const EXPECTED_OPENING: Record<string, 'FOR' | 'AGAINST' | 'UNDECIDED'> = {
+    CEO: 'FOR',
+    CFO: 'AGAINST',
+    CAIO: 'UNDECIDED',
+    CISO: 'AGAINST',
+  };
+
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '%s의 OPINIONS stance는 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST다',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO'] as const) {
+        const result = await provider.complete(
+          baseRequest(JSON.stringify({ kind: 'statement', roleId, stage: 'OPINIONS', scenarioId })),
+        );
+        expect((result.json as { stance: string }).stance).toBe(EXPECTED_OPENING[roleId]);
+      }
+    },
+  );
+
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '%s의 REACTIONS·FOLLOWUP stance는 OPINIONS와 무관하게 고정 맵을 쓴다(CAIO는 FOR)',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      for (const stage of ['REACTIONS', 'FOLLOWUP'] as const) {
+        const result = await provider.complete(
+          baseRequest(
+            JSON.stringify({ kind: 'statement', roleId: 'CAIO', stage, scenarioId }),
+          ),
+        );
+        expect((result.json as { stance: string }).stance).toBe('FOR');
+      }
+    },
+  );
+
+  it('scenarioId가 없거나 알 수 없으면 OPINIONS도 이전 고정값으로 되돌아간다(기존 테스트 하위 호환)', async () => {
+    const provider = createMockProvider('mock-model');
+    const noScenario = await provider.complete(
+      baseRequest(JSON.stringify({ kind: 'statement', roleId: 'CAIO', stage: 'OPINIONS' })),
+    );
+    const unknownScenario = await provider.complete(
+      baseRequest(
+        JSON.stringify({ kind: 'statement', roleId: 'CAIO', stage: 'OPINIONS', scenarioId: 'anon-board' }),
+      ),
+    );
+    expect((noScenario.json as { stance: string }).stance).toBe('FOR');
+    expect((unknownScenario.json as { stance: string }).stance).toBe('FOR');
+  });
+});
+
 describe('parseMockFault', () => {
   it('accepts known fault names from a header or body value', () => {
     expect(parseMockFault('timeout')).toBe('timeout');

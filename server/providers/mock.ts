@@ -102,14 +102,28 @@ const ROLE_VOTE: Record<string, 'YES' | 'NO'> = {
   CISO: 'NO',
 };
 
-/** 발언(statement)의 고정 stance(T63). ROLE_VOTE와 같은 방향으로 둬 mock 실행에서도
- * "OPINIONS stance와 최종 표의 일치율"을 관측할 수 있게 한다. */
+/** 발언(statement)의 고정 stance(T63). REACTIONS·FOLLOWUP 등 OPINIONS 이후 단계에만
+ * 쓴다(아래 scenarioAwareOpeningStance 참고) — ROLE_VOTE와 같은 방향으로 둬 mock
+ * 실행에서도 "stance와 최종 표의 일치율"을 관측할 수 있게 한다. */
 const ROLE_STANCE: Record<string, 'FOR' | 'AGAINST' | 'UNDECIDED'> = {
   CEO: 'FOR',
   CFO: 'AGAINST',
   CAIO: 'FOR',
   CISO: 'AGAINST',
 };
+
+/** PR #13 Codex 3차 검토: OPINIONS 단계의 stance는 안건마다 다른 "첫 반응"
+ * (roleLenses[role].opening, client의 src/domain/stance.ts scriptedStances와 같은
+ * 원칙)을 써야 한다 — 고정 ROLE_STANCE(CAIO 항상 FOR)만 쓰면 experience-first·
+ * ai-approval 문서가 명시한 CAIO "미정"과 어긋난다. envelope에 scenarioId가 있으면
+ * 그 안건의 roleLenses를 쓰고, 없거나 등록되지 않은 안건이면 위 고정 맵으로
+ * 되돌아간다. REACTIONS·FOLLOWUP은 이 함수를 쓰지 않고 그대로 고정 맵을 쓴다(참가자
+ * 발언을 들은 뒤의 반응은 "첫 반응" 개념이 아니다). */
+function scenarioAwareOpeningStance(roleId: string, scenarioId: string | undefined): 'FOR' | 'AGAINST' | 'UNDECIDED' {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  const opening = materials?.roleLenses?.[roleId as ExecRoleId]?.opening;
+  return opening ?? ROLE_STANCE[roleId] ?? 'UNDECIDED';
+}
 
 function buildStatementJson(env: MockRequestEnvelope): unknown {
   const roleId = env.roleId ?? 'CEO';
@@ -121,7 +135,10 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     referencedStatementIds: [],
     concerns: [`[mock] ${roleId} 우려사항`],
     suggestedConditionIds: [scenarioAwareRoleCondition(roleId, env.scenarioId)],
-    stance: ROLE_STANCE[roleId] ?? 'UNDECIDED',
+    stance:
+      stage === 'OPINIONS'
+        ? scenarioAwareOpeningStance(roleId, env.scenarioId)
+        : ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
 
