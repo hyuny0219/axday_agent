@@ -21,7 +21,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { CONDITION_IDS, type ExecRoleId } from '../server/validate';
+import { CONDITION_IDS, EXEC_ROLE_IDS, type ExecRoleId } from '../server/validate';
 
 type ConditionId = (typeof CONDITION_IDS)[number];
 import { getScenarioMaterials } from '../server/scenario-data';
@@ -461,14 +461,23 @@ interface HeuristicReport {
   overTimeoutRate: number;
   validationFailureRate: number;
   callFailureRate: number;
-  cisoCitedE4: boolean;
+  /** PR #13 Codex 2차 검토 P2: 예전에는 "CISO가 E4를 인용"을 고정으로 봤다(anon-board
+   * 시절 CISO 렌즈가 E4였기 때문) — 안건이 바뀐 뒤로는 안건·역할에 안 맞는 고정값이었다.
+   * 이제는 scenario-data.ts의 roleLenses[role].evidenceIds를 "그 역할이 인용하길 기대하는
+   * 자료"로 보고, 역할마다 한 번이라도 그중 하나를 인용했는지를 본다(관측값, 합격 기준
+   * 아님 — stanceVoteAgreement와 같은 원칙). 렌즈가 없는 안건(레지스트리 밖)은 항상 false다. */
+  roleLensEvidenceCited: Record<ExecRoleId, boolean>;
   unanimityNotRequired: true;
   observedUnanimousPaths: string[];
   injectionResistanceRate: number;
   injectionOffendingRows: EvalRow[];
 }
 
-function computeHeuristics(rows: EvalRow[], evalPaths: EvalPath[]): HeuristicReport {
+function computeHeuristics(
+  rows: EvalRow[],
+  evalPaths: EvalPath[],
+  scenarioId: KnownScenarioId,
+): HeuristicReport {
   const roundRows = rows.filter((r) => r.stage === 'OPINIONS' || r.stage === 'REACTIONS');
   const overTimeout = roundRows.filter((r) => r.latencyMs > 8000).length;
   const overTimeoutRate = roundRows.length > 0 ? overTimeout / roundRows.length : 0;
@@ -480,7 +489,14 @@ function computeHeuristics(rows: EvalRow[], evalPaths: EvalPath[]): HeuristicRep
   ).length;
   const callFailureRate = rows.length > 0 ? callFailed / rows.length : 0;
 
-  const cisoCitedE4 = rows.some((r) => r.roleId === 'CISO' && (r.evidenceIds ?? []).includes('E4'));
+  const roleLenses = getScenarioMaterials(scenarioId)?.roleLenses;
+  const roleLensEvidenceCited = {} as Record<ExecRoleId, boolean>;
+  for (const role of EXEC_ROLE_IDS) {
+    const lensEvidenceIds = roleLenses?.[role]?.evidenceIds ?? [];
+    roleLensEvidenceCited[role] =
+      lensEvidenceIds.length > 0 &&
+      rows.some((r) => r.roleId === role && (r.evidenceIds ?? []).some((id) => lensEvidenceIds.includes(id)));
+  }
 
   const observedUnanimousPaths: string[] = [];
   for (const evalPath of evalPaths) {
@@ -506,7 +522,7 @@ function computeHeuristics(rows: EvalRow[], evalPaths: EvalPath[]): HeuristicRep
     overTimeoutRate,
     validationFailureRate,
     callFailureRate,
-    cisoCitedE4,
+    roleLensEvidenceCited,
     unanimityNotRequired: true,
     observedUnanimousPaths,
     injectionResistanceRate,
@@ -608,7 +624,11 @@ function buildMarkdown(
         ? ' — FAIL: 실측이 성립하지 않는다. "실패 사유" 절을 본다'
         : ''),
   );
-  lines.push(`- CISO가 E4를 한 번 이상 인용: ${heuristics.cisoCitedE4 ? 'PASS' : 'FAIL'}`);
+  lines.push(
+    `- 역할별 렌즈 자료 인용(한 번 이상, roleLenses.evidenceIds 기준): ${EXEC_ROLE_IDS.map(
+      (role) => `${role} ${heuristics.roleLensEvidenceCited[role] ? 'PASS' : 'FAIL'}`,
+    ).join(' · ')}`,
+  );
   lines.push(
     `- 네 조건 경로에서 만장일치를 합격 기준으로 요구하지 않음: PASS(구조적 — 이 하네스는 표 일치를 판정에 쓰지 않는다)` +
       (heuristics.observedUnanimousPaths.length > 0
@@ -670,7 +690,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const heuristics = computeHeuristics(allRows, evalPaths);
+  const heuristics = computeHeuristics(allRows, evalPaths, scenarioId);
   const date = new Date().toISOString().slice(0, 10);
   const outDir = path.resolve(import.meta.dirname, '../docs/eval');
   mkdirSync(outDir, { recursive: true });
