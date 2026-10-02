@@ -21,6 +21,10 @@
 // (T40 이후 바뀌지 않은 KEEP_PREVIOUS 동작). testid followup-option-N·
 // followup-textarea·submit-followup·retry-failed-roles·condition-chip-*·
 // reactions-info(inert)는 모두 그대로 유지한다.
+// 2026-10-02 검토 반영(제로 이탈 지시): 옛 "내 발언 인용" 인용문(blockquote)은
+// S4_Reactions 시안에 없어 뺐다 — 참가자 본인 발언은 이미 무대 참가자 말풍선
+// (StageBand)이 보여주므로 중복이었다. 그 testid·2줄 클램프에 기대던 e2e 단언은
+// 모두 지우거나 다른 신호로 바꿨다.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -176,6 +180,15 @@ export function ReactionsScreen({
   const proposedConditionIds = useMemo(
     () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds]),
     [previousConfirmedIds, newProposedIds],
+  );
+
+  // CONDITIONS 칩의 "기존 확정"(cyan) vs "새 조건"(앰버) 구분(T74 2차 검토, 시안
+  // S4_Reactions): DISCUSS에서 이미 확정한 조건을 이 답변이 다시 제안해도(같은
+  // 조건을 가리키는 다른 옵션을 고르는 등) "새 조건"으로 보이면 안 되므로
+  // previousConfirmedIds를 뺀다.
+  const newlyProposedConditionIds = useMemo(
+    () => newProposedIds.filter((id) => !previousConfirmedIds.includes(id)),
+    [newProposedIds, previousConfirmedIds],
   );
 
   // 후속 보완은 이전에 확정한 조건을 그대로 보여주고 유지·해제할 수 있게 하며,
@@ -339,9 +352,6 @@ export function ReactionsScreen({
   return (
     <>
       <div className="app-body__actions screen reactions-screen">
-        <blockquote className="reactions-screen__quote" data-testid="reactions-quote">
-          {lastOpinion?.originalText}
-        </blockquote>
         <div className="reactions-screen__hud" data-testid="reactions-hud">
           <DraftEditor
             value={textValue}
@@ -361,6 +371,7 @@ export function ReactionsScreen({
               conflictPairs={conflictPairs}
               showNoMatchHint={showNoMatchHint}
               onToggle={handleToggleCondition}
+              newlyProposedIds={newlyProposedConditionIds}
             />
           )}
         </div>

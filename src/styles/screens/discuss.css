@@ -187,6 +187,14 @@
   color: var(--hud-line);
 }
 
+/* T74(S4_Reactions 시안 그대로): REACTIONS에서 이번 답변으로 새로 제안된 조건이
+   확정되면 기존 확정 칩(cyan)과 다른 앰버 테두리 + "+ 새 조건"으로 보여준다
+   (ConditionChips의 newlyProposedIds). */
+.condition-chip--new {
+  border-color: var(--hud-warn);
+  color: var(--hud-warn);
+}
+
 .condition-chips__conflicts {
   margin: var(--space-1) 0 0;
   padding-left: var(--space-2);

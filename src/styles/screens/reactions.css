@@ -21,27 +21,6 @@
   }
 }
 
-/* 내 발언 인용 상자(시안에는 없는 요소지만 기존 동작·testid를 유지한다 — REACTIONS에
-   들어오기 전 DISCUSS에서 전달한 발언을 참가자가 다시 확인할 수 있어야 하고,
-   e2e/stage.spec.ts·noscroll.spec.ts가 이 testid·2줄 클램프에 의존한다). HUD 입력
-   상자 바로 위, 왼쪽 열 맨 앞에 둔다. */
-.reactions-screen__quote {
-  margin: 0;
-  padding: var(--space-1) var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--accent);
-  border-left-width: 4px;
-  border-radius: var(--radius-control);
-  color: var(--text);
-  font-size: var(--fs-card);
-  box-shadow: var(--shadow-card);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
-}
-
 /* HUD 입력 상자(시안 "MY REPLY · 내 답변" — discuss-screen__hud와 같은 모양·값).
    DraftEditor·ConditionChips는 discuss.css의 공용 클래스를 그대로 쓴다(컴포넌트
    재사용, T74). */
