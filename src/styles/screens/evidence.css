@@ -89,26 +89,39 @@
    같으므로 다시 적지 않는다 — 치수(패딩·간격·글자 크기)만 덮어쓰고, 해석·원문은
    종이 한 장 안에서 2×2를 다 보여줘야 하므로 각 1~2줄로 클램프한다(기본 변형은
    EvidenceDialog 팝업 안에서만 쓰여 원문을 클램프하지 않는다 — 그 규칙은 그대로
-   둔다). */
+   둔다).
+   PR #14 Codex 1차 검토(P2): 1280×720에서 카드 두 장(C·D)이 종이 아래로 밀려 잘렸다
+   — 그리드 행(`grid-template-rows: auto`가 암묵적으로 만드는 행)과 카드(grid item)
+   모두 기본 최소 크기가 "내용 높이"라 `.evidence-grid`의 `flex:1`이 준 실제 가용
+   높이보다 카드 두 줄 분량이 더 크면(실측 232px 가용 vs 261px 필요) 그리드 자체의
+   `overflow-y:auto`가 조용히 스크롤을 만들어 `toBeVisible()`은 통과하지만 2×2 전체가
+   화면에 보이지 않았다. `grid-auto-rows: minmax(0, 1fr)`(행이 0까지 줄어들 수 있고
+   남는 공간을 균등히 나눠 가진다) + 카드 `min-height: 0`(grid item이 내용 높이 밑으로
+   줄어들 수 있게 허용)으로 두 행이 실제 가용 높이 안에 맞춰 줄어들게 하고,
+   1280 치수(패딩·행간·글자 크기)도 함께 줄여 두 줄 클램프가 실제로 그 안에 들어가게
+   했다(여유 있게 맞도록 재계산: 카드 1장 높이 104.8px × 2 + 그리드 행간 8px =
+   217.6px ≤ 실측 가용 232px). */
 .evidence-grid--compact {
-  gap: 15px;
+  gap: 10px;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 @media (max-width: 1280px) {
   .evidence-grid--compact {
-    gap: 12px;
+    gap: 8px;
   }
 }
 
 .evidence-card--compact {
-  padding: 15px 17.5px;
-  gap: 7.5px;
+  min-height: 0;
+  padding: 10px 12.5px;
+  gap: 5px;
 }
 
 @media (max-width: 1280px) {
   .evidence-card--compact {
-    padding: 12px 14px;
-    gap: 6px;
+    padding: 8px 10px;
+    gap: 4px;
   }
 }
 
@@ -123,7 +136,7 @@
 }
 
 .evidence-grid--compact .evidence-card__insight {
-  font-size: 16.25px;
+  font-size: 15px;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -133,12 +146,12 @@
 
 @media (max-width: 1280px) {
   .evidence-grid--compact .evidence-card__insight {
-    font-size: 13px;
+    font-size: 12px;
   }
 }
 
 .evidence-grid--compact .evidence-card__meta {
-  font-size: 15px;
+  font-size: 13.75px;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -148,6 +161,6 @@
 
 @media (max-width: 1280px) {
   .evidence-grid--compact .evidence-card__meta {
-    font-size: 12px;
+    font-size: 11px;
   }
 }

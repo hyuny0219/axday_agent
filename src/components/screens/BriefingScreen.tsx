@@ -33,8 +33,11 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
 
   // UNKNOWN 줄(시안): 미정 항목을 " · "로 이어 붙이되, 시안의 먹칠(redaction)은
   // 마지막 항목에만 건다(카드 명시) — 글자색을 배경과 같게 해 시각적으로만 가리고
-  // 텍스트 자체(스크린리더가 읽는 내용)는 그대로 남긴다. 항목이 1개뿐이면 앞선 안내
-  // 문구 없이 그 하나만 먹칠한다.
+  // 텍스트 자체는 DOM에 그대로 남긴다. 항목이 1개뿐이면 앞선 안내 문구 없이 그
+  // 하나만 먹칠한다. PR #14 Codex 1차 검토(P2): 화면이 보이는 참가자에게는 "먹칠돼
+  // 아직 안 정해졌다"는 상태가 중요한데 평문 텍스트만 읽으면 스크린리더 사용자는
+  // 그 상태를 알 수 없었다 — `aria-label`로 값과 "먹칠 처리된 미정 항목"이라는 상태를
+  // 함께 읽어 준다(값 자체도 감추지 않는다).
   const undecidedItems = scenario.motionBreakdown.undecidedItems;
   const redactedItem = undecidedItems[undecidedItems.length - 1];
   const leadingItems = undecidedItems.slice(0, -1);
@@ -73,7 +76,12 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
                 {leadingItems.length > 0 && (
                   <span className="briefing-screen__undecided-muted">{leadingItems.join(' · ')} · </span>
                 )}
-                <span className="briefing-screen__undecided-redacted">{redactedItem}</span>
+                <span
+                  className="briefing-screen__undecided-redacted"
+                  aria-label={`${redactedItem} (먹칠 처리된 미정 항목)`}
+                >
+                  {redactedItem}
+                </span>
               </p>
             )}
           </div>
