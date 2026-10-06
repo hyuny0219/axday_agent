@@ -89,7 +89,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   page,
 }) => {
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();

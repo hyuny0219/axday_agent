@@ -18,7 +18,7 @@ export interface AttractScreenProps {
 }
 
 const MODE_BADGE_TEXT: Record<SessionMode, string> = {
-  live: 'LIVE · 실제 임원 에이전트 · 4분 이사회',
+  live: '실시간 · 실제 임원 에이전트 · 4분 이사회',
   scripted: '사전 구성 시뮬레이션',
 };
 
@@ -34,11 +34,11 @@ export function AttractScreen({ mode, onStart, startDisabled = false }: AttractS
         <div className="attract-screen__bracket attract-screen__bracket--bl" aria-hidden="true" />
         <div className="attract-screen__bracket attract-screen__bracket--br" aria-hidden="true" />
         <div className="attract-screen__readout" aria-hidden="true">
-          <span>CAM 01 · 회의실 A</span>
-          <span className="attract-screen__readout-dim">STANDBY</span>
+          <span>회의실 A</span>
+          <span className="attract-screen__readout-dim">대기 중</span>
         </div>
         <span className="attract-screen__stamp" aria-hidden="true">
-          TOP SECRET
+          극비
         </span>
 
         <div className="attract-screen__center">
@@ -47,7 +47,7 @@ export function AttractScreen({ mode, onStart, startDisabled = false }: AttractS
           </p>
           <h1 className="attract-screen__title">BOARDROOM 2026</h1>
           <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
-          <p className="attract-screen__case-file">CASE FILE No. 02 · 특별 이사 1석 공석</p>
+          <p className="attract-screen__case-file">사건 02 · 특별 이사 1석 공석</p>
         </div>
 
         <button

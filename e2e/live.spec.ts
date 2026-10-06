@@ -74,7 +74,7 @@ async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<v
 test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 근거를 보여준다', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   await enterAiAssistant(page);
 
@@ -114,7 +114,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await page.getByTestId('confirm-vote').click();
 
   await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByTestId('result-mode-notice')).toContainText('LIVE');
+  await expect(page.getByTestId('result-mode-notice')).toContainText('실시간');
   // 임원 4명 모두 응답했으므로 판단 근거가 4개 모두 보인다.
   await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
   await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
@@ -122,8 +122,8 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // "체험 종료"로 재시작해도 live가 꺼지지 않는다(2026-09-28 시연 중 발견: 리셋이 mode를
   // 초기값 scripted로 되돌리고 서버 확인은 첫 마운트에만 돌아 이후 세션이 전부 scripted였다).
   await page.getByRole('button', { name: '체험 종료' }).click();
-  await expect(page.getByTestId('attract-mode-badge')).toContainText('LIVE');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('attract-mode-badge')).toContainText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   // 리셋 뒤 **같은 조건**으로 다시 완주해도 결과에 도달한다. 최종안 hash가 조건 조합에서
   // 결정적이라 이전 세션과 같아지는데, 표결 시작·결과 대기 가드가 hash만 기억하면 두 번째
@@ -155,7 +155,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
   });
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   await enterAiAssistant(page);
 
@@ -197,7 +197,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await mockRoleFailure(page, 'CAIO');
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   await enterAiAssistant(page);
 
@@ -254,7 +254,7 @@ test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 �
   page,
 }) => {
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();

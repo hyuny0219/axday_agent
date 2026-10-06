@@ -25,12 +25,13 @@ function speakerTag(speaker: MemberId): string {
   return speaker === 'PARTICIPANT' ? '나' : speaker;
 }
 
-/** 머리글 오른쪽 건수 배지(시안 TRANSCRIPT "N ENTRIES · 스크롤", 1건은 "1 ENTRY"). */
+/** 머리글 오른쪽 건수 배지(시안 TRANSCRIPT "N ENTRIES · 스크롤", 1건은 "1 ENTRY",
+ * T83에서 한국어화). */
 function entryCountLabel(count: number): string {
   if (count <= 1) {
-    return `${count} ENTRY`;
+    return `${count}건`;
   }
-  return `${count} ENTRIES · 스크롤`;
+  return `${count}건 · 스크롤`;
 }
 
 export function MinutesPanel({ entries }: MinutesPanelProps) {
@@ -121,7 +122,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
       data-testid="minutes-panel"
     >
       <header className="minutes__head">
-        <h2 className="minutes__title">TRANSCRIPT · 발언 흐름</h2>
+        <h2 className="minutes__title">발언 흐름</h2>
         <span className="minutes__count" data-testid="minutes-count">
           {entryCountLabel(entries.length)}
         </span>

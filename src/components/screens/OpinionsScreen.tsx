@@ -93,17 +93,17 @@ export function OpinionsScreen({
   const paperHead = (
     <>
       <span className="opinions-screen__stamp" aria-hidden="true">
-        CONFIDENTIAL
+        대외비
       </span>
       <div className="opinions-screen__head">
-        <span className="opinions-screen__step">STEP 02</span>
+        <span className="opinions-screen__step">2단계</span>
         {/* 시안 원본은 <h1>이지만, 이 화면은 ATTRACT의 페이지 <h1>("BOARDROOM 2026")
             아래 중첩되는 화면 제목이라 다른 조종석 화면(BRIEFING·MOTION·VOTE 등)과
             같은 <h2> 위계를 쓴다 — 글자 크기·굵기는 시안 값 그대로다. */}
         <h2 className="opinions-screen__title">임원 네 명의 첫 의견</h2>
       </div>
       <div className="opinions-screen__meta">
-        <span>같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.</span>
+        <span>같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 발언 흐름에 쌓입니다.</span>
         <span className="opinions-screen__tally">{stanceSummaryLine(stances)}</span>
       </div>
     </>

@@ -41,21 +41,22 @@ describe('Header', () => {
   });
 
   // T78(2026-10-02, 안건 교체): 케이스 번호가 세션의 안건 caseLabel을 따르고, 안건이
-  // 아직 없으면(ATTRACT·SELECT) "No. --"를 보인다(시안 Main.html 형식 유지).
-  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 "No. --"를 보인다', () => {
+  // 아직 없으면(ATTRACT·SELECT) "사건 --"를 보인다(시안 Main.html 형식 유지, T83에서
+  // 한국어화).
+  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 "사건 --"를 보인다', () => {
     const session = createInitialSession(0, 'session-case');
 
     const { rerender } = render(
       <Header session={session} scenario={null} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. --');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('사건 --');
 
     rerender(<Header session={session} scenario={aiApprovalScenario} onOperatorReset={vi.fn()} />);
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. 01');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('사건 01');
 
     rerender(
       <Header session={session} scenario={experienceFirstScenario} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. 02');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('사건 02');
   });
 });
