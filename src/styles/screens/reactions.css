@@ -58,6 +58,19 @@
   }
 }
 
+/* CONDITIONS 칩 자리 예약(T85 my#10): 답을 시작하기 전에도 이 높이를 미리
+   비워 둬, 칩이 생기는 순간 바로 아래 "답변 전달" 버튼이 밀려 내려가지 않게
+   한다 — condition-chip의 최소 터치 높이(--touch-min, 56px) + 라벨 한 줄 기준. */
+.reactions-screen__conditions-slot {
+  min-height: 76px;
+}
+
+@media (max-width: 1280px) {
+  .reactions-screen__conditions-slot {
+    min-height: 68px;
+  }
+}
+
 /* [AI 비서실장 열기][답변 전달 ▶](시안 — discuss-screen__submit-row과 같은 크기). */
 .reactions-screen__submit-row {
   align-items: center;
@@ -270,11 +283,18 @@
   }
 }
 
+/* T85 my#8: 카드 자체는 명시적 높이가 없지만, 바깥 .reactions-screen__paper가
+   overflow:hidden(무스크롤 규칙)이라 너무 긴 문장은 문장 중간에서 말없이 잘렸다 —
+   줄 클램프 + 말줄임으로 항상 온전한 단어에서 끊기게 한다. */
 .reaction-card__text {
   margin: 0;
   font-size: 15px;
   line-height: 1.4;
   color: #3b3a36;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 @media (max-width: 1280px) {

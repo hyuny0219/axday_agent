@@ -52,7 +52,7 @@ describe('buildMinutes(scripted)', () => {
     expect(entries.every((entry) => entry.kind === 'speech')).toBe(true);
   });
 
-  it('scripted 전 단계를 거치면 순서대로 8개 항목 묶음이 쌓이고 반응 없는 임원은 "기존 의견 유지"다', () => {
+  it('scripted 전 단계를 거치면 순서대로 8개 항목 묶음이 쌓이고 반응 없는 임원은 유지 문구다', () => {
     let session = selectScenario('scripted');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> DISCUSS
@@ -95,11 +95,11 @@ describe('buildMinutes(scripted)', () => {
     ]);
 
     // PILOT 조건을 확정했으므로 CFO는 실제 반응 문구, 조건과 무관한 CISO는
-    // "기존 의견 유지"다(scenario.reactions에 PILOT용 CISO 반응이 없다).
+    // "앞서 말씀드린 입장 그대로입니다."다(scenario.reactions에 PILOT용 CISO 반응이 없다).
     const cfoReaction = entries.find((entry) => entry.id === 'reaction-CFO');
     const cisoReaction = entries.find((entry) => entry.id === 'reaction-CISO');
     expect(cfoReaction?.text).toContain('처리 공수');
-    expect(cisoReaction?.text).toBe('기존 의견 유지');
+    expect(cisoReaction?.text).toBe('앞서 말씀드린 입장 그대로입니다.');
 
     const myOpinion = entries.find((entry) => entry.id === 'my-opinion');
     expect(myOpinion).toMatchObject({ speaker: 'PARTICIPANT', kind: 'mine' });
@@ -151,7 +151,7 @@ function statementFor(roleId: Statement['roleId'], stage: Statement['stage'], te
 }
 
 describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮어써도 남는다', () => {
-  it('OPINIONS에서 실패한 임원은 REACTIONS 라운드가 진행 중이어도 "응답 없음"으로 남는다', () => {
+  it('OPINIONS에서 실패한 임원은 REACTIONS 라운드가 진행 중이어도 실패 문구로 남는다', () => {
     let session = selectScenario('live');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
 
@@ -177,7 +177,7 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
     const beforeReactions = buildMinutes(session, scenario, roundLog);
     expect(beforeReactions.find((entry) => entry.id === 'opinion-CAIO')).toMatchObject({
       kind: 'failed',
-      text: '응답 없음',
+      text: '이번에는 답을 받지 못했습니다',
     });
     expect(beforeReactions.find((entry) => entry.id === 'opinion-CEO')).toMatchObject({
       kind: 'speech',
@@ -206,10 +206,10 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
     roundLog = upsertRoundLogEntry(roundLog, { stage: 'REACTIONS', roleId: 'CISO', status: 'pending' });
 
     const duringReactions = buildMinutes(session, scenario, roundLog);
-    // OPINIONS 라운드의 CAIO 항목은 그대로 "응답 없음"이다.
+    // OPINIONS 라운드의 CAIO 항목은 그대로 실패 문구다.
     expect(duringReactions.find((entry) => entry.id === 'opinion-CAIO')).toMatchObject({
       kind: 'failed',
-      text: '응답 없음',
+      text: '이번에는 답을 받지 못했습니다',
     });
     // REACTIONS 라운드는 아직 진행 중이므로 판단 중(점 세 개)으로 보인다.
     expect(duringReactions.find((entry) => entry.id === 'reaction-CAIO')).toMatchObject({

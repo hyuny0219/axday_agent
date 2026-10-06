@@ -160,6 +160,13 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   const remainingTasksLine =
     scenario.remainingTasks.length > 0 ? scenario.remainingTasks.join(' · ') : null;
 
+  // 참가자 행 안내(T85 #15): 내 표가 결정적이지 않았을 때, "결과는 임원 표만으로
+  // 정해졌습니다"(참가자를 배제한 듯 들리는 문구) 대신 내 표가 실제 결론과 같은
+  // 방향이었는지로 가른다 — PASS면 YES, REJECT면 NO가 다수 의견과 같다.
+  const participantAgreesWithOutcome =
+    (session.outcome === 'PASS' && resultSummary?.participant.vote === 'YES') ||
+    (session.outcome === 'REJECT' && resultSummary?.participant.vote === 'NO');
+
   return (
     <>
       <div className="app-body__actions screen result-screen__actions">
@@ -184,9 +191,13 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             })}
           </div>
           {persuasion && (
-            <p className="result-tally__caption">
+            // T85 #16: 게임 용어("→ 추가 도장 획득")를 걷어내고 자연문으로 바꾼다.
+            // 같은 내용을 되풀이하던 VERDICTS 쪽 문단(아래 result-summary__persuasion)은
+            // 빼고 이 한 곳에만 남긴다(설득 도장 자체·"BONUS" 연출은 오른쪽 도장 칸에
+            // 그대로 있다).
+            <p className="result-tally__caption" data-testid="result-tally-caption">
               이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
-              {persuasion.earned ? ' → 추가 도장 획득' : ' · 추가 도장은 3석부터'}
+              {persuasion.earned ? ' — 결과를 바꾼 한 표입니다' : ' · 3석부터 설득 도장을 받습니다'}
               {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
             </p>
           )}
@@ -213,7 +224,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         <div className="result-report__top">
           <div className="result-report__main">
             <p className="result-report__eyebrow" aria-hidden="true">
-              <span className="result-report__eyebrow-tag">결과 보고</span>
+              {/* T85 #20: 안건 번호는 선택한 안건(incident.caseLabel, "사건 02")에서 — T83이
+                  태그를 한국어로 바꿨으므로 "결과 보고 · 사건 02" 꼴로 잇는다. */}
+              <span className="result-report__eyebrow-tag">결과 보고 · {caseTag}</span>
               <span>이사회 한 장 요약</span>
             </p>
             <h2 className="result-screen__title" data-testid="result-conclusion">
@@ -380,16 +393,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   <span className="result-seat__reason" data-testid="result-summary-decisive">
                     {resultSummary.participant.decisive
                       ? '이사님의 한 표가 결과를 정했습니다'
-                      : '결과는 임원 표만으로 정해졌습니다'}
+                      : participantAgreesWithOutcome
+                        ? '다수 의견과 같은 판단을 내렸습니다'
+                        : '소수 의견으로 회의록에 남았습니다'}
                   </span>
                 </li>
               </ul>
-              {persuasion && (
-                <p className="result-summary__persuasion" data-testid="persuasion-summary">
-                  이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
-                  {persuasion.earned ? ' → 추가 도장' : ' · 추가 도장은 3석부터'}
-                </p>
-              )}
               <div className="result-verdicts__footer">
                 {remainingTasksLine && (
                   <p className="result-verdicts__line" data-testid="result-tasks">

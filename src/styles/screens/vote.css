@@ -569,6 +569,46 @@
   }
 }
 
+/* 종이 위(VOTE)의 CTA 비활성 안내는 어두운 HUD 색(shell.css 기본값) 대신 종이 톤
+   --ink-muted를 쓴다(T85 #2). */
+.vote-screen__cta-row .cta-disabled-hint {
+  color: var(--ink-muted);
+}
+
+/* 비활성 CTA 자체도 종이 위에서는 shell.css 기본값(--text-muted, 어두운 HUD용 밝은
+   회청색)이 크림 종이 위에서 대비가 떨어진다 — 종이 톤 --ink-muted·--paper-border로
+   덮어쓴다(T85 #2). */
+.vote-screen__cta-row .cta:disabled {
+  color: var(--ink-muted);
+  border-color: var(--paper-border);
+}
+
+/* 임원 표 집계 대기 점 애니메이션(T85 #7, stage.css의 stage-dot-bounce 키프레임을
+   그대로 재사용한다 — StageBand가 항상 같은 화면에 렌더돼 키프레임이 이미 로드돼
+   있다). prefers-reduced-motion에서는 base.css 전역 규칙이 지속 시간을 0으로 낮춘다. */
+.vote-screen__confirm-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.vote-screen__confirm-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: stage-dot-bounce 900ms ease-in-out infinite;
+}
+
+.vote-screen__confirm-dots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.vote-screen__confirm-dots span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
 .vote-screen__cta-note {
   margin: 0;
   font-size: 15px;

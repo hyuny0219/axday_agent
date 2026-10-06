@@ -550,4 +550,52 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 ### 검수
 
 `npm run check`(단위 506)·`npm run build`·`npx playwright test -c playwright.local.config.ts` 모두 통과. 두 해상도 스크린샷을 전부 재생성해 라벨 길이 변화(대부분 더 짧아짐)로 인한 줄바꿈·잘림이 없는지 육안으로 확인했다.
+## v1.4 — UX 카피·대기 상태·스타일 다듬기 (T85, 2026-10-07)
+
+배경: Opus 5.5 UX 검토(`opus-ux-review.md`, 항목 #1~#25)와 직접 걸어 본 발견(`my-ux-findings.md`)에서 번역투·운영자 말투·게임 용어·일관성 없는 비활성 버튼 스타일을 다수 지적했다. 화면 구조를 바꾸는 항목(유지 카드, 안건 문장 동적화, 결과 버튼 재배치, 결과 6개월 카드 승격, 카드 클릭 입장, OPINIONS CTA 잠금, 후속 선택지 숨김)은 T84가 맡고, 이 카드는 그 나머지 — 문구·대기 상태·비활성 스타일·줄바꿈·사소한 레이아웃 보정만 다룬다.
+
+### 비활성 CTA(공통 스타일 + 안내 한 줄)
+
+`shell.css`의 `.cta:disabled`를 진한 남색 채움(`--panel-active`)에서 투명 배경 + 점선 테두리(`--border`) + 흐린 글자(`--text-muted`) + `opacity:0.55`로 바꿨다 — 활성 버튼과 뚜렷이 구분된다. 새 공용 클래스 `.cta-disabled-hint`(`shell.css`)를 만들어 비활성일 때만 버튼 옆에 조건부 안내를 보여준다: DISCUSS·REACTIONS "추천 문구를 고르거나 직접 써 주세요", SELECT "안건 카드를 골라 주세요", VOTE "찬성 또는 반대 도장을 먼저 눌러 주세요"(`data-testid="discuss-cta-hint"`·`reactions-cta-hint`·`select-cta-hint`·`vote-cta-hint`). MOTION은 이미 전용 대기 문구(`motion-screen__waiting`)가 있어 추가하지 않았다. 종이 배경(VOTE·MOTION) 위에서는 `--text-muted`(어두운 HUD용 밝은 회청색)가 크림 종이와 대비가 떨어져 `vote.css`·`motion.css`가 `--ink-muted`·`--paper-border`로 덮어쓴다. SELECT는 무대 사진 위라 기존 `select-screen__selected-label`과 같은 톤(`#8f8a80`)으로 맞췄다.
+
+### VOTE 확정 후 대기(#7)
+
+확정 버튼을 누르면(`submitted`) 라벨이 "임원 표를 모으는 중…" + 점 세 개 애니메이션(`vote-screen__confirm-dots`, `stage.css`의 `stage-dot-bounce` 키프레임 재사용, `prefers-reduced-motion`은 기존 전역 규칙으로 자동 정지)으로 바뀐다. BALLOTS 패널 안내는 "임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다"에서 "임원 네 명이 표를 정하고 있습니다 · 곧 결과가 공개됩니다"로 — 내부 타이밍 규칙(8초·1회)은 참가자 화면에서 뺐다(운영 가이드·코드 주석에는 남겨 뒀다).
+
+### live 실패·재시도 문구(#6)
+
+`LiveStatementCards.tsx`·`EvidenceDialog.tsx`의 공용 `STATUS_TEXT`를 "판단 중…"/"응답 지연·확인 필요"에서 "생각을 정리하고 있습니다…"/"이번에는 답을 받지 못했습니다"로 바꿨다. 재시도 버튼은 어느 화면(`LiveStatementCards`·`MotionScreen`·`VoteScreen`)이든 "응답 없는 임원 다시 요청"/"미표결 임원 다시 요청" → "다시 물어보기", 누른 뒤에는 "다시 요청함 · …은 회의록에 남습니다" → "다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다"로 통일했다. `minutes.ts`의 회의록 실패 항목 텍스트("응답 없음")도 같은 문구로 맞췄다.
+
+### MOTION NOT INCLUDED(#4) · 안건 문장 조사(my#1)
+
+`MotionScreen.tsx`의 "은(는)" 템플릿 조사(받침 유무에 안 맞는 기계식 표기)를 없앴다. 빠진 조건이 있으면 "이번 안건에서 빠진 조건: ○○, ○○. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.", 없으면 "제안하신 조건이 모두 들어갔습니다."로 바꿨다. 저장소 전체에서 "은(는)" 템플릿은 이 한 곳뿐이었다.
+
+### 결과 화면(#15·#16·#20, my#4)
+
+- VERDICTS 참가자 행: 내 표가 결정적이지 않을 때 "결과는 임원 표만으로 정해졌습니다"(참가자를 배제한 듯 들림) 대신 결론과 같은 방향으로 투표했으면 "다수 의견과 같은 판단을 내렸습니다", 반대 방향이면 "소수 의견으로 회의록에 남았습니다"(`ResultScreen.tsx`의 `participantAgreesWithOutcome`).
+- 설득 도장 근거 줄은 왼쪽 TALLY 한 곳(`data-testid="result-tally-caption"`)만 남기고 VERDICTS 쪽 중복 문단(`persuasion-summary`)은 뺐다 — 오른쪽 "도장 칸"(스탬프 비주얼)이 이미 접근 가능한 텍스트로 "설득 성공"/"BONUS 미획득"을 보여주므로 정보 손실은 없다. 문구는 "이사님 표 찬성 · 같은 표 5석 → 추가 도장"(게임 용어) → "이사님 표 찬성 · 같은 표 5석 — 결과를 바꾼 한 표입니다"(획득) / "… · 3석부터 설득 도장을 받습니다"(미획득)로 자연문화했다.
+- "DEBRIEF 02"가 안건과 무관하게 고정돼 있던 것을 선택한 안건의 `caseDigits`(incident.caseLabel 숫자)로 바꿨다 — 안건①은 "DEBRIEF 01", 안건②는 "DEBRIEF 02". ATTRACT의 "CASE FILE No. 02"는 아직 안건을 고르기 전(SELECT 이전) 보여주는 장식 문구라 특정 안건에 묶을 수 없어 그대로 뒀다(안건 선택 뒤에는 헤더 CASE FILE No.가 이미 선택값을 따른다, T78).
+
+### 표결 이유 문구(#14)
+
+`aiApproval.ts`·`experienceFirst.ts`의 `voteRules[*].reason`을 번역투("~가 있어 찬성", "~이 갖춰지기 전이라 찬성할 수 없어 반대")에서 1인칭 회의 발언투("…한다니 그러면 찬성합니다", "…해 반대합니다")로 다시 썼다. 판단 순서·조건 매핑은 그대로이고, 숫자·퍼센트는 쓰지 않는다(`NUMERIC_COPY_PATTERN` 테스트 유지). `docs/SCENARIO_AI_APPROVAL.md`·`SCENARIO_EXPERIENCE_FIRST.md`의 표결 우선순위 표도 같은 문구로 맞췄다.
+
+### 그 밖의 문구·레이아웃
+
+- `AssistantPanel.tsx`: 제목 "AI 비서실장(시연)" → "AI 비서실장", 열기 버튼 "AI 비서실장 열기" → "AI 비서실장에게 정리 맡기기", 실패 안내 "기본 안내로 전환했습니다." → "연결이 늦어 미리 준비한 정리를 보여 드립니다.", "근거: E1, E2"(T52 위반 재발) → 자료명으로(#17).
+- `ConditionChips.tsx`: 자유 입력에서 조건을 못 찾았을 때 안내를 "말씀은 회의 기록에 남깁니다. 반영할 조건이 있으면 선택해 주세요" → "조건으로 잡힌 내용은 없습니다. 추천 문구를 고르면 조건이 붙습니다."(#11).
+- `ReactionsScreen.tsx`·`minutes.ts`: scripted 반응이 없을 때 "기존 의견 유지 — <원안 전문 반복>" → "앞서 말씀드린 입장 그대로입니다."(#13) — 같은 문장을 두 번 보여주던 것을 줄였다.
+- `MinutesPanel.tsx`: 시각을 모르는 행(scripted 각본 문구)은 "[--:--]"를 지어내지 않고 역할 코드만 보여준다(#12). "나" 항목·live 응답은 그대로 세션 시작 기준 실측 `mm:ss`다(T77에서 이미 구현돼 있었다).
+- `App.tsx`의 `chairLineFor`: MOTION 단계 의장 말풍선을 고정 문구("이 조건으로 안건을 고정합니다")에서 실제 반영 조건 수·첫 조건명을 말하는 문장(조건 없으면 "원안 그대로 표결에 부칩니다", 1개면 "<라벨> 조건을 달아 표결에 부칩니다", 2개 이상이면 "<첫 라벨> 등 조건 N개를 달아 표결에 부칩니다")으로 바꿨다(#19) — scripted 후속 답변 뒤 무대가 아무 반응도 안 하는 것처럼 보이던 문제. TRANSCRIPT 패널의 같은 항목(`minutes.ts` chair-motion)은 그대로 둬 회의록 표기는 바뀌지 않는다.
+- `OpinionsScreen.tsx`: 장식 "발언" 칩(버튼처럼 보임)을 지우고, 안내 두 문장("같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.")을 첫 문장만 남겼다(#25).
+- `StageBand.tsx`: RESULT 단계에서만 참가자 좌석에 "나" 명패를 더했다(다른 단계는 기존 결정대로 명패 없음, #24).
+- `ProgressStrip.tsx`: RESULT에서 탭 5개 모두 완료(✓) 표시로 바꿨다(이전에는 "05 표결"에 `aria-current`만 남아 여정이 안 끝난 것처럼 보였다, #24).
+- `base.css`: 전역 `word-break: keep-all; overflow-wrap: break-word;`로 한국어 단어 중간 줄바꿈("경험/일까요?" 등)을 막았다(#9).
+- `evidenceDialog.css`의 `.evidence-open-hint`(크림 종이 위 "EXHIBIT A–D + STATEMENTS" 힌트) 색을 대비가 약한 `--text-muted`(약 1.6:1)에서 `--ink-muted`로(#18). `EvidenceDialog.tsx` 팝업 하단 안내를 "Esc · 닫기 버튼 · 바깥 클릭으로 닫힘" → "Esc나 바깥을 누르면 닫힙니다"로 자연문화.
+- `reactions.css`: 답을 시작하기 전에도 CONDITIONS 칩 자리를 미리 비워 둬(`reactions-screen__conditions-slot`, min-height 예약), 칩이 생기는 순간 "답변 전달" 버튼이 밀려 내려가던 레이아웃 점프를 줄였다(my#10).
+- `reaction-card__text`·`opinion-card__text`에 4줄 클램프 + 말줄임을 더해, 바깥 패널의 `overflow:hidden`(무스크롤 규칙)이 문장을 중간에서 말없이 자르던 것을 줄임표로 바꿨다(my#8). BRIEFING EXHIBIT 압축 카드(T80 `evidence-card--compact`)는 이미 2줄 클램프가 있어 손대지 않았다 — 1568×777에서 카드가 작아 보이는 문제는 치수(패딩·높이) 쪽 원인이라 이 카드 범위 밖으로 남겨 둔다.
+
+### 확인
+
+`npm run check`(단위 506, 전부 통과)·`npx playwright test -c <로컬 scratchpad 설정>`(142건, 두 해상도 모두 통과) 확인. `UPDATE_SCREENSHOTS=1`로 `docs/screenshots/{desktop-1080,desktop-720}/*.png` 24장을 전부 갱신하고 1280 스크린샷을 육안 확인했다 — MOTION 의장 말풍선·NOT INCLUDED 새 문구, RESULT의 DEBRIEF 01·진행 탭 5개 완료·참가자 "나" 명패·TALLY 새 문구, REACTIONS의 비활성 CTA 안내·AI 비서실장 버튼 라벨이 모두 의도대로 보이고 잘림·겹침은 없다. BRIEFING EXHIBIT 압축 카드의 세로 여백 문제(my#8 일부)와 AssistantPanel "열기" 버튼의 scripted 무반응 의심(my#11)은 이 카드에서 재현/확인하지 못해 손대지 않았다.
 

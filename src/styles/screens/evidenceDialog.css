@@ -385,7 +385,10 @@
   background-color: var(--paper);
 }
 
+/* T85 #18: 이 힌트는 크림 종이(--paper) 위 버튼 옆에 쓴다 — 어두운 HUD용
+   --text-muted(#acc0d3)는 대비가 약 1.6:1로 거의 안 보인다. 종이 톤 --ink-muted로
+   바꾼다. */
 .evidence-open-hint {
   font-size: var(--fs-meta);
-  color: var(--text-muted);
+  color: var(--ink-muted);
 }

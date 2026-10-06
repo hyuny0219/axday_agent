@@ -99,10 +99,16 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
         >
           이사회 입장 ▶
         </button>
-        {selectedId !== null && selectedIndex !== -1 && (
-          <span className="select-screen__selected-label">
-            선택한 안건: {caseTagFor(selectedIndex)}
-          </span>
+        {selectedId === null ? (
+          <p className="cta-disabled-hint" data-testid="select-cta-hint">
+            안건 카드를 골라 주세요
+          </p>
+        ) : (
+          selectedIndex !== -1 && (
+            <span className="select-screen__selected-label">
+              선택한 안건: {caseTagFor(selectedIndex)}
+            </span>
+          )
         )}
       </div>
     </section>

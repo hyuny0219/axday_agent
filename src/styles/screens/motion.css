@@ -317,6 +317,13 @@
   }
 }
 
+/* 비활성 CTA(T85 #2): shell.css 기본값(--text-muted, 어두운 HUD용 밝은 회청색)이
+   크림 종이 위에서 대비가 떨어진다 — 종이 톤 --ink-muted·--paper-border로 덮어쓴다. */
+.motion-screen__cta-row .cta:disabled {
+  color: var(--ink-muted);
+  border-color: var(--paper-border);
+}
+
 .motion-screen__cta-hint {
   font-family: var(--font-label);
   font-size: 15px;

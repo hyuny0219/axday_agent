@@ -76,7 +76,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // 설득 도장을 얻는다. tally와 일치함을 함께 단언한다.
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 5');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
-    await expect(page.getByTestId('persuasion-summary')).toContainText('찬성 · 같은 표 5석 → 추가 도장');
+    await expect(page.getByTestId('result-tally-caption')).toContainText(
+      '찬성 · 같은 표 5석 — 결과를 바꾼 한 표입니다',
+    );
   });
 
   test('조건 없이 진행하면 REACTIONS 표정이 그대로 유지되고 RESULT에서 설득 도장을 얻지 못한다', async ({
@@ -121,7 +123,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // CEO+참가자만 찬성(2석) — 3석에 못 미쳐 도장을 얻지 못한다. tally와 일치한다.
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 2');
     await expect(page.getByTestId('persuasion-stamp')).toHaveCount(0);
-    await expect(page.getByTestId('persuasion-summary')).toContainText('찬성 · 같은 표 2석 · 추가 도장은 3석부터');
+    await expect(page.getByTestId('result-tally-caption')).toContainText(
+      '찬성 · 같은 표 2석 · 3석부터 설득 도장을 받습니다',
+    );
   });
 });
 
@@ -196,6 +200,8 @@ test.describe('live mock: 무대 표정', () => {
     // YES를 더하면 찬성 3석 → 참가자 표와 같은 표 3석(경계), 도장을 얻는다.
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
-    await expect(page.getByTestId('persuasion-summary')).toContainText('찬성 · 같은 표 3석 → 추가 도장');
+    await expect(page.getByTestId('result-tally-caption')).toContainText(
+      '찬성 · 같은 표 3석 — 결과를 바꾼 한 표입니다',
+    );
   });
 });

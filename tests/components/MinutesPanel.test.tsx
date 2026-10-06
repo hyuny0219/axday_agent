@@ -55,7 +55,9 @@ describe('MinutesPanel 낭독', () => {
       />,
     );
     const before = screen.getByTestId('minutes-entry-op-CFO');
-    expect(before).toHaveTextContent('[--:--] CFO');
+    // 시각을 모르는 행(T85 #12)은 "[--:--]"를 지어내 보이지 않고 역할 코드만 보인다.
+    expect(before).not.toHaveTextContent('--:--');
+    expect(before).toHaveTextContent('CFO');
     expect(before).toHaveTextContent('대기 중');
 
     rerender(

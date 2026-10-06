@@ -348,8 +348,15 @@ export function StageBand({
             {/* 참가자 좌석에는 명패를 두지 않는다(2026-09-28 사용자, T67에서 헤더 명패
                 자체를 없앤 뒤에도 유지되는 결정이다 — 임원 4석 사이에 참가자 표기가
                 끼면 임원이 다섯으로 읽힌다). 이 좌석은 글로우(DISCUSS)·말풍선
-                (REACTIONS)·표 배지(RESULT)만 맡는다. */}
-            {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
+                (REACTIONS)·표 배지(RESULT)만 맡는다. RESULT만 예외: 표결이 끝나
+                다섯으로 읽힐 위험이 없고, ✓/✕ 배지만으로는 그게 누구 표인지 알 수
+                없어 "나" 명패를 더한다(T85 #24). */}
+            {stage === 'RESULT' && ballots && (
+              <>
+                <span className="stage-band__nameplate stage-band__nameplate--participant">나</span>
+                <VoteBadge memberId="PARTICIPANT" ballots={ballots} />
+              </>
+            )}
             <span
               className={`stage-band__silhouette stage-band__silhouette--participant${
                 participant.glow ? ' stage-band__silhouette--glow' : ''

@@ -127,7 +127,7 @@ export function VoteScreen({
           </div>
           {showWaiting && (
             <p className="vote-screen__ballots-info" data-testid="vote-waiting-execs">
-              임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다.
+              임원 네 명이 표를 정하고 있습니다 · 곧 결과가 공개됩니다
             </p>
           )}
           {showRetry && (
@@ -138,7 +138,7 @@ export function VoteScreen({
               disabled={retryUsed}
               onClick={handleRetry}
             >
-              {retryUsed ? '다시 요청함 · 미표결로 확정됩니다' : '미표결 임원 다시 요청'}
+              {retryUsed ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
             </button>
           )}
         </div>
@@ -220,8 +220,24 @@ export function VoteScreen({
               onClick={handleConfirm}
               data-testid="confirm-vote"
             >
-              최종 투표 확정 ▶
+              {submitted ? (
+                <>
+                  임원 표를 모으는 중
+                  <span className="vote-screen__confirm-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </>
+              ) : (
+                '최종 투표 확정 ▶'
+              )}
             </button>
+            {pendingVote === null && !submitted && (
+              <p className="cta-disabled-hint" data-testid="vote-cta-hint">
+                찬성 또는 반대 도장을 먼저 눌러 주세요
+              </p>
+            )}
             <p className="vote-screen__cta-note">
               확정 버튼으로만 표가 성립합니다. 확정 후 임원 표가 공개되고 결과로 넘어갑니다.
               <br />

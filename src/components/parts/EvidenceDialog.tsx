@@ -81,8 +81,8 @@ const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
 /** live pending/failed 문구(LiveStatementCards.STATUS_TEXT와 같은 값 — 두 화면이
  * 같은 말로 "아직 응답 없음"을 보여줘야 한다). */
 const STATUS_TEXT: Record<'pending' | 'failed', string> = {
-  pending: '판단 중…',
-  failed: '응답 지연·확인 필요',
+  pending: '생각을 정리하고 있습니다…',
+  failed: '이번에는 답을 받지 못했습니다',
 };
 
 export function EvidenceDialog({
@@ -241,7 +241,7 @@ export function EvidenceDialog({
           </div>
         </div>
         <div className="evidence-dialog__footer">
-          <span>Esc · 닫기 버튼 · 바깥 클릭으로 닫힘</span>
+          <span>Esc나 바깥을 누르면 닫힙니다</span>
           <span>열린 동안 뒤 화면은 멈춤</span>
         </div>
       </div>

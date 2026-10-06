@@ -296,6 +296,11 @@ export function DiscussScreen({
           >
             의견 전달 ▶
           </button>
+          {!canSubmit && (
+            <p className="cta-disabled-hint" data-testid="discuss-cta-hint">
+              추천 문구를 고르거나 직접 써 주세요
+            </p>
+          )}
         </div>
       </div>
       <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">

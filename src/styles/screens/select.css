@@ -402,3 +402,11 @@
     font-size: 12px;
   }
 }
+
+/* 무대 사진 위(SELECT)의 CTA 비활성 안내는 선택 안내 라벨과 같은 톤으로 맞춘다
+   (T85 #2). */
+.select-screen__submit-row .cta-disabled-hint {
+  font-family: var(--font-label);
+  letter-spacing: 0.14em;
+  color: #8f8a80;
+}
