@@ -155,6 +155,64 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       expect(proposeFromText(scenario, text), text).toEqual([]);
     }
   });
+
+  // PR #13 Codex 5차 검토 P1: 4차에서 좁힌 약속형 어간도 정보성 질문의 부분 문자열이다.
+  // 조건 5개 전부, 키워드가 둘인 조건(EXP_ONLY)은 키워드별로, 물음표 있는 꼴·없는 꼴
+  // (간접 의문)·정보 요청 서술어 꼴을 섞어 확인한다.
+  it('약속형 어간을 그대로 포함한 의문·정보 요청 문장은 아무 조건도 제안하지 않는다(PR #13 Codex 5차 검토)', () => {
+    const negativeQuestions = [
+      // SCOPE: '상황에 한정'
+      '상황에 한정하는 기준이 무엇입니까?',
+      '상황에 한정할지 고민입니다.',
+      // RECORD: '판단 근거를 기록'
+      '판단 근거를 기록하는 방법이 무엇입니까?',
+      '판단 근거를 기록하는 기준이 궁금합니다.',
+      // DATA_VETO: '경고 시 결정을 잠시 멈추'
+      '경고 시 결정을 잠시 멈추는 기준이 무엇입니까?',
+      '경고 시 결정을 잠시 멈추는지 궁금합니다.',
+      // REVIEW: '결정 결과를 복기'
+      '결정 결과를 복기하는 기준이 무엇입니까?',
+      '결정 결과를 복기하는 방법을 알려 주세요.',
+      // EXP_ONLY: 키워드 2개 — '언제나 경험 판단'·'절대 우선으로'
+      '언제나 경험 판단을 따르는 기준이 무엇입니까?',
+      '언제나 경험 판단을 따르는 방법을 알려 주세요.',
+      // ㄹ 불규칙 활용 '-를지'(따를지)·'-ㄹ지'(둘지)도 간접 의문으로 본다 — 열거한
+      // '할지·될지·을지'만 보면 빠지던 꼴.
+      '최종 결정을 언제나 경험 판단에 따를지 고민입니다.',
+      '절대 우선으로 둘지 아직 정하지 못했습니다.',
+      '절대 우선으로 두는 기준이 무엇입니까?',
+      '절대 우선으로 두는 방법을 설명해 주십시오.',
+    ];
+    for (const text of negativeQuestions) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+  });
+
+  it('질문과 청유가 섞인 문장은 질문은 무시하고 청유한 조건만 제안한다(PR #13 Codex 5차 검토)', () => {
+    expect(
+      proposeFromText(scenario, '전례 없는 상황이란 무엇입니까? 판단 근거를 기록합시다.'),
+    ).toEqual(['RECORD']);
+    expect(
+      proposeFromText(scenario, '상황에 한정하는 기준이 무엇입니까? 상황에 한정합시다.'),
+    ).toEqual(['SCOPE']);
+    expect(
+      proposeFromText(
+        scenario,
+        '상황에 한정하지 않는 이유가 무엇입니까? 상황에 한정합시다.',
+      ),
+    ).toEqual(['SCOPE']);
+    expect(proposeFromText(scenario, '상황에 한정합시다 기준은 무엇입니까')).toEqual([
+      'SCOPE',
+    ]);
+  });
+
+  // 회귀: 긍정 언급이 의문 규칙 때문에 사라지면 안 된다. EXP_ONLY의 '언제나'가 의문사
+  // '언제'의 부정칭 꼴로 걸려 의문사로 잡히면 안 된다.
+  it('의문 규칙을 추가해도 긍정 언급은 그대로 제안한다(PR #13 Codex 5차 검토 회귀)', () => {
+    expect(
+      proposeFromText(scenario, '최종 결정은 언제나 경험 판단을 따르도록 합시다.'),
+    ).toEqual(['EXP_ONLY']);
+  });
 });
 
 describe('findConflicts', () => {

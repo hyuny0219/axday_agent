@@ -71,6 +71,201 @@ function hasNegationMarker(window: string): boolean {
 const NEGATION_WINDOW = 24;
 const CLAUSE_END = /[.!?,\n]/;
 
+// PR #13 Codex 5차 검토 P1: 4차에서 약속형 어간으로 좁힌 키워드도 정보성 질문의 부분
+// 문자열이다 — "금액 한도를 정하는 기준이 무엇입니까?"가 '금액 한도를 정'에 걸리고,
+// 아래 부정 검사는 뒤쪽의 '않'만 보고 의문절인지는 보지 않는다. REACTIONS 직접 입력
+// 경로가 추출된 조건을 자동 수락하므로(ReactionsScreen) 질문만 했는데 조건이 최종
+// 안건에 들어갈 수 있다. 의문·정보 요청 문장 속 키워드 언급은 "그 한 번의 언급만
+// 무시"(continue)한다 — 부정(조건 전체 거부, return false)과 다르다. 의문 판정을
+// 부정 판정보다 먼저 해야 한다: "금액 한도를 정하지 않는 이유가 무엇입니까? 금액
+// 한도를 정합시다."에서 첫 문장은 '않'이 있지만 의문문이라 무시하고, 둘째 문장의
+// 긍정 청유만으로 LIMIT을 제안한다 — 부정을 먼저 보면 의문문 안의 '않'이 조건
+// 전체를 거부해 버린다.
+//
+// 범위는 절(쉼표)이 아니라 문장이다. 의문 종결은 문장 끝에 오므로 쉼표를 넘어서
+// 봐야 한다. 강한 문장 경계는 ". ! ? ？ \n"이고, 문장 부호 없이 이어 쓴 경우를 위해
+// 평서·청유 격식 종결(-니다·-시다·-십시오·-세요) 바로 뒤 공백도 약한 경계로 둔다 —
+// 의문 종결(-니까 등)은 이 목록에 없어 잘려 나가지 않는다.
+const STRONG_SENTENCE_BOUNDARY = /[.!?？\n]/g;
+const WEAK_SENTENCE_BOUNDARY = /(니다|시다|십시오|세요)(?=\s)/g;
+
+function findSentenceBoundaries(text: string): number[] {
+  const boundaries = new Set<number>();
+  let match: RegExpExecArray | null;
+  STRONG_SENTENCE_BOUNDARY.lastIndex = 0;
+  while ((match = STRONG_SENTENCE_BOUNDARY.exec(text))) {
+    boundaries.add(match.index + 1);
+  }
+  WEAK_SENTENCE_BOUNDARY.lastIndex = 0;
+  while ((match = WEAK_SENTENCE_BOUNDARY.exec(text))) {
+    boundaries.add(match.index + match[0].length);
+  }
+  return [...boundaries].sort((a, b) => a - b);
+}
+
+/** 주어진 위치(키워드 시작 인덱스)를 포함하는 문장의 [start, end) 범위를 찾는다. */
+function sentenceSpanAt(text: string, index: number): { start: number; end: number } {
+  let start = 0;
+  let end = text.length;
+  for (const boundary of findSentenceBoundaries(text)) {
+    if (boundary <= index) {
+      start = boundary;
+    } else {
+      end = boundary;
+      break;
+    }
+  }
+  return { start, end };
+}
+
+// 받침 판정: 음절 코드에서 (code - 0xAC00) % 28이 종성 인덱스다. ㅂ=17, ㄹ=8.
+const JONG_B = 17;
+const JONG_L = 8;
+
+function hasJongseong(char: string | undefined, jong: number): boolean {
+  if (!char) return false;
+  const code = char.codePointAt(0);
+  if (code === undefined || code < 0xac00 || code > 0xd7a3) return false;
+  return (code - 0xac00) % 28 === jong;
+}
+
+function stripTrailingWhitespaceAndQuotes(s: string): string {
+  return s.replace(/[\s"'""''「」『』]+$/u, '');
+}
+
+// 물음표 없이 의문 종결로 끝나는 꼴(문장 맨 끝 기준). '습니까'는 '습'이 이미 ㅂ받침
+// 음절이라 일반 규칙(ㅂ받침+니까)에 포함된다. '하니까'(이유 연결)의 '하'는 받침이
+// 없어 제외된다.
+function hasInterrogativeEnding(core: string): boolean {
+  if (core.endsWith('니까') && hasJongseong(core.at(-3), JONG_B)) {
+    return true;
+  }
+  if (core.endsWith('까요') && hasJongseong(core.at(-3), JONG_L)) {
+    return true;
+  }
+  if (core.endsWith('까') && !core.endsWith('까요') && hasJongseong(core.at(-2), JONG_L)) {
+    return true;
+  }
+  if (/(?:인가|는가|은가|던가|건가|한가)(?:요)?$/.test(core)) return true;
+  if (core.endsWith('나요')) return true;
+  if (core.endsWith('는지요') || core.endsWith('인지요')) return true;
+  if (core.endsWith('냐')) return true;
+  return false;
+}
+
+// 키워드 뒤쪽(같은 문장 안)의 간접 의문 표지. 뒤가 공백·조사·쉼표·문장 끝이어야
+// 한다 — '한지'·'던지'는 넣지 않고, '정할지라도'는 뒤가 '라'라서 제외된다.
+// '-(으)ㄹ지'는 '할지·될지·을지'를 열거하는 대신 ㄹ받침 음절 + '지'로 본다 — '멈출지·
+// 따를지·둘지'처럼 어간에 따라 음절이 달라지기 때문이다(builder가 테스트 작성 중
+// 발견). 단 '일지'(명사, "기록한 일지를 남깁시다")는 ㄹ받침이어도 제외해 LOG와 겹치지
+// 않게 한다.
+const INDIRECT_QUESTION_MARKER = /(는지|인지|은지)(?=[\s,도는를가만요]|$)/;
+const JI_AFTER_SYLLABLE = /([가-힣])지(?=[\s,도는를가만요]|$)/g;
+
+function hasIndirectQuestionMarker(afterKeyword: string): boolean {
+  if (INDIRECT_QUESTION_MARKER.test(afterKeyword)) return true;
+  for (const match of afterKeyword.matchAll(JI_AFTER_SYLLABLE)) {
+    if (match[1] !== '일' && hasJongseong(match[1], JONG_L)) return true;
+  }
+  return false;
+}
+
+// 키워드 뒤쪽의 정보 요청 서술어. 뒤쪽만 보는 이유: "설명드리자면 금액 한도를
+// 정해야 합니다."처럼 키워드 앞의 '설명'은 제안이지 질문이 아니다.
+const INFO_REQUEST_VERB = /알려|가르쳐|설명|궁금|알고 싶|묻고 싶|여쭙|여쭤|질문/;
+
+function hasInfoRequestVerb(afterKeyword: string): boolean {
+  return INFO_REQUEST_VERB.test(afterKeyword);
+}
+
+// 의문사. 부정칭(언제나·누구나·무엇이든·어디서든 등)과 '왜냐'·'몇몇'은 의문사로 보지
+// 않는다 — EXP_ONLY 키워드 '언제나 경험 판단'의 '언제'가 의문사로 잡히면 안 된다.
+const INTERROGATIVE_WORDS = [
+  '무엇',
+  '뭐',
+  '뭔',
+  '뭘',
+  '무슨',
+  '어떤',
+  '어떻게',
+  '어떠',
+  '어디',
+  '언제',
+  '누가',
+  '누구',
+  '왜',
+  '얼마',
+  '몇',
+  '어느',
+];
+const INDEFINITE_SUFFIX = /^(나|든|이나|이든|서나|서든)/;
+
+function hasInterrogativeWord(sentence: string): boolean {
+  for (const word of INTERROGATIVE_WORDS) {
+    let from = 0;
+    for (;;) {
+      const index = sentence.indexOf(word, from);
+      if (index === -1) break;
+      const after = sentence.slice(index + word.length);
+      const isIndefinite = INDEFINITE_SUFFIX.test(after);
+      const isWaenya = word === '왜' && after.startsWith('냐');
+      const isMyeotMyeot = word === '몇' && after.startsWith('몇');
+      if (!isIndefinite && !isWaenya && !isMyeotMyeot) {
+        return true;
+      }
+      // '몇몇'은 둘째 '몇'도 단어 시작으로 다시 검사되지 않도록 함께 건너뛴다.
+      from = index + word.length + (isMyeotMyeot ? 1 : 0);
+    }
+  }
+  return false;
+}
+
+// 해요체·반말 종결. '-지'·'-나'는 간접 의문 표지(는지·할지 등)와 다른 자리다 —
+// 여기서는 문장 "끝" 전체가 이 어미로 끝나는지만 본다.
+const CASUAL_OR_POLITE_ENDINGS = ['지요', '예요', '에요', '데요', '죠', '나', '지'];
+
+function hasCasualOrPoliteEnding(core: string): boolean {
+  return CASUAL_OR_POLITE_ENDINGS.some((ending) => core.endsWith(ending));
+}
+
+// 간접 의문 표지·정보 요청 서술어는 **키워드가 든 절** 안에서만 본다. 문장 끝까지
+// 보면 "금액 한도를 정하고 질문은 나중에 받겠습니다."·"…정해서 설명자료를 준비합시다."
+// 처럼 연결어미로 이어진 뒤 절의 무관한 '질문'·'설명'이 앞 절의 분명한 청유를 지운다
+// (5차 수정 내부 검토). 키워드 동사가 연결어미(-고·-서·-되·-며·-면·-자·-지만·-면서·
+// -다가·-거나)나 '-ㄴ 뒤/다음/후'로 닫히고 공백이 오면, 또는 쉼표가 오면 절이 끝난
+// 것으로 본다. '-서'는 '해서·어서·아서·여서·라서' 꼴만 — 조사 '에서'("기준이 어디에서
+// 나오는지")를 절 끝으로 보면 안 된다. '-고'도 의도·인용의 '-려고/-자고/-다고/-라고'
+// ("정하려고 하는데 기준이 무엇인지 궁금합니다")와 '-고 보니/보면'("정하고 보니 기준이
+// 무엇인지 모르겠습니다")은 조건을 정한 것이 아니라 아직 묻는 중이므로 절 끝으로 보지
+// 않는다(내부 재검토). 반면 "…정하는 기준이 무엇인지 알려 주세요"는 키워드가 관형절로
+// 이어져 절이 닫히지 않으므로 끝까지 본다. 문장 유형(물음표·의문 종결·의문사+해요체)은
+// 그대로 문장 전체 기준이다.
+const KEYWORD_CLAUSE_END =
+  /,|(?:(?<![려자다라])고(?!\s보[니면])|[해어아여라]서|되|며|면|자|지만|면서|다가|거나|뒤|다음|후)\s/;
+
+function keywordClause(afterKeyword: string): string {
+  const cut = afterKeyword.search(KEYWORD_CLAUSE_END);
+  return cut === -1 ? afterKeyword : afterKeyword.slice(0, cut);
+}
+
+/**
+ * 문장이 의문문이거나(물음표·의문 종결·"의문사 + 해요체/반말 종결"), 키워드가 든 절
+ * 뒤쪽에 간접 의문 표지나 정보 요청 서술어가 있으면 true다. 애매하면 놓치는 쪽을 택한다 —
+ * "금액 한도를 정합시다, 괜찮겠습니까?" 같은 부가 의문은 문장 전체가 의문이라
+ * 놓친다(이 한계는 의도한 것).
+ */
+function isQuestionOrInfoRequestMention(sentence: string, afterKeyword: string): boolean {
+  const trimmed = stripTrailingWhitespaceAndQuotes(sentence);
+  if (trimmed.endsWith('?') || trimmed.endsWith('？')) return true;
+  const core = trimmed.replace(/[.!]+$/u, '');
+  if (hasInterrogativeEnding(core)) return true;
+  const clause = keywordClause(afterKeyword);
+  if (hasIndirectQuestionMarker(clause)) return true;
+  if (hasInfoRequestVerb(clause)) return true;
+  if (hasInterrogativeWord(sentence) && hasCasualOrPoliteEnding(core)) return true;
+  return false;
+}
+
 function isNegatedAfter(text: string, index: number, keywordLength: number): boolean {
   const end = index + keywordLength;
   // 공백 묶음을 한 칸으로 접은 **뒤에** 창을 자른다. 직접 입력·붙여넣기에서 "뿐만  아니라"·
@@ -105,11 +300,21 @@ function textMentionsConditionUnnegated(
       if (index === -1) {
         break;
       }
+      const keywordEnd = index + keyword.length;
+      // 의문·정보 요청 문장 속 언급은 그 한 번만 건너뛴다(부정과 달리 조건 전체를
+      // 거부하지 않는다) — 부정 검사보다 먼저 본다(PR #13 Codex 5차 검토 P1).
+      const { start, end } = sentenceSpanAt(text, index);
+      const sentence = text.slice(start, end);
+      const afterKeyword = text.slice(keywordEnd, end);
+      if (isQuestionOrInfoRequestMention(sentence, afterKeyword)) {
+        searchFrom = keywordEnd;
+        continue;
+      }
       if (isNegatedAfter(text, index, keyword.length)) {
         return false;
       }
       affirmed = true;
-      searchFrom = index + keyword.length;
+      searchFrom = keywordEnd;
     }
   }
   return affirmed;
@@ -131,7 +336,9 @@ export function proposeFromPhrases(scenario: Scenario, phraseIds: string[]): str
  * 자유 입력 텍스트에서 조건별 명시 키워드(Condition.keywords)를 찾아 제안만 한다(확정 아님).
  * 키워드 뒤 같은 절에 "없이·생략·말고·-지 않-·안 -·못 하-·반대·빼고·제외·아니·금지·-지 말-"이 나오면 부정문으로 보고
  * 제안하지 않는다('-지 말-'은 '-지 마-'·'-지 맙-' 활용 전체). 한 조건의 키워드 중 하나라도 부정되면 다른 키워드가 긍정으로 남아 있어도
- * 그 조건은 제안하지 않는다.
+ * 그 조건은 제안하지 않는다. 키워드가 의문문이나 정보 요청 문장(같은 문장 안에서 물음표·
+ * 의문 종결·간접 의문 표지·"알려/설명/궁금" 같은 서술어) 속에서만 쓰였으면 그 언급은
+ * 무시한다 — 같은 조건을 다른 문장에서 긍정으로 말하면 그대로 제안한다(PR #13 Codex 5차 검토 P1).
  */
 export function proposeFromText(scenario: Scenario, text: string): string[] {
   return scenario.conditions
