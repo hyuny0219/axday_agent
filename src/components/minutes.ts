@@ -8,6 +8,8 @@ import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
 import { reactionsFor } from './reactionsFor';
+import { chairMotionLine } from './chairMotionLine';
+import { collectConfirmedConditionIds } from './opinionConditions';
 
 /** 시간 표기를 알 수 없을 때 보여주는 자리표시(T77, 시안 TRANSCRIPT "[--:--]"). */
 export const TIME_UNKNOWN = '--:--';
@@ -240,7 +242,8 @@ export function buildMinutes(
     entries.push({
       id: 'chair-motion',
       speaker: 'CEO',
-      text: '이 조건으로 안건을 고정합니다',
+      // 무대 의장 말풍선과 같은 문장(PR #20 Codex 3차 검토 P2).
+      text: chairMotionLine(scenario, collectConfirmedConditionIds(session.opinions)),
       kind: 'speech',
       timeLabel: TIME_UNKNOWN,
     });

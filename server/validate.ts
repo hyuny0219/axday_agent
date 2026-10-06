@@ -57,7 +57,10 @@ const STRAY_LATIN_EXCEPTIONS = new Set<string>(['AI', ...EXEC_ROLE_IDS]);
  * undefined). statementResponseSchema·voteResponseSchema·assistantResponseSchema가 사람이
  * 보는 필드(message·reason·draftText)에 붙여 쓴다. */
 export function findStrayLatinRun(text: string): string | undefined {
-  const matches = text.match(/[A-Za-z]{2,}/g);
+  // 라틴 2자 이상 연속, 또는 라틴 문자와 숫자·밑줄이 붙은 토큰(자료 ID `E1`, `FULL_AUTO`
+  // 같은 내부 식별자 — 영문자만 2자 이상 세면 `E1`이 빠져 "E1 자료에 따르면"이 그대로
+  // 노출됐다, PR #20 Codex 3차 검토 P2).
+  const matches = text.match(/[A-Za-z][A-Za-z0-9_]+|[0-9_]+[A-Za-z][A-Za-z0-9_]*/g);
   return matches?.find((word) => !STRAY_LATIN_EXCEPTIONS.has(word));
 }
 

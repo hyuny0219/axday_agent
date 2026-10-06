@@ -271,6 +271,13 @@ describe('findStrayLatinRun', () => {
   it('ignores digits, percent signs, and decimal points', () => {
     expect(findStrayLatinRun('응답 62%가 대기 2.8일을 지적했습니다.')).toBeUndefined();
   });
+
+  // PR #20 Codex 3차 검토 P2: 영문자만 2자 이상 세면 자료 ID `E1`(영문 1자 + 숫자)이 빠진다.
+  it('catches evidence IDs like E1 and underscore IDs like FULL_AUTO', () => {
+    expect(findStrayLatinRun('E1 자료에 따르면 대기가 길어졌습니다.')).toBe('E1');
+    expect(findStrayLatinRun('사람 검토 전면 생략(FULL_AUTO)이 포함되어')).toBe('FULL_AUTO');
+    expect(findStrayLatinRun('CFO가 E2를 인용했습니다.')).toBe('E2');
+  });
 });
 
 describe('RequestIdRegistry', () => {

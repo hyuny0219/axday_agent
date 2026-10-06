@@ -51,6 +51,7 @@ import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
 import { collectConfirmedConditionIds } from '../components/opinionConditions';
+import { chairMotionLine } from '../components/chairMotionLine';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -514,15 +515,7 @@ function chairLineFor(
     return scenario?.chairBriefing.situation;
   }
   if (stage === 'MOTION') {
-    if (confirmedConditionIds.length === 0) {
-      return '원안 그대로 표결에 부칩니다';
-    }
-    const firstLabel =
-      scenario?.conditions.find((condition) => condition.id === confirmedConditionIds[0])?.label ??
-      confirmedConditionIds[0];
-    return confirmedConditionIds.length === 1
-      ? `${firstLabel} 조건을 달아 표결에 부칩니다`
-      : `${firstLabel} 등 조건 ${confirmedConditionIds.length}개를 달아 표결에 부칩니다`;
+    return chairMotionLine(scenario, confirmedConditionIds);
   }
   return undefined;
 }

@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { chairMotionLine } from '../../src/components/chairMotionLine';
+import { collectConfirmedConditionIds } from '../../src/components/opinionConditions';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
 import {
@@ -107,8 +109,14 @@ describe('buildMinutes(scripted)', () => {
     const myFollowup = entries.find((entry) => entry.id === 'my-followup');
     expect(myFollowup?.text).toBe('출처와 기준일을 표시하고 담당자가 확인한 뒤 공유합시다.');
 
+    // 의장의 안건 고정 발언은 무대 말풍선과 같은 문장(chairMotionLine — 조건 수·첫 조건명,
+    // 조건이 없으면 "원안 그대로", PR #20 Codex 3차 검토 P2).
     const chairMotion = entries.find((entry) => entry.id === 'chair-motion');
-    expect(chairMotion).toMatchObject({ speaker: 'CEO', kind: 'speech', text: '이 조건으로 안건을 고정합니다' });
+    expect(chairMotion).toMatchObject({ speaker: 'CEO', kind: 'speech' });
+    expect(chairMotion?.text).toMatch(/표결에 부칩니다$/);
+    expect(chairMotion?.text).toBe(
+      chairMotionLine(scenario, collectConfirmedConditionIds(session.opinions)),
+    );
   });
 
   it('KEEP_PREVIOUS 경로에서는 내 답이 "(답하지 않고 넘어갔습니다)"다', () => {
