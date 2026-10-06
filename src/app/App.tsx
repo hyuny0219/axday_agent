@@ -50,6 +50,7 @@ import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
+import { collectConfirmedConditionIds } from '../components/opinionConditions';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
@@ -500,13 +501,28 @@ function StageRouter() {
 }
 
 /** BRIEFING·MOTION 단계에서 무대 띠 의장(CEO) 말풍선에 쓸 원문(v1.0 1절). 다른
- * 단계에서는 undefined를 돌려주고 StageBand가 그 단계 규칙대로 다른 문구를 고른다. */
-function chairLineFor(stage: Session['stage'], scenario: Scenario | null): string | undefined {
+ * 단계에서는 undefined를 돌려주고 StageBand가 그 단계 규칙대로 다른 문구를 고른다.
+ * MOTION(T85 #19): scripted에서 후속 답변 뒤 아무도 반응하지 않아 어색하던 것을,
+ * 고정 문구 대신 실제로 반영된 조건 수·첫 조건명을 말하는 한 줄로 바꾼다 — 조건이
+ * 없으면 원안 그대로 표결한다고 말한다. */
+function chairLineFor(
+  stage: Session['stage'],
+  scenario: Scenario | null,
+  confirmedConditionIds: string[],
+): string | undefined {
   if (stage === 'BRIEFING') {
     return scenario?.chairBriefing.situation;
   }
   if (stage === 'MOTION') {
-    return '이 조건으로 안건을 고정합니다';
+    if (confirmedConditionIds.length === 0) {
+      return '원안 그대로 표결에 부칩니다';
+    }
+    const firstLabel =
+      scenario?.conditions.find((condition) => condition.id === confirmedConditionIds[0])?.label ??
+      confirmedConditionIds[0];
+    return confirmedConditionIds.length === 1
+      ? `${firstLabel} 조건을 달아 표결에 부칩니다`
+      : `${firstLabel} 등 조건 ${confirmedConditionIds.length}개를 달아 표결에 부칩니다`;
   }
   return undefined;
 }
@@ -594,7 +610,7 @@ function AppShell() {
                     scenario={scenario}
                     stances={stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-                    chairLine={chairLineFor(session.stage, scenario)}
+                    chairLine={chairLineFor(session.stage, scenario, collectConfirmedConditionIds(session.opinions))}
                   />
                 </div>
                 {content}

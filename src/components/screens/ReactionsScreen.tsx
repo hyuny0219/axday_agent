@@ -513,17 +513,22 @@ export function ReactionsScreen({
             countTestId="followup-char-count"
             errorTestId="followup-draft-error"
           />
-          {hasStartedAnswer && (
-            <ConditionChips
-              scenario={scenario}
-              proposedIds={proposedConditionIds}
-              acceptedIds={acceptedConditionIds}
-              conflictPairs={conflictPairs}
-              showNoMatchHint={showNoMatchHint}
-              onToggle={handleToggleCondition}
-              newlyProposedIds={newlyProposedConditionIds}
-            />
-          )}
+          {/* T85 my#10: 답을 시작하는 순간 CONDITIONS 칩이 생기며 바로 아래
+              "답변 전달" 버튼이 밀려 내려가 클릭 직전 버튼이 움직였다 — 칩이 없을
+              때도 이 슬롯이 자리를 미리 비워 둔다(reactions.css min-height). */}
+          <div className="reactions-screen__conditions-slot">
+            {hasStartedAnswer && (
+              <ConditionChips
+                scenario={scenario}
+                proposedIds={proposedConditionIds}
+                acceptedIds={acceptedConditionIds}
+                conflictPairs={conflictPairs}
+                showNoMatchHint={showNoMatchHint}
+                onToggle={handleToggleCondition}
+                newlyProposedIds={newlyProposedConditionIds}
+              />
+            )}
+          </div>
         </div>
         <div className="reactions-screen__submit-row screen__submit-row">
           <AssistantPanel
@@ -547,6 +552,11 @@ export function ReactionsScreen({
           >
             답변 전달 ▶
           </button>
+          {!canSubmit && (
+            <p className="cta-disabled-hint" data-testid="reactions-cta-hint">
+              추천 문구를 고르거나 직접 써 주세요
+            </p>
+          )}
         </div>
       </div>
       <div className="app-body__content screen reactions-screen__info" ref={infoRef} data-testid="reactions-info">

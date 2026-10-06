@@ -85,10 +85,10 @@ describe('DiscussScreen', () => {
     expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent('[live] CFO의 실제 발언입니다.');
 
     // 아직 응답 없는(pending) 임원은 각본 문장 대신 OPINIONS 화면과 같은 "판단 중…" 문구다.
-    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent('판단 중');
+    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent('생각을 정리하고 있습니다');
 
     // 실패한 임원은 OPINIONS 화면과 같은 "응답 지연·확인 필요" 문구다.
-    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent('응답 지연·확인 필요');
+    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent('이번에는 답을 받지 못했습니다');
 
     // scenario.initialOpinions의 각본 문구는 live 모드에서 화면에 나오면 안 된다.
     for (const opinion of scenario.initialOpinions) {
@@ -193,7 +193,7 @@ describe('DiscussScreen', () => {
     );
     const info = screen.getByTestId('discuss-info');
     expect(info.hasAttribute('inert')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 열기' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 정리 맡기기' }));
     expect(info.hasAttribute('inert')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
     expect(info.hasAttribute('inert')).toBe(false);

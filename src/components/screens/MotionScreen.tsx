@@ -103,7 +103,7 @@ export function MotionScreen({
             disabled={retryUsed}
             onClick={handleRetry}
           >
-            {retryUsed ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+            {retryUsed ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
           </button>
         )}
       </div>
@@ -142,10 +142,11 @@ export function MotionScreen({
             <div className="motion-screen__cols-box">
               <span className="motion-screen__box-label">NOT INCLUDED · 빠진 것</span>
               <p className="motion-screen__not-included-text">
-                {notIncludedLabels.length > 0
-                  ? `${notIncludedLabels.join(' · ')}은(는) 이사님이 선택하지 않아 상정하지 않습니다. `
-                  : '이사님이 제안한 조건을 모두 반영해 빠진 것이 없습니다. '}
-                상정은 조건의 효과가 검증됐다는 뜻이 아닙니다.
+                {notIncludedLabels.length > 0 ? (
+                  <>이번 안건에서 빠진 조건: {notIncludedLabels.join(', ')}. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.</>
+                ) : (
+                  '제안하신 조건이 모두 들어갔습니다.'
+                )}
               </p>
             </div>
           </div>

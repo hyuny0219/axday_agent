@@ -103,7 +103,7 @@ export function OpinionsScreen({
         <h2 className="opinions-screen__title">임원 네 명의 첫 의견</h2>
       </div>
       <div className="opinions-screen__meta">
-        <span>같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.</span>
+        <span>같은 자료를 읽고 각자의 관점에서 말합니다.</span>
         <span className="opinions-screen__tally">{stanceSummaryLine(stances)}</span>
       </div>
     </>
@@ -156,12 +156,6 @@ export function OpinionsScreen({
                       data-testid={`exec-mood-label-${opinion.memberId}`}
                     >
                       {STANCE_LABEL[stance]}
-                    </span>
-                    {/* "발언" 칩(시안): scripted는 항상 이미 도착한 의견만 보여주므로
-                        live의 판단 중/응답 없음 상태가 없다 — 장식이라 접근 가능한
-                        문구는 위 opinion-card__mood·본문이 전담한다. */}
-                    <span className="opinion-card__chip" aria-hidden="true">
-                      발언
                     </span>
                   </div>
                   <p className="opinion-card__text">{opinion.text}</p>
