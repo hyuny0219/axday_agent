@@ -200,8 +200,11 @@ const INTERROGATIVE_WORDS = [
 ];
 // '무엇보다'(무엇보다 금액 한도를 정하세요)는 비교 부사라 의문사가 아니다.
 const INDEFINITE_SUFFIX = /^(나|든|이나|이든|서나|서든|보다)/;
-const DETERMINER_WORDS = ['어떤', '어느', '무슨'];
-const INDEFINITE_NOUN_PHRASE = /^\s[가-힣]+(?:든|라도|도)(?=\s|$)/;
+// 양보절 속 의문사는 부정칭이다 — "누가 뭐라 해도 금액 한도를 정하세요"(PR #13 Codex 8차
+// 검토 P1)·"어떤 기준이든 …"·"어떻게 되더라도 …"·"무엇을 하든 …". 의문사 어절부터 두 어절
+// 안에 '-도/-든/-든지/-라도'로 끝나는 어절이 있으면 양보절로 본다. 의문사 바로 뒤 접미
+// (언제나·누구든)는 INDEFINITE_SUFFIX가 먼저 본다.
+const CONCESSIVE_PHRASE = /^(?:[^\s,.!?]+\s){0,2}[^\s,.!?]*(?:도|든|든지|라도)(?=[\s,.!?]|$)/;
 
 function hasInterrogativeWord(sentence: string): boolean {
   for (const word of INTERROGATIVE_WORDS) {
@@ -211,14 +214,10 @@ function hasInterrogativeWord(sentence: string): boolean {
       if (index === -1) break;
       const after = sentence.slice(index + word.length);
       // '얼마나'는 '언제나·누구나'와 달리 부정칭이 아니라 의문사("얼마나 돼요")다 —
-      // '얼마'는 '얼마든(지)'만 부정칭으로 본다.
-      // 관형사 '어떤·어느·무슨'은 다음 명사에 '-든/-라도/-도'가 붙으면 부정칭이다 —
-      // "어떤 기준이든 금액 한도를 정해요"·"어떤 경우에도 …"는 질문이 아니다.
+      // '얼마'는 '얼마든(지)'만 접미로 본다. 양보절(CONCESSIVE_PHRASE)은 공통.
       const isIndefinite =
-        word === '얼마'
-          ? after.startsWith('든')
-          : INDEFINITE_SUFFIX.test(after) ||
-            (DETERMINER_WORDS.includes(word) && INDEFINITE_NOUN_PHRASE.test(after));
+        (word === '얼마' ? after.startsWith('든') : INDEFINITE_SUFFIX.test(after)) ||
+        CONCESSIVE_PHRASE.test(sentence.slice(index));
       const isWaenya = word === '왜' && after.startsWith('냐');
       const isMyeotMyeot = word === '몇' && after.startsWith('몇');
       if (!isIndefinite && !isWaenya && !isMyeotMyeot) {

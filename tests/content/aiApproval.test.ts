@@ -298,6 +298,24 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       expect(proposeFromText(scenario, text), text).toEqual(['LIMIT']);
     }
   });
+
+  // PR #13 Codex 8차 검토 P1: 의문사 + '-세요'를 전부 질문으로 봤더니 "누가 뭐라 해도
+  // 금액 한도를 정하세요"의 양보절 속 '누가'가 의문사로 잡혀 요청한 LIMIT이 빠졌다.
+  // 의문사 어절부터 두 어절 안에 '-도/-든/-라도'로 끝나는 어절이 있으면 양보절(부정칭)이다.
+  it('양보절 속 의문사(누가 뭐라 해도·어떻게 되더라도·무엇을 하든)는 질문이 아니다(PR #13 Codex 8차 검토)', () => {
+    for (const text of [
+      '누가 뭐라 해도 금액 한도를 정하세요',
+      '어떻게 되더라도 금액 한도를 정하세요.',
+      '누가 반대하든 금액 한도를 정해요.',
+    ]) {
+      expect(proposeFromText(scenario, text), text).toEqual(['LIMIT']);
+    }
+    expect(proposeFromText(scenario, '무엇을 하든 승인 사유를 기록해요.')).toEqual(['LOG']);
+    // 양보 어미가 없는 의문사 문장은 여전히 질문이다.
+    for (const text of ['왜 금액 한도를 정하세요', '누가 금액 한도를 정해요']) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+  });
 });
 
 describe('findConflicts', () => {
