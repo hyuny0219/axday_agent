@@ -25,4 +25,13 @@
 // 비서실장 refine·summarize에는 EXEC_DECISION_RULE과 같은 위치에 둬 새지 않는다. 응답
 // 스키마는 바뀌지 않았지만 시스템 프롬프트 본문이 바뀌므로 버전을 올린다. 전후 비교는
 // docs/eval/tuning-v8.md.
-export const PROMPT_VERSION = 'v8';
+// v9(2026-10-07, T82): v8 실측(docs/eval/tuning-v8-after.jsonl 192행 중 87행, 39~45%)에서
+// 발언·판단 근거 문장에 조건 ID(LOG, OWNER, SCOPE 등)가 그대로 새는 것을 발견했다 — 프롬프트가
+// meeting_record의 "허용 조건 목록"에 ID와 한국어 라벨을 나란히 줬기 때문이다. 조건 목록을
+// 한국어 라벨만 보이는 블록과 응답 스키마 필드 전용 ID 대응표로 나누고(prompts/common.ts의
+// formatConditionLabels·formatConditionIdMap), 공통 가드레일에 "조건도 한국어 이름으로,
+// 영문 약어·코드 금지('AI'·임원 역할 이름·숫자·단위만 예외)"를 더했다. 응답 스키마 자체는
+// 바뀌지 않았지만(evidenceIds·suggestedConditionIds는 여전히 ID), validate.ts의
+// findStrayLatinRun()이 message·reason·draftText에 남은 조건 ID·영문을 응답 단계에서 한 번
+// 더 거절한다(invalid_response). 전후 비교는 docs/eval/tuning-v9.md.
+export const PROMPT_VERSION = 'v9';

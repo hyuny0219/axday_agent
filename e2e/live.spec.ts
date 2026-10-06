@@ -32,7 +32,7 @@ async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<v
             status: 'answered',
             statement: {
               roleId,
-              message: `[mock] ${roleId}의 ${body.stage} 발언입니다.`,
+              message: `[모의] ${roleId}의 ${body.stage} 발언입니다.`,
               evidenceIds: ['E1'],
               referencedStatementIds: [],
               concerns: [],
@@ -59,7 +59,7 @@ async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<v
               motionId: body.motion.id,
               motionHash: body.motion.hash,
               vote: 'YES',
-              reason: `[mock] ${roleId}의 판단 근거입니다.`,
+              reason: `[모의] ${roleId}의 판단 근거입니다.`,
               evidenceIds: ['E1'],
               remainingConcerns: [],
             },
@@ -90,7 +90,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // 화면에 상시 보이지 않고 팝업 안으로 옮겼다).
   const openEvidence = page.getByTestId('open-evidence');
   await openEvidence.click();
-  await expect(page.getByTestId('statement-card-CEO')).toHaveText('[mock] CEO의 OPINIONS 단계 발언입니다.');
+  await expect(page.getByTestId('statement-card-CEO')).toHaveText('[모의] CEO의 의견 단계 발언입니다.');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
 
