@@ -13,7 +13,6 @@ async function enterBriefing(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 }
 
 async function enterReactions(page: Page) {
@@ -128,7 +127,6 @@ test.describe('1920×1080에서 무대 열', () => {
     await expect(page.getByTestId('stage-band')).toHaveCount(0);
 
     await page.getByTestId('scenario-card-ai-approval').click();
-    await page.getByRole('button', { name: '이사회 입장' }).click();
 
     const stageBand = page.getByTestId('stage-band');
     await expect(stageBand).toBeVisible();

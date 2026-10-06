@@ -49,7 +49,7 @@ describe('BriefingScreen', () => {
   // 상태"를 알 수 없으므로 aria-label로 값과 상태를 함께 읽어 준다.
   it('마지막 UNKNOWN 항목은 값과 "먹칠 처리된 미정 항목" 상태를 함께 읽는 aria-label을 가진다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
-    const items = anonBoardScenario.motionBreakdown.undecidedItems;
+    const items = anonBoardScenario.motionBreakdown.undecidedItems.map((item) => item.text);
     const lastItem = items[items.length - 1]!;
     const redacted = screen.getByText(lastItem, { selector: '.briefing-screen__undecided-redacted' });
     expect(redacted).toHaveAttribute('aria-label', `${lastItem} (먹칠 처리된 미정 항목)`);

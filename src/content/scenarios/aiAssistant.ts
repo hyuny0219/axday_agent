@@ -63,7 +63,13 @@ export const aiAssistantScenario: Scenario = {
   // (T52, 새 사실 없음).
   motionBreakdown: {
     proposal: '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다.',
-    undecidedItems: ['사용자별 권한', '검토 담당자', '확대 기준'],
+    // resolvedBy(T84): 보존 안건(레지스트리 밖)이라 화면에 쓰이지 않지만 타입을
+    // 맞춘다. aiApproval.ts 주석과 같은 규칙.
+    undecidedItems: [
+      { text: '사용자별 권한', resolvedBy: 'ACCESS' },
+      { text: '검토 담당자', resolvedBy: 'REVIEW' },
+      { text: '확대 기준', resolvedBy: 'MEASURE' },
+    ],
   },
   initialOpinions: [
     {
@@ -271,7 +277,11 @@ export const aiAssistantScenario: Scenario = {
       reject: '보고 준비는 지금 방식 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },
-  remainingTasks: ['권한 검증', '검토 담당자 지정', '파일럿 성과 측정'],
+  remainingTasks: [
+    { text: '권한 검증', resolvedBy: 'ACCESS' },
+    { text: '검토 담당자 지정', resolvedBy: 'REVIEW' },
+    { text: '파일럿 성과 측정', resolvedBy: 'MEASURE' },
+  ],
   baseConditionIds: [],
   status: 'active',
 };

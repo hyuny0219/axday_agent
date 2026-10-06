@@ -11,12 +11,9 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.getByRole('button', { name: '체험 시작' }).focus();
   await page.keyboard.press('Enter');
 
-  // SELECT: 카드 선택도, 입장 CTA도 마우스 클릭 없이 포커스+Enter로만 조작한다.
+  // SELECT: 카드 자체가 버튼이라(T84 #10) 포커스+Enter만으로 바로 입장한다 —
+  // 별도 입장 CTA가 없다.
   await page.getByTestId('scenario-card-ai-approval').focus();
-  await page.keyboard.press('Enter');
-  const enterBoard = page.getByRole('button', { name: '이사회 입장' });
-  await expect(enterBoard).toBeEnabled();
-  await enterBoard.focus();
   await page.keyboard.press('Enter');
 
   // BRIEFING
@@ -37,12 +34,12 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await submitOpinion.focus();
   await page.keyboard.press('Enter');
 
-  // REACTIONS: '앞선 의견 유지' 체크 카드(T74, 네이티브 체크박스)로 후속 입력 없이
-  // 마무리한다 — 체크박스는 Space로 토글한다(DISCUSS 추천 문구 카드와 같은 규칙).
+  // REACTIONS: "답하지 않고 넘어가기" 보조 버튼(T84 #1, 네이티브 button)으로 후속
+  // 입력 없이 마무리한다 — 체크박스가 아니라 버튼이라 Space 대신 Enter로 누른다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  const keepPreviousCheckbox = page.locator('[data-testid="followup-option-2"] input[type="checkbox"]');
-  await keepPreviousCheckbox.focus();
-  await page.keyboard.press('Space');
+  const keepPreviousButton = page.getByTestId('keep-previous-answer');
+  await keepPreviousButton.focus();
+  await page.keyboard.press('Enter');
 
   // MOTION
   const freezeMotion = page.getByTestId('freeze-motion');
@@ -88,7 +85,6 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -152,7 +148,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  const keepPrevious = await wheelUntilVisible('followup-option-2');
+  const keepPrevious = await wheelUntilVisible('keep-previous-answer');
   await keepPrevious.click();
 
   const freezeMotion = await wheelUntilVisible('freeze-motion');

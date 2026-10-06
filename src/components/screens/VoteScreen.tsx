@@ -23,6 +23,7 @@ import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { buildMotionDisplay } from '../motionDisplay';
 import '../../styles/screens/vote.css';
 import '../../styles/screens/live.css';
 
@@ -92,6 +93,9 @@ export function VoteScreen({
   // 줄 자리를 재요청 버튼이 대신한다(시안 "실패 시 버튼이 이 줄 자리에").
   const showWaiting = mode === 'live' && execBallotsPending && !showRetry;
 
+  // 표결 안건 문장(T84, MotionScreen과 같은 이유) — motion.text 자체는 바뀌지 않는다.
+  const motionDisplay = buildMotionDisplay(scenario, motion.effectiveConditionIds);
+
   function handleRetry() {
     if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
       return;
@@ -156,11 +160,11 @@ export function VoteScreen({
           </div>
           <div className="vote-screen__motion-card" data-testid="vote-motion-card">
             <span className="vote-screen__motion-label">표결 안건</span>
-            {/* 시안은 원안 문장만 한 줄로 보여준다 — motion.text는 domain/motion.ts
-                freezeMotion이 고정한 실제 안건 문구다(scenario.originalMotion.text와
-                항상 같은 값이지만, "지금 표결 중인 바로 그 안건"을 가리키는 쪽은
-                motion이다). */}
-            <span className="vote-screen__motion-text">{motion.text}</span>
+            {/* T84: motion.text(domain/motion.ts freezeMotion이 고정한 실제 안건 문구,
+                해시·서버 검증용)는 그대로 두고, 화면에는 buildMotionDisplay가 지은
+                문장을 보여준다 — 조건을 붙여도 고정 "…절차는 미정이다."로 끝나던
+                문제를 고친다(Opus UX 검토 #3+my#2). */}
+            <span className="vote-screen__motion-text">{motionDisplay.sentence}</span>
             {/* PR #12 Codex 5차 검토(P1): 시안의 MOTION 한 줄 상자는 반영 조건을
                 문장에 녹여 쓰지만(문안 생성 규칙 변경 금지, motion.text는 항상 원안
                 그대로다), 반영 조건 자체가 화면에 안 보이면 투표자가 원안만 보고
@@ -181,6 +185,11 @@ export function VoteScreen({
                   ))}
                 </ul>
               </div>
+            )}
+            {motionDisplay.undecidedLabels.length > 0 && (
+              <p className="vote-screen__motion-undecided" data-testid="vote-motion-undecided">
+                아직 정하지 않은 것 · {motionDisplay.undecidedLabels.join(' · ')}
+              </p>
             )}
           </div>
           <fieldset className="vote-screen__choices" disabled={submitted}>

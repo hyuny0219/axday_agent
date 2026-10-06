@@ -292,11 +292,9 @@ export function ReactionsScreen({
       return;
     }
     const option = scenario.followUp.options[index];
-    if (!option) {
-      return;
-    }
-    if (option.keepPrevious) {
-      onKeepPrevious();
+    if (!option || option.keepPrevious) {
+      // keepPrevious 옵션은 더 이상 체크 카드로 그리지 않는다(T84 #1 참고) — 여기
+      // 걸릴 일은 없지만, 혹시 인덱스가 섞여도 조합을 깨지 않도록 조용히 막는다.
       return;
     }
     // P1-b: 직접 고친 내용이 있으면(dirty) 조용히 덮어쓰지 않고 DISCUSS와 같은 확인
@@ -352,6 +350,18 @@ export function ReactionsScreen({
     setTextValue(text);
     setDirty(true);
     setDraftRevision((value) => value + 1);
+  }
+
+  // "답하지 않고 넘어가기"(T84 #1) — 옛 "앞서 전달한 의견을 유지하겠습니다" 체크
+  // 카드와 같은 동작(onKeepPrevious 즉시 호출)이지만, 이제 "답변 전달 ▶" 옆 보조
+  // 버튼이다. 같은 모양의 다른 카드처럼 "골라서 붙는" 동작으로 보여 실수로 눌러
+  // 직접 쓴 답을 버리는 일을 막는다. RebuildConfirm이 뜬 동안은 PR #12 Codex 5차
+  // 검토 P2와 같은 이유로 막는다.
+  function handleKeepPrevious() {
+    if (pendingOptionIndex !== null) {
+      return;
+    }
+    onKeepPrevious();
   }
 
   function handleToggleCondition(conditionId: string) {
@@ -539,6 +549,15 @@ export function ReactionsScreen({
           />
           <button
             type="button"
+            className="cta cta--secondary reactions-screen__keep-previous"
+            disabled={pendingOptionIndex !== null}
+            onClick={handleKeepPrevious}
+            data-testid="keep-previous-answer"
+          >
+            답하지 않고 넘어가기
+          </button>
+          <button
+            type="button"
             className="cta"
             disabled={!canSubmit}
             onClick={handleSubmit}
@@ -616,19 +635,36 @@ export function ReactionsScreen({
             <p className="reactions-screen__followup-text">{scenario.followUp.question}</p>
           </div>
           <p className="reactions-screen__recommend-hint">
-            추천 답변 · 여러 개 선택 가능 · 고르면 왼쪽 내 답변에 이어 붙습니다
+            추천 답변 · 여러 개 선택 가능 · 답하지 않으려면 '답하지 않고 넘어가기'
           </p>
           <div className="reactions-screen__option-list">
-            {scenario.followUp.options.map((option, index) => (
-              <PhraseCard
-                key={index}
-                phrase={{ id: String(index), text: option.text }}
-                selected={selectedOptionIds.includes(String(index))}
-                onToggle={() => handleToggleOption(index)}
-                testId={`followup-option-${index}`}
-                disabled={pendingOptionIndex !== null}
-              />
-            ))}
+            {scenario.followUp.options.map((option, index) => {
+              // keepPrevious 카드는 더 이상 여기 그리지 않는다(T84 #1) — 보조 버튼
+              // "답하지 않고 넘어가기"로 옮겼다.
+              if (option.keepPrevious) {
+                return null;
+              }
+              // 이미 확정된 조건을 다시 제안하는 카드(T84 #23, Opus UX 검토) — 숨기지
+              // 않고 "(앞서 제안함)" 표시 + 체크 상태로 보여 주되, 다시 제안되지
+              // 않게(이미 previousConfirmedIds로 proposedConditionIds에 들어 있으므로
+              // 이 카드를 다시 토글해도 새 제안이 되지 않는다) 토글 자체를 잠근다.
+              const alreadyProposed =
+                option.proposeConditionId !== null &&
+                previousConfirmedIds.includes(option.proposeConditionId);
+              return (
+                <PhraseCard
+                  key={index}
+                  phrase={{
+                    id: String(index),
+                    text: alreadyProposed ? `${option.text} (앞서 제안함)` : option.text,
+                  }}
+                  selected={alreadyProposed || selectedOptionIds.includes(String(index))}
+                  onToggle={() => handleToggleOption(index)}
+                  testId={`followup-option-${index}`}
+                  disabled={pendingOptionIndex !== null || alreadyProposed}
+                />
+              );
+            })}
           </div>
           <div className="reactions-screen__evidence-row">
             <button

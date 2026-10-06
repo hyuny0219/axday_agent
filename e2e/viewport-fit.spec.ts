@@ -49,10 +49,10 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await startCta.click();
 
   await expectNoPageScroll(page, 'SELECT');
-  await page.getByTestId('scenario-card-ai-approval').click();
-  const enterBoard = page.getByRole('button', { name: '이사회 입장' });
-  await expect(enterBoard).toBeInViewport();
-  await enterBoard.click();
+  // T84 #10: 카드 자체가 입장 버튼이다 — 별도 "이사회 입장" CTA가 없다.
+  const scenarioCard = page.getByTestId('scenario-card-ai-approval');
+  await expect(scenarioCard).toBeInViewport();
+  await scenarioCard.click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
@@ -86,7 +86,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await expectNoPageScroll(page, 'REACTIONS');
-  const keepPrevious = page.getByTestId('followup-option-2');
+  const keepPrevious = page.getByTestId('keep-previous-answer');
   await expect(keepPrevious).toBeInViewport();
   await keepPrevious.click();
 
@@ -140,7 +140,6 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();

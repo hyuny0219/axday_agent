@@ -14,7 +14,6 @@ async function enterOpinions(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
 }
 
@@ -129,7 +128,6 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();
@@ -156,7 +154,6 @@ test.describe('live mock: 무대 표정', () => {
 
     await page.getByRole('button', { name: '체험 시작' }).click();
     await page.getByTestId('scenario-card-ai-approval').click();
-    await page.getByRole('button', { name: '이사회 입장' }).click();
     await page.getByRole('button', { name: '의견 듣기' }).click();
 
     // OPINIONS의 stance는 mock 제공자가 안건의 roleLenses.opening을 쓴다(PR #13 Codex

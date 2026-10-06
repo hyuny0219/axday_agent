@@ -38,7 +38,7 @@ function findStrayLatin(text: string): string[] {
   return Array.from(cleaned.matchAll(STRAY_LATIN), (m) => m[0]);
 }
 
-test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 영문 단어가 남아 있지 않다', async ({
+test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 영문 단어가 남아 있지 않다(부결 경로)', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -58,8 +58,8 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await page.getByRole('button', { name: '체험 시작' }).click();
   await checkScreen('SELECT');
 
+  // T84 #10: 카드 클릭으로 바로 입장한다("이사회 입장" 버튼은 없앴다).
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await checkScreen('BRIEFING');
 
   // 근거 자료 팝업도 BRIEFING과 같은 틀(EXHIBIT·CONFIDENTIAL·STATEMENTS)을 쓰므로 함께
@@ -80,7 +80,10 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await submitOpinion.click();
   await checkScreen('REACTIONS');
 
-  await page.getByTestId('followup-option-2').click();
+  // T84 #1: "앞서 전달한 의견을 유지하겠습니다" 체크 카드(followup-option-2)를 보조
+  // 버튼 "답하지 않고 넘어가기"로 옮겼다 — 조건을 더 붙이지 않는 경로(부결로
+  // 이어진다, aiApproval.ts voteRules의 조건 없는 always 분기)는 이 버튼으로 탄다.
+  await page.getByTestId('keep-previous-answer').click();
   await checkScreen('MOTION');
 
   await page.getByTestId('freeze-motion').click();
@@ -94,6 +97,62 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
 
   await page.getByTestId('result-transcript-toggle').click();
   await checkScreen('RESULT(회의록 전문)');
+
+  expect(stray, `역할 약자·BOARDROOM 2026·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
+});
+
+// T84: 위 경로는 조건을 하나도 붙이지 않아 항상 부결(aiApproval.ts voteRules의
+// 조건 없는 always 분기는 CEO만 찬성)로 끝나, resultCopy.sixMonthsLater.reject만
+// 지나갔다 — PASS 전용 문구(resultCopy.sixMonthsLater.pass, 6개월 뒤 카드)에 남아
+// 있던 영문 "Agent"(T83 정리 누락, T84에서 "AI 에이전트"로 수정)를 이 검사가 끝내
+// 잡아내지 못한 이유다. 조건을 붙여 가결로 이어지는 경로를 따로 둔다.
+test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 영문 단어가 남아 있지 않다(조건부 가결 경로)', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+
+  const stray: Record<string, string[]> = {};
+
+  async function checkScreen(label: string) {
+    const text = await visibleBodyTextWithoutOperatorAndSessionCode(page);
+    const found = findStrayLatin(text);
+    if (found.length > 0) {
+      stray[label] = found;
+    }
+  }
+
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+
+  // 승인 사유 기록(LOG) 조건을 DISCUSS에서 확정한다.
+  await page.getByTestId('phrase-card-P2').click();
+  const submitOpinion = page.getByTestId('submit-opinion');
+  await expect(submitOpinion).toBeEnabled();
+  await submitOpinion.click();
+
+  // 결재 규칙 책임자(OWNER) 조건을 REACTIONS 후속 질문에서 더 확정한다 — LOG+OWNER면
+  // CAIO·CISO가 모두 찬성으로 바뀌어 CEO까지 3석 찬성으로 가결이 결정된다(참가자
+  // 표와 무관하게, aiApproval.ts voteRules).
+  await page.getByTestId('followup-option-0').click();
+  const submitFollowup = page.getByTestId('submit-followup');
+  await expect(submitFollowup).toBeEnabled();
+  await submitFollowup.click();
+  await checkScreen('MOTION');
+
+  await page.getByTestId('freeze-motion').click();
+  await page.getByTestId('vote-radio-YES').check();
+  const confirmVote = page.getByTestId('confirm-vote');
+  await expect(confirmVote).toBeEnabled();
+  await confirmVote.click();
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  await checkScreen('RESULT');
+
+  // "6개월 뒤" 카드(T84 #8)가 가결 + 반영 조건 있음 경로의 resultCopy.sixMonthsLater.pass
+  // 문구를 실제로 보여준다 — 이 검사가 전에 놓쳤던 자리다.
+  await expect(page.getByTestId('result-epilogue')).toBeVisible();
+  await checkScreen('RESULT(6개월 뒤 카드)');
 
   expect(stray, `역할 약자·BOARDROOM 2026·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
 });

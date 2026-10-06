@@ -14,7 +14,6 @@ test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장�
   await expect(page.getByTestId('scenario-card-experience-first')).toBeEnabled();
 
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 
   const briefingNext = page.getByRole('button', { name: '의견 듣기' });
   await expect(briefingNext).toBeVisible();

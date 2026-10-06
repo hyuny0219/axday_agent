@@ -25,7 +25,6 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
@@ -145,7 +144,6 @@ test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법�
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 
   const openEvidence = page.getByTestId('open-evidence');
   const dialog = page.getByTestId('evidence-dialog');
@@ -187,7 +185,6 @@ test('무대 명패 4개가 서로 겹치지 않고 참가자 좌석에는 명�
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 
   // 참가자 좌석은 명패 없이 글로우·말풍선·표 배지만 둔다(2026-09-28 사용자).
   await expect(

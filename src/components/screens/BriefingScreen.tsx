@@ -37,7 +37,10 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 아직 안 정해졌다"는 상태가 중요한데 평문 텍스트만 읽으면 스크린리더 사용자는
   // 그 상태를 알 수 없었다 — `aria-label`로 값과 "먹칠 처리된 미정 항목"이라는 상태를
   // 함께 읽어 준다(값 자체도 감추지 않는다).
-  const undecidedItems = scenario.motionBreakdown.undecidedItems;
+  // T84: motionBreakdown.undecidedItems는 이제 { text, resolvedBy? } 객체다 — 이
+  // 화면은 조건 확정 전 단계(BRIEFING)라 resolvedBy 필터링과 무관하게 항상 text
+  // 전체를 그대로 보여준다(src/components/motionDisplay.ts는 MOTION 이후에만 쓴다).
+  const undecidedItems = scenario.motionBreakdown.undecidedItems.map((item) => item.text);
   const redactedItem = undecidedItems[undecidedItems.length - 1];
   const leadingItems = undecidedItems.slice(0, -1);
 
