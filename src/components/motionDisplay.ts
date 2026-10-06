@@ -7,6 +7,7 @@
 // 나열하지도 않는다.
 
 import type { Scenario, UndecidedItem } from '../content/types';
+import type { SessionOutcome } from '../domain/types';
 
 export interface MotionDisplay {
   /** "표결 안건" 상자에 보여줄 한 문장. 확정 조건이 1개 이상이면 조건 칩을 가리키는
@@ -41,10 +42,14 @@ export function buildMotionDisplay(
 }
 
 /** 결과 화면 "남은 과제" 줄(T84) — buildMotionDisplay와 같은 로직으로 확정 조건에
- * 대응하는 과제를 뺀다. */
+ * 대응하는 과제를 뺀다. 단 **부결이면 붙인 조건도 승인된 것이 아니므로** 과제를 하나도
+ * 빼지 않는다(PR #20 Codex 1차 검토 P2 — LIMIT만 붙인 수정안이 부결됐는데 "결재 범위·한도
+ * 확정"이 남은 과제에서 사라졌다). */
 export function buildRemainingTaskLabels(
   scenario: Scenario,
   confirmedConditionIds: readonly string[],
+  outcome: SessionOutcome,
 ): string[] {
-  return filterUnresolved(scenario.remainingTasks, confirmedConditionIds);
+  const resolvedBy = outcome === 'PASS' ? confirmedConditionIds : [];
+  return filterUnresolved(scenario.remainingTasks, resolvedBy);
 }

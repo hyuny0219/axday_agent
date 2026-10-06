@@ -164,7 +164,8 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 확정 조건에 대응하는 과제(remainingTasks[].resolvedBy)는 빼고 남은 것만 보여준다
   // (MotionScreen·VoteScreen과 같은 로직 — Opus UX 검토 #3+my#2). 과제가 모두
   // 해소됐거나(조건부 가결) 원래 없으면(준비 중 안건) 줄 자체를 그리지 않는다.
-  const remainingTaskLabels = buildRemainingTaskLabels(scenario, includedIds);
+  // 부결이면 과제를 하나도 빼지 않는다(PR #20 Codex 1차 검토 P2, buildRemainingTaskLabels 참고).
+  const remainingTaskLabels = buildRemainingTaskLabels(scenario, includedIds, session.outcome);
   const remainingTasksLine = remainingTaskLabels.length > 0 ? remainingTaskLabels.join(' · ') : null;
 
   // 참가자 행 안내(T85 #15): 내 표가 결정적이지 않았을 때, "결과는 임원 표만으로
