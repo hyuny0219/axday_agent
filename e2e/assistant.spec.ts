@@ -41,7 +41,7 @@ test('AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사
   const panel = page.getByTestId('assistant-panel');
   await expect(panel).toBeVisible();
   await expect(page.getByTestId('assistant-close')).toBeVisible();
-  await expect(panel.getByText('AI 비서실장(시연)')).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'AI 비서실장' })).toBeVisible();
 
   await page.getByTestId('assistant-action-refine').click();
   const refineResult = page.getByTestId('assistant-result-refine');

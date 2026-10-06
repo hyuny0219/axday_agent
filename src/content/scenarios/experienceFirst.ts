@@ -214,69 +214,71 @@ export const experienceFirstScenario: Scenario = {
       },
     ],
   },
+  // T85 #14: 번역투 문장을 사람이 회의에서 말하듯 다시 썼다(의미·판단 순서는 그대로,
+  // 숫자·퍼센트는 쓰지 않는다 — NUMERIC_COPY_PATTERN).
   voteRules: {
     CEO: [
       {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
-        reason: '경험 판단 절대 우선 조건은 데이터를 버리는 쪽이라 찬성할 수 없어 반대',
+        reason: '경험만 절대 우선으로 두면 데이터를 아예 버리는 셈이라 반대합니다',
       },
-      { when: { always: true }, vote: 'YES', reason: '책임지는 사람의 판단을 앞세우는 방향에 찬성' },
+      { when: { always: true }, vote: 'YES', reason: '책임지는 사람이 판단을 앞세우는 방향이라 찬성합니다' },
     ],
     CFO: [
       {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
-        reason: '경험 판단 절대 우선 조건이 있어 숫자의 경고가 무시돼 반대',
+        reason: '경험만 절대 우선으로 두면 숫자가 경고해도 무시하게 돼 반대합니다',
       },
       {
         when: { has: 'DATA_VETO' },
         vote: 'YES',
-        reason: '데이터 경고 시 멈춤 조건이 있어 찬성',
+        reason: '데이터가 경고하면 멈춘다니 그러면 찬성합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '데이터 경고 시 멈춤 조건이 갖춰지기 전이라 찬성할 수 없어 반대',
+        reason: '데이터가 경고할 때 멈추는 절차가 없으면 찬성할 수 없어 반대합니다',
       },
     ],
     CAIO: [
       {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
-        reason: '경험 판단 절대 우선 조건이 있어 데이터가 쓰일 자리가 없어 반대',
+        reason: '경험만 절대 우선으로 두면 데이터가 쓰일 자리가 없어 반대합니다',
       },
       {
         when: { has: 'SCOPE' },
         vote: 'YES',
-        reason: '전례 없는 상황 한정 조건이 있어 찬성',
+        reason: '전례 없는 상황으로 범위를 좁힌다니 그러면 찬성합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '전례 없는 상황 한정 조건이 없어 반대',
+        reason: '범위를 좁히지 않으면 반대합니다',
       },
     ],
     CISO: [
       {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
-        reason: '경험 판단 절대 우선 조건이 있어 설명 없는 결정이 늘어 반대',
+        reason: '경험만 절대 우선으로 두면 설명 없는 결정만 늘어 반대합니다',
       },
       {
         when: { all: [{ has: 'RECORD' }, { has: 'REVIEW' }] },
         vote: 'YES',
-        reason: '판단 근거 기록과 결정 결과 복기 조건이 있어 찬성',
+        reason: '판단 근거를 남기고 나중에 복기도 한다니 그러면 찬성합니다',
       },
       {
         when: { has: 'RECORD' },
         vote: 'NO',
-        reason: '판단 근거 기록 조건은 있으나 결정 결과 복기 조건이 갖춰지기 전이라 찬성할 수 없어 반대',
+        reason: '판단 근거는 남기지만 나중에 복기하는 절차가 없어 반대합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '판단 근거 기록 조건이 없어 반대',
+        reason: '판단 근거조차 남기지 않으면 반대합니다',
       },
     ],
   },

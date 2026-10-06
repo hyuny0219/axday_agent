@@ -91,8 +91,8 @@ function referencedLabel(statements: Statement[], id: string): string {
 // DiscussScreen도 live 모드 임원 카드에 같은 문구를 그대로 써야 하므로(Codex 18차 검토 P2)
 // export한다 — 참가자가 아직 답이 없는 임원을 두 화면에서 다른 말로 보면 안 된다.
 export const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
-  pending: '판단 중…',
-  failed: '응답 지연·확인 필요',
+  pending: '생각을 정리하고 있습니다…',
+  failed: '이번에는 답을 받지 못했습니다',
 };
 
 /** 임원 4명을 고정 순서(CEO/CFO/CAIO/CISO)로 그린다. roleStatus가 'idle'이면
@@ -126,7 +126,7 @@ export function LiveStatementCards({
         disabled={retryDisabled}
         onClick={onRetryFailedRoles}
       >
-        {retryDisabled ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+        {retryDisabled ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
       </button>
     ) : null;
 
@@ -219,7 +219,7 @@ export function LiveStatementCards({
                 disabled={retryDisabled}
                 onClick={onRetryFailedRoles}
               >
-                {retryDisabled ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+                {retryDisabled ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
               </button>
             )}
           </article>

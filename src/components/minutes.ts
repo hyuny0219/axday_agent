@@ -104,14 +104,16 @@ function liveRoundResults(
       return { roleId, kind: 'speech' as const, text: statement?.text ?? '', createdAt: statement?.createdAt };
     }
     if (status === 'failed') {
-      return { roleId, kind: 'failed' as const, text: '응답 없음' };
+      return { roleId, kind: 'failed' as const, text: '이번에는 답을 받지 못했습니다' };
     }
     return { roleId, kind: 'pending' as const, text: '' };
   });
 }
 
+const NO_REACTION_TEXT = '앞서 말씀드린 입장 그대로입니다.';
+
 function scriptedReactionText(reactions: Reaction[]): string {
-  return reactions.length > 0 ? (reactions[0]?.text ?? '기존 의견 유지') : '기존 의견 유지';
+  return reactions.length > 0 ? (reactions[0]?.text ?? NO_REACTION_TEXT) : NO_REACTION_TEXT;
 }
 
 /**

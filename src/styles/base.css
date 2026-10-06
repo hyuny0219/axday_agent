@@ -23,6 +23,11 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   line-height: 1.4;
+  /* 한국어 줄바꿈(T85 #9): 한 단어(특히 조사가 붙은 명사)가 화면 폭에 안 맞으면
+     글자 사이에서 끊기던 것(예: "경험/일까요?")을 막는다 — 어절 단위로만 줄바꿈하고,
+     그래도 넘치는 긴 토큰(URL 등)만 중간에서 꺾는다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 디스플레이 서체(v1.0 애니메이션 프레임, DESIGN_SPEC.md v1.0 2절 "제목·결론·도장에

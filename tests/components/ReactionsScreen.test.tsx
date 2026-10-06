@@ -145,7 +145,7 @@ describe('ReactionsScreen', () => {
 
     fireEvent.click(screen.getByTestId('open-evidence'));
 
-    expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent('판단 중');
+    expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent('생각을 정리하고 있습니다');
     expect(screen.queryByTestId('statement-failed-CAIO-opinions')).not.toBeInTheDocument();
   });
 
@@ -307,7 +307,7 @@ describe('ReactionsScreen', () => {
 
     fireEvent.click(screen.getByTestId('open-evidence'));
 
-    expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent('응답 지연·확인 필요');
+    expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent('이번에는 답을 받지 못했습니다');
     expect(screen.queryByTestId('statement-pending-CAIO-opinions')).not.toBeInTheDocument();
   });
 });

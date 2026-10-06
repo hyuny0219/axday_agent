@@ -490,17 +490,8 @@
   white-space: nowrap;
 }
 
-/* "설득 도장" 근거 한 줄(T63, v1.0 9절). 다른 요약 줄과 같은 예산 안에 들도록 1줄
-   클램프한다. */
-.result-summary__persuasion {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: var(--fs-meta);
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
+/* "설득 도장" 근거 한 줄은 T85 #16에서 왼쪽 TALLY(result-tally__caption) 한 곳만
+   남기고 여기(VERDICTS)의 중복 문단은 뺐다. */
 
 /* VERDICTS 아래 요약 줄 3개(남은 과제·AI가 도운 일·+6 MONTHS, T66 item 2). 위 행
    목록과 점선으로 구분한다(mock "+6 MONTHS" 줄 구분선과 같은 톤). */
@@ -587,7 +578,6 @@
   .result-seat__reason,
   .result-your-card__value,
   .result-mine__quote,
-  .result-summary__persuasion,
   .result-verdicts__line {
     font-size: 12px;
   }

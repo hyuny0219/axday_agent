@@ -31,7 +31,7 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   refine: '내 발언 정리',
 };
 
-const FALLBACK_MESSAGE = '기본 안내로 전환했습니다.';
+const FALLBACK_MESSAGE = '연결이 늦어 미리 준비한 정리를 보여 드립니다.';
 // 내 발언 정리 실패 시 문구는 AGENT_BOARDROOM_SPEC.md 4장 원문 그대로 쓴다(다른 두
 // 기능은 FALLBACK_MESSAGE를 그대로 유지).
 const REFINE_FALLBACK_MESSAGE = '정리하지 못했습니다. 원문으로 계속할 수 있습니다';
@@ -62,6 +62,12 @@ export interface AssistantPanelProps {
 
 function conditionLabel(scenario: Scenario, id: string): string {
   return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
+}
+
+/** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52 — "근거: E1, E2" 노출을 T85 #17에서 다시
+ * 발견해 고친다). */
+function evidenceLabel(scenario: Scenario, id: string): string {
+  return scenario.evidence.find((item) => item.id === id)?.title ?? id;
 }
 
 export function AssistantPanel({
@@ -227,12 +233,12 @@ export function AssistantPanel({
         onClick={() => setOpen((value) => !value)}
         data-testid="assistant-toggle"
       >
-        {open ? 'AI 비서실장 숨기기' : 'AI 비서실장 열기'}
+        {open ? 'AI 비서실장 숨기기' : 'AI 비서실장에게 정리 맡기기'}
       </button>
       {open && (
         <aside className="assistant-panel__body" data-testid="assistant-panel">
           <div className="assistant-panel__header">
-            <h3 className="assistant-panel__title">AI 비서실장(시연)</h3>
+            <h3 className="assistant-panel__title">AI 비서실장</h3>
             <button
               type="button"
               className="assistant-panel__close"
@@ -299,7 +305,7 @@ export function AssistantPanel({
                 </>
               )}
               <p className="assistant-panel__evidence">
-                근거: {summaryResult.evidenceIds.join(', ')}
+                근거: {summaryResult.evidenceIds.map((id) => evidenceLabel(scenario, id)).join(', ')}
               </p>
             </div>
           )}

@@ -206,69 +206,71 @@ export const aiApprovalScenario: Scenario = {
       },
     ],
   },
+  // PR #13 Codex 검토 이후의 번역투 문장을 T85 #14에서 사람이 회의에서 말하듯
+  // 다시 썼다(의미·판단 순서는 그대로, 숫자·퍼센트는 쓰지 않는다 — NUMERIC_COPY_PATTERN).
   voteRules: {
     CEO: [
       {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
-        reason: '사람 검토 전면 생략 조건은 갖춰지기 전이라 찬성할 수 없어 반대',
+        reason: '사람 검토를 아예 빼면 사고가 나도 되돌릴 수 없어 반대합니다',
       },
-      { when: { always: true }, vote: 'YES', reason: '늦는 결재를 푸는 방향에 찬성' },
+      { when: { always: true }, vote: 'YES', reason: '늦는 결재를 푸는 방향이라 찬성합니다' },
     ],
     CFO: [
       {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
-        reason: '사람 검토 전면 생략 조건이 있어 오승인 규모를 가늠할 수 없어 반대',
+        reason: '사람 검토를 아예 빼면 얼마나 잘못 승인되는지 가늠할 수가 없어 반대합니다',
       },
       {
         when: { all: [{ has: 'LIMIT' }, { has: 'REVIEW' }] },
         vote: 'YES',
-        reason: '결재 금액 한도와 사람 표본 재검토 조건이 있어 찬성',
+        reason: '금액 한도를 정하고 표본도 다시 본다니 그러면 찬성합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '결재 금액 한도와 사람 표본 재검토 조건이 함께 갖춰지기 전이라 찬성할 수 없어 반대',
+        reason: '금액 한도와 표본 재검토가 둘 다 있어야 찬성할 수 있어 반대합니다',
       },
     ],
     CAIO: [
       {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
-        reason: '사람 검토 전면 생략 조건이 있어 기록 없는 승인이 늘어 반대',
+        reason: '사람 검토를 아예 빼면 기록 없는 승인만 늘어 반대합니다',
       },
       {
         when: { has: 'LOG' },
         vote: 'YES',
-        reason: '승인 사유 기록 조건이 있어 찬성',
+        reason: '승인 사유를 남긴다니 그거면 찬성합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '승인 사유 기록 조건이 없어 반대',
+        reason: '승인 사유를 남기지 않으면 반대합니다',
       },
     ],
     CISO: [
       {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
-        reason: '사람 검토 전면 생략 조건이 있어 책임 공백이 커져 반대',
+        reason: '사람 검토를 아예 빼면 책임질 사람이 아무도 없어 반대합니다',
       },
       {
         when: { all: [{ has: 'OWNER' }, { has: 'LOG' }] },
         vote: 'YES',
-        reason: '결재 규칙 책임자와 승인 사유 기록 조건이 있어 찬성',
+        reason: '책임자도 정하고 사유도 남긴다니 그러면 찬성합니다',
       },
       {
         when: { has: 'OWNER' },
         vote: 'NO',
-        reason: '결재 규칙 책임자 조건은 있으나 승인 사유 기록 조건이 갖춰지기 전이라 찬성할 수 없어 반대',
+        reason: '책임자는 정했지만 승인 사유 기록이 없어 반대합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '결재 규칙 책임자 조건이 없어 반대',
+        reason: '책임질 사람조차 정하지 않았으니 반대합니다',
       },
     ],
   },

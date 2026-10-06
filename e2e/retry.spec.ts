@@ -1,5 +1,5 @@
-// "다시 요청"(T65) E2E: REACTIONS에서 CFO만 실패 → "응답 없는 임원 다시 요청" → 카드·표정
-// 갱신, VOTE에서 CAIO 미표결 → "미표결 임원 다시 요청" → 결과에 반영. live.spec.ts와 같은
+// "다시 요청"(T65) E2E: REACTIONS에서 CFO만 실패 → "다시 물어보기" → 카드·표정
+// 갱신, VOTE에서 CAIO 미표결 → "다시 물어보기" → 결과에 반영. live.spec.ts와 같은
 // mock 서버(8787, MODEL_PROVIDER=mock)를 쓰고, page.route로 /api/board/round·/api/board/vote
 // 응답만 가로챈다(e2e/live.spec.ts의 mockRoleFailure와 같은 방식, 허용 경로가 e2e/뿐이라
 // 서버·클라이언트 코드는 건드리지 않는다).
@@ -182,7 +182,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
   await expect(page.getByTestId('statement-failed-CFO')).toBeVisible({ timeout: 10_000 });
   const retryButton = page.getByTestId('retry-failed-roles');
   await expect(retryButton).toBeVisible();
-  await expect(retryButton).toHaveText('응답 없는 임원 다시 요청');
+  await expect(retryButton).toHaveText('다시 물어보기');
 
   await retryButton.click();
 
@@ -219,7 +219,7 @@ test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 
 
   const retryButton = page.getByTestId('retry-failed-roles');
   await expect(retryButton).toBeVisible({ timeout: 10_000 });
-  await expect(retryButton).toHaveText('미표결 임원 다시 요청');
+  await expect(retryButton).toHaveText('다시 물어보기');
   await retryButton.click();
 
   // 재요청이 성공하면 CAIO도 실제 표(YES)로 집계돼 미표결 안내가 뜨지 않는다.
@@ -256,15 +256,16 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
   // 실패한 CFO가 있으므로 재요청 버튼이 최종 안건 화면 오른쪽 열에 남아 있다.
   const retryButton = page.getByTestId('retry-failed-roles');
   await expect(retryButton).toBeVisible();
-  await expect(retryButton).toHaveText('응답 없는 임원 다시 요청');
-  await expect(page.getByTestId('minutes-entry-followup-CFO')).toContainText('응답 없음');
+  await expect(retryButton).toHaveText('다시 물어보기');
+  await expect(page.getByTestId('minutes-entry-followup-CFO')).toContainText('이번에는 답을 받지 못했습니다');
 
   await retryButton.click();
 
   // 재요청이 성공하면 회의록·표정이 갱신되고 버튼은 사라진다. 표결 진행은 그대로 가능하다.
-  await expect(page.getByTestId('minutes-entry-followup-CFO')).not.toContainText('응답 없음', {
-    timeout: 10_000,
-  });
+  await expect(page.getByTestId('minutes-entry-followup-CFO')).not.toContainText(
+    '이번에는 답을 받지 못했습니다',
+    { timeout: 10_000 },
+  );
   await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('미정');
   await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
