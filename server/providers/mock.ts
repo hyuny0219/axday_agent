@@ -125,15 +125,26 @@ function scenarioAwareOpeningStance(roleId: string, scenarioId: string | undefin
   return opening ?? ROLE_STANCE[roleId] ?? 'UNDECIDED';
 }
 
+// T82: 발언 문장(message)·판단 근거(reason)·정리 문장(draftText)이 서버 응답 검증을 그대로
+// 통과해야 하므로(findStrayLatinRun, validate.ts) roleId·"AI" 같은 허용된 예외 밖의 영문을
+// 섞지 않는다 — 옛 "[mock]" 표기·단계 영문명(OPINIONS 등)은 라틴 문자 연속이라 그 자체로
+// 걸려 e2e(live.spec.ts 등)가 깨졌다.
+const STAGE_LABEL_KO: Record<string, string> = {
+  OPINIONS: '의견',
+  REACTIONS: '반응',
+  FOLLOWUP: '후속',
+  VOTE: '표결',
+};
+
 function buildStatementJson(env: MockRequestEnvelope): unknown {
   const roleId = env.roleId ?? 'CEO';
   const stage = env.stage ?? 'OPINIONS';
   return {
     roleId,
-    message: `[mock] ${roleId}의 ${stage} 단계 발언입니다.`,
+    message: `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     referencedStatementIds: [],
-    concerns: [`[mock] ${roleId} 우려사항`],
+    concerns: [`[모의] ${roleId} 우려사항`],
     suggestedConditionIds: [scenarioAwareRoleCondition(roleId, env.scenarioId)],
     stance:
       stage === 'OPINIONS'
@@ -149,7 +160,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
     vote: ROLE_VOTE[roleId] ?? 'NO',
-    reason: `[mock] ${roleId}의 판단 근거입니다.`,
+    reason: `[모의] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     remainingConcerns: [],
   };
@@ -158,7 +169,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
 function buildAssistantJson(env: MockRequestEnvelope): unknown {
   return {
     draftRevision: env.draftRevision ?? 0,
-    draftText: '[mock] 참가자 발언을 짧게 정리한 문장입니다.',
+    draftText: '[모의] 참가자 발언을 짧게 정리한 문장입니다.',
     evidenceIds: ['E1'],
     suggestedConditionIds: [scenarioAwareFirstCondition(env.scenarioId)],
   };

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   RequestIdRegistry,
   assistantResponseSchema,
+  findStrayLatinRun,
   requestMetaSchema,
   statementResponseSchema,
   voteResponseSchema,
@@ -110,6 +111,44 @@ describe('statementResponseSchema', () => {
     const result = schema.safeParse({ ...validStatement(), stance: 'MAYBE' });
     expect(result.success).toBe(false);
   });
+
+  // T82: 조건 ID(LOG·OWNER 등)가 문장에 그대로 새는 것을 거절한다(docs/eval/
+  // tuning-v8-after.jsonl에서 발견된 결함). 'AI'·임원 역할 이름·숫자·단위는 예외다.
+  it('rejects a message with a stray condition ID (T82)', () => {
+    const schema = statementResponseSchema();
+    const result = schema.safeParse({
+      ...validStatement(),
+      message: 'LOG·OWNER 조건이 보장되지 않아 반대합니다.',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a message that names the condition in Korean instead of its ID (T82)', () => {
+    const schema = statementResponseSchema();
+    const result = schema.safeParse({
+      ...validStatement(),
+      message: '승인 사유 기록 조건이 보장되면 찬성합니다.',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts "AI" and executive role names as exceptions to the stray-Latin check (T82)', () => {
+    const schema = statementResponseSchema();
+    const result = schema.safeParse({
+      ...validStatement(),
+      message: 'CISO·CFO 의견에 동의하며, AI가 승인한 결재를 신뢰합니다.',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts numbers and units in a message (not Latin letters, T82)', () => {
+    const schema = statementResponseSchema();
+    const result = schema.safeParse({
+      ...validStatement(),
+      message: '응답 62%가 지연을 지적했고 대기 2.8일이 확인되었습니다.',
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('voteResponseSchema', () => {
@@ -151,6 +190,24 @@ describe('voteResponseSchema', () => {
     const result = schema.safeParse({ ...base, vote: 'MAYBE' });
     expect(result.success).toBe(false);
   });
+
+  it('rejects a reason with a stray condition ID (T82)', () => {
+    const schema = voteResponseSchema({ motionId: 'motion-1', motionHash: 'abc123' });
+    const result = schema.safeParse({
+      ...base,
+      reason: 'SCOPE·RECORD·DATA_VETO 조건 없는 원안은 반대합니다.',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a reason that names the condition in Korean instead of its ID (T82)', () => {
+    const schema = voteResponseSchema({ motionId: 'motion-1', motionHash: 'abc123' });
+    const result = schema.safeParse({
+      ...base,
+      reason: '전례 없는 상황 한정·판단 근거 기록 조건이 전제되어 찬성합니다.',
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('assistantResponseSchema', () => {
@@ -182,6 +239,37 @@ describe('assistantResponseSchema', () => {
     const schema = assistantResponseSchema({ draftRevision: 2 });
     const result = schema.safeParse({ ...base, suggestedConditionIds: ['GHOST'] });
     expect(result.success).toBe(false);
+  });
+
+  it('rejects a draftText with a stray condition ID (T82)', () => {
+    const schema = assistantResponseSchema({ draftRevision: 2 });
+    const result = schema.safeParse({ ...base, draftText: '결재 규칙 책임자(OWNER) 조건을 확인해야 합니다.' });
+    expect(result.success).toBe(false);
+  });
+
+  it('keeps suggestedConditionIds as IDs regardless of the stray-Latin check (T82)', () => {
+    // 비서실장 응답의 suggestedConditionIds는 응답 스키마 필드라 여전히 ID로 받는다 —
+    // findStrayLatinRun은 draftText(사람이 보는 문장)만 본다.
+    const schema = assistantResponseSchema({ draftRevision: 2 });
+    const result = schema.safeParse({ ...base, draftText: '승인 사유 기록 조건을 확인해야 합니다.' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.suggestedConditionIds).toEqual(['OWNER']);
+    }
+  });
+});
+
+describe('findStrayLatinRun', () => {
+  it('finds a condition-ID-shaped Latin run', () => {
+    expect(findStrayLatinRun('LOG·OWNER 조건이 보장되지 않아')).toBe('LOG');
+  });
+
+  it('treats "AI" and executive role names as allowed exceptions', () => {
+    expect(findStrayLatinRun('AI가 승인한 결재를 CISO·CFO가 신뢰합니다.')).toBeUndefined();
+  });
+
+  it('ignores digits, percent signs, and decimal points', () => {
+    expect(findStrayLatinRun('응답 62%가 대기 2.8일을 지적했습니다.')).toBeUndefined();
   });
 });
 

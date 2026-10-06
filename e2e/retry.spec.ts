@@ -16,13 +16,23 @@ async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '의견 듣기' }).click();
 }
 
+// T82: server/providers/mock.ts와 같은 한국어 표기(영문은 서버 검증에서 거절된다,
+// validate.ts의 findStrayLatinRun) — 이 route 가로채기는 서버를 거치지 않지만 실제 mock
+// 응답과 모양을 맞춰 둔다.
+const STAGE_LABEL_KO: Record<string, string> = {
+  OPINIONS: '의견',
+  REACTIONS: '반응',
+  FOLLOWUP: '후속',
+  VOTE: '표결',
+};
+
 function answeredStatementEntry(roleId: ExecRoleId, stage: string) {
   return {
     roleId,
     status: 'answered',
     statement: {
       roleId,
-      message: `[mock] ${roleId}의 ${stage} 발언입니다.`,
+      message: `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 발언입니다.`,
       evidenceIds: ['E1'],
       referencedStatementIds: [],
       concerns: [],
@@ -94,7 +104,7 @@ async function mockVoteFailureThenRetrySucceeds(page: Page, failingRoleId: ExecR
               motionId: body.motion.id,
               motionHash: body.motion.hash,
               vote: 'YES',
-              reason: `[mock] ${roleId}의 판단 근거입니다.`,
+              reason: `[모의] ${roleId}의 판단 근거입니다.`,
               evidenceIds: ['E1'],
               remainingConcerns: [],
             },
