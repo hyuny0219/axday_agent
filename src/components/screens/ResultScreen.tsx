@@ -169,11 +169,19 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   const remainingTasksLine = remainingTaskLabels.length > 0 ? remainingTaskLabels.join(' · ') : null;
 
   // 참가자 행 안내(T85 #15): 내 표가 결정적이지 않았을 때, "결과는 임원 표만으로
-  // 정해졌습니다"(참가자를 배제한 듯 들리는 문구) 대신 내 표가 실제 결론과 같은
-  // 방향이었는지로 가른다 — PASS면 YES, REJECT면 NO가 다수 의견과 같다.
-  const participantAgreesWithOutcome =
-    (session.outcome === 'PASS' && resultSummary?.participant.vote === 'YES') ||
-    (session.outcome === 'REJECT' && resultSummary?.participant.vote === 'NO');
+  // 정해졌습니다"(참가자를 배제한 듯 들리는 문구) 대신 내 표가 다수 의견과 같은
+  // 방향이었는지로 가른다. 가결/부결이 아니라 **실제 득표수**로 본다 — live에서 임원
+  // 3명이 미표결이고 찬성 1·반대 1이면 부결이지만 다수 의견은 없으므로 "다수 의견과
+  // 같은 판단"이라고 하면 모순이다(PR #20 Codex 2차 검토 P2). 동률이면 별도 문구.
+  const participantRowNote = (() => {
+    const vote = resultSummary?.participant.vote;
+    if (!vote) return '';
+    const mine = tallyResult.counts[vote];
+    const other = tallyResult.counts[vote === 'YES' ? 'NO' : 'YES'];
+    if (mine > other) return '다수 의견과 같은 판단을 내렸습니다';
+    if (mine < other) return '소수 의견으로 회의록에 남았습니다';
+    return '표가 갈려 어느 쪽도 다수가 아니었습니다';
+  })();
 
   return (
     <>
@@ -419,9 +427,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   <span className="result-seat__reason" data-testid="result-summary-decisive">
                     {resultSummary.participant.decisive
                       ? '이사님의 한 표가 결과를 정했습니다'
-                      : participantAgreesWithOutcome
-                        ? '다수 의견과 같은 판단을 내렸습니다'
-                        : '소수 의견으로 회의록에 남았습니다'}
+                      : participantRowNote}
                   </span>
                 </li>
               </ul>
