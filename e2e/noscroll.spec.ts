@@ -53,7 +53,6 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   ).toBeInViewport();
 
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
   await expectFullyVisible(page, 'minutes-panel', 'BRIEFING');
@@ -270,7 +269,6 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await expectNoPageScroll(page, 'OPINIONS(live)');

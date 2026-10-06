@@ -326,6 +326,40 @@
   color: #9fb6cc;
 }
 
+/* "처음 화면으로" 확인 단계(T84, Opus UX 검토 #5) — discuss.css의 rebuild-confirm과
+   같은 인라인 alertdialog 모양(왼쪽 열은 어두운 조종석 테마라 같은 토큰을 쓴다). */
+.end-session-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background-color: var(--panel-active);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+}
+
+.end-session-confirm__message {
+  margin: 0;
+  color: var(--text);
+}
+
+.end-session-confirm__actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.end-session-confirm__confirm {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
 /* 회의록 전문 패널(T58 흡수, T64 item 7). "VERDICTS" 패널 대신 오른쪽 열 아래 영역을
    통째로 채운다 — MinutesPanel(어두운 TRANSCRIPT 판)을 그대로 재사용한다. */
 .result-transcript {
@@ -372,9 +406,12 @@
   border-radius: var(--radius-card);
   color: var(--ink);
   padding: var(--space-1) var(--space-2);
-  /* mock(C_Result.html)과 같이 이 패널이 남는 세로 공간을 모두 차지한다
-     (flex-grow:1) — 아래 footer가 margin-top:auto로 패널 바닥에 고정된다. */
-  flex: 1 1 auto;
+  /* T84: 남는 세로 공간은 이제 이 패널이 다 차지하지 않는다 — 바로 아래
+     result-epilogue-card가 그 공간을 가져가 "6개월 뒤" 문장을 키운다(Opus UX
+     검토 #8). 이 패널은 내용 높이만큼만 차지하고(flex-grow 없음), footer는 더
+     margin-top:auto로 바닥에 붙지 않는다(남는 공간이 없으므로 효과가 없을
+     뿐 그대로 둬도 해롭지 않다). */
+  flex: 0 1 auto;
 }
 
 .result-verdicts__head {
@@ -525,18 +562,79 @@
   overflow: hidden;
 }
 
-.result-verdicts__epilogue {
-  -webkit-line-clamp: 2;
+/* "6개월 뒤" 카드(T84, Opus UX 검토 #8) — VERDICTS와 같은 종이-2 패널 톤이지만
+   독립 카드다. VERDICTS가 더 이상 flex-grow하지 않으므로(위) 남는 세로 공간은
+   이 카드가 가져간다. */
+.result-epilogue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+  flex: 1 1 auto;
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-card);
+  color: var(--ink);
+  padding: var(--space-1) var(--space-2);
 }
 
-.result-verdicts__epilogue-label {
+.result-epilogue-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.result-epilogue-card__text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.result-epilogue-card__conditions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-top: 6px;
+  border-top: 1px dashed var(--paper-border);
+}
+
+.result-epilogue-card__conditions-label {
   font-family: var(--font-label);
+  font-size: 13px;
   letter-spacing: 0.14em;
   color: var(--label);
 }
 
-/* "체험용 가상 전망" 배지(T47, 기존 result-epilogue 카드에서 옮겨 씀). 이제 +6
-   MONTHS 줄 끝에 인라인으로 붙는다. */
+.result-epilogue-card__chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-epilogue-card__chips li {
+  padding: 4px 14px;
+  border: 1px solid var(--paper-vote-yes);
+  border-radius: 999px;
+  font-size: 16px;
+  color: var(--paper-vote-yes);
+}
+
+.result-epilogue-card__no-conditions {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+/* "체험용 가상 전망" 배지(T47). T84에서 +6 MONTHS 인라인 줄에서 이 카드 머리줄로
+   옮겨 씀(기존 색·모양 그대로). */
 .result-epilogue__badge {
   display: inline-flex;
   align-items: center;
@@ -589,6 +687,25 @@
   .result-mine__quote,
   .result-summary__persuasion,
   .result-verdicts__line {
+    font-size: 12px;
+  }
+
+  .result-epilogue-card {
+    padding: 4px var(--space-1);
+    gap: 6px;
+  }
+
+  .result-epilogue-card__text {
+    font-size: 14px;
+  }
+
+  .result-epilogue-card__conditions-label,
+  .result-epilogue-card__no-conditions {
+    font-size: 11px;
+  }
+
+  .result-epilogue-card__chips li {
+    padding: 3px 10px;
     font-size: 12px;
   }
 }

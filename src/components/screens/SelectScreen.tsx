@@ -5,6 +5,16 @@
 // hook·subtitle이 아니라 chairBriefing.question(안건 질문 한 줄)만 쓴다(시안 카드
 // 제목이 사건 헤드라인이 아니라 질문 문장이기 때문, src/content/scenarios/index.ts
 // 주석 참고). 준비 중 안건(①③)은 선택 자체를 막는다.
+//
+// T84(Opus UX 검토 #10): 카드 문구가 "선택하면 이사회에 입장합니다"였는데 실제로는
+// 카드를 고른 뒤 아래 "이사회 입장 ▶" 버튼을 또 눌러야 했다 — 두 단계가 한 문장이
+// 가리키는 동작과 달라 참가자가 멈칫했다. 별도 선택 상태·제출 버튼을 없애고 카드
+// 클릭(버튼 네이티브 동작이라 Enter/Space 키보드 활성화도 그대로 된다) 즉시
+// onEnter를 부른다. App.tsx의 onEnter(dispatch SELECT_SCENARIO)는 동기 리듀서
+// 호출이라 지연이 없지만, 중복 클릭·연타로 같은 전환이 두 번 나가는 것은
+// `entering` 플래그로 막는다(두 번째 클릭부터는 모든 카드가 disabled). 빈 공간이
+// 많던 카드 본문에는 사건 한 줄(incident.headline)과 "눌러서 입장" 힌트를 더해
+// 첫 행동 신호를 분명히 한다.
 
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
@@ -25,8 +35,18 @@ function caseTagFor(index: number): string {
 }
 
 export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedIndex = scenarios.findIndex((scenario) => scenario.id === selectedId);
+  // 입장 중복 방지(연타·중복 클릭): onEnter를 부른 뒤 모든 카드를 잠가 두 번째
+  // 클릭이 또 dispatch를 내보내지 않게 한다. 이 화면은 전환과 함께 곧 사라지므로
+  // 되돌릴 일이 없다.
+  const [entering, setEntering] = useState(false);
+
+  function handleSelect(scenario: Scenario) {
+    if (scenario.status === 'preparing' || entering) {
+      return;
+    }
+    setEntering(true);
+    onEnter(scenario.id);
+  }
 
   return (
     <section className="screen select-screen">
@@ -51,59 +71,33 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
 
       <div className="select-screen__cards">
         {scenarios.map((scenario, index) => {
-          const disabled = scenario.status === 'preparing';
-          const selected = selectedId === scenario.id;
+          const preparing = scenario.status === 'preparing';
           return (
             <button
               key={scenario.id}
               type="button"
-              className={`scenario-card${selected ? ' scenario-card--selected' : ''}`}
-              disabled={disabled}
-              aria-pressed={selected}
+              className="scenario-card"
+              disabled={preparing || entering}
               data-testid={`scenario-card-${scenario.id}`}
-              onClick={() => setSelectedId(scenario.id)}
+              onClick={() => handleSelect(scenario)}
             >
-              {selected && (
-                <span className="scenario-card__check" aria-hidden="true">
-                  ✓
-                </span>
-              )}
               <span
                 className={`scenario-card__stamp${
-                  disabled ? ' scenario-card__stamp--preparing' : ' scenario-card__stamp--confidential'
+                  preparing ? ' scenario-card__stamp--preparing' : ' scenario-card__stamp--confidential'
                 }`}
                 aria-hidden="true"
               >
-                {disabled ? '준비 중' : '대외비'}
+                {preparing ? '준비 중' : '대외비'}
               </span>
               <span className="scenario-card__case">{caseTagFor(index)}</span>
               <h3 className="scenario-card__title">{scenario.chairBriefing.question}</h3>
+              <p className="scenario-card__headline">{scenario.incident.headline}</p>
               <span className="scenario-card__footer">
-                {disabled ? '봉인됨 · 다음 안건을 준비하고 있습니다' : '열람 가능 · 선택하면 이사회에 입장합니다'}
+                {preparing ? '봉인됨 · 다음 안건을 준비하고 있습니다' : '열람 가능 · 눌러서 입장'}
               </span>
             </button>
           );
         })}
-      </div>
-
-      <div className="select-screen__submit-row screen__submit-row">
-        <button
-          type="button"
-          className="cta"
-          disabled={selectedId === null}
-          onClick={() => {
-            if (selectedId !== null) {
-              onEnter(selectedId);
-            }
-          }}
-        >
-          이사회 입장 ▶
-        </button>
-        {selectedId !== null && selectedIndex !== -1 && (
-          <span className="select-screen__selected-label">
-            선택한 안건: {caseTagFor(selectedIndex)}
-          </span>
-        )}
       </div>
     </section>
   );

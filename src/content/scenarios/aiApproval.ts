@@ -66,7 +66,14 @@ export const aiApprovalScenario: Scenario = {
   // (T52 형식 그대로, 새 사실 없음).
   motionBreakdown: {
     proposal: '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다.',
-    undecidedItems: ['결재 범위와 금액 한도', '잘못 승인했을 때 책임', '사람이 다시 보는 절차'],
+    // resolvedBy(T84): 각 미정 항목을 해소하는 조건 id. 그 조건이 확정되면
+    // MotionScreen·VoteScreen·ResultScreen은 이 항목을 "아직 정하지 않은 것"에서 뺀다
+    // (src/content/motionDisplay.ts). BriefingScreen(조건 확정 전 단계)은 영향받지 않는다.
+    undecidedItems: [
+      { text: '결재 범위와 금액 한도', resolvedBy: 'LIMIT' },
+      { text: '잘못 승인했을 때 책임', resolvedBy: 'OWNER' },
+      { text: '사람이 다시 보는 절차', resolvedBy: 'REVIEW' },
+    ],
   },
   initialOpinions: [
     {
@@ -276,12 +283,16 @@ export const aiApprovalScenario: Scenario = {
     pass: '수정안이 승인되었습니다. 운영 전에 확인할 조건도 함께 기록했습니다.',
     reject: '이번 안건은 부결되었습니다. 주요 우려와 이사님의 의견을 기록했습니다.',
     sixMonthsLater: {
-      pass: '소액 반복 결재는 Agent가 처리합니다. 이사회가 붙인 조건이 한도·기록·재검토의 기준이 되었습니다.',
-      passOriginal: 'Agent가 반복 결재를 승인합니다. 한도와 책임은 운영하면서 정해야 합니다.',
+      pass: '소액 반복 결재는 AI 에이전트가 처리합니다. 이사회가 붙인 조건이 한도·기록·재검토의 기준이 되었습니다.',
+      passOriginal: 'AI 에이전트가 반복 결재를 승인합니다. 한도와 책임은 운영하면서 정해야 합니다.',
       reject: '결재는 사람이 그대로 봅니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },
-  remainingTasks: ['결재 범위·한도 확정', '승인 사유 기록 방식', '책임자 지정'],
+  remainingTasks: [
+    { text: '결재 범위·한도 확정', resolvedBy: 'LIMIT' },
+    { text: '승인 사유 기록 방식', resolvedBy: 'LOG' },
+    { text: '책임자 지정', resolvedBy: 'OWNER' },
+  ],
   baseConditionIds: [],
   status: 'active',
 };

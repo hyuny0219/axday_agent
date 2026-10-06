@@ -66,7 +66,13 @@ export const anonBoardScenario: Scenario = {
   // (T52, 새 사실 없음).
   motionBreakdown: {
     proposal: '사내 게시판을 익명제로 전환한다.',
-    undecidedItems: ['작성자 추적 범위', '게시 전 검수', '임원 열람 범위'],
+    // resolvedBy(T84): 보존 안건(레지스트리 밖)이라 화면에 쓰이지 않지만 타입을
+    // 맞춘다. aiApproval.ts 주석과 같은 규칙.
+    undecidedItems: [
+      { text: '작성자 추적 범위', resolvedBy: 'TRACE' },
+      { text: '게시 전 검수', resolvedBy: 'SCREEN' },
+      { text: '임원 열람 범위' },
+    ],
   },
   initialOpinions: [
     {
@@ -285,7 +291,11 @@ export const anonBoardScenario: Scenario = {
       reject: '게시판은 실명 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },
-  remainingTasks: ['신고 처리 담당자 지정', '로그 보관 기간 확정', '운영 효과 측정'],
+  remainingTasks: [
+    { text: '신고 처리 담당자 지정' },
+    { text: '로그 보관 기간 확정' },
+    { text: '운영 효과 측정', resolvedBy: 'MEASURE' },
+  ],
   baseConditionIds: [],
   status: 'active',
 };

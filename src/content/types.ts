@@ -39,12 +39,22 @@ export interface ChairBriefing {
   role: string;
 }
 
+/** 미정 항목 한 줄(T84). `resolvedBy`가 있으면 그 조건이 확정되는 순간 이 항목은 더
+ * 미정이 아니다 — BriefingScreen(조건 확정 전, 항상 전체 표시)과 달리 MotionScreen·
+ * VoteScreen·ResultScreen은 확정 조건에 대응하는 항목을 걸러내고 남은 것만 보여준다
+ * (`src/content/motionDisplay.ts`). 새 사실을 만들지 않고 기존 undecidedItems·
+ * remainingTasks 문자열에 대응 조건 id만 더한 것이다. */
+export interface UndecidedItem {
+  text: string;
+  resolvedBy?: string;
+}
+
 /** 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 표시용 필드(T52, 브리핑 오른쪽
  * 열 2번 블록). 기존 원안 문장(`originalMotion.text`/`subtitle`)을 쪼개 채우며 새 사실을
  * 만들지 않는다. `originalMotion.text`는 표결·프롬프트가 그대로 쓰므로 건드리지 않는다. */
 export interface MotionBreakdown {
   proposal: string;
-  undecidedItems: string[];
+  undecidedItems: UndecidedItem[];
 }
 
 /** 임원 "지금 기울어 있는 쪽"의 값 집합(src/domain/types.ts의 Stance와 같은 리터럴).
@@ -158,7 +168,7 @@ export interface Scenario {
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;
-  remainingTasks: string[];
+  remainingTasks: UndecidedItem[];
   baseConditionIds: string[];
   status: ScenarioStatus;
 }

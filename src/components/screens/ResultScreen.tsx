@@ -19,6 +19,7 @@ import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds } from '../opinionConditions';
+import { buildRemainingTaskLabels } from '../motionDisplay';
 import { buildResultSummary } from '../resultSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
 import { MinutesPanel } from '../parts/MinutesPanel';
@@ -29,6 +30,7 @@ import {
   computeResultStamp,
 } from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
+import { EndSessionConfirm } from '../parts/EndSessionConfirm';
 // 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
 // 스킨)에서 오른쪽 종이 보고서의 전용 칸(200px)으로 옮겼다(docs/design/mockups/README.md
 // "도장은 결과 화면 오른쪽 종이 보고서 우상단에 — 무대에는 표 배지만"). 이 화면이
@@ -104,6 +106,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 상태는 건드리지 않는다. 전문 항목은 다른 화면의 "발언 흐름" 패널과 같은 순수
   // 함수(buildMinutes)로 계산해 항목 수·순서가 어긋나지 않는다.
   const [showTranscript, setShowTranscript] = useState(false);
+  // "처음 화면으로" 확인 단계(T84, Opus UX 검토 #5 — "'체험 종료'가 확인 없이 즉시
+  // 초기화"). 세션 초기화(onReset)는 되돌릴 수 없으므로 한 번 더 확인한다.
+  const [endSessionConfirmOpen, setEndSessionConfirmOpen] = useState(false);
   const transcriptEntries = useMemo(
     () => buildMinutes(session, scenario, roundLog),
     [session, scenario, roundLog],
@@ -155,10 +160,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     scenario.resultCopy.sixMonthsLater,
   );
 
-  // "남은 과제"·"AI가 도운 일" 한 줄(T66 item 2 "라벨 + 항목을 '·'로 이어서"). 과제가
-  // 비어 있으면(준비 중 안건) 줄 자체를 그리지 않는다.
-  const remainingTasksLine =
-    scenario.remainingTasks.length > 0 ? scenario.remainingTasks.join(' · ') : null;
+  // "남은 과제"·"AI가 도운 일" 한 줄(T66 item 2 "라벨 + 항목을 '·'로 이어서"). T84:
+  // 확정 조건에 대응하는 과제(remainingTasks[].resolvedBy)는 빼고 남은 것만 보여준다
+  // (MotionScreen·VoteScreen과 같은 로직 — Opus UX 검토 #3+my#2). 과제가 모두
+  // 해소됐거나(조건부 가결) 원래 없으면(준비 중 안건) 줄 자체를 그리지 않는다.
+  const remainingTaskLabels = buildRemainingTaskLabels(scenario, includedIds);
+  const remainingTasksLine = remainingTaskLabels.length > 0 ? remainingTaskLabels.join(' · ') : null;
 
   return (
     <>
@@ -191,20 +198,38 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             </p>
           )}
         </section>
-        <button type="button" className="cta" onClick={onReset} data-testid="end-session">
-          체험 종료
-        </button>
-        {/* "회의록 전문 보기"(보조 CTA, T58 흡수 — T64 item 7). 세션 상태는 바꾸지
-            않고 오른쪽 열 기록 영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
-        <button
-          type="button"
-          className="cta cta--secondary"
-          onClick={() => setShowTranscript((previous) => !previous)}
-          aria-pressed={showTranscript}
-          data-testid="result-transcript-toggle"
-        >
-          {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
-        </button>
+        {endSessionConfirmOpen ? (
+          <EndSessionConfirm
+            onConfirm={onReset}
+            onCancel={() => setEndSessionConfirmOpen(false)}
+          />
+        ) : (
+          <>
+            {/* "회의록 전문 보기"가 이제 주 CTA다(T84 #5) — 결과 화면에 머무는 동안
+                가장 자주 쓰는 동작이고, 세션 상태는 바꾸지 않고 오른쪽 열 기록
+                영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
+            <button
+              type="button"
+              className="cta"
+              onClick={() => setShowTranscript((previous) => !previous)}
+              aria-pressed={showTranscript}
+              data-testid="result-transcript-toggle"
+            >
+              {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
+            </button>
+            {/* "처음 화면으로"(옛 "체험 종료")는 세션을 초기화하는 되돌릴 수 없는
+                동작이라 보조 CTA로 낮추고, 누르면 바로 초기화하지 않고 확인 단계를
+                먼저 연다(위 EndSessionConfirm). */}
+            <button
+              type="button"
+              className="cta cta--secondary"
+              onClick={() => setEndSessionConfirmOpen(true)}
+              data-testid="end-session"
+            >
+              처음 화면으로
+            </button>
+          </>
+        )}
       </div>
       <div className="app-body__content screen result-screen" data-skip={skip}>
         {/* 종이 보고서 머리글(T64→T66, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약").
@@ -404,18 +429,35 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                     <span data-testid="result-ai-help-none">AI 비서실장 도움은 사용하지 않았습니다.</span>
                   )}
                 </p>
-                {epilogue !== null && (
-                  <p
-                    className="result-verdicts__line result-verdicts__epilogue"
-                    data-testid="result-epilogue"
-                  >
-                    <span className="result-verdicts__epilogue-label">6개월 후</span> {epilogue}{' '}
-                    <span className="result-epilogue__badge">체험용 가상 전망</span>
-                  </p>
-                )}
               </div>
             </section>
           )
+        )}
+        {/* "6개월 뒤" 카드(T84, Opus UX 검토 #8 — "가장 기억에 남을 문장이 12px
+            회색 1줄 클램프라 가장 작다"). VERDICTS 패널 바로 아래 별도 카드로
+            승격하고, VERDICTS 아래 남는 빈 공간을 이 카드 + "이사님이 붙인 조건"
+            큰 칩으로 채운다. 회의록 전문을 보는 동안(showTranscript)은 그리지
+            않는다 — 전문 보기도 VERDICTS와 자리를 바꿔 쓰는 요약 전용 카드다. */}
+        {!showTranscript && resultSummary && epilogue !== null && (
+          <section className="result-epilogue-card" data-testid="result-epilogue">
+            <div className="result-epilogue-card__head">
+              <h3 className="result-screen__section-label">6개월 뒤, 이사님의 결정은</h3>
+              <span className="result-epilogue__badge">체험용 가상 전망</span>
+            </div>
+            <p className="result-epilogue-card__text">{epilogue}</p>
+            <div className="result-epilogue-card__conditions">
+              <span className="result-epilogue-card__conditions-label">이사님이 붙인 조건</span>
+              {resultSummary.conditionLabels.length > 0 ? (
+                <ul className="result-epilogue-card__chips">
+                  {resultSummary.conditionLabels.map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="result-epilogue-card__no-conditions">조건 없이 원안 그대로 상정</span>
+              )}
+            </div>
+          </section>
         )}
       </div>
     </>

@@ -18,7 +18,6 @@ async function advanceClock(page: Page, ms: number): Promise<void> {
 async function enterScenario(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 }
 
 test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ page }) => {

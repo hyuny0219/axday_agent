@@ -66,10 +66,11 @@ export const experienceFirstScenario: Scenario = {
   },
   motionBreakdown: {
     proposal: '중요한 의사결정에서는 데이터보다 경험 있는 사람의 판단을 우선한다.',
+    // resolvedBy(T84): aiApproval.ts 주석과 같은 규칙.
     undecidedItems: [
-      '"중요한 의사결정"의 기준',
-      '경험을 우선할 때 데이터는 어떻게 쓰나',
-      '판단이 틀렸을 때 되짚는 방법',
+      { text: '"중요한 의사결정"의 기준', resolvedBy: 'SCOPE' },
+      { text: '경험을 우선할 때 데이터는 어떻게 쓰나', resolvedBy: 'DATA_VETO' },
+      { text: '판단이 틀렸을 때 되짚는 방법', resolvedBy: 'REVIEW' },
     ],
   },
   initialOpinions: [
@@ -289,7 +290,11 @@ export const experienceFirstScenario: Scenario = {
       reject: '결정 규칙은 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },
   },
-  remainingTasks: ['"중요한 의사결정"의 기준', '판단 근거 기록 양식', '복기 주기'],
+  remainingTasks: [
+    { text: '"중요한 의사결정"의 기준', resolvedBy: 'SCOPE' },
+    { text: '판단 근거 기록 양식', resolvedBy: 'RECORD' },
+    { text: '복기 주기', resolvedBy: 'REVIEW' },
+  ],
   baseConditionIds: [],
   status: 'active',
 };

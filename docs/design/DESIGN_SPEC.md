@@ -551,3 +551,6 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 `npm run check`(단위 506)·`npm run build`·`npx playwright test -c playwright.local.config.ts` 모두 통과. 두 해상도 스크린샷을 전부 재생성해 라벨 길이 변화(대부분 더 짧아짐)로 인한 줄바꿈·잘림이 없는지 육안으로 확인했다.
 
+## T84 — 참가자 흐름·화면 구조 다듬기 (2026-10-07)
+
+Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안건 카드 클릭 즉시 입장(SELECT), live 응답 대기 중 CTA 잠금(OPINIONS), 후속 "유지" 카드→보조 버튼 "답하지 않고 넘어가기"(REACTIONS), 안건 문장을 확정 조건 반영해 동적 구성(MOTION·VOTE·RESULT, `motionDisplay.ts`), 결과 화면 주 버튼 "회의록 전문 보기" + "처음 화면으로" 확인 단계, "6개월 뒤" 카드 승격(RESULT).

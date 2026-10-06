@@ -54,15 +54,12 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
 
   await page.getByRole('button', { name: '체험 시작' }).click();
 
-  // SELECT(T70): 시안(S1_Select) 카드 2장(활성 1 + 준비 중 1) 중 활성 안건을 선택한 상태.
-  await page.getByTestId('scenario-card-ai-approval').click();
-  await expect(page.getByTestId('scenario-card-ai-approval')).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  // SELECT(T70): 시안(S1_Select) 카드 2장이 보이는 상태. T84 #10부터 카드를 누르면
+  // 바로 입장하므로(별도 선택 상태·CTA가 없다) 입장 전 화면을 그대로 캡처한다.
+  await expect(page.getByTestId('scenario-card-ai-approval')).toBeVisible();
   await capture(page, testInfo.project.name, 'select');
+  await page.getByTestId('scenario-card-ai-approval').click();
 
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 
   // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·근거 자료 버튼·CTA(T68).
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
@@ -141,7 +138,9 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
-  await page.getByTestId('followup-option-2').click();
+  // T84 #1: "앞서 전달한 의견을 유지하겠습니다" 체크 카드를 보조 버튼 "답하지 않고
+  // 넘어가기"로 옮겼다 — 확정한 4개 조건은 그대로 넘어간다.
+  await page.getByTestId('keep-previous-answer').click();
 
   // MOTION(T75, S5_Motion): 확정 조건 4개가 반영된 MOTION ON THE TABLE·CONDITIONS·
   // NOT INCLUDED·CHAIR 안내가 모두 보이는 상태를 캡처한 뒤 표결을 건다.
@@ -160,9 +159,9 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(confirmVote).toBeEnabled();
   await confirmVote.click();
 
-  // RESULT: 왼쪽 열(TALLY+체험 종료 CTA)과 오른쪽 열(종이 보고서: 결론·도장 칸·
-  // VERDICTS)이 스크롤 없이 한 화면에 모두 보인다(T66). 표결 배지·결론 도장(T43)이
-  // 다 나온 뒤에 캡처한다.
+  // RESULT: 왼쪽 열(TALLY+"처음 화면으로" 보조 CTA)과 오른쪽 열(종이 보고서: 결론·
+  // 도장 칸·VERDICTS)이 스크롤 없이 한 화면에 모두 보인다(T66). 표결 배지·결론
+  // 도장(T43)이 다 나온 뒤에 캡처한다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
   await expect(page.getByTestId('result-stamp')).toBeVisible();
@@ -173,13 +172,13 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await capture(page, testInfo.project.name, 'result');
 
   // 부결 경로(찬성 2석) 스크린샷(T66 완료 확인 "부결 경로 스크린샷 1장 추가"). 같은
-  // 세션을 리셋하지 않고 "체험 종료" 전에 이미 result.png를 찍었으니, 여기서는
-  // 새로 완주해 반대를 확정한다.
+  // 세션을 리셋하지 않고 "처음 화면으로" 전에 이미 result.png를 찍었으니, 여기서는
+  // 새로 완주해 반대를 확정한다. T84 #5부터 "처음 화면으로"는 확인 단계를 먼저 연다.
   await page.getByTestId('end-session').click();
+  await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
