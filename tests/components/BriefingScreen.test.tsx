@@ -44,18 +44,14 @@ describe('BriefingScreen', () => {
     }
   });
 
-  // PR #14 Codex 1차 검토(P2): 마지막 UNKNOWN 항목은 글자색을 배경과 같게 해
-  // 시각적으로만 가린다(먹칠) — 평문 텍스트만 읽으면 스크린리더 사용자는 "먹칠된
-  // 상태"를 알 수 없으므로 aria-label로 값과 상태를 함께 읽어 준다.
-  it('마지막 UNKNOWN 항목은 값과 "먹칠 처리된 미정 항목" 상태를 함께 읽는 aria-label을 가진다', () => {
+  // T81(2026-10-07): 시안의 마지막 UNKNOWN 항목 먹칠을 제거했다 — 모든 미정 항목이
+  // 가려지지 않은 평문으로 보이고, 먹칠용 클래스·aria-label은 남지 않는다.
+  it('UNKNOWN 항목은 전부 평문으로 보이고 먹칠 요소가 없다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     const items = anonBoardScenario.motionBreakdown.undecidedItems;
-    const lastItem = items[items.length - 1]!;
-    const redacted = screen.getByText(lastItem, { selector: '.briefing-screen__undecided-redacted' });
-    expect(redacted).toHaveAttribute('aria-label', `${lastItem} (먹칠 처리된 미정 항목)`);
-    // 앞선 항목들은 먹칠하지 않고 평문 그대로 보인다.
-    for (const item of items.slice(0, -1)) {
-      expect(screen.getByText(new RegExp(item))).toBeInTheDocument();
-    }
+    const line = screen.getByText(items.join(' · '), { selector: '.briefing-screen__undecided-muted' });
+    expect(line).toBeInTheDocument();
+    expect(document.querySelector('.briefing-screen__undecided-redacted')).toBeNull();
+    expect(document.querySelector('[aria-label*="먹칠"]')).toBeNull();
   });
 });

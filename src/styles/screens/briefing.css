@@ -168,16 +168,9 @@
   color: var(--stamp-red);
 }
 
-/* UNKNOWN 항목(시안 — 마지막 항목만 먹칠). 앞선 항목은 흐린 잉크, 마지막 항목은
-   글자색을 배경과 같게 해 시각적으로만 가린다(텍스트 자체는 DOM·스크린리더에 남는다,
-   카드 명시). */
+/* UNKNOWN 항목: 흐린 잉크 평문. 시안의 마지막 항목 먹칠은 T81에서 제거했다. */
 .briefing-screen__undecided-muted {
   color: var(--ink-muted);
-}
-
-.briefing-screen__undecided-redacted {
-  background-color: var(--ink);
-  color: var(--ink);
 }
 
 /* YOUR ORDERS 점선 상자(시안 — 역할 문장 + FINAL CALL). border는 motion-screen의

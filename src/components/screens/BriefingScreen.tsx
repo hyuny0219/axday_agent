@@ -31,16 +31,11 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
   const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
 
-  // UNKNOWN 줄(시안): 미정 항목을 " · "로 이어 붙이되, 시안의 먹칠(redaction)은
-  // 마지막 항목에만 건다(카드 명시) — 글자색을 배경과 같게 해 시각적으로만 가리고
-  // 텍스트 자체는 DOM에 그대로 남긴다. 항목이 1개뿐이면 앞선 안내 문구 없이 그
-  // 하나만 먹칠한다. PR #14 Codex 1차 검토(P2): 화면이 보이는 참가자에게는 "먹칠돼
-  // 아직 안 정해졌다"는 상태가 중요한데 평문 텍스트만 읽으면 스크린리더 사용자는
-  // 그 상태를 알 수 없었다 — `aria-label`로 값과 "먹칠 처리된 미정 항목"이라는 상태를
-  // 함께 읽어 준다(값 자체도 감추지 않는다).
+  // UNKNOWN 줄: 미정 항목을 " · "로 이어 붙여 흐린 잉크로 보여 준다. 시안 Main.html의
+  // 마지막 항목 먹칠(redaction, T80)은 2026-10-07 사용자 지시로 제거했다 — 참가자가
+  // 렌더링 오류로 오해할 수 있고, 가린 값이 DOM에 그대로 남아 접근성 보완(aria-label)이
+  // 필요했던 연출이라 걷어내고 전부 평문으로 둔다(T81).
   const undecidedItems = scenario.motionBreakdown.undecidedItems;
-  const redactedItem = undecidedItems[undecidedItems.length - 1];
-  const leadingItems = undecidedItems.slice(0, -1);
 
   return (
     <>
@@ -70,18 +65,10 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               <span className="briefing-screen__label">PROPOSAL</span>
               {scenario.motionBreakdown.proposal}
             </p>
-            {redactedItem && (
+            {undecidedItems.length > 0 && (
               <p className="briefing-screen__undecided">
                 <span className="briefing-screen__label briefing-screen__label--unknown">UNKNOWN</span>
-                {leadingItems.length > 0 && (
-                  <span className="briefing-screen__undecided-muted">{leadingItems.join(' · ')} · </span>
-                )}
-                <span
-                  className="briefing-screen__undecided-redacted"
-                  aria-label={`${redactedItem} (먹칠 처리된 미정 항목)`}
-                >
-                  {redactedItem}
-                </span>
+                <span className="briefing-screen__undecided-muted">{undecidedItems.join(' · ')}</span>
               </p>
             )}
           </div>
