@@ -84,7 +84,7 @@ test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반�
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
 
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await page.getByTestId('freeze-motion').click();
 
   await page.getByTestId('vote-radio-YES').check();

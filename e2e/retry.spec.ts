@@ -218,7 +218,7 @@ test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();
 

@@ -30,7 +30,7 @@ async function enterReactions(page: Page) {
 
 /** REACTIONS에서 시작해 VOTE까지 이동한다(빠른 답 3번 선택 → 최종안 고정). */
 async function enterVote(page: Page) {
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();

@@ -306,7 +306,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // CAIO 후속 질문이 답글 카드 아래에서 잘리지 않고 보인다.
   await expect(page.getByTestId('followup-question')).toBeInViewport();
 
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();

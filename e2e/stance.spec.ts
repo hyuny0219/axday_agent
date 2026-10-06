@@ -55,7 +55,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--for/);
 
-    await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+    await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();
 
@@ -136,7 +136,7 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차).
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
@@ -181,7 +181,7 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
 
-    await page.getByTestId('followup-option-2').click();
+    await page.getByTestId('keep-previous-answer').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await expect(page.getByTestId('freeze-motion')).toBeEnabled();
     await page.getByTestId('freeze-motion').click();
