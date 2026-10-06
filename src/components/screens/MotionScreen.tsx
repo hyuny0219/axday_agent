@@ -21,6 +21,7 @@ import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { collectConfirmedConditionIds } from '../opinionConditions';
+import { buildMotionDisplay } from '../motionDisplay';
 import '../../styles/screens/motion.css';
 import '../../styles/screens/live.css';
 
@@ -85,6 +86,11 @@ export function MotionScreen({
   // 건드리지 않는다(문구는 항상 scenario.originalMotion.text 그대로).
   const motionKindLabel = confirmedConditionIds.length === 0 ? '원안' : '수정안';
 
+  // 표결 안건 문장(T84, Opus UX 검토 #3+my#2): scenario.originalMotion.text를 그대로
+  // 보여주면 조건을 붙여도 "…절차는 미정이다."로 끝나 모순돼 보인다. 표시만 동적으로
+  // 구성한다(motion.text 자체·freezeMotion에 넘기는 값은 바뀌지 않는다).
+  const motionDisplay = buildMotionDisplay(scenario, confirmedConditionIds);
+
   // "NOT INCLUDED · 빠진 것"(시안): 이번에 확정되지 않은 조건들을 그대로 나열한다 — 새
   // 사실을 만들지 않고 scenario.conditions·확정 목록만으로 계산한다.
   const notIncludedLabels = scenario.conditions
@@ -120,7 +126,12 @@ export function MotionScreen({
           </div>
           <div className="motion-screen__motion-box" data-testid="motion-card">
             <span className="motion-screen__box-label">표결 안건 · {motionKindLabel}</span>
-            <p className="motion-screen__motion-text">{scenario.originalMotion.text}</p>
+            <p className="motion-screen__motion-text">{motionDisplay.sentence}</p>
+            {motionDisplay.undecidedLabels.length > 0 && (
+              <p className="motion-screen__not-included-text" data-testid="motion-undecided">
+                아직 정하지 않은 것 · {motionDisplay.undecidedLabels.join(' · ')}
+              </p>
+            )}
           </div>
           <div className="motion-screen__cols">
             <div className="motion-screen__cols-box">

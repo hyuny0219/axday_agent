@@ -599,3 +599,6 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 `npm run check`(단위 506, 전부 통과)·`npx playwright test -c <로컬 scratchpad 설정>`(142건, 두 해상도 모두 통과) 확인. `UPDATE_SCREENSHOTS=1`로 `docs/screenshots/{desktop-1080,desktop-720}/*.png` 24장을 전부 갱신하고 1280 스크린샷을 육안 확인했다 — MOTION 의장 말풍선·NOT INCLUDED 새 문구, RESULT의 DEBRIEF 01·진행 탭 5개 완료·참가자 "나" 명패·TALLY 새 문구, REACTIONS의 비활성 CTA 안내·AI 비서실장 버튼 라벨이 모두 의도대로 보이고 잘림·겹침은 없다. BRIEFING EXHIBIT 압축 카드의 세로 여백 문제(my#8 일부)와 AssistantPanel "열기" 버튼의 scripted 무반응 의심(my#11)은 이 카드에서 재현/확인하지 못해 손대지 않았다.
 
+## T84 — 참가자 흐름·화면 구조 다듬기 (2026-10-07)
+
+Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안건 카드 클릭 즉시 입장(SELECT), live 응답 대기 중 CTA 잠금(OPINIONS), 후속 "유지" 카드→보조 버튼 "답하지 않고 넘어가기"(REACTIONS), 안건 문장을 확정 조건 반영해 동적 구성(MOTION·VOTE·RESULT, `motionDisplay.ts`), 결과 화면 주 버튼 "회의록 전문 보기" + "처음 화면으로" 확인 단계, "6개월 뒤" 카드 승격(RESULT).

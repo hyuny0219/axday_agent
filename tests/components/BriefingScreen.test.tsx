@@ -48,7 +48,7 @@ describe('BriefingScreen', () => {
   // 가려지지 않은 평문으로 보이고, 먹칠용 클래스·aria-label은 남지 않는다.
   it('UNKNOWN 항목은 전부 평문으로 보이고 먹칠 요소가 없다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
-    const items = anonBoardScenario.motionBreakdown.undecidedItems;
+    const items = anonBoardScenario.motionBreakdown.undecidedItems.map((item) => item.text);
     const line = screen.getByText(items.join(' · '), { selector: '.briefing-screen__undecided-muted' });
     expect(line).toBeInTheDocument();
     expect(document.querySelector('.briefing-screen__undecided-redacted')).toBeNull();

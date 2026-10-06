@@ -6,7 +6,6 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -23,7 +22,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
 
   // MOTION: 확정된 조건으로 표결을 건다.
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -45,6 +44,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 
   await page.getByTestId('end-session').click();
+  await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
 });
 
@@ -54,7 +54,6 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -102,7 +101,6 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -117,7 +115,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
@@ -158,7 +156,6 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
 
@@ -170,7 +167,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+  await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
@@ -189,5 +186,6 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 
   await page.getByTestId('end-session').click();
+  await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
 });

@@ -77,7 +77,7 @@ describe('anonBoardScenario', () => {
     expect(scenario.motionBreakdown.proposal.length).toBeGreaterThan(0);
     expect(scenario.motionBreakdown.undecidedItems.length).toBeGreaterThan(0);
     for (const item of scenario.motionBreakdown.undecidedItems) {
-      expect(scenario.subtitle).toContain(item);
+      expect(scenario.subtitle).toContain(item.text);
     }
   });
 

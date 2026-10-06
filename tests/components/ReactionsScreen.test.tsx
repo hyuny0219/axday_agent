@@ -259,7 +259,7 @@ describe('ReactionsScreen', () => {
     expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('바뀜');
   });
 
-  it('RebuildConfirm이 뜬 동안 추천 답변 카드가 모두 잠겨 "앞서 전달한 의견을 유지하겠습니다"를 눌러도 다음 단계로 넘어가지 않는다(PR #12 Codex 5차 검토 P2-b)', () => {
+  it('RebuildConfirm이 뜬 동안 "답하지 않고 넘어가기"를 눌러도 다음 단계로 넘어가지 않는다(PR #12 Codex 5차 검토 P2-b, T84 #1)', () => {
     let keepPreviousCalls = 0;
     render(
       <ReactionsScreen
@@ -282,11 +282,10 @@ describe('ReactionsScreen', () => {
     fireEvent.click(screen.getByTestId('followup-option-0'));
     expect(screen.getByTestId('rebuild-confirm')).toBeInTheDocument();
 
-    // anonBoard의 세 번째 옵션(index 2)이 keepPrevious다 — 확인 UI가 뜬 동안에는
-    // 카드 자체가 잠겨 있어야 하고, 클릭해도 onKeepPrevious가 불리면 안 된다.
-    const keepPreviousCard = screen.getByTestId('followup-option-2');
-    expect(keepPreviousCard.querySelector('input')).toBeDisabled();
-    fireEvent.click(keepPreviousCard);
+    // T84 #1: keepPrevious 옵션은 더 이상 체크 카드로 그리지 않고 "답하지 않고 넘어가기"
+    // 보조 버튼이다 — 확인 UI가 뜬 동안에는 눌러도 onKeepPrevious가 불리면 안 된다.
+    expect(screen.queryByTestId('followup-option-2')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
     expect(keepPreviousCalls).toBe(0);
     expect(screen.getByTestId('rebuild-confirm')).toBeInTheDocument();
     // 직접 쓴 텍스트도 그대로 남아 있다(건너뛰고 버려지지 않았다).

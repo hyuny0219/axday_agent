@@ -34,7 +34,8 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 마지막 항목 먹칠(redaction, T80)은 2026-10-07 사용자 지시로 제거했다 — 참가자가
   // 렌더링 오류로 오해할 수 있고, 가린 값이 DOM에 그대로 남아 접근성 보완(aria-label)이
   // 필요했던 연출이라 걷어내고 전부 평문으로 둔다(T81).
-  const undecidedItems = scenario.motionBreakdown.undecidedItems;
+  // T84: undecidedItems는 { text, resolvedBy? } 객체 — BRIEFING은 조건 확정 전이라 text 전체.
+  const undecidedItems = scenario.motionBreakdown.undecidedItems.map((item) => item.text);
 
   return (
     <>
