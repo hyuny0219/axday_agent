@@ -278,6 +278,26 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       expect(proposeFromText(scenario, text), text).toEqual(['LIMIT']);
     }
   });
+
+  // PR #13 Codex 7차 검토 P1: '-세요'를 요청형으로 보고 통째로 제외했더니 존대 의문문이
+  // 빠져나갔다. 의문사와 함께 쓰인 '-세요'는 질문이고, 명령형 '-세요'와 같이 오는
+  // 의문사 꼴은 부정칭('어떤 ~든'·'무엇보다')이라 제안을 유지한다.
+  it('의문사 + 존대 종결 -세요 문장은 물음표가 없어도 제안하지 않는다(PR #13 Codex 7차 검토)', () => {
+    for (const text of [
+      '왜 금액 한도를 정하세요',
+      '결재 규칙 책임자는 누구세요',
+      '승인 사유를 기록하는 양식은 어디에 있으세요',
+    ]) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+    for (const text of [
+      '금액 한도를 정하세요.',
+      '어떤 기준이든 금액 한도를 정하세요.',
+      '무엇보다 금액 한도를 정하세요.',
+    ]) {
+      expect(proposeFromText(scenario, text), text).toEqual(['LIMIT']);
+    }
+  });
 });
 
 describe('findConflicts', () => {
