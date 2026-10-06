@@ -203,10 +203,9 @@ export function DiscussScreen({
     }));
   }, [mode, roleStatus, transcript, stances, scenario]);
 
-  // CASE 칩(시안 "CASE 02"): scenario.incident.caseLabel("사건 02")의 숫자만 뽑는다
-  // (ResultScreen·BriefingScreen의 caseTag 계산과 같은 규칙).
-  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
-  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
+  // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
+  // "사건 02" 형식이라 그대로 쓴다(ResultScreen·BriefingScreen도 같다).
+  const caseTag = scenario.incident.caseLabel;
 
   function handleTogglePhrase(phraseId: string) {
     const result = togglePhrase(draft, scenario, phraseId);
@@ -302,7 +301,7 @@ export function DiscussScreen({
       <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">
         <div className="discuss-screen__paper">
           <div className="discuss-screen__head">
-            <span className="discuss-screen__step">STEP 03</span>
+            <span className="discuss-screen__step">3단계</span>
             {/* 시안 원본은 <h1>이지만, 이 화면은 ATTRACT의 페이지 <h1>("BOARDROOM 2026")
                 아래 중첩되는 화면 제목이라 다른 조종석 화면과 같은 <h2> 위계를 쓴다 —
                 글자 크기·굵기는 시안 값 그대로다. */}
@@ -331,10 +330,10 @@ export function DiscussScreen({
             >
               근거 자료 · 임원 발언 보기
             </button>
-            <span className="evidence-open-hint">EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명</span>
+            <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
           </div>
           <div className="discuss-screen__stance-row" data-testid="discuss-stance-row">
-            <span className="discuss-screen__stance-label">STANCE</span>
+            <span className="discuss-screen__stance-label">입장</span>
             {EXEC_MEMBER_ORDER.map((memberId) => {
               const stance = stances[memberId];
               return (

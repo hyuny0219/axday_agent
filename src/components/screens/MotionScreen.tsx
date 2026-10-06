@@ -110,22 +110,22 @@ export function MotionScreen({
       <div className="app-body__content screen motion-screen__info">
         <div className="motion-screen__paper">
           <span className="motion-screen__stamp" aria-hidden="true">
-            DRAFT
+            초안
           </span>
           <div className="motion-screen__head">
-            <span className="motion-screen__step">STEP 05 · 1/2</span>
+            <span className="motion-screen__step">5단계 · 1/2</span>
             {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T72와
                 같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
             <h2 className="motion-screen__title">지금 표결할 안건</h2>
           </div>
           <div className="motion-screen__motion-box" data-testid="motion-card">
-            <span className="motion-screen__box-label">MOTION ON THE TABLE · {motionKindLabel}</span>
+            <span className="motion-screen__box-label">표결 안건 · {motionKindLabel}</span>
             <p className="motion-screen__motion-text">{scenario.originalMotion.text}</p>
           </div>
           <div className="motion-screen__cols">
             <div className="motion-screen__cols-box">
               <span className="motion-screen__box-label">
-                CONDITIONS · 반영된 조건 {confirmedConditionIds.length}
+                반영된 조건 {confirmedConditionIds.length}
               </span>
               {confirmedConditionIds.length > 0 ? (
                 <ul className="motion-screen__conditions" data-testid="motion-conditions">
@@ -140,7 +140,7 @@ export function MotionScreen({
               )}
             </div>
             <div className="motion-screen__cols-box">
-              <span className="motion-screen__box-label">NOT INCLUDED · 빠진 것</span>
+              <span className="motion-screen__box-label">빠진 것</span>
               <p className="motion-screen__not-included-text">
                 {notIncludedLabels.length > 0
                   ? `${notIncludedLabels.join(' · ')}은(는) 이사님이 선택하지 않아 상정하지 않습니다. `
@@ -150,7 +150,7 @@ export function MotionScreen({
             </div>
           </div>
           <div className="motion-screen__chair-box">
-            <span className="motion-screen__box-label">CHAIR · 의장</span>
+            <span className="motion-screen__box-label">의장</span>
             <p className="motion-screen__chair-text">
               이 문안을 고정하고 표결로 넘어갑니다. 고정한 뒤에는 조건을 바꿀 수 없습니다. 임원 네
               명은 같은 문안을 읽고 각자 표를 정합니다.
@@ -166,7 +166,7 @@ export function MotionScreen({
             >
               이 안건으로 표결 ▶
             </button>
-            <span className="motion-screen__cta-hint">FREEZE MOTION · 조건 확정</span>
+            <span className="motion-screen__cta-hint">조건 확정</span>
           </div>
           {freezeDisabled && (
             <p className="motion-screen__waiting" data-testid="motion-waiting-followup">

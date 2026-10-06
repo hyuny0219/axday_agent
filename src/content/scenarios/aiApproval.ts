@@ -1,4 +1,4 @@
-// 안건 ① — AI Agent에게 결재권을 부여한다 (docs/SCENARIO_AI_APPROVAL.md v2 그대로 옮김,
+// 안건 ① — AI 에이전트에게 결재권을 부여한다 (docs/SCENARIO_AI_APPROVAL.md v2 그대로 옮김,
 // 2026-10-02 사용자 승인). 본 시나리오의 수치·대사·의결 규칙은 체험용 가상 설정이며
 // 실제 삼성화재 자료가 아니다. 구조는 이전 안건(anonBoard.ts)과 같다 — 조건 5개,
 // 상충 1쌍, 표결 규칙 12행.
@@ -7,10 +7,10 @@ import type { Scenario } from '../types';
 
 export const aiApprovalScenario: Scenario = {
   id: 'ai-approval',
-  title: 'AI Agent에게 결재권을 줄까',
-  selectLine: 'AI Agent에게 결재권을 줄까',
+  title: 'AI 에이전트에게 결재권을 줄까',
+  selectLine: 'AI 에이전트에게 결재권을 줄까',
   subtitle:
-    '정해진 범위의 반복 결재를 AI Agent가 직접 승인한다. 결재 범위와 금액 한도, 잘못 승인했을 때 책임, 사람이 다시 보는 절차는 미정이다.',
+    '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다. 결재 범위와 금액 한도, 잘못 승인했을 때 책임, 사람이 다시 보는 절차는 미정이다.',
   incident: {
     caseLabel: '사건 01',
     headline: '결재는 쌓이고, 담당자는 부재중',
@@ -18,7 +18,7 @@ export const aiApprovalScenario: Scenario = {
   },
   originalMotion: {
     id: 'ai-approval-original',
-    text: '정해진 범위의 반복 결재를 AI Agent가 직접 승인한다. 범위·한도·책임·재검토 절차는 미정이다.',
+    text: '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다. 범위·한도·책임·재검토 절차는 미정이다.',
   },
   evidence: [
     {
@@ -59,13 +59,13 @@ export const aiApprovalScenario: Scenario = {
   },
   chairBriefing: {
     situation: '비용·휴가·구매 같은 반복 결재가 하루 수십 건 쌓이고, 결재자가 자리를 비우면 며칠씩 멈춥니다.',
-    question: 'AI Agent에게 결재권을 줄까요?',
+    question: 'AI 에이전트에게 결재권을 줄까요?',
     role: '의견을 내고, 필요한 조건도 직접 제안할 수 있습니다. 마지막에는 한 표를 던집니다.',
   },
   // 원안 문장(subtitle과 동일)을 "제안"과 "아직 정하지 않은 것"으로 그대로 쪼갠 것이다
   // (T52 형식 그대로, 새 사실 없음).
   motionBreakdown: {
-    proposal: '정해진 범위의 반복 결재를 AI Agent가 직접 승인한다.',
+    proposal: '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다.',
     undecidedItems: ['결재 범위와 금액 한도', '잘못 승인했을 때 책임', '사람이 다시 보는 절차'],
   },
   initialOpinions: [

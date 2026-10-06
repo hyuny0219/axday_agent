@@ -259,10 +259,10 @@ export function StageBand({
         <div className="stage-band__bracket stage-band__bracket--bl" />
         <div className="stage-band__bracket stage-band__bracket--br" />
         <div className="stage-band__readout">
-          <span>CAM 01 · 회의실 A</span>
-          <span>REC ●</span>
+          <span>회의실 A</span>
+          <span>녹화중</span>
         </div>
-        <div className="stage-band__classified">CLASSIFIED</div>
+        <div className="stage-band__classified">기밀</div>
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,

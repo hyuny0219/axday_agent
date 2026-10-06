@@ -30,10 +30,11 @@ export interface EvidenceGridProps {
   variant?: 'dialog' | 'compact';
 }
 
-// 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록"). 화면 문구에
-// 자료 ID(E1~E4)를 쓰지 않는 규칙(위 주석)을 그대로 지키기 위해 ID 대신 카드 순서로
-// A~D를 매긴다 — evidence-card-{id} 같은 자동화용 값이 아니라 순수 장식이다.
-const EXHIBIT_LETTERS = ['A', 'B', 'C', 'D'] as const;
+// 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록", T83에서
+// "자료 ①" 형식으로 한국어화). 화면 문구에 자료 ID(E1~E4)를 쓰지 않는 규칙(위 주석)을
+// 그대로 지키기 위해 ID 대신 카드 순서로 ①~④를 매긴다 — evidence-card-{id} 같은
+// 자동화용 값이 아니라 순수 장식이다.
+const EXHIBIT_MARKS = ['①', '②', '③', '④'] as const;
 
 export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps) {
   const isCompact = variant === 'compact';
@@ -50,7 +51,7 @@ export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps
               한 줄로, 원문(content)을 그 아래 흐린 메타 줄로 둔다. */}
           <h3 className="evidence-card__heading">
             <span className="evidence-card__tag" aria-hidden="true">
-              EXHIBIT {EXHIBIT_LETTERS[index % EXHIBIT_LETTERS.length]}
+              자료 {EXHIBIT_MARKS[index % EXHIBIT_MARKS.length]}
             </span>
             {' · '}
             {card.title}

@@ -16,11 +16,12 @@ export interface SelectScreenProps {
   onEnter: (scenarioId: string) => void;
 }
 
-/** 카드 좌상단 CASE 칩(시안 "CASE 01"/"CASE 02"). 시나리오 데이터의 caseLabel(예
- * "사건 02")은 BRIEFING eyebrow 등 다른 화면이 그대로 쓰므로 바꾸지 않고, 이 칩은
- * 카드 배열 순서(1부터)로만 번호를 매긴다 — anon-board 콘텐츠를 건드리지 않는다. */
+/** 카드 좌상단 사건 칩(시안 "CASE 01"/"CASE 02", T83에서 한국어 "사건 01"/"사건 02"로
+ * 교체). 시나리오 데이터의 caseLabel(예 "사건 02")은 BRIEFING eyebrow 등 다른 화면이
+ * 그대로 쓰므로 바꾸지 않고, 이 칩은 카드 배열 순서(1부터)로만 번호를 매긴다 —
+ * anon-board 콘텐츠를 건드리지 않는다. */
 function caseTagFor(index: number): string {
-  return `CASE ${String(index + 1).padStart(2, '0')}`;
+  return `사건 ${String(index + 1).padStart(2, '0')}`;
 }
 
 export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
@@ -38,13 +39,13 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
         <div className="select-screen__bracket select-screen__bracket--bl" />
         <div className="select-screen__bracket select-screen__bracket--br" />
         <div className="select-screen__readout">
-          <span>CAM 01 · 회의실 A</span>
-          <span className="select-screen__readout-dim">STANDBY · 안건 대기</span>
+          <span>회의실 A</span>
+          <span className="select-screen__readout-dim">안건 대기 중</span>
         </div>
       </div>
 
       <div className="select-screen__heading">
-        <span className="select-screen__eyebrow">CASE SELECTION · 안건 선택</span>
+        <span className="select-screen__eyebrow">안건 선택</span>
         <h2 className="select-screen__title">안건을 선택해 주세요</h2>
       </div>
 
@@ -73,12 +74,12 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
                 }`}
                 aria-hidden="true"
               >
-                {disabled ? '준비 중' : 'CONFIDENTIAL'}
+                {disabled ? '준비 중' : '대외비'}
               </span>
               <span className="scenario-card__case">{caseTagFor(index)}</span>
               <h3 className="scenario-card__title">{scenario.chairBriefing.question}</h3>
               <span className="scenario-card__footer">
-                {disabled ? 'FILE SEALED · 다음 안건을 준비하고 있습니다' : 'OPEN FILE · 선택하면 이사회에 입장합니다'}
+                {disabled ? '봉인됨 · 다음 안건을 준비하고 있습니다' : '열람 가능 · 선택하면 이사회에 입장합니다'}
               </span>
             </button>
           );

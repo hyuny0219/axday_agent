@@ -17,7 +17,8 @@ import { DRAFT_MAX_LENGTH } from '../../domain/draft';
 export interface DraftEditorProps {
   value: string;
   onChange: (text: string) => void;
-  /** HUD 머리줄 라벨(시안 "MY STATEMENT · 내 발언"/"MY REPLY · 내 답변"). */
+  /** HUD 머리줄 라벨(시안 "MY STATEMENT · 내 발언"/"MY REPLY · 내 답변", T83에서
+   * 한국어화). */
   label?: string;
   ariaLabel?: string;
   placeholder?: string;
@@ -29,7 +30,7 @@ export interface DraftEditorProps {
 export function DraftEditor({
   value,
   onChange,
-  label = 'MY STATEMENT · 내 발언',
+  label = '내 발언',
   ariaLabel = '내 발언',
   placeholder = '이사님의 의견을 직접 입력하거나 선택한 문구를 수정해 주세요.',
   textareaTestId = 'draft-editor-textarea',

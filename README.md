@@ -4,7 +4,7 @@
 
 삼성화재 AX Day 2026 · BOARDROOM 2026: 4분 이사회
 
-참가자는 특별 이사로 가상 임원 4명과 토론하고 마지막에 한 표를 행사합니다. 안건은 2026-10-02(T78)에 두 개로 교체했습니다 — ① [AI Agent에게 결재권을 줄까](docs/SCENARIO_AI_APPROVAL.md)·② [데이터보다 경험이 중요할까](docs/SCENARIO_EXPERIENCE_FIRST.md). P0(두 안건 전 구간 완주, live/scripted 겸용)는 구현이 끝났고 PR 준비 단계입니다([진행 상황](docs/TASKS.md#진행-상황)). 관람 뷰·P2(서버 배포·튜닝)는 아직 착수 전입니다.
+참가자는 특별 이사로 가상 임원 4명과 토론하고 마지막에 한 표를 행사합니다. 안건은 2026-10-02(T78)에 두 개로 교체했습니다 — ① [AI 에이전트에게 결재권을 줄까](docs/SCENARIO_AI_APPROVAL.md)·② [데이터보다 경험이 중요할까](docs/SCENARIO_EXPERIENCE_FIRST.md). P0(두 안건 전 구간 완주, live/scripted 겸용)는 구현이 끝났고 PR 준비 단계입니다([진행 상황](docs/TASKS.md#진행-상황)). 관람 뷰·P2(서버 배포·튜닝)는 아직 착수 전입니다.
 
 ## 설치
 
@@ -85,7 +85,7 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 
 ## 완료 범위 (P0)
 
-- 두 안건(① AI Agent 결재권·② 데이터보다 경험) 모두 전 구간을 실제 브라우저에서 마우스 클릭·키보드만으로 완주(추천 문구만 / 직접 입력만 두 경로 모두).
+- 두 안건(① AI 에이전트 결재권·② 데이터보다 경험) 모두 전 구간을 실제 브라우저에서 마우스 클릭·키보드만으로 완주(추천 문구만 / 직접 입력만 두 경로 모두).
 - 추천 문구 복수 선택, 300자 제한, 편집 보존, 공백 방지, 후속 질문 조건 유지/해제.
 - 최종 투표 이전에는 찬성/반대 버튼이 없고, 참가자 표는 확정 버튼으로만 성립. 임원 표는 최초 대기 8초 안에 도착·검증된 것을 집계하고, 실패한 임원은 운영자가 "미표결 임원 다시 요청"을 1회 누를 수 있다(T65 — 8초 뒤 5초 유예 안에 시작한 재요청은 자체 타임아웃까지 기다려 도착한 표를 집계). 그래도 없는 표는 UNCAST.
 - 운영자 메뉴(새 체험 확인, scripted로 새 체험, 모델 연결 확인, 전체화면 진입/종료), 새로고침 시 새 세션, 최종 투표 중복 클릭 방지. 240초 만료와 무입력 75초 안내·90초 복귀는 T50(2026-09-22)에서 제거했습니다 — 체험은 시간으로 끝나지 않고 결과 화면 "체험 종료"나 운영 메뉴로만 끝납니다.
@@ -115,7 +115,7 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 [CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
 
 - [기획서 v0.7](AX_Day_2026_Boardroom_Plan.md)
-- [안건 ① AI Agent 결재권 — 상세 시나리오·표결 분기](docs/SCENARIO_AI_APPROVAL.md)
+- [안건 ① AI 에이전트 결재권 — 상세 시나리오·표결 분기](docs/SCENARIO_AI_APPROVAL.md)
 - [안건 ② 데이터보다 경험 — 상세 시나리오·표결 분기](docs/SCENARIO_EXPERIENCE_FIRST.md)
 - [이전 안건(보존, 레지스트리 밖) — 사내 게시판 익명제](docs/SCENARIO_ANON_BOARD.md)
 - [더 이전 초안(보존, T62 이전 HOLD 규칙 구버전)](docs/SCENARIO_CUSTOMER_SUPPORT.md) · [〃](docs/SCENARIO_PREVENTION.md)

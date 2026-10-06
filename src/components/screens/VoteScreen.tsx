@@ -49,10 +49,11 @@ const VOTE_LABELS: Record<PendingVote, string> = {
   NO: '반대',
 };
 
-/** 원형 도장 라디오 아래 타자기 캡션(시안 "APPROVE · 선택됨"/"REJECT"). */
+/** 원형 도장 라디오 아래 타자기 캡션(시안 "APPROVE · 선택됨"/"REJECT", T83에서
+ * 한국어화). */
 const VOTE_STAMP_LABELS: Record<PendingVote, string> = {
-  YES: 'APPROVE',
-  NO: 'REJECT',
+  YES: '찬성',
+  NO: '반대',
 };
 
 export function VoteScreen({
@@ -105,7 +106,7 @@ export function VoteScreen({
         <ExecStanceList stances={stances} />
         <div className="vote-screen__ballots" data-testid="vote-ballots">
           <div className="vote-screen__ballots-head">
-            <span>BALLOTS · 임원 표</span>
+            <span>임원 표</span>
             <span className="vote-screen__ballots-privacy">참가자 확정 전 비공개</span>
           </div>
           <div className="vote-screen__ballots-grid">
@@ -145,16 +146,16 @@ export function VoteScreen({
       <div className="app-body__content screen vote-screen__info">
         <div className="vote-screen__paper">
           <span className="vote-screen__stamp" aria-hidden="true">
-            CONFIDENTIAL
+            대외비
           </span>
           <div className="vote-screen__head">
-            <span className="vote-screen__step">STEP 05 · 2/2</span>
+            <span className="vote-screen__step">5단계 · 2/2</span>
             {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T72와
                 같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
             <h2 className="vote-screen__title">최종 투표 · 특별 이사 1표</h2>
           </div>
           <div className="vote-screen__motion-card" data-testid="vote-motion-card">
-            <span className="vote-screen__motion-label">MOTION</span>
+            <span className="vote-screen__motion-label">표결 안건</span>
             {/* 시안은 원안 문장만 한 줄로 보여준다 — motion.text는 domain/motion.ts
                 freezeMotion이 고정한 실제 안건 문구다(scenario.originalMotion.text와
                 항상 같은 값이지만, "지금 표결 중인 바로 그 안건"을 가리키는 쪽은
