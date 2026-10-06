@@ -373,10 +373,9 @@ export function ReactionsScreen({
     });
   }
 
-  // CASE 칩(시안 "CASE 02"): DiscussScreen과 같은 규칙으로 scenario.incident.caseLabel
-  // 숫자만 뽑는다.
-  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
-  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
+  // 사건 칩(시안 "CASE 02", T83에서 한국어화): DiscussScreen과 같은 규칙으로
+  // scenario.incident.caseLabel을 그대로 쓴다("사건 02" 형식).
+  const caseTag = scenario.incident.caseLabel;
 
   // scripted 전용 "기준" 입장(아직 아무 조건도 확정되지 않았을 때의 stance) —
   // 반응 카드 유지/바뀜 배지(아래 .reaction-card)와 근거 자료 팝업 02 행이 함께
@@ -506,7 +505,7 @@ export function ReactionsScreen({
           <DraftEditor
             value={textValue}
             onChange={handleTextChange}
-            label="MY REPLY · 내 답변"
+            label="내 답변"
             ariaLabel="내 답변"
             placeholder="이사님의 답변을 직접 입력하거나 추천 답변을 선택해 주세요."
             textareaTestId="followup-textarea"
@@ -552,7 +551,7 @@ export function ReactionsScreen({
       <div className="app-body__content screen reactions-screen__info" ref={infoRef} data-testid="reactions-info">
         <div className="reactions-screen__paper">
           <div className="reactions-screen__head">
-            <span className="reactions-screen__step">STEP 04</span>
+            <span className="reactions-screen__step">4단계</span>
             {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T73과
                 같은 이유) — 글자 크기는 시안 값 그대로다. */}
             <h2 className="reactions-screen__title">
@@ -612,7 +611,7 @@ export function ReactionsScreen({
           )}
           <div className="reactions-screen__followup" data-testid="followup-question">
             <span className="reactions-screen__followup-label">
-              FOLLOW-UP · {scenario.followUp.askedBy}가 묻습니다
+              추가 질문 · {scenario.followUp.askedBy}가 묻습니다
             </span>
             <p className="reactions-screen__followup-text">{scenario.followUp.question}</p>
           </div>
@@ -640,7 +639,7 @@ export function ReactionsScreen({
             >
               근거 자료 · 임원 발언 보기
             </button>
-            <span className="evidence-open-hint">EXHIBIT A–D + STATEMENTS</span>
+            <span className="evidence-open-hint">자료 ①~④ + 임원 발언</span>
           </div>
         </div>
       </div>

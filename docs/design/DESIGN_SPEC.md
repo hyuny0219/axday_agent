@@ -462,3 +462,92 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 검수(수정 후): `npm run check`(단위 406)·`npm run build`·`npx playwright test -c playwright.local.config.ts`(138건) 모두 통과. `docs/screenshots/{desktop-1080,desktop-720}/briefing.png`를 다시 갱신(EXHIBIT 카드가 더 작아졌을 뿐 구성·순서는 그대로)했고, `briefing-evidence.png`는 팝업 자체가 바뀌지 않아 픽셀 단위로 그대로다.
 
+## T83: 영문 라벨 전부 한국어화 (2026-10-07)
+
+배경(2026-10-07 사용자 결정): "화면 문구에 영어 단어가 섞여 있어 어색하고 AI스럽다. 사람이 쓰는 것처럼 자연스럽게." 승인 시안(C안, "기밀 작전실" — T64) 콘셉트의 서류·조종석 장식 라벨은 대부분 영문(SITREP·EXHIBIT·CONFIDENTIAL 등)이었다. **전부 한국어로** 바꾼다 — 예외로 유지한 것은 역할 약자(CEO·CFO·CAIO·CISO, 명패·아바타 이니셜), 타이틀 `BOARDROOM 2026`, 'AI' 두 글자뿐이다. 안건 문구의 `AI Agent`도 `AI 에이전트`로 통일했다.
+
+- **구조 변경 없음, 문구만 교체**: 레이아웃·CSS 치수·testid·컴포넌트 구조는 전혀 건드리지 않았다(글자 수가 줄어든 경우 — 예 CONFIDENTIAL→대외비 — 가 대부분이라 폭 초과 위험이 없다). `--font-label`(Special Elite)·`--font-hud`(Share Tech Mono)는 한글 글리프가 없어 시스템 모노스페이스로 떨어지지만, 이미 같은 span 안에 영문과 한글이 섞여 쓰이던 사례(예 옛 "YOUR ORDERS · 특별 이사")가 정상적으로 렌더되고 있었으므로 font-family는 바꾸지 않았다 — 두 해상도 스크린샷으로 실제 렌더를 확인했다(아래).
+- **사건 칩 계산 단순화**: `BriefingScreen`·`DiscussScreen`·`ReactionsScreen`·`ResultScreen`이 각자 `scenario.incident.caseLabel`에서 정규식으로 숫자만 뽑아 `CASE ${n}` 영문 태그를 다시 만들던 코드를 걷어냈다 — `caseLabel` 자체가 이미 "사건 01"/"사건 02" 형식이므로 그대로 쓴다.
+- **내부 식별자는 유지**: `SessionStage`(`BRIEFING`·`OPINIONS`·`DISCUSS`·`REACTIONS`·`MOTION`·`VOTE`·`RESULT`·`ATTRACT`·`SELECT`)·`RoleStatus`·`Ballot['vote']`(`YES`·`NO`·`UNCAST`) 같은 TypeScript 리터럴·enum 값은 코드 식별자라 바꾸지 않았다 — 화면에 **글자로 찍히는 값만** 한국어로 바꿨다.
+
+### 대응표(영문 → 한국어)
+
+| 위치 | 영문 | 한국어 |
+| --- | --- | --- |
+| ATTRACT | `LIVE · 실제 임원 에이전트 · 4분 이사회` | `실시간 · 실제 임원 에이전트 · 4분 이사회` |
+| ATTRACT·SELECT·StageBand | `CAM 01 · 회의실 A` | `회의실 A`(PR 검토 — "1번 카메라 · 회의실 A"는 폭이 늘어 REACTIONS 말풍선과 겹쳐 더 짧게 축약) |
+| ATTRACT | `STANDBY` | `대기 중` |
+| ATTRACT | `TOP SECRET` | `극비` |
+| ATTRACT | `CASE FILE No. 02 · 특별 이사 1석 공석` | `사건 02 · 특별 이사 1석 공석` |
+| SELECT | `STANDBY · 안건 대기` | `안건 대기 중` |
+| SELECT | `CASE SELECTION · 안건 선택` | `안건 선택` |
+| SELECT | `CASE 01`/`CASE 02`(카드 칩) | `사건 01`/`사건 02` |
+| SELECT | `CONFIDENTIAL`(카드 도장) | `대외비` |
+| SELECT | `OPEN FILE · 선택하면 이사회에 입장합니다` | `열람 가능 · 선택하면 이사회에 입장합니다` |
+| SELECT | `FILE SEALED · 다음 안건을 준비하고 있습니다` | `봉인됨 · 다음 안건을 준비하고 있습니다` |
+| BRIEFING·OPINIONS·VOTE·EvidenceDialog | `CONFIDENTIAL` | `대외비` |
+| BRIEFING | `SITREP` | `상황` |
+| BRIEFING | `PROPOSAL` | `제안` |
+| BRIEFING | `UNKNOWN` | `미정` |
+| BRIEFING | `YOUR ORDERS · 특별 이사` | `특별 이사의 임무` |
+| BRIEFING | `FINAL CALL: 찬성 / 반대` | `최종 선택: 찬성 / 반대` |
+| BRIEFING·EvidenceDialog | `EXHIBIT A–D · 판단에 참고할 자료` | `자료 ①~④ · 판단에 참고할 자료` |
+| EvidenceGrid | `EXHIBIT A`/`B`/`C`/`D`(카드 태그) | `자료 ①`/`②`/`③`/`④` |
+| OPINIONS | `STEP 02` | `2단계` |
+| OPINIONS | `...전문은 왼쪽 TRANSCRIPT에 쌓입니다.` | `...전문은 왼쪽 발언 흐름에 쌓입니다.` |
+| DISCUSS | `STEP 03` | `3단계` |
+| DISCUSS | `EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명` | `자료 4장 + 임원 발언 4건` |
+| DISCUSS | `STANCE`(칩 라벨) | `입장` |
+| REACTIONS | `STEP 04` | `4단계` |
+| REACTIONS | `MY REPLY · 내 답변`(DraftEditor 라벨) | `내 답변` |
+| REACTIONS | `FOLLOW-UP · {역할}가 묻습니다` | `추가 질문 · {역할}가 묻습니다` |
+| REACTIONS | `EXHIBIT A–D + STATEMENTS` | `자료 ①~④ + 임원 발언` |
+| DiscussScreen(기본값) | `MY STATEMENT · 내 발언`(DraftEditor 라벨) | `내 발언` |
+| MOTION | `DRAFT`(도장) | `초안` |
+| MOTION | `STEP 05 · 1/2` | `5단계 · 1/2` |
+| MOTION | `MOTION ON THE TABLE · {원안/수정안}` | `표결 안건 · {원안/수정안}` |
+| MOTION | `CONDITIONS · 반영된 조건 N` | `반영된 조건 N` |
+| MOTION | `NOT INCLUDED · 빠진 것` | `빠진 것` |
+| MOTION | `CHAIR · 의장` | `의장` |
+| MOTION | `FREEZE MOTION · 조건 확정` | `조건 확정` |
+| ConditionChips(DISCUSS·REACTIONS 공용) | `CONDITIONS` | `조건` |
+| VOTE | `BALLOTS · 임원 표` | `임원 표` |
+| VOTE | `CONFIDENTIAL` | `대외비` |
+| VOTE | `STEP 05 · 2/2` | `5단계 · 2/2` |
+| VOTE | `MOTION`(안건 라벨) | `표결 안건` |
+| VOTE | `APPROVE`/`REJECT`(도장 캡션) | `찬성`/`반대` |
+| RESULT | `TALLY · 5석 과반` | `집계 · 5석 과반` |
+| RESULT | `DEBRIEF 02` | `결과 보고` |
+| RESULT | `YOUR CONDITIONS · 반영 조건` | `반영 조건` |
+| RESULT | `YOUR WORDS · 내 원문` | `내 원문` |
+| RESULT | `APPROVED`/`REJECTED`(도장 메타) | `가결`/`부결` |
+| RESULT | `BONUS`(설득 도장) | `보너스` |
+| RESULT | `BONUS 미획득` | `보너스 미획득` |
+| RESULT | `VERDICTS · 임원별 판단` | `임원별 판단` |
+| RESULT | `+6 MONTHS` | `6개월 후` |
+| RESULT·AttractScreen·Header | `실시간(LIVE) 임원 에이전트 판단입니다.` 등 `LIVE` 모드 배지 | `실시간` |
+| Header | `CASE FILE No. {N} · SESSION {code}` | `사건 {N} · 세션 {code}` |
+| MinutesPanel | `TRANSCRIPT · 발언 흐름` | `발언 흐름` |
+| MinutesPanel | `N ENTRIES · 스크롤`/`1 ENTRY` | `N건 · 스크롤`/`1건` |
+| StageBand | `REC ●` | `녹화중`(같은 폭 문제로 공백·● 없이 축약) |
+| StageBand | `CLASSIFIED` | `기밀` |
+| EvidenceDialog | `STATEMENTS · {라벨}` | `{라벨}`(접두 제거) |
+| ResultScreen(TALLY 패널) | `YES {n} / NO {n}` | `찬성 {n} / 반대 {n}` |
+
+### 유지한 영문(예외)
+
+- 역할 약자 `CEO`·`CFO`·`CAIO`·`CISO`(명패·아바타 이니셜·`MEMBER_LABELS`의 괄호 표기) — 실제 직함 약칭이라 번역 대상이 아니다.
+- 타이틀 `BOARDROOM 2026`.
+- `AI` 두 글자(`AI 비서실장`·`AI 에이전트`·`AI가 도운 일` 등) — 사용자가 명시한 예외.
+- 운영자 전용 `OperatorMenu`의 `MODEL_PROVIDER`(환경변수 이름)·`scripted`(모드 식별자) — 참가자가 보는 "주요 화면"이 아니라 현장 운영자만 여는 기술 메뉴이고, 두 단어 모두 실제 설정값을 가리키는 코드 수준 용어라 카드 범위(화면 장식 라벨) 밖으로 판단했다.
+- Header의 세션 코드(`sessionId.slice(0,4).toUpperCase()`) — `crypto.randomUUID()`의 앞 4자를 그대로 보여주는 장식용 임의 코드라 영문·숫자가 섞일 수 있다(역할 약자와 같은 "코드" 성격).
+- `EvidenceDialog` 팝업 안내("Esc · 닫기 버튼 · 바깥 클릭으로 닫힘")의 `Esc` — 물리 키보드 키 이름 표기라 한국어 UI에서도 흔히 그대로 쓴다(디자인 장식 라벨이 아니다).
+
+### 회귀 방지
+
+`e2e/no-stray-english.spec.ts`(신설): ATTRACT→SELECT→BRIEFING(+근거 자료 팝업)→OPINIONS→DISCUSS→REACTIONS→MOTION→VOTE→RESULT(+회의록 전문)를 scripted로 순서대로 지나며 매 화면 `document.body.innerText`(운영 메뉴·헤더 세션 코드는 DOM에서 제거)에서 위 예외(역할 약자·`BOARDROOM 2026`·`AI`)를 뺀 라틴 알파벳 2자 이상 연속이 없는지 확인한다.
+
+### 검수
+
+`npm run check`(단위 506)·`npm run build`·`npx playwright test -c playwright.local.config.ts` 모두 통과. 두 해상도 스크린샷을 전부 재생성해 라벨 길이 변화(대부분 더 짧아짐)로 인한 줄바꿈·잘림이 없는지 육안으로 확인했다.
+

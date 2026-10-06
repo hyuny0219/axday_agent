@@ -30,9 +30,9 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
   await expect(page.getByTestId('briefing-role')).toBeVisible();
-  // FINAL CALL 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다(시안
-  // "FINAL CALL: 찬성 / 반대").
-  await expect(page.getByTestId('briefing-role')).toContainText('FINAL CALL: 찬성 / 반대');
+  // 최종 선택 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다(시안
+  // "FINAL CALL: 찬성 / 반대", T83에서 "최종 선택: 찬성 / 반대"로 한국어화).
+  await expect(page.getByTestId('briefing-role')).toContainText('최종 선택: 찬성 / 반대');
 
   // T52: "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점 목록은 제거됐다.
   await expect(page.getByTestId('briefing-issues')).toHaveCount(0);

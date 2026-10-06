@@ -170,7 +170,7 @@ export function EvidenceDialog({
         data-testid="evidence-dialog"
       >
         <span className="evidence-dialog__stamp" aria-hidden="true">
-          CONFIDENTIAL
+          대외비
         </span>
         <div className="evidence-dialog__header">
           <span className="evidence-dialog__case">{caseTag}</span>
@@ -190,14 +190,14 @@ export function EvidenceDialog({
         </div>
         <div className="evidence-dialog__body">
           <div className="evidence-dialog__column evidence-dialog__column--exhibits">
-            <span className="evidence-dialog__column-label">EXHIBIT A–D · 판단에 참고할 자료</span>
+            <span className="evidence-dialog__column-label">자료 ①~④ · 판단에 참고할 자료</span>
             <EvidenceGrid evidence={evidence} />
           </div>
           <div className="evidence-dialog__column evidence-dialog__column--statements">
-            <span className="evidence-dialog__column-label">STATEMENTS · {statementsColumnLabel}</span>
+            <span className="evidence-dialog__column-label">{statementsColumnLabel}</span>
             {statements.length === 0 ? (
               <p className="evidence-dialog__statements-empty" data-testid="evidence-dialog-statements-empty">
-                STATEMENTS · 02 단계에서 임원이 말하면 여기에 쌓입니다
+                02 단계에서 임원이 말하면 여기에 쌓입니다
               </p>
             ) : (
               <div className="evidence-dialog__statements">

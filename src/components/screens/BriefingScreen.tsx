@@ -26,10 +26,9 @@ export interface BriefingScreenProps {
 
 export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
-  // CASE 칩(시안 "CASE 02"): scenario.incident.caseLabel("사건 02")의 숫자만 뽑는다
-  // (ResultScreen·DiscussScreen·ReactionsScreen의 caseTag 계산과 같은 규칙).
-  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
-  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
+  // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
+  // "사건 02" 형식이라 그대로 쓴다(ResultScreen·DiscussScreen·ReactionsScreen도 같다).
+  const caseTag = scenario.incident.caseLabel;
 
   // UNKNOWN 줄: 미정 항목을 " · "로 이어 붙여 흐린 잉크로 보여 준다. 시안 Main.html의
   // 마지막 항목 먹칠(redaction, T80)은 2026-10-07 사용자 지시로 제거했다 — 참가자가
@@ -47,7 +46,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
       <div className="app-body__content screen briefing-screen__info">
         <div className="briefing-screen__paper">
           <span className="briefing-screen__stamp" aria-hidden="true">
-            CONFIDENTIAL
+            대외비
           </span>
           <div className="briefing-screen__block" data-testid="chair-briefing">
             <div className="briefing-screen__case-row" data-testid="briefing-incident">
@@ -58,31 +57,31 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           </div>
           <div className="briefing-screen__status" data-testid="briefing-status">
             <p className="briefing-screen__situation">
-              <span className="briefing-screen__label">SITREP</span>
+              <span className="briefing-screen__label">상황</span>
               {scenario.chairBriefing.situation}
             </p>
             <p className="briefing-screen__proposal">
-              <span className="briefing-screen__label">PROPOSAL</span>
+              <span className="briefing-screen__label">제안</span>
               {scenario.motionBreakdown.proposal}
             </p>
             {undecidedItems.length > 0 && (
               <p className="briefing-screen__undecided">
-                <span className="briefing-screen__label briefing-screen__label--unknown">UNKNOWN</span>
+                <span className="briefing-screen__label briefing-screen__label--unknown">미정</span>
                 <span className="briefing-screen__undecided-muted">{undecidedItems.join(' · ')}</span>
               </p>
             )}
           </div>
           <div className="briefing-screen__role" data-testid="briefing-role">
-            <span className="briefing-screen__label">YOUR ORDERS · 특별 이사</span>
+            <span className="briefing-screen__label">특별 이사의 임무</span>
             <p className="briefing-screen__role-text">{scenario.chairBriefing.role}</p>
             <p className="briefing-screen__final-decision">
-              FINAL CALL: <span className="briefing-screen__final-yes">찬성</span> /{' '}
+              최종 선택: <span className="briefing-screen__final-yes">찬성</span> /{' '}
               <span className="briefing-screen__final-no">반대</span>
             </p>
           </div>
           <div className="briefing-screen__exhibit">
             <div className="briefing-screen__exhibit-head">
-              <span className="briefing-screen__exhibit-label">EXHIBIT A–D · 판단에 참고할 자료</span>
+              <span className="briefing-screen__exhibit-label">자료 ①~④ · 판단에 참고할 자료</span>
               <button
                 type="button"
                 className="evidence-open-button briefing-screen__evidence-trigger"

@@ -63,7 +63,7 @@ const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
 };
 
 const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
-  live: '실시간(LIVE) 임원 에이전트 판단입니다.',
+  live: '실시간 임원 에이전트 판단입니다.',
   scripted: '사전 구성 시뮬레이션 결과입니다.',
 };
 
@@ -134,10 +134,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   const conclusion =
     session.outcome === 'PASS' ? scenario.resultCopy.pass : scenario.resultCopy.reject;
 
-  // 도장 칸 케이스 태그(장식, T64 "CASE 02"). 안건 사건 번호(incident.caseLabel, 예
-  // "사건 02")에서 숫자만 뽑아 영문 케이스 태그로 바꾼다 — 새 사실을 만들지 않는다.
-  const caseDigits = scenario.incident.caseLabel.match(/\d+/)?.[0];
-  const caseTag = caseDigits ? `CASE ${caseDigits}` : 'CASE FILE';
+  // 도장 칸 케이스 태그(장식, T64 "CASE 02", T83에서 한국어화). 안건 사건 번호
+  // (incident.caseLabel)가 이미 "사건 02" 형식이라 그대로 쓴다.
+  const caseTag = scenario.incident.caseLabel;
 
   // 가결은 도장과 같은 기준(반영 조건 유무)으로 pass/passOriginal을 가른다
   // (components/resultEpilogue.ts, PR #8 Codex 2차 검토).
@@ -170,8 +169,8 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             같은 규칙, 같은 정보가 오른쪽 열 본문에 접근 가능하게 그대로 있다). */}
         <section className="result-tally" data-testid="result-tally" aria-hidden="true">
           <div className="result-tally__head">
-            <span>TALLY · 5석 과반</span>
-            <span>YES {tallyResult.counts.YES} / NO {tallyResult.counts.NO}</span>
+            <span>집계 · 5석 과반</span>
+            <span>찬성 {tallyResult.counts.YES} / 반대 {tallyResult.counts.NO}</span>
           </div>
           <div className="result-tally__bars">
             {SEAT_ORDER.map((memberId) => {
@@ -214,7 +213,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         <div className="result-report__top">
           <div className="result-report__main">
             <p className="result-report__eyebrow" aria-hidden="true">
-              <span className="result-report__eyebrow-tag">DEBRIEF 02</span>
+              <span className="result-report__eyebrow-tag">결과 보고</span>
               <span>이사회 한 장 요약</span>
             </p>
             <h2 className="result-screen__title" data-testid="result-conclusion">
@@ -236,7 +235,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             {resultSummary && (
               <div className="result-your-columns">
                 <div className="result-your-card">
-                  <span className="result-your-card__label">YOUR CONDITIONS · 반영 조건</span>
+                  <span className="result-your-card__label">반영 조건</span>
                   <p className="result-your-card__value" data-testid="result-summary-conditions">
                     {resultSummary.conditionLabels.length > 0
                       ? resultSummary.conditionLabels.join(', ')
@@ -244,7 +243,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   </p>
                 </div>
                 <div className="result-your-card">
-                  <span className="result-your-card__label">YOUR WORDS · 내 원문</span>
+                  <span className="result-your-card__label">내 원문</span>
                   <div className="result-mine" data-testid="result-mine">
                     {resultSummary.quote.map((text, index) => (
                       <p key={index} className="result-mine__quote">
@@ -272,7 +271,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                 </span>
                 <span className="result-stamp__text">{stampBigText}</span>
                 <span className="result-stamp__meta" aria-hidden="true">
-                  {resultStamp.outcome === 'PASS' ? 'APPROVED' : 'REJECTED'} · {tallyResult.counts.YES}:
+                  {resultStamp.outcome === 'PASS' ? '가결' : '부결'} · {tallyResult.counts.YES}:
                   {tallyResult.counts.NO}
                 </span>
               </div>
@@ -286,7 +285,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                     }}
                   >
                     <span className="result-stamp__case" aria-hidden="true">
-                      BONUS
+                      보너스
                     </span>
                     <span className="result-stamp__text">설득 성공</span>
                     <span className="result-stamp__meta" aria-hidden="true">
@@ -295,7 +294,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   </div>
                 ) : (
                   <p className="result-bonus-missed" data-testid="persuasion-stamp-missed">
-                    BONUS 미획득
+                    보너스 미획득
                     <br />
                     같은 표 {persuasion.sameVoteSeats}석 · 3석부터
                   </p>
@@ -320,7 +319,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                보여주고 이 패널이 표를 글자로 다시 적으므로 카드는 중복이었다. */
             <section className="result-verdicts" data-testid="result-summary">
               <div className="result-verdicts__head">
-                <h3 className="result-screen__section-label">VERDICTS · 임원별 판단</h3>
+                <h3 className="result-screen__section-label">임원별 판단</h3>
                 <p className="result-summary__tally" data-testid="result-summary-tally">
                   찬성 {resultSummary.tally.counts.YES} · 반대 {resultSummary.tally.counts.NO}
                   {resultSummary.tally.counts.UNCAST > 0 &&
@@ -410,7 +409,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                     className="result-verdicts__line result-verdicts__epilogue"
                     data-testid="result-epilogue"
                   >
-                    <span className="result-verdicts__epilogue-label">+6 MONTHS</span> {epilogue}{' '}
+                    <span className="result-verdicts__epilogue-label">6개월 후</span> {epilogue}{' '}
                     <span className="result-epilogue__badge">체험용 가상 전망</span>
                   </p>
                 )}

@@ -152,7 +152,7 @@ test.describe('live mock: 무대 표정', () => {
     page,
   }) => {
     await page.goto('/');
-    await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+    await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
 
     await page.getByRole('button', { name: '체험 시작' }).click();
     await page.getByTestId('scenario-card-ai-approval').click();
