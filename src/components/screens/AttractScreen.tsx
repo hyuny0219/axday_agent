@@ -47,7 +47,7 @@ export function AttractScreen({ mode, onStart, startDisabled = false }: AttractS
           </p>
           <h1 className="attract-screen__title">BOARDROOM 2026</h1>
           <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
-          <p className="attract-screen__case-file">사건 02 · 특별 이사 1석 공석</p>
+          <p className="attract-screen__case-file">특별 이사 1석 공석</p>
         </div>
 
         <button

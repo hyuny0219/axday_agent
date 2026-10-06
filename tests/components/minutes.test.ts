@@ -111,7 +111,7 @@ describe('buildMinutes(scripted)', () => {
     expect(chairMotion).toMatchObject({ speaker: 'CEO', kind: 'speech', text: '이 조건으로 안건을 고정합니다' });
   });
 
-  it('KEEP_PREVIOUS 경로에서는 내 답이 "앞서 전달한 의견을 유지"다', () => {
+  it('KEEP_PREVIOUS 경로에서는 내 답이 "(답하지 않고 넘어갔습니다)"다', () => {
     let session = selectScenario('scripted');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
@@ -129,7 +129,7 @@ describe('buildMinutes(scripted)', () => {
 
     const entries = buildMinutes(session, scenario, []);
     const myFollowup = entries.find((entry) => entry.id === 'my-followup');
-    expect(myFollowup?.text).toBe('앞서 전달한 의견을 유지');
+    expect(myFollowup?.text).toBe('(답하지 않고 넘어갔습니다)');
     // scripted는 후속 라운드가 없으므로 followup-* 항목이 없다.
     expect(entries.some((entry) => entry.id.startsWith('followup-'))).toBe(false);
   });

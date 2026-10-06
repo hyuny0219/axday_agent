@@ -486,7 +486,7 @@ export function ReactionsScreen({
       const reactionText =
         reactions.length > 0
           ? reactions.map((reaction) => reaction.text).join(' ')
-          : `기존 의견 유지 — ${initial?.text ?? ''}`;
+          : '앞서 말씀드린 입장 그대로입니다.';
       const reactionEntry: EvidenceDialogStatementView = {
         memberId,
         stance,
@@ -602,7 +602,6 @@ export function ReactionsScreen({
             <div className="reactions-screen__cards">
               {EXEC_MEMBER_ORDER.map((memberId) => {
                 const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
-                const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
                 const stance = stances[memberId];
                 // PR #12 Codex 5차 검토 P2: 유지/바뀜 배지는 반응 문구가 있는지가
                 // 아니라 실제 stance가 바뀌었는지로 가른다 — 조건 하나만으로는 표가
@@ -631,7 +630,7 @@ export function ReactionsScreen({
                     <p className="reaction-card__text">
                       {reactions.length > 0
                         ? reactions.map((reaction) => reaction.text).join(' ')
-                        : `기존 의견 유지 — ${initial?.text ?? ''}`}
+                        : '앞서 말씀드린 입장 그대로입니다.'}
                     </p>
                   </article>
                 );

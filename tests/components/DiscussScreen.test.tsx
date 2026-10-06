@@ -193,7 +193,7 @@ describe('DiscussScreen', () => {
     );
     const info = screen.getByTestId('discuss-info');
     expect(info.hasAttribute('inert')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 정리 맡기기' }));
+    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 맡기기' }));
     expect(info.hasAttribute('inert')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
     expect(info.hasAttribute('inert')).toBe(false);

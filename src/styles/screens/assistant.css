@@ -31,6 +31,7 @@
   align-self: flex-start;
   border-color: var(--accent);
   color: var(--accent);
+  white-space: nowrap;
 }
 
 .assistant-panel__toggle:hover,

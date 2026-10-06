@@ -76,7 +76,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 5');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
     await expect(page.getByTestId('result-tally-caption')).toContainText(
-      '찬성 · 같은 표 5석 — 결과를 바꾼 한 표입니다',
+      '찬성 · 같은 표 5석 — 설득 도장을 받았습니다',
     );
   });
 
@@ -198,7 +198,7 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
     await expect(page.getByTestId('result-tally-caption')).toContainText(
-      '찬성 · 같은 표 3석 — 결과를 바꾼 한 표입니다',
+      '찬성 · 같은 표 3석 — 설득 도장을 받았습니다',
     );
   });
 });

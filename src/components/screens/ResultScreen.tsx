@@ -204,7 +204,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             // 그대로 있다).
             <p className="result-tally__caption" data-testid="result-tally-caption">
               이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
-              {persuasion.earned ? ' — 결과를 바꾼 한 표입니다' : ' · 3석부터 설득 도장을 받습니다'}
+              {persuasion.earned ? ' — 설득 도장을 받았습니다' : ' · 3석부터 설득 도장을 받습니다'}
               {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
             </p>
           )}

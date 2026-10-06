@@ -277,9 +277,9 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
   const info = page.getByTestId('reactions-info');
   await expect(info).not.toHaveAttribute('inert', '');
 
-  // T74부터 "AI 비서실장에게 정리 맡기기" 버튼은 편집기 토글 없이 늘 보인다.
+  // T74부터 "AI 비서실장에게 맡기기" 버튼은 편집기 토글 없이 늘 보인다.
   await page.getByTestId('followup-option-0').click();
-  const openAssistant = page.getByRole('button', { name: 'AI 비서실장에게 정리 맡기기' });
+  const openAssistant = page.getByRole('button', { name: 'AI 비서실장에게 맡기기' });
   await openAssistant.click();
   await expect(info).toHaveAttribute('inert', '');
   // inert 안의 요소는 포커스를 받지 못한다.

@@ -401,6 +401,8 @@
   gap: 6px;
   min-height: 0;
   overflow: hidden;
+  /* 남는 높이는 판정 목록 카드가 가져가고, "6개월 뒤" 카드는 내용 높이로 맨 아래에 둔다. */
+  flex: 1 1 auto;
   background-color: var(--paper-2);
   border: 1px solid var(--paper-border);
   border-radius: var(--radius-card);
@@ -562,7 +564,9 @@
   gap: 8px;
   min-height: 0;
   overflow: hidden;
-  flex: 1 1 auto;
+  /* 내용 높이만큼만 — 남는 높이를 카드 안에 빈칸으로 두면 미완성처럼 보인다(Opus 최종
+     검토 should 5). 남는 공간은 종이 바탕으로 남긴다. */
+  flex: 0 0 auto;
   background-color: var(--paper-2);
   border: 1px solid var(--paper-border);
   border-radius: var(--radius-card);
@@ -586,7 +590,7 @@
 }
 
 .result-epilogue-card__conditions {
-  margin-top: auto;
+  margin-top: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

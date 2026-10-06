@@ -220,7 +220,7 @@ export function buildMinutes(
     entries.push({
       id: 'my-followup',
       speaker: 'PARTICIPANT',
-      text: secondOpinion ? secondOpinion.originalText : '앞서 전달한 의견을 유지',
+      text: secondOpinion ? secondOpinion.originalText : '(답하지 않고 넘어갔습니다)',
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, secondOpinion?.createdAt),
     });

@@ -233,7 +233,7 @@ export function AssistantPanel({
         onClick={() => setOpen((value) => !value)}
         data-testid="assistant-toggle"
       >
-        {open ? 'AI 비서실장 숨기기' : 'AI 비서실장에게 정리 맡기기'}
+        {open ? 'AI 비서실장 숨기기' : 'AI 비서실장에게 맡기기'}
       </button>
       {open && (
         <aside className="assistant-panel__body" data-testid="assistant-panel">

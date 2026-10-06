@@ -154,7 +154,7 @@ export function MotionScreen({
               <span className="motion-screen__box-label">빠진 것</span>
               <p className="motion-screen__not-included-text">
                 {notIncludedLabels.length > 0 ? (
-                  <>이번 안건에서 빠진 조건: {notIncludedLabels.join(', ')}. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.</>
+                  <>{notIncludedLabels.join(', ')}. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.</>
                 ) : (
                   '제안하신 조건이 모두 들어갔습니다.'
                 )}
