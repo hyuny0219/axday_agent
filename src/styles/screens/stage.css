@@ -232,6 +232,13 @@
   border-color: var(--hud-warn);
 }
 
+/* 참가자 명패(T85 #24): RESULT에서만 그린다(StageBand.tsx) — 임원 4석 색과 겹치지
+   않는 중립 색(accent)으로 "나"를 표시한다. */
+.stage-band__nameplate--participant {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"): 명패 아래 작은 회색 한 줄.
    StageBand.tsx가 역할별 관심사 단어(방향/비용/시스템/보안) + STANCE_LABEL을 합쳐 넣는다. */
 .stage-band__caption {
