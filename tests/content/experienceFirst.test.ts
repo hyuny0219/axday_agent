@@ -182,6 +182,9 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       '절대 우선으로 둘지 아직 정하지 못했습니다.',
       '절대 우선으로 두는 기준이 무엇입니까?',
       '절대 우선으로 두는 방법을 설명해 주십시오.',
+      // 물음표 없는 의문사 + 해요체(PR #13 Codex 6차 검토 P1)
+      '판단 근거를 기록하는 양식은 어떻게 정해요',
+      '경고 시 결정을 잠시 멈추는 기준은 누가 정해요',
     ];
     for (const text of negativeQuestions) {
       expect(proposeFromText(scenario, text), text).toEqual([]);

@@ -39,7 +39,7 @@ npm run test         # vitest만(tests/domain, tests/content, tests/services, te
 npm run build && npx playwright test   # e2e(1920×1080·1280×720 두 해상도, mock 서버 자동 기동)
 ```
 
-단위 테스트 503개(도메인 규칙·표결 평가·조건·시계·서버 검증·live 어댑터), E2E 54개(27개 spec × 2 해상도). `e2e/fixtures.ts`가 모든 spec에 외부 요청 차단 fixture를 자동 적용해 `localhost` 밖으로 나간 요청이 있으면 테스트가 실패합니다.
+단위 테스트 504개(도메인 규칙·표결 평가·조건·시계·서버 검증·live 어댑터), E2E 54개(27개 spec × 2 해상도). `e2e/fixtures.ts`가 모든 spec에 외부 요청 차단 fixture를 자동 적용해 `localhost` 밖으로 나간 요청이 있으면 테스트가 실패합니다.
 
 ## 부스 운영(로컬 서버)
 

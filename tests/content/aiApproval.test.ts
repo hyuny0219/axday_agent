@@ -256,6 +256,28 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       proposeFromText(scenario, '금액 한도를 정하고 나서 질문을 받겠습니다.'),
     ).toEqual(['LIMIT']);
   });
+
+  // PR #13 Codex 6차 검토 P1: 의문사 + 해요체 규칙이 '예요·에요·데요'만 열거해 가장 흔한
+  // '-해요/-어요/-아요'가 빠졌다 — 물음표 없는 "…어떻게 정해요"가 LOG로 잡혔다. '-요'
+  // 종결 전체를 받되 약속('-ㄹ게요')·요청('-세요')은 질문이 아니다.
+  it('의문사 + 해요체(-해요/-어요/-아요) 문장은 물음표가 없어도 제안하지 않는다(PR #13 Codex 6차 검토)', () => {
+    for (const text of [
+      '승인 사유를 기록하는 방식은 어떻게 정해요',
+      '금액 한도는 누가 정해요',
+      '표본 재검토를 하는 주기는 얼마나 돼요',
+      '결재 규칙 책임자를 왜 따로 둬요',
+    ]) {
+      expect(proposeFromText(scenario, text), text).toEqual([]);
+    }
+    // 의문사 없는 해요체 평서, 부정칭, 약속형은 그대로 제안한다.
+    for (const text of [
+      '금액 한도를 정해요.',
+      '어떤 기준이든 금액 한도를 정해요.',
+      '누가 뭐라 해도 금액 한도를 정할게요.',
+    ]) {
+      expect(proposeFromText(scenario, text), text).toEqual(['LIMIT']);
+    }
+  });
 });
 
 describe('findConflicts', () => {

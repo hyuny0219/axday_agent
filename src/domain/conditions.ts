@@ -199,6 +199,8 @@ const INTERROGATIVE_WORDS = [
   '어느',
 ];
 const INDEFINITE_SUFFIX = /^(나|든|이나|이든|서나|서든)/;
+const DETERMINER_WORDS = ['어떤', '어느', '무슨'];
+const INDEFINITE_NOUN_PHRASE = /^\s[가-힣]+(?:든|라도|도)(?=\s|$)/;
 
 function hasInterrogativeWord(sentence: string): boolean {
   for (const word of INTERROGATIVE_WORDS) {
@@ -207,7 +209,15 @@ function hasInterrogativeWord(sentence: string): boolean {
       const index = sentence.indexOf(word, from);
       if (index === -1) break;
       const after = sentence.slice(index + word.length);
-      const isIndefinite = INDEFINITE_SUFFIX.test(after);
+      // '얼마나'는 '언제나·누구나'와 달리 부정칭이 아니라 의문사("얼마나 돼요")다 —
+      // '얼마'는 '얼마든(지)'만 부정칭으로 본다.
+      // 관형사 '어떤·어느·무슨'은 다음 명사에 '-든/-라도/-도'가 붙으면 부정칭이다 —
+      // "어떤 기준이든 금액 한도를 정해요"·"어떤 경우에도 …"는 질문이 아니다.
+      const isIndefinite =
+        word === '얼마'
+          ? after.startsWith('든')
+          : INDEFINITE_SUFFIX.test(after) ||
+            (DETERMINER_WORDS.includes(word) && INDEFINITE_NOUN_PHRASE.test(after));
       const isWaenya = word === '왜' && after.startsWith('냐');
       const isMyeotMyeot = word === '몇' && after.startsWith('몇');
       if (!isIndefinite && !isWaenya && !isMyeotMyeot) {
@@ -221,11 +231,19 @@ function hasInterrogativeWord(sentence: string): boolean {
 }
 
 // 해요체·반말 종결. '-지'·'-나'는 간접 의문 표지(는지·할지 등)와 다른 자리다 —
-// 여기서는 문장 "끝" 전체가 이 어미로 끝나는지만 본다.
-const CASUAL_OR_POLITE_ENDINGS = ['지요', '예요', '에요', '데요', '죠', '나', '지'];
+// 여기서는 문장 "끝" 전체가 이 어미로 끝나는지만 본다. 해요체는 '-요'로 끝나는 꼴
+// 전체를 받는다 — '예요·에요·데요'만 열거했더니 가장 흔한 '-해요/-어요/-아요'가 빠져
+// "승인 사유를 기록하는 방식은 어떻게 정해요"가 LOG로 잡혔다(PR #13 Codex 6차 검토
+// P1). 단 '-ㄹ게요/-ㄹ께요'(약속)와 '-세요'(요청)는 의문사가 있어도 질문이 아니다 —
+// "누가 뭐라 해도 금액 한도를 정할게요"는 약속이다.
+const CASUAL_ENDINGS = ['죠', '나', '지'];
+const NON_QUESTION_YO_ENDINGS = ['게요', '께요', '세요'];
 
 function hasCasualOrPoliteEnding(core: string): boolean {
-  return CASUAL_OR_POLITE_ENDINGS.some((ending) => core.endsWith(ending));
+  if (core.endsWith('요')) {
+    return !NON_QUESTION_YO_ENDINGS.some((ending) => core.endsWith(ending));
+  }
+  return CASUAL_ENDINGS.some((ending) => core.endsWith(ending));
 }
 
 // 간접 의문 표지·정보 요청 서술어는 **키워드가 든 절** 안에서만 본다. 문장 끝까지

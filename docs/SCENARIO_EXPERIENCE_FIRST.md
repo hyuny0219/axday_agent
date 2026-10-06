@@ -72,6 +72,8 @@ T78 구현 시 조건별로 1개씩 작성했다(anonBoard.ts 패턴과 동일, 
 
 **PR #13 Codex 5차 검토(2026-10-02) P1**: 4차에서 좁힌 약속형 어간도 정보성 질문의 부분 문자열이다(ai-approval과 같은 문제) — "판단 근거를 기록하는 방법이 무엇입니까?"가 `판단 근거를 기록`에 걸린다. 키워드는 그대로 두고 `src/domain/conditions.ts`에 "의문·정보 요청 문장 속 언급은 그 한 번만 무시한다"는 규칙을 추가했다(부정과 달리 조건 전체를 거부하지 않음). 조건 5개 전부(SCOPE·RECORD·DATA_VETO·REVIEW·EXP_ONLY, 키워드 2개인 EXP_ONLY는 키워드별로)에서 물음표 있는 꼴·간접 의문·정보 요청 서술어 꼴을 확인했고, EXP_ONLY 키워드 `언제나 경험 판단`의 "언제"가 의문사로 잘못 잡혀 "최종 결정은 언제나 경험 판단을 따르도록 합시다."가 사라지지 않는지도 회귀로 확인했다(`tests/content/experienceFirst.test.ts`, `tests/domain/conditions.test.ts`).
 
+**PR #13 Codex 6차 검토(2026-10-06) P1**: ai-approval과 같은 수정 — 의문사 + 해요체 규칙에 `-해요/-어요/-아요`를 포함했다("판단 근거를 기록하는 양식은 어떻게 정해요"·"경고 시 결정을 잠시 멈추는 기준은 누가 정해요"는 제안하지 않음). 자세한 내용은 `docs/SCENARIO_AI_APPROVAL.md` 6차 단락.
+
 ## 구현 파일(T78)
 
 `src/content/scenarios/experienceFirst.ts`(id `experience-first`, caseLabel `사건 02`) · `server/scenario-data.ts`의 `EXPERIENCE_FIRST_MATERIALS` · 콘텐츠 검증 `tests/content/experienceFirst.test.ts` · e2e 상충쌍 흐름(`e2e/reactions.spec.ts`, `scenario-card-experience-first`) · e2e 전 구간 완주(`e2e/flow-full.spec.ts`).
