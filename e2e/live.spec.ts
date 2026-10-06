@@ -14,7 +14,7 @@ type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByTestId('scenario-card-anon-board').click();
+  await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '이사회 입장' }).click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
 }
@@ -244,4 +244,47 @@ test('서버 상태 확인이 실패하면 scripted 배지와 기존 흐름을 �
   // scripted 경로는 사전 구성된 임원 4열 카드를 그대로 보여준다(live 발언 카드가 아니다).
   await expect(page.locator('.opinion-card')).toHaveCount(4);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(0);
+});
+
+// PR #13 Codex 2차 검토 P1: mock 제공자가 역할마다 ai-approval 전용 조건 ID(LIMIT 등)를
+// 고정으로 돌려줘, experience-first에서는 임원 4명 중 3명이 매 라운드 invalid_response로
+// 떨어졌다(suggestedConditionIds가 그 안건의 조건이 아니라서). server/providers/mock.ts를
+// 안건별로 고치고 난 회귀 확인 — 라우트 가로채기 없이 실제 mock 서버로 전 구간을 완주한다.
+test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 응답하고 완주한다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-experience-first').click();
+  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+  await expect(page.locator('[data-testid^="statement-failed-"]')).toHaveCount(0);
+
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('phrase-card-P1').click();
+  const submitOpinion = page.getByTestId('submit-opinion');
+  await expect(submitOpinion).toBeEnabled();
+  await submitOpinion.click();
+
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+  await expect(page.locator('[data-testid^="statement-failed-"]')).toHaveCount(0);
+
+  await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-YES').check();
+  await page.getByTestId('confirm-vote').click();
+
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
+  await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
 });

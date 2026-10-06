@@ -4,7 +4,7 @@
 
 삼성화재 AX Day 2026 · BOARDROOM 2026: 4분 이사회
 
-참가자는 특별 이사로 가상 임원 4명과 토론하고 마지막에 한 표를 행사합니다. P0(안건 ② 완주, live/scripted 겸용)는 구현이 끝났고 PR 준비 단계입니다([진행 상황](docs/TASKS.md#진행-상황)). P1(안건 ①·③, 관람 뷰)·P2(서버 배포·튜닝)는 아직 착수 전입니다.
+참가자는 특별 이사로 가상 임원 4명과 토론하고 마지막에 한 표를 행사합니다. 안건은 2026-10-02(T78)에 두 개로 교체했습니다 — ① [AI Agent에게 결재권을 줄까](docs/SCENARIO_AI_APPROVAL.md)·② [데이터보다 경험이 중요할까](docs/SCENARIO_EXPERIENCE_FIRST.md). P0(두 안건 전 구간 완주, live/scripted 겸용)는 구현이 끝났고 PR 준비 단계입니다([진행 상황](docs/TASKS.md#진행-상황)). 관람 뷰·P2(서버 배포·튜닝)는 아직 착수 전입니다.
 
 ## 설치
 
@@ -39,7 +39,7 @@ npm run test         # vitest만(tests/domain, tests/content, tests/services, te
 npm run build && npx playwright test   # e2e(1920×1080·1280×720 두 해상도, mock 서버 자동 기동)
 ```
 
-단위 테스트 203개(도메인 규칙·표결 평가·조건·시계·서버 검증·live 어댑터), E2E 54개(27개 spec × 2 해상도). `e2e/fixtures.ts`가 모든 spec에 외부 요청 차단 fixture를 자동 적용해 `localhost` 밖으로 나간 요청이 있으면 테스트가 실패합니다.
+단위 테스트 506개(도메인 규칙·표결 평가·조건·시계·서버 검증·live 어댑터), E2E 54개(27개 spec × 2 해상도). `e2e/fixtures.ts`가 모든 spec에 외부 요청 차단 fixture를 자동 적용해 `localhost` 밖으로 나간 요청이 있으면 테스트가 실패합니다.
 
 ## 부스 운영(로컬 서버)
 
@@ -81,11 +81,11 @@ bash scripts/offline-check.sh
 
 mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공자)으로 검증한 live 흐름(E2E `e2e/live.spec.ts`, 단위 `tests/server/*.test.ts`·`tests/services/live.test.ts`·`tests/services/assistant-live.test.ts`).
 
-실제 Anthropic API 키 실측은 **2026-09-22에 처음 유효하게 실행했습니다**(`npm run eval:live -- --runs 3`, claude-sonnet-5, 144호출 전량 성공, 검증 실패 0·호출 실패 0, 지연 중앙값 3.53초·p95 5.78초·최대 7.27초로 8초 예산 초과 0건). 기록은 `docs/eval/live-2026-09-22.{md,jsonl}`, 절차와 예상 비용은 [docs/LIVE_EVAL.md](docs/LIVE_EVAL.md)에 있습니다. 이 실측은 이전 안건(ai-assistant)·프롬프트 v1 기준이며, 그 기록으로 문체를 v3까지 튜닝했습니다(`docs/eval/tuning-v2.md`·`tuning-v3.md`, T34). 현재 활성 안건(anon-board, 2026-09-23)에서는 T54가 프롬프트 v4 기준선을 144행·실패 0으로 재측정한 뒤 v5와 비교했습니다(`docs/eval/tuning-v5.md`). 같은 폴더의 2026-09-11 기록은 CLI 로그인을 키 대용으로 받던 하네스 결함으로 전량 `provider_error`라 유효한 실측이 아닙니다. 그 뒤 현재 안건(anon-board) 기준으로 프롬프트 **v5·v6·v7**을 고정 평가 세트(12케이스·144호출)로 각각 실측했습니다 — `docs/eval/tuning-v5.md`(자료명 인용, T54), `tuning-v6.md`(찬성·반대 두 표, T62), `tuning-v7.md`(stance 필드, T63). 현재 배포 프롬프트는 v7이며 마지막 실측(after3)은 144행 실패 0입니다.
+실제 Anthropic API 키 실측은 **2026-09-22에 처음 유효하게 실행했습니다**(`npm run eval:live -- --runs 3`, claude-sonnet-5, 144호출 전량 성공, 검증 실패 0·호출 실패 0, 지연 중앙값 3.53초·p95 5.78초·최대 7.27초로 8초 예산 초과 0건). 기록은 `docs/eval/live-2026-09-22.{md,jsonl}`, 절차와 예상 비용은 [docs/LIVE_EVAL.md](docs/LIVE_EVAL.md)에 있습니다. 이 실측은 이전 안건(ai-assistant)·프롬프트 v1 기준이며, 그 기록으로 문체를 v3까지 튜닝했습니다(`docs/eval/tuning-v2.md`·`tuning-v3.md`, T34). 현재 활성 안건(anon-board, 2026-09-23)에서는 T54가 프롬프트 v4 기준선을 144행·실패 0으로 재측정한 뒤 v5와 비교했습니다(`docs/eval/tuning-v5.md`). 같은 폴더의 2026-09-11 기록은 CLI 로그인을 키 대용으로 받던 하네스 결함으로 전량 `provider_error`라 유효한 실측이 아닙니다. 그 뒤 이전 안건(anon-board) 기준으로 프롬프트 **v5·v6·v7**을 고정 평가 세트(12케이스·144호출)로 각각 실측했습니다 — `docs/eval/tuning-v5.md`(자료명 인용, T54), `tuning-v6.md`(찬성·반대 두 표, T62), `tuning-v7.md`(stance 필드, T63), 마지막 실측(after3)은 144행 실패 0입니다. **2026-10-02(T78)에 안건을 ①AI 결재권·②데이터보다 경험으로 교체**했으므로 그 실측은 더는 활성 콘텐츠를 대표하지 않습니다. 같은 날 T79가 안건별 임원 렌즈·OPINIONS 전용 출발 성향을 추가해 **현재 배포 프롬프트는 v8**이고, 새 안건 2개 기준 16케이스(192호출)로 재측정했습니다 — `docs/eval/tuning-v8.md`. 190/192 응답(2건은 상충 경로 한 케이스의 VOTE에서 provider 수준 `invalid_response`로 실패, 재실행하지 않고 그대로 기록), stance 누락·존댓말 위반·`E\d` 잔존 모두 0건, OPINIONS stance가 의도한 출발 성향(찬성 1·반대 2·미정 1)과 64/64(100%) 일치했습니다.
 
 ## 완료 범위 (P0)
 
-- 안건 ② 전 구간을 실제 브라우저에서 마우스 클릭·키보드만으로 완주(추천 문구만 / 직접 입력만 두 경로 모두).
+- 두 안건(① AI Agent 결재권·② 데이터보다 경험) 모두 전 구간을 실제 브라우저에서 마우스 클릭·키보드만으로 완주(추천 문구만 / 직접 입력만 두 경로 모두).
 - 추천 문구 복수 선택, 300자 제한, 편집 보존, 공백 방지, 후속 질문 조건 유지/해제.
 - 최종 투표 이전에는 찬성/반대 버튼이 없고, 참가자 표는 확정 버튼으로만 성립. 임원 표는 최초 대기 8초 안에 도착·검증된 것을 집계하고, 실패한 임원은 운영자가 "미표결 임원 다시 요청"을 1회 누를 수 있다(T65 — 8초 뒤 5초 유예 안에 시작한 재요청은 자체 타임아웃까지 기다려 도착한 표를 집계). 그래도 없는 표는 UNCAST.
 - 운영자 메뉴(새 체험 확인, scripted로 새 체험, 모델 연결 확인, 전체화면 진입/종료), 새로고침 시 새 세션, 최종 투표 중복 클릭 방지. 240초 만료와 무입력 75초 안내·90초 복귀는 T50(2026-09-22)에서 제거했습니다 — 체험은 시간으로 끝나지 않고 결과 화면 "체험 종료"나 운영 메뉴로만 끝납니다.
@@ -98,9 +98,9 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 
 ## 미구현 (P1 · P2)
 
-- **P1** — 안건 ①·③ 데이터·정규화, ③의 실행 방식 표시와 제안 꼬리표, 관람 뷰(원문·AI 초안·미확정 표 미전송, 재접속·연결 끊김 처리), 서기 입력 확인 리허설. 카드: `docs/TASKS.md`의 T18~T22.
+- **P1** — 레지스트리에 없는 세 번째 안건 자리의 관람 뷰(원문·AI 초안·미확정 표 미전송, 재접속·연결 끊김 처리), 서기 입력 확인 리허설. 카드: `docs/TASKS.md`의 T18~T22(옛 안건 ①·③ 초안은 `docs/SCENARIO_CUSTOMER_SUPPORT.md`·`SCENARIO_PREVENTION.md`에 보존, T70에서 두 카드만 남기며 레지스트리에서 뺐다).
 - **P2** — 실제 모델 응답 비용·지연 튜닝(임원 에이전트 고도화 2차), 결과 출력(프린터) 선택 확장. 카드: T23·T24·T34·T35.
-- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. 현재 안건(anon-board) 기준 실측은 T54(v4 기준선 → v5)·T62(v6)·T63(v7)에서 마쳤고 기록은 `docs/eval/tuning-v5~v7.md`에 있습니다(위 "데모와 실제 AI 차이"). T35(비서실장 별도 평가)도 남아 있습니다.
+- 임원 에이전트 실제 키 실측(`npm run eval:live -- --runs 3`)은 2026-09-22에 실행했고(위 "데모와 실제 AI 차이"), T34(고도화 1차)는 완료했습니다. T54(v4 기준선 → v5)·T62(v6)·T63(v7)의 프롬프트 튜닝(`docs/eval/tuning-v5~v7.md`)은 **이전 안건(anon-board)** 콘텐츠 기준이라 2026-10-02 T78의 안건 교체 이후로는 활성 콘텐츠를 대표하지 않습니다. 같은 날 T79가 새 안건 2개 기준으로 프롬프트 v8을 재측정했습니다(`docs/eval/tuning-v8.md`, 190/192 응답). PR #13 Codex 1차 검토(P1)에서 `npm run eval:live`가 레지스트리에서 빠진 `anon-board`를 그대로 가리켜 호출 전에 `unknown_scenario`로 멈추던 결함을 고쳐, `--scenario`(기본 `ai-approval`, `experience-first`도 가능)로 안건을 고를 수 있게 했습니다(`docs/LIVE_EVAL.md`). T35(비서실장 별도 평가)는 아직 남아 있습니다.
 
 ## 현장 미검증 목록
 
@@ -112,12 +112,13 @@ mock 제공자로 검증된 항목: `MODEL_PROVIDER=mock`(결정적 mock 제공�
 
 ## Claude Code 시작점
 
-[CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 안건 ② 프로토타입부터 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
+[CLAUDE_IMPLEMENTATION.md](CLAUDE_IMPLEMENTATION.md)를 읽고 구현합니다. 문서 마지막의 시작 프롬프트를 그대로 전달할 수 있습니다.
 
 - [기획서 v0.7](AX_Day_2026_Boardroom_Plan.md)
-- [안건 ① 상세 시나리오·표결 분기 (T62 이전 초안, HOLD 규칙 구버전)](docs/SCENARIO_CUSTOMER_SUPPORT.md)
-- [안건 ③ 상세 시나리오·표결 분기 (T62 이전 초안, HOLD 규칙 구버전)](docs/SCENARIO_PREVENTION.md)
-- [안건 ② 상세 시나리오·표결 분기](docs/SCENARIO_AI_ASSISTANT.md)
+- [안건 ① AI Agent 결재권 — 상세 시나리오·표결 분기](docs/SCENARIO_AI_APPROVAL.md)
+- [안건 ② 데이터보다 경험 — 상세 시나리오·표결 분기](docs/SCENARIO_EXPERIENCE_FIRST.md)
+- [이전 안건(보존, 레지스트리 밖) — 사내 게시판 익명제](docs/SCENARIO_ANON_BOARD.md)
+- [더 이전 초안(보존, T62 이전 HOLD 규칙 구버전)](docs/SCENARIO_CUSTOMER_SUPPORT.md) · [〃](docs/SCENARIO_PREVENTION.md)
 - [디자인 명세·화면 이미지](docs/design/DESIGN_SPEC.md)
 - [CSS 디자인 토큰](docs/design/tokens.css)
 - [개정 PPT v0.7 · 18장](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx)

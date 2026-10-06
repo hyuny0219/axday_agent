@@ -262,6 +262,27 @@ describe('proposeFromText', () => {
   });
 });
 
+// PR #13 Codex 5차 검토 P1: 약속형 어간으로 좁힌 키워드도 정보성 질문의 부분
+// 문자열이다. 의문·정보 요청 문장 속 언급은 그 한 번만 무시한다(부정과 달리 조건
+// 전체를 거부하지 않는다). 규칙 자체(받침 판정 경계 등)를 anonBoard 픽스처로 검증한다.
+describe('의문·정보 요청 문장 속 언급 무시(PR #13 Codex 5차 검토 P1)', () => {
+  it('받침 판정 경계: "하니까"는 의문이 아니고 "합니까"는 의문이다', () => {
+    expect(proposeFromText(scenario, '검수하니까 진행합시다.')).toEqual(['SCREEN']);
+    expect(proposeFromText(scenario, '검수합니까?')).toEqual([]);
+  });
+
+  it('ㄹ받침+까 꼴("할까요"·"했을까")도 의문으로 본다', () => {
+    expect(proposeFromText(scenario, '검수할까요?')).toEqual([]);
+    expect(proposeFromText(scenario, '검수했을까 궁금합니다.')).toEqual([]);
+  });
+
+  it('의문 판정이 부정 판정보다 먼저다 — 의문문 속 부정은 조건을 거부하지 않고, 이어지는 긍정 청유만 본다', () => {
+    expect(
+      proposeFromText(scenario, '검수하지 않는 이유가 무엇입니까? 검수 절차를 둡시다.'),
+    ).toEqual(['SCREEN']);
+  });
+});
+
 describe('findConflicts', () => {
   it('선택 집합 안에서 실제로 겹치는 충돌쌍만 반환한다', () => {
     expect(findConflicts(scenario, ['TRACE', 'ANON_FULL', 'PILOT'])).toEqual([

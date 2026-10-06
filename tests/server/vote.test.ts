@@ -11,7 +11,7 @@ function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
     sessionId: 'session-1',
     requestId: 'req-vote-default',
     mode: 'live',
-    scenarioId: 'anon-board',
+    scenarioId: 'ai-approval',
     budgetMs: 8000,
     transcript: {
       revision: 1,
@@ -21,7 +21,7 @@ function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
       id: 'work-assistant-original',
       hash: 'motion-hash-1',
       text: '여러 부서 자료를 연결해 주간 보고서를 자동 작성·공유하는 AI 업무 비서를 도입한다.',
-      effectiveConditionIds: ['PILOT'],
+      effectiveConditionIds: ['LIMIT'],
       executionMode: 'pilot',
     },
     ...overrides,
@@ -202,4 +202,111 @@ describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CFO'] }).success).toBe(false);
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO'] }).success).toBe(true);
   });
+});
+
+// PR #13 Codex 1차 검토 P2: CONDITION_IDS는 안건①·②의 합집합이라, 스키마만으로는 다른
+// 안건의 조건(예: 안건①에 SCOPE)도 모양상 통과한다. motion.effectiveConditionIds는
+// scenarioId가 가리키는 안건 자신의 조건이어야만 유효하다 — 요청 방향 검증.
+describe('voteRequestSchema의 안건별 조건 검증(PR #13 Codex 1차 검토 P2)', () => {
+  it('안건①(ai-approval) 요청에 안건②의 조건(SCOPE)이 섞이면 거부한다', () => {
+    const input = baseVoteInput({
+      requestId: 'req-foreign-1',
+      scenarioId: 'ai-approval',
+      motion: {
+        id: 'm1',
+        hash: 'h1',
+        text: '안건',
+        effectiveConditionIds: ['SCOPE'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    const result = voteRequestSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it('안건②(experience-first) 요청에 안건①의 조건(LIMIT)이 섞이면 거부한다', () => {
+    const input = baseVoteInput({
+      requestId: 'req-foreign-2',
+      scenarioId: 'experience-first',
+      motion: {
+        id: 'm2',
+        hash: 'h2',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    const result = voteRequestSchema.safeParse(input);
+    expect(result.success).toBe(false);
+  });
+
+  it('각 안건 자신의 조건 ID만 실으면 통과한다', () => {
+    const aiApproval = baseVoteInput({
+      requestId: 'req-valid-1',
+      scenarioId: 'ai-approval',
+      motion: {
+        id: 'm3',
+        hash: 'h3',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT', 'REVIEW'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(aiApproval).success).toBe(true);
+
+    const experienceFirst = baseVoteInput({
+      requestId: 'req-valid-2',
+      scenarioId: 'experience-first',
+      motion: {
+        id: 'm4',
+        hash: 'h4',
+        text: '안건',
+        effectiveConditionIds: ['SCOPE', 'REVIEW'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(experienceFirst).success).toBe(true);
+  });
+
+  it('알 수 없는 scenarioId는 조건 검증을 건너뛴다(handleVote가 별도로 unknown_scenario를 던진다)', () => {
+    const input = baseVoteInput({
+      requestId: 'req-unknown-scenario',
+      scenarioId: 'not-a-scenario',
+      motion: {
+        id: 'm5',
+        hash: 'h5',
+        text: '안건',
+        effectiveConditionIds: ['LIMIT'],
+        executionMode: 'DEFAULT',
+      },
+    });
+    expect(voteRequestSchema.safeParse(input).success).toBe(true);
+  });
+});
+
+// PR #13 Codex 2차 검토 P1: 실제 createMockProvider(server/providers/mock.ts)가 두 안건
+// 모두에서 임원 4명 전원 answered를 돌려주는지 확인한다. 표결 응답에는 조건 ID가 없어
+// (evidenceIds만 있고 둘 다 E1~E4 공유) round만큼 깨지기 쉽지 않았지만, 카드 지시대로
+// round와 같이 명시적으로 확인해 둔다.
+describe('실제 mock 제공자가 두 안건 모두에서 깨끗하게 동작하는지(PR #13 Codex 2차 검토 P1)', () => {
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '%s에서 임원 4명 모두 answered를 돌려준다',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      const input = baseVoteInput({
+        requestId: `req-mock-clean-${scenarioId}`,
+        scenarioId,
+        motion: {
+          id: `m-${scenarioId}`,
+          hash: `h-${scenarioId}`,
+          text: '안건',
+          effectiveConditionIds: [],
+          executionMode: 'DEFAULT',
+        },
+      });
+      const results = await handleVote(input, { provider });
+      expect(results).toHaveLength(4);
+      expect(results.every((r) => r.status === 'answered')).toBe(true);
+    },
+  );
 });

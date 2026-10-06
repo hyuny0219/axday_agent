@@ -1,10 +1,12 @@
-// T34 고정 평가 세트 실행기. scripts/eval-set.json(12케이스 = 안건② 네 경로 × 참가자
-// 발언 변형 3개)을 server/handlers/round.ts·vote.ts로 직접 실행해 라운드별 비교(전/후)에
-// 쓸 원시 기록(jsonl)을 만든다. scripts/live-eval.ts(T32, 4경로×1변형, npm run eval:live의
-// 공개 동작)는 건드리지 않는다 — docs/LIVE_EVAL.md가 그 스크립트의 48/144 호출 수를
-// 문서화하고 있어서다. 이 스크립트는 별도 산출물이다.
+// T34 고정 평가 세트 실행기(T79에서 두 안건 기준으로 재작성). scripts/eval-set.json(16케이스 =
+// 안건 2개 × 네 경로(조건 없음·조건 보완·상충·요청형) × 참가자 발언 변형 2개)을
+// server/handlers/round.ts·vote.ts로 직접 실행해 라운드별 비교(전/후)에 쓸 원시 기록(jsonl)을
+// 만든다. 옛 세트(anon-board, 12케이스, 변형 3개, 경로명 '부정')는 T78 안건 교체로 더는 쓸 수
+// 없다 — docs/eval/tuning-v1~v7이 그 세트 기록이다. scripts/live-eval.ts(T32, 4경로×1변형,
+// npm run eval:live의 공개 동작)는 건드리지 않는다 — docs/LIVE_EVAL.md가 그 스크립트의
+// 48/144 호출 수를 문서화하고 있어서다. 이 스크립트는 별도 산출물이다.
 //
-// 실행: `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v1-before.jsonl`
+// 실행: `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v8-after.jsonl`
 //   - MODEL_PROVIDER=mock 이면 mock으로 실행한다(modelId는 서버와 같이 항상 'mock-model' —
 //     MODEL_ID는 무시. 산출물 행의 modelId만으로 실제 평가와 구별하기 위해서다).
 //   - 그 외에는 실제 모델(anthropic) 평가를 시도하고, 키가 없으면 안내 후 종료 코드 0으로
@@ -15,7 +17,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { CONDITION_IDS, type ExecRoleId } from '../server/validate';
+import { CONDITION_IDS, EXEC_ROLE_IDS, type ExecRoleId } from '../server/validate';
 
 type ConditionId = (typeof CONDITION_IDS)[number];
 import { getScenarioMaterials } from '../server/scenario-data';
@@ -41,11 +43,13 @@ export function resolveEvalModel(env: NodeJS.ProcessEnv): { useMock: boolean; mo
 }
 import { systemClock, type Clock } from '../server/clock';
 
-const SCENARIO_ID = 'anon-board';
 const BUDGET_MS = 8000;
 
 export interface EvalCase {
   id: string;
+  /** T79: 케이스마다 안건을 명시한다(ai-approval·experience-first) — 이전 세트는 파일
+   * 전체가 한 안건(anon-board)이었지만 지금은 두 안건을 한 세트에 담는다. */
+  scenarioId: string;
   pathId: string;
   pathLabel: string;
   variant: string;
@@ -54,7 +58,6 @@ export interface EvalCase {
 }
 
 interface EvalSetFile {
-  scenarioId: string;
   cases: EvalCase[];
 }
 
@@ -62,14 +65,14 @@ function loadEvalSet(): EvalCase[] {
   const filePath = path.resolve(import.meta.dirname, 'eval-set.json');
   const raw = readFileSync(filePath, 'utf-8');
   const parsed = JSON.parse(raw) as EvalSetFile;
-  if (parsed.scenarioId !== SCENARIO_ID) {
-    throw new Error(`eval-set.json scenarioId mismatch: ${parsed.scenarioId}`);
-  }
   return parsed.cases;
 }
 
 export interface EvalRow {
   caseId: string;
+  /** T79: 두 안건을 한 세트에서 같이 재는 평가 세트라 행마다 어느 안건인지 적는다.
+   * 선택 필드로 둬서 이전 버전의 EvalRow 리터럴(예: 테스트 고정값)이 깨지지 않는다. */
+  scenarioId?: string;
   pathId: string;
   pathLabel: string;
   variant: string;
@@ -97,6 +100,7 @@ function toRoundRows(
 ): EvalRow[] {
   return results.map((result) => ({
     caseId: evalCase.id,
+    scenarioId: evalCase.scenarioId,
     pathId: evalCase.pathId,
     pathLabel: evalCase.pathLabel,
     variant: evalCase.variant,
@@ -195,6 +199,7 @@ export function toVoteRows(
   const calls = callRecordsByRole(sink, fromIndex);
   return results.map((result) => ({
     caseId: evalCase.id,
+    scenarioId: evalCase.scenarioId,
     pathId: evalCase.pathId,
     pathLabel: evalCase.pathLabel,
     variant: evalCase.variant,
@@ -216,9 +221,9 @@ async function runCase(
   provider: ModelProvider,
   clock: Clock,
 ): Promise<EvalRow[]> {
-  const materials = getScenarioMaterials(SCENARIO_ID);
+  const materials = getScenarioMaterials(evalCase.scenarioId);
   if (!materials) {
-    throw new Error(`unknown_scenario:${SCENARIO_ID}`);
+    throw new Error(`unknown_scenario:${evalCase.scenarioId}`);
   }
   const sessionId = `evalset-${evalCase.id}`;
 
@@ -228,7 +233,7 @@ async function runCase(
     mode: 'live',
     stage: 'OPINIONS',
     transcript: { revision: 0, statements: [] },
-    scenarioId: SCENARIO_ID,
+    scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
   const opinionsResults = await handleRound(opinionsRequest, { provider, clock });
@@ -249,7 +254,7 @@ async function runCase(
     stage: 'REACTIONS',
     transcript: { revision: 1, statements: opinionsStatements },
     participantOpinion: evalCase.participantOpinion,
-    scenarioId: SCENARIO_ID,
+    scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
   const reactionsResults = await handleRound(reactionsRequest, { provider, clock });
@@ -267,7 +272,7 @@ async function runCase(
     sessionId,
     requestId: randomUUID(),
     mode: 'live',
-    scenarioId: SCENARIO_ID,
+    scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
     transcript: { revision: 2, statements: [...opinionsStatements, ...reactionsStatements] },
     motion: {
@@ -500,6 +505,74 @@ export function stanceVoteAgreement(rows: EvalRow[]): StanceVoteAgreement {
   return { comparable, agree };
 }
 
+export interface OpeningStanceRoleResult {
+  role: ExecRoleId;
+  /** OPINIONS answered·stance 보유 행 수. */
+  total: number;
+  /** scenario-data.ts의 roleLenses[role].opening과 실제 stance가 같은 행 수. */
+  match: number;
+  distribution: { FOR: number; AGAINST: number; UNDECIDED: number };
+}
+
+/**
+ * T79: "OPINIONS stance 분포(역할별, 의도한 출발 성향과 일치율)". scenario-data.ts의
+ * roleLenses[role].opening을 "의도"로 두고 실제 OPINIONS stance와 비교한다 — 렌즈·출발
+ * 성향은 정답표가 아니므로 이 수치는 "프롬프트가 의도대로 읽혔는지"를 보는 관측값이지
+ * 완료 기준이 아니다.
+ */
+export function openingStanceByRole(rows: EvalRow[]): OpeningStanceRoleResult[] {
+  const byRole = new Map<ExecRoleId, OpeningStanceRoleResult>();
+  for (const role of EXEC_ROLE_IDS) {
+    byRole.set(role, { role, total: 0, match: 0, distribution: { FOR: 0, AGAINST: 0, UNDECIDED: 0 } });
+  }
+  for (const row of rows) {
+    if (row.stage !== 'OPINIONS' || row.status !== 'answered' || !row.stance || !row.scenarioId) continue;
+    const entry = byRole.get(row.roleId);
+    if (!entry) continue;
+    entry.total += 1;
+    if (row.stance === 'FOR' || row.stance === 'AGAINST' || row.stance === 'UNDECIDED') {
+      entry.distribution[row.stance] += 1;
+    }
+    const intended = getScenarioMaterials(row.scenarioId)?.roleLenses?.[row.roleId]?.opening;
+    if (intended && intended === row.stance) {
+      entry.match += 1;
+    }
+  }
+  return [...byRole.values()];
+}
+
+export interface ConditionSupplementPersuasion {
+  /** pathId='condition_supplement' · VOTE answered · 의도한 opening이 AGAINST/UNDECIDED인
+   * (caseId,roleId) 수. */
+  eligible: number;
+  /** 그중 최종 표가 YES인 수("돌아선" 수). */
+  persuaded: number;
+}
+
+/**
+ * T79: "조건 보완 경로에서 반대·미정 임원이 돌아서는 비율(VOTE YES)". condition_supplement
+ * 경로는 각 임원의 scripted voteRules가 YES로 갈리는 조건 조합을 쓴다(eval-set.json 주석) —
+ * 의도한 출발 성향이 AGAINST/UNDECIDED인 임원이 조건이 채워진 뒤 실제로 찬성으로 돌아서는지를
+ * 본다. 기준값을 정하지 않고 관측값만 남긴다(stanceVoteAgreement와 같은 원칙).
+ */
+export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplementPersuasion {
+  let eligible = 0;
+  let persuaded = 0;
+  for (const row of rows) {
+    if (row.pathId !== 'condition_supplement' || row.stage !== 'VOTE' || row.status !== 'answered' || !row.vote) {
+      continue;
+    }
+    if (!row.scenarioId) continue;
+    const intended = getScenarioMaterials(row.scenarioId)?.roleLenses?.[row.roleId]?.opening;
+    if (intended !== 'AGAINST' && intended !== 'UNDECIDED') continue;
+    eligible += 1;
+    if (row.vote === 'YES') {
+      persuaded += 1;
+    }
+  }
+  return { eligible, persuaded };
+}
+
 function readRows(file: string): EvalRow[] {
   return readFileSync(file, 'utf-8')
     .split('\n')
@@ -516,14 +589,23 @@ function runCheck(files: string[]): void {
     const mentions = findEvidenceIdMentions(rows);
     const missingStance = findMissingStance(rows);
     const agreement = stanceVoteAgreement(rows);
+    const openingByRole = openingStanceByRole(rows);
+    const persuasion = conditionSupplementPersuasion(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
         ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
         ` · 문장 속 자료 ID(E\\d) 잔존 ${mentions.length}건` +
         ` · stance 누락 ${missingStance.length}건` +
-        ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}`,
+        ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
+        ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );
+    for (const r of openingByRole) {
+      console.log(
+        `    [OPINIONS 출발 성향] ${r.role} · FOR ${r.distribution.FOR} · AGAINST ${r.distribution.AGAINST}` +
+          ` · UNDECIDED ${r.distribution.UNDECIDED} · 의도 일치 ${r.match}/${r.total}`,
+      );
+    }
     for (const row of missingStance) {
       console.log(`    [stance 누락] ${row.caseId}/${row.roleId}/${row.stage}`);
     }
