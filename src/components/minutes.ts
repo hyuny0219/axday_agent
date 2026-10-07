@@ -233,8 +233,12 @@ export function buildMinutes(
     }
 
     // 5. 후속 질문(각본 문구, 도착 시각 없음). T93: 참가자 입장별로 묻는 임원·질문이
-    // 다를 수 있다(resolveFollowUpPrompt).
-    const followUpPrompt = resolveFollowUpPrompt(scenario, firstOpinion.stance ?? null);
+    // 다를 수 있다(resolveFollowUpPrompt). 다시 답하기에서 입장을 바꿔 제출했으면 실제로
+    // 답한 질문은 둘째 의견의 입장 기준이다(PR #20 Codex 22차 검토 P2).
+    const followUpPrompt = resolveFollowUpPrompt(
+      scenario,
+      session.opinions[1]?.stance ?? firstOpinion.stance ?? null,
+    );
     entries.push({
       id: 'caio-question',
       speaker: followUpPrompt.askedBy,

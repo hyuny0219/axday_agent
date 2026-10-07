@@ -45,9 +45,12 @@ export interface ScenarioMaterials {
 const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
   scenarioId: 'ai-approval',
   originalMotionId: 'ai-approval-original',
+  // 화면(src/content/scenarios/aiApproval.ts subtitle)과 같은 문장. 'AI Agent'가 남아 있으면
+  // 모델이 원안을 인용할 때 'Agent'가 영문 잔존 검사기(validate.ts)에 걸려 정상 응답이
+  // 거절된다(PR #20 Codex 22차 검토 P2).
   originalMotionText:
-    '정해진 범위의 반복 결재를 AI Agent가 직접 승인한다.' +
-    ' 범위·한도·책임·재검토 절차는 미정이다.',
+    '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다.' +
+    ' 결재 범위와 금액 한도, 잘못 승인했을 때 책임, 사람이 다시 보는 절차는 미정이다.',
   // T93(2026-10-07): src/content/scenarios/aiApproval.ts의 evidence.content와 같은 쉬운 말
   // 문장으로 함께 갱신한다 — live 프롬프트(meeting_record)가 읽는 자료 본문과 화면이
   // 어긋나지 않게 한다.
