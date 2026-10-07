@@ -197,11 +197,12 @@ export function ReactionsScreen({
   );
   // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): 결재권을 준다는
   // 전제의 질문이 반대 참가자에게 어색했다 — 참가자의 최근 입장(lastOpinion.stance)에 따라
-  // FOR/AGAINST 질문을 고른다. "다시 답하기" 추천 답변의 입장 선택(side, 아래)과는 다른
-  // 축이다 — 질문 자체는 참가자의 실제 입장을 따르고, 답변 추천만 side로 고른다.
+  // FOR/AGAINST 질문을 고른다. 질문과 추천 답변이 어긋나면 안 되므로(PR #20 Codex 20차
+  // 검토 P2 — "다시 답하기"에서 입장을 바꾸면 반대용 답변이 찬성 질문 아래 나왔다) 지금
+  // 고른 입장(side)이 있으면 그것을, 없으면 참가자의 최근 입장(lastOpinion.stance)을 쓴다.
   const followUpPrompt = useMemo(
-    () => resolveFollowUpPrompt(scenario, lastOpinion?.stance ?? null),
-    [scenario, lastOpinion],
+    () => resolveFollowUpPrompt(scenario, side ?? lastOpinion?.stance ?? null),
+    [scenario, side, lastOpinion],
   );
   // 라운드당 1회(T65) — server/sessionLimit.ts의 호출 상한이 최종 방어선이다.
   const [retryUsed, setRetryUsed] = useState(false);

@@ -93,6 +93,24 @@ export function findForbiddenWords(text: string): string[] {
   return FORBIDDEN_WORDS.filter((word) => text.includes(word));
 }
 
+/** 금지 어휘의 **실제 출현 횟수**(같은 어휘가 한 발언에 두 번 나오면 2). 집계용 —
+ * findForbiddenWords는 어휘 종류만 돌려줘 횟수가 과소 집계됐다(PR #20 Codex 20차 검토 P2). */
+export function countForbiddenWordOccurrences(text: string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const word of FORBIDDEN_WORDS) {
+    let from = 0;
+    let n = 0;
+    for (;;) {
+      const index = text.indexOf(word, from);
+      if (index === -1) break;
+      n += 1;
+      from = index + word.length;
+    }
+    if (n > 0) counts[word] = n;
+  }
+  return counts;
+}
+
 export interface ReadabilityStats {
   sentenceCount: number;
   avgCharsPerSentence: number;

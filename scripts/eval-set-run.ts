@@ -32,7 +32,7 @@ import type {
   ModelProvider,
 } from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
-import { findForbiddenWords, readabilityStats } from '../server/prompts/plainLanguage';
+import { countForbiddenWordOccurrences, readabilityStats } from '../server/prompts/plainLanguage';
 
 /** 평가 실행에 쓸 제공자·modelId. mock이면 서버(server/index.ts)와 같이 MODEL_ID와 무관하게 항상
  * MOCK_MODEL_ID다 — 예전에는 MODEL_ID 기본값(claude-sonnet-5)을 mock에도 넘겨 mock 실행의 모든
@@ -650,9 +650,9 @@ export function plainLanguageStats(rows: EvalRow[]): PlainLanguageStats {
       const stats = readabilityStats(text);
       sentenceTotal += stats.sentenceCount;
       charTotal += stats.avgCharsPerSentence * stats.sentenceCount;
-      for (const word of findForbiddenWords(text)) {
-        forbiddenWordMentions += 1;
-        forbiddenWordCounts[word] = (forbiddenWordCounts[word] ?? 0) + 1;
+      for (const [word, n] of Object.entries(countForbiddenWordOccurrences(text))) {
+        forbiddenWordMentions += n;
+        forbiddenWordCounts[word] = (forbiddenWordCounts[word] ?? 0) + n;
       }
     }
   }
