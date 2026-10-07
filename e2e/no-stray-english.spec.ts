@@ -15,7 +15,7 @@ import { test, expect } from './fixtures';
  * 지워야 'AI' 예외가 중복 적용되지 않는다. 'Esc'는 팝업 안내("Esc · 닫기 버튼")의
  * 키보드 키 이름 — 물리 키보드 표기 그대로라 디자인 장식 라벨이 아니다(판단 근거:
  * 한국어 UI에서도 "Esc 키"로 흔히 쓴다). */
-const ALLOWED_TOKENS = ['BECOME A BOARD', 'BOARDROOM 2026', 'CEO', 'CFO', 'CAIO', 'CISO', 'AI', 'Esc'];
+const ALLOWED_TOKENS = ['BECOME A BOARD', 'CEO', 'CFO', 'CAIO', 'CISO', 'AI', 'Esc'];
 const STRAY_LATIN = /[A-Za-z]{2,}/g;
 
 /** 붉은 사각 도장류(T87, 사용자 — "붉은 상자 안의 글씨는 영어로, 더 비밀요원스럽다")만
