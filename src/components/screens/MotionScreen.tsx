@@ -20,7 +20,7 @@ import { useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
-import { collectConfirmedConditionIds } from '../opinionConditions';
+import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildMotionDisplay } from '../motionDisplay';
 import '../../styles/screens/motion.css';
 import '../../styles/screens/live.css';
@@ -55,6 +55,7 @@ export function MotionScreen({
   onFreeze,
 }: MotionScreenProps) {
   const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions), [opinions]);
+  const participantStance = useMemo(() => collectParticipantStance(opinions), [opinions]);
   // 라운드당 1회(T65) — 세션 호출 상한(server/sessionLimit.ts)이 최종 방어선이다. 세션
   // 전체에서 라운드 재요청은 1회뿐이라(OPINIONS·REACTIONS·FOLLOWUP 중 먼저 쓴 곳에서
   // 소진), 이미 다른 단계에서 재요청을 썼으면 이 버튼을 눌러도 서버가 call_limit으로
@@ -89,7 +90,7 @@ export function MotionScreen({
   // 표결 안건 문장(T84, Opus UX 검토 #3+my#2): scenario.originalMotion.text를 그대로
   // 보여주면 조건을 붙여도 "…절차는 미정이다."로 끝나 모순돼 보인다. 표시만 동적으로
   // 구성한다(motion.text 자체·freezeMotion에 넘기는 값은 바뀌지 않는다).
-  const motionDisplay = buildMotionDisplay(scenario, confirmedConditionIds);
+  const motionDisplay = buildMotionDisplay(scenario, confirmedConditionIds, participantStance);
 
   // "NOT INCLUDED · 빠진 것"(시안): 이번에 확정되지 않은 조건들을 그대로 나열한다 — 새
   // 사실을 만들지 않고 scenario.conditions·확정 목록만으로 계산한다.
@@ -138,7 +139,9 @@ export function MotionScreen({
           <div className="motion-screen__cols">
             <div className="motion-screen__cols-box">
               <span className="motion-screen__box-label">
-                반영된 조건 {confirmedConditionIds.length}
+                {participantStance === 'AGAINST' && confirmedConditionIds.length > 0
+                  ? `이사님이 요구한 조건 ${confirmedConditionIds.length}`
+                  : `반영된 조건 ${confirmedConditionIds.length}`}
               </span>
               {confirmedConditionIds.length > 0 ? (
                 <ul className="motion-screen__conditions" data-testid="motion-conditions">

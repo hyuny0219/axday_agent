@@ -81,7 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
-import { reactionsFor } from '../reactionsFor';
+import { reactionsFor, oppositionReactionText } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -549,10 +549,16 @@ export function ReactionsScreen({
         stage: 'OPINIONS',
       };
       const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
+      const opposition = oppositionReactionText(
+        scenario,
+        memberId,
+        lastOpinion?.stance ?? null,
+        previousConfirmedIds,
+      );
       const reactionText =
         reactions.length > 0
           ? reactions.map((reaction) => reaction.text).join(' ')
-          : '앞서 말씀드린 입장 그대로입니다.';
+          : opposition ?? '앞서 말씀드린 입장 그대로입니다.';
       const reactionEntry: EvidenceDialogStatementView = {
         memberId,
         stance,
@@ -564,7 +570,7 @@ export function ReactionsScreen({
       };
       return [opinionEntry, reactionEntry];
     });
-  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds, scriptedBaselineStances]);
+  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds, scriptedBaselineStances, lastOpinion]);
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
   // 않고 넘어가기")뿐이고, 발언 흐름(MinutesPanel)은 App.tsx AppShell이 OPINIONS와
@@ -618,6 +624,12 @@ export function ReactionsScreen({
               <div className="reactions-screen__cards">
                 {EXEC_MEMBER_ORDER.map((memberId) => {
                   const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
+                  const opposition = oppositionReactionText(
+                    scenario,
+                    memberId,
+                    lastOpinion?.stance ?? null,
+                    previousConfirmedIds,
+                  );
                   const stance = stances[memberId];
                   const changed = scriptedBaselineStances[memberId] !== stance;
                   return (
@@ -638,7 +650,7 @@ export function ReactionsScreen({
                       <p className="reaction-card__text reaction-card__text--full">
                         {reactions.length > 0
                           ? reactions.map((reaction) => reaction.text).join(' ')
-                          : '앞서 말씀드린 입장 그대로입니다.'}
+                          : opposition ?? '앞서 말씀드린 입장 그대로입니다.'}
                       </p>
                     </article>
                   );

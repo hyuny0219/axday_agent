@@ -35,6 +35,9 @@ export interface VoteScreenProps {
   execBallotsPending: boolean;
   /** 무대 표정 배지의 접근 가능한 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
+  /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). MOTION 상자 문구를 반대 입장에 맞게
+   * 바꾼다(buildMotionDisplay). */
+  participantStance?: 'FOR' | 'AGAINST' | null;
   /** 실패한 역할을 가려내 "미표결 임원 다시 요청" 버튼을 보여줄 때만 쓴다(T65). */
   roleStatus?: Record<ExecMemberId, RoleStatus>;
   onSelectVote: (vote: PendingVote) => void;
@@ -64,6 +67,7 @@ export function VoteScreen({
   pendingVote,
   mode,
   execBallotsPending,
+  participantStance = null,
   roleStatus,
   onSelectVote,
   onConfirmVote,
@@ -94,7 +98,7 @@ export function VoteScreen({
   const showWaiting = mode === 'live' && execBallotsPending && !showRetry;
 
   // 표결 안건 문장(T84, MotionScreen과 같은 이유) — motion.text 자체는 바뀌지 않는다.
-  const motionDisplay = buildMotionDisplay(scenario, motion.effectiveConditionIds);
+  const motionDisplay = buildMotionDisplay(scenario, motion.effectiveConditionIds, participantStance);
 
   function handleRetry() {
     if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
@@ -178,7 +182,9 @@ export function VoteScreen({
                 그대로 읽으므로, 옛 sr-only 문단은 완전히 대체돼 뺐다. */}
             {motion.effectiveConditionIds.length > 0 && (
               <div className="vote-screen__motion-conditions" data-testid="vote-motion-conditions">
-                <span className="vote-screen__motion-conditions-label">반영 조건</span>
+                <span className="vote-screen__motion-conditions-label">
+                  {participantStance === 'AGAINST' ? '이사님이 요구한 조건' : '반영 조건'}
+                </span>
                 <ul className="vote-screen__motion-conditions-list">
                   {motion.effectiveConditionIds.map((id) => (
                     <li key={id}>

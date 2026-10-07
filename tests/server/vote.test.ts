@@ -204,6 +204,21 @@ describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
   });
 });
 
+// T92: 참가자 입장. round.ts와 같은 선택 필드 규칙.
+describe('voteRequestSchema participantStance(T92)', () => {
+  const base = baseVoteInput({ requestId: 'req-stance' });
+
+  it('생략하면(기존 요청) 그대로 통과한다', () => {
+    expect(voteRequestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('FOR·AGAINST는 통과하고, 그 밖의 값은 거부한다', () => {
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'FOR' }).success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'AGAINST' }).success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'UNDECIDED' }).success).toBe(false);
+  });
+});
+
 // PR #13 Codex 1차 검토 P2: CONDITION_IDS는 안건①·②의 합집합이라, 스키마만으로는 다른
 // 안건의 조건(예: 안건①에 SCOPE)도 모양상 통과한다. motion.effectiveConditionIds는
 // scenarioId가 가리키는 안건 자신의 조건이어야만 유효하다 — 요청 방향 검증.

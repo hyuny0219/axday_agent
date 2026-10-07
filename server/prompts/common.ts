@@ -175,9 +175,9 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
     lines.push(`참가자 입장: ${stanceLabel}`);
     if (input.participantStance === 'AGAINST' && input.conditions.length > 0) {
       lines.push(
-        '참가자는 안건에 반대하며, 위 조건은 참가자가 "이 조건이어야 받아들일 수 있다"고' +
-          ' 내건 요구입니다. 조건이 붙어 있다는 사실만으로 찬성하지 말고, 그 조건이 당신의' +
-          ' 우려를 실제로 해소하는지로 판단하십시오.',
+        '참가자는 안건에 반대하며, 위 조건은 "이 조건이어야 받아들일 수 있다"는 참가자의' +
+          ' 요구입니다. 조건이 붙어 있다는 사실만으로 찬성하지 말고, 그 조건이 당신의 우려를' +
+          ' 실제로 해소하는지로 판단하십시오.',
       );
     }
   }

@@ -50,7 +50,7 @@ import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
-import { collectConfirmedConditionIds } from '../components/opinionConditions';
+import { collectConfirmedConditionIds, collectParticipantStance } from '../components/opinionConditions';
 import { chairMotionLine } from '../components/chairMotionLine';
 import { AttractScreen } from '../components/screens/AttractScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
@@ -516,6 +516,7 @@ function StageRouter() {
           pendingVote={session.pendingVote}
           mode={session.mode}
           execBallotsPending={session.execBallotsPending}
+          participantStance={collectParticipantStance(session.opinions)}
           roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
@@ -554,12 +555,13 @@ function chairLineFor(
   stage: Session['stage'],
   scenario: Scenario | null,
   confirmedConditionIds: string[],
+  participantStance: 'FOR' | 'AGAINST' | null,
 ): string | undefined {
   if (stage === 'BRIEFING') {
     return scenario?.chairBriefing.situation;
   }
   if (stage === 'MOTION') {
-    return chairMotionLine(scenario, confirmedConditionIds);
+    return chairMotionLine(scenario, confirmedConditionIds, participantStance);
   }
   return undefined;
 }
@@ -653,7 +655,12 @@ function AppShell() {
                     scenario={scenario}
                     stances={stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-                    chairLine={chairLineFor(session.stage, scenario, collectConfirmedConditionIds(session.opinions))}
+                    chairLine={chairLineFor(
+                      session.stage,
+                      scenario,
+                      collectConfirmedConditionIds(session.opinions),
+                      collectParticipantStance(session.opinions),
+                    )}
                   />
                 </div>
                 {content}

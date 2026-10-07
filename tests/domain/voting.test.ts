@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
+import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
 import { computeMotionHash } from '../../src/domain/motion';
 import {
   EXEC_MEMBER_ORDER,
   castParticipant,
   countVotesChangedByConditions,
   decideBoard,
+  decideMember,
+  evalPredicate,
   explainBoard,
   participantDecisive,
   tally,
   type TallyResult,
+  type VoteContext,
 } from '../../src/domain/voting';
 import type { Ballot, Motion } from '../../src/domain/types';
 import type { ExecMemberId, Vote } from '../../src/content/types';
@@ -357,5 +362,75 @@ describe('차단 규칙', () => {
   it('중복 의석·확정 후 재투표는 차단한다', () => {
     const ballots = castParticipant(boardBallots, motion, 'YES', 'scripted');
     expect(() => castParticipant(ballots, motion, 'NO', 'scripted')).toThrow();
+  });
+});
+
+// T92: 참가자 입장(participantStance) predicate. 사용자 지적 "AI 임원들이 찬성 쪽으로
+// 몰고 가는 경향"을 scripted 엔진 쪽에서 회귀로 고정한다.
+describe('participantStance predicate(T92)', () => {
+  const baseCtx: VoteContext = { conditionIds: [], executionMode: 'DEFAULT' };
+
+  it('participantStance를 생략하면 null과 같다', () => {
+    expect(evalPredicate({ participantStance: null }, baseCtx)).toBe(true);
+    expect(evalPredicate({ participantStance: 'AGAINST' }, baseCtx)).toBe(false);
+  });
+
+  it('participantStance가 일치하는 값만 true', () => {
+    const against: VoteContext = { ...baseCtx, participantStance: 'AGAINST' };
+    expect(evalPredicate({ participantStance: 'AGAINST' }, against)).toBe(true);
+    expect(evalPredicate({ participantStance: 'FOR' }, against)).toBe(false);
+    expect(evalPredicate({ participantStance: null }, against)).toBe(false);
+  });
+
+  it('decideMember가 participantStance 조합 규칙을 평가할 수 있다', () => {
+    const rules = [
+      { when: { participantStance: 'AGAINST' as const }, vote: 'NO' as const },
+      { when: { always: true as const }, vote: 'YES' as const },
+    ];
+    expect(decideMember(rules, { ...baseCtx, participantStance: 'AGAINST' })).toBe('NO');
+    expect(decideMember(rules, { ...baseCtx, participantStance: 'FOR' })).toBe('YES');
+    expect(decideMember(rules, baseCtx)).toBe('YES');
+  });
+});
+
+// T92: 두 활성 안건(①②)의 기존 voteRules가 참가자 반대 입장에서도 "조건이 붙어 있다는
+// 사실만으로" 찬성으로 몰리지 않는지(사용자 지적) decideBoard로 확인한다. CFO·CAIO·CISO
+// 기본값이 모두 NO라 순수 반대(조건 없음)·단일 조건 조건부 반대 모두 과반 YES에
+// 못 미쳐야 한다(참가자 자신의 표까지 더하면 REJECT).
+describe('반대 입장 경로의 표 분포(T92, 안건①②)', () => {
+  function voteCounts(scenario: typeof aiApprovalScenario, conditionIds: string[]) {
+    const id = 'motion-under-test';
+    const text = scenario.originalMotion.text;
+    const executionMode = 'DEFAULT';
+    const motion: Motion = {
+      id,
+      scenarioId: scenario.id,
+      kind: conditionIds.length === 0 ? 'original' : 'amended',
+      conditionIds,
+      baseConditionIds: [],
+      effectiveConditionIds: conditionIds,
+      executionMode,
+      frozenAt: 0,
+      text,
+      hash: computeMotionHash({ id, text, effectiveConditionIds: conditionIds, executionMode }),
+    };
+    const ballots = decideBoard(scenario, motion, 'AGAINST');
+    return ballots.filter((b) => b.vote === 'YES').length;
+  }
+
+  it('안건① 순수 반대(조건 없음)는 YES가 1명(CEO)뿐이라 참가자 NO까지 더하면 부결', () => {
+    expect(voteCounts(aiApprovalScenario, [])).toBe(1);
+  });
+
+  it('안건① 조건부 반대(REVIEW 1개만)도 YES 과반에 못 미친다', () => {
+    expect(voteCounts(aiApprovalScenario, ['REVIEW'])).toBeLessThan(3);
+  });
+
+  it('안건② 순수 반대(조건 없음)는 YES가 1명(CEO)뿐이라 참가자 NO까지 더하면 부결', () => {
+    expect(voteCounts(experienceFirstScenario, [])).toBe(1);
+  });
+
+  it('안건② 조건부 반대(RECORD 1개만)도 YES 과반에 못 미친다', () => {
+    expect(voteCounts(experienceFirstScenario, ['RECORD'])).toBeLessThan(3);
   });
 });

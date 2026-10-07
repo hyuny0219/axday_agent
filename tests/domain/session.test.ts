@@ -283,3 +283,42 @@ describe('단계 밖 액션 무시', () => {
     });
   });
 });
+
+describe('참가자 입장(stance, T92)', () => {
+  it('stance 없이 SUBMIT_OPINION하면 null로 저장된다', () => {
+    const session = sessionAtReactions();
+    expect(session.opinions[0]?.stance).toBe(null); // sessionAtReactions는 stance를 안 실었다
+  });
+
+  it('stance를 실으면 그대로 저장되고, 생략하면 null로 저장된다', () => {
+    let session = createInitialSession(T0);
+    session = reduce(session, { type: 'START' }, T0);
+    session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0);
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '반대합니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: [],
+        stance: 'AGAINST',
+      },
+      T0,
+    );
+    expect(session.opinions[0]?.stance).toBe('AGAINST');
+
+    session = reduce(
+      session,
+      {
+        type: 'SUBMIT_FOLLOWUP',
+        originalText: '여전히 반대입니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: [],
+      },
+      T0,
+    );
+    expect(session.opinions[1]?.stance).toBe(null);
+  });
+});

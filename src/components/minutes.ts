@@ -7,9 +7,9 @@
 import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
-import { reactionsFor } from './reactionsFor';
+import { reactionsFor, oppositionReactionText } from './reactionsFor';
 import { chairMotionLine } from './chairMotionLine';
-import { collectConfirmedConditionIds } from './opinionConditions';
+import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
 /** 시간 표기를 알 수 없을 때 보여주는 자리표시(T77, 시안 TRANSCRIPT "[--:--]"). */
 export const TIME_UNKNOWN = '--:--';
@@ -114,8 +114,23 @@ function liveRoundResults(
 
 const NO_REACTION_TEXT = '앞서 말씀드린 입장 그대로입니다.';
 
-function scriptedReactionText(reactions: Reaction[]): string {
-  return reactions.length > 0 ? (reactions[0]?.text ?? NO_REACTION_TEXT) : NO_REACTION_TEXT;
+/** T92: 순수 반대(조건 없음) 응답이 있으면 그 문구를 쓰고, 없으면(찬성·조건부 반대·과거
+ * 시나리오) 기존 규칙(첫 조건 반응 또는 "입장 그대로")으로 되돌아간다. */
+function scriptedReactionText(
+  reactions: Reaction[],
+  opposition: string | undefined,
+): string {
+  if (reactions.length > 0) {
+    return reactions[0]?.text ?? NO_REACTION_TEXT;
+  }
+  return opposition ?? NO_REACTION_TEXT;
+}
+
+/** 참가자 발언 행에 입장을 덧붙인다(T92, "참가자 행에 이사님 입장이 보이게"). 입장을
+ * 고르지 않았으면 원문 그대로. */
+function withStanceLabel(text: string, stance: 'FOR' | 'AGAINST' | null | undefined): string {
+  if (!stance) return text;
+  return `${text} (이사님 입장: ${stance === 'FOR' ? '찬성' : '반대'})`;
 }
 
 /**
@@ -177,7 +192,7 @@ export function buildMinutes(
     entries.push({
       id: 'my-opinion',
       speaker: 'PARTICIPANT',
-      text: firstOpinion.originalText,
+      text: withStanceLabel(firstOpinion.originalText, firstOpinion.stance),
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, firstOpinion.createdAt),
     });
@@ -196,10 +211,16 @@ export function buildMinutes(
     } else {
       for (const roleId of EXEC_MEMBER_ORDER) {
         const reactions = reactionsFor(scenario, roleId, firstOpinion.confirmedConditionIds);
+        const opposition = oppositionReactionText(
+          scenario,
+          roleId,
+          firstOpinion.stance ?? null,
+          firstOpinion.confirmedConditionIds,
+        );
         entries.push({
           id: `reaction-${roleId}`,
           speaker: roleId,
-          text: scriptedReactionText(reactions),
+          text: scriptedReactionText(reactions, opposition),
           kind: 'speech',
           timeLabel: TIME_UNKNOWN,
         });
@@ -222,7 +243,9 @@ export function buildMinutes(
     entries.push({
       id: 'my-followup',
       speaker: 'PARTICIPANT',
-      text: secondOpinion ? secondOpinion.originalText : '(답하지 않고 넘어갔습니다)',
+      text: secondOpinion
+        ? withStanceLabel(secondOpinion.originalText, secondOpinion.stance)
+        : '(답하지 않고 넘어갔습니다)',
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, secondOpinion?.createdAt),
     });
@@ -243,7 +266,11 @@ export function buildMinutes(
       id: 'chair-motion',
       speaker: 'CEO',
       // 무대 의장 말풍선과 같은 문장(PR #20 Codex 3차 검토 P2).
-      text: chairMotionLine(scenario, collectConfirmedConditionIds(session.opinions)),
+      text: chairMotionLine(
+        scenario,
+        collectConfirmedConditionIds(session.opinions),
+        collectParticipantStance(session.opinions),
+      ),
       kind: 'speech',
       timeLabel: TIME_UNKNOWN,
     });
