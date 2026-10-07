@@ -85,7 +85,8 @@
 }
 
 .assistant-panel [data-testid='assistant-error'] {
-  color: var(--vote-no);
+  /* 종이 팝업 위라 어두운 패널용 --vote-no(연분홍)는 대비가 안 나온다(PR #20 Codex 13차 검토 P2). */
+  color: var(--paper-vote-no);
   font-size: var(--fs-meta);
 }
 
