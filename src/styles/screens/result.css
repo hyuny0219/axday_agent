@@ -24,6 +24,16 @@
   text-wrap: balance;
 }
 
+/* "이사님의 조건 N개가 임원 M명의 표를 바꿨습니다" 한 줄(T96) — 결론 제목 바로 아래
+   보조 문구. 굵은 라벨은 아니지만 결론 다음으로 먼저 읽어야 할 문장이라 본문보다
+   살짝 진하게 둔다. */
+.result-screen__persuasion-summary {
+  margin: 0;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  color: var(--label);
+}
+
 /* 종이 보고서 머리글(T64→T66, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약"). 위쪽을
    왼쪽(결론·조건·원문)·오른쪽(도장 칸 200px)으로 나눈다(item 1). */
 .result-report__top {
@@ -511,6 +521,20 @@
   border-radius: 999px;
   background-color: rgba(107, 74, 31, 0.12);
   color: var(--label);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* "한 끗 차이" pill(T96, 부결한 임원이 조건 1~2개만 더 있었으면 찬성이었을지).
+   result-summary__changed와 같은 모양이지만 다른 톤(회색)으로 — "바뀐 표"가 아니라
+   "바뀔 수도 있었던 표"라는 가정이라 구분한다. */
+.result-summary__near-miss {
+  flex: 0 0 auto;
+  padding: 2px var(--space-1);
+  border-radius: 999px;
+  background-color: rgba(92, 88, 80, 0.12);
+  color: var(--ink-muted);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;

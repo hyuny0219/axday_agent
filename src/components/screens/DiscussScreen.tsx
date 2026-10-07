@@ -37,6 +37,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -280,6 +281,22 @@ export function DiscussScreen({
     );
   }
 
+  // AI 비서실장 "조건 추천"의 "적용"(T96) — 그 조건과 연결된 추천 문구를 체크한다.
+  // 이미 그 조건으로 체크된 문구가 있으면(재적용) 아무것도 하지 않는다. 입장을 아직
+  // 고르지 않았으면 'FOR' 쪽 문구를 기본으로 삼는다(PersuasionBoard·AssistantPanel의
+  // 기본 설득 목표와 같다).
+  function handleRecommendCondition(conditionId: string) {
+    const phrase = scenario.phrases.find(
+      (candidate) =>
+        candidate.conditionId === conditionId &&
+        (candidate.side ?? 'FOR') === (side ?? 'FOR') &&
+        !draft.selectedPhraseIds.includes(candidate.id),
+    );
+    if (phrase) {
+      handleTogglePhrase(phrase.id);
+    }
+  }
+
   function handleSubmit() {
     if (!canSubmit) {
       return;
@@ -294,6 +311,13 @@ export function DiscussScreen({
   return (
     <>
       <div className="app-body__actions screen discuss-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={[]}
+          participantStance={side}
+          stances={stances}
+          mode={mode}
+        />
         {pendingPhraseId !== null && <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />}
         <div className="discuss-screen__hud" data-testid="discuss-hud">
           <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
@@ -311,6 +335,8 @@ export function DiscussScreen({
             scenario={scenario}
             sessionId={sessionId}
             selectedConditionIds={confirmedConditionIds}
+            participantStance={side}
+            onRecommendCondition={handleRecommendCondition}
             draftText={draft.draftText}
             draftRevision={draftRevision}
             transcript={transcript}
@@ -383,6 +409,11 @@ export function DiscussScreen({
               {draft.draftText.trim() === '' && (
                 <GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
               )}
+              {/* T96(2026-10-08 사용자 지시): 강제가 아닌 제안 — 입장을 고른 뒤 한 번
+                  비서실장의 "조건 추천"을 알려준다(data-guide 강조는 없다). */}
+              <p className="discuss-screen__guide" data-testid="discuss-assistant-tip">
+                비서실장에게 조건 추천을 받아 보세요
+              </p>
               <div
                 className="discuss-screen__phrase-list"
                 data-guide={draft.draftText.trim() === '' ? 'next' : undefined}

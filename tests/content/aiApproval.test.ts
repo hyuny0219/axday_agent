@@ -350,6 +350,8 @@ describe('쉬운 말(T93)', () => {
     ...scenario.initialOpinions.map((o) => o.text),
     ...scenario.reactions.map((r) => r.text),
     ...Object.values(scenario.oppositionReactions ?? {}),
+    // T96: REACTIONS "유지" 카드의 빈 대사 대신 쓰는 역할별 유지 이유도 임원 발언이다.
+    ...Object.values(scenario.holdReasons ?? {}),
     ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason ?? '')),
     scenario.followUp.question,
     ...(scenario.followUp.byStance

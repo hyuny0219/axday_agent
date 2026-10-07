@@ -17,7 +17,16 @@ export type { AssistantMode } from '../services/assistant/types';
 export type AssistantActionType =
   | 'OPINION_SUMMARY'
   | 'CONDITION_COMPARE'
-  | 'DRAFT_REFINE';
+  | 'DRAFT_REFINE'
+  // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
+  // 고르는 데 큰 도움이 된다고 느끼게"): "조건 추천"을 열어 확인할 때마다
+  // CONDITION_RECOMMEND_VIEW 한 건, 추천 조건을 눌러 실제로 체크에 반영할 때마다
+  // CONDITION_RECOMMEND_APPLY 한 건(evidenceIds에 반영한 조건 id 하나를 담는다 — 이
+  // 필드는 이름과 달리 "조건 id를 담는 범용 문자열 칸"으로 재사용한다, 아래 count
+  // 집계용). 기존 세 유형과 달리 "마지막 1건만"이 아니라 "몇 번·몇 개"로 모은다
+  // (describeAdditionalHelp의 countConditionRecommendation 참고).
+  | 'CONDITION_RECOMMEND_VIEW'
+  | 'CONDITION_RECOMMEND_APPLY';
 
 /** AssistantPanel이 실제로 결과를 렌더했을 때만 만드는 기록 한 건. requestedAt은
  * 참가자가 요청해 받은 결과(요약·비교·정리)의 시각이다. */
@@ -48,6 +57,8 @@ const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = [
   'OPINION_SUMMARY',
   'CONDITION_COMPARE',
   'DRAFT_REFINE',
+  'CONDITION_RECOMMEND_VIEW',
+  'CONDITION_RECOMMEND_APPLY',
 ];
 
 /** AssistantActionEvent + requestedAt을 session.assistantActions(string[])에 그대로
@@ -120,12 +131,38 @@ function describeEntry(entry: AssistantAction): string | null {
  * 디코딩할 수 없는 레이블(구조화되지 않은 값)은 조용히 무시해 실제로 없었던 도움을
  * 과장해 보여주지 않는다.
  */
+/** T96 "조건 추천" 전용 집계 — 기존 세 유형("마지막 1건만 보여준다")과 달리 "몇 번
+ * 열어 봤는지"·"조건을 몇 개 반영했는지"를 센다. appliedConditionIds는 evidenceIds[0]에
+ * 담긴 조건 id를 중복 없이 모은다(같은 조건을 두 번 눌러도 1개로 센다). */
+function countConditionRecommendation(actionLabels: readonly string[]): {
+  viewCount: number;
+  appliedConditionIds: string[];
+} {
+  let viewCount = 0;
+  const appliedConditionIds: string[] = [];
+  for (const label of actionLabels) {
+    const entry = decodeAssistantLogEntry(label);
+    if (!entry) {
+      continue;
+    }
+    if (entry.type === 'CONDITION_RECOMMEND_VIEW') {
+      viewCount += 1;
+    } else if (entry.type === 'CONDITION_RECOMMEND_APPLY') {
+      const conditionId = entry.evidenceIds[0];
+      if (conditionId && !appliedConditionIds.includes(conditionId)) {
+        appliedConditionIds.push(conditionId);
+      }
+    }
+  }
+  return { viewCount, appliedConditionIds };
+}
+
 export function describeAdditionalHelp(actionLabels: readonly string[]): string[] {
   const order: AssistantActionType[] = [];
   const latestByType = new Map<AssistantActionType, AssistantAction>();
   for (const label of actionLabels) {
     const entry = decodeAssistantLogEntry(label);
-    if (!entry) {
+    if (!entry || entry.type === 'CONDITION_RECOMMEND_VIEW' || entry.type === 'CONDITION_RECOMMEND_APPLY') {
       continue;
     }
     const existing = latestByType.get(entry.type);
@@ -143,6 +180,13 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
     if (line) {
       lines.push(line);
     }
+  }
+  const recommendation = countConditionRecommendation(actionLabels);
+  if (recommendation.viewCount > 0) {
+    lines.push(`조건 추천 ${recommendation.viewCount}회`);
+  }
+  if (recommendation.appliedConditionIds.length > 0) {
+    lines.push(`추천 조건 ${recommendation.appliedConditionIds.length}개 반영`);
   }
   return lines;
 }

@@ -21,6 +21,7 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildRemainingTaskLabels } from '../motionDisplay';
 import { buildResultSummary } from '../resultSummary';
+import { countVotesChangedFromOpening, nextTrySuggestionLabel, oneStepAwayNote } from '../persuasionSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
 import { MinutesPanel } from '../parts/MinutesPanel';
 import {
@@ -96,6 +97,36 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     () => (finalMotion ? buildResultSummary(scenario, session) : null),
     [scenario, session, finalMotion],
   );
+
+  // 상단 "이사님의 조건이 임원 표를 몇 명 바꿨는지" 한 줄(T96, 2026-10-08 사용자 지시
+  // "이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 느끼게").
+  // resultSummary.execRows.changed(조건 없는 안건 기준 게이지)와는 다르게, 참가자의
+  // 첫 의견 때 임원 입장과 최종 표를 비교한다(components/persuasionSummary.ts).
+  const changedFromOpeningCount = useMemo(
+    () => countVotesChangedFromOpening(scenario, session),
+    [scenario, session],
+  );
+  const persuasionSummaryLine = useMemo(() => {
+    if (!finalMotion) return null;
+    const conditionCount = resultSummary?.conditionLabels.length ?? 0;
+    if (changedFromOpeningCount > 0) {
+      // 조건을 하나도 안 붙였는데도 "미정"이던 임원이 표결로 입장을 정한 경우(예:
+      // 안건①의 CAIO)는 "조건 0개가 바꿨다"는 말이 어색하므로 따로 문구를 쓴다
+      // (requiredConditionsFor·countVotesChangedFromOpening은 그대로 쓰고 표시만 가른다).
+      if (conditionCount === 0) {
+        return `이사님 의견을 듣고 임원 ${changedFromOpeningCount}명이 입장을 정했습니다`;
+      }
+      return `이사님의 조건 ${conditionCount}개가 임원 ${changedFromOpeningCount}명의 표를 바꿨습니다`;
+    }
+    const suggestion = nextTrySuggestionLabel(
+      scenario,
+      finalMotion.effectiveConditionIds,
+      collectParticipantStance(session.opinions),
+    );
+    return suggestion
+      ? `이번엔 임원 표를 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
+      : '이번엔 임원 표를 바꾸지 못했습니다';
+  }, [scenario, session, finalMotion, resultSummary, changedFromOpeningCount]);
 
   // 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기"): 화면 로컬 상태로 오른쪽
   // 열의 기록 영역(VERDICTS 패널)만 "이사회 한 장 요약" ↔ 전문으로 바꾼다. 세션
@@ -283,6 +314,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             <h2 className="result-screen__title" data-testid="result-conclusion">
               {conclusion}
             </h2>
+            {persuasionSummaryLine && (
+              <p className="result-screen__persuasion-summary" data-testid="result-persuasion-summary">
+                {persuasionSummaryLine}
+              </p>
+            )}
             {session.expiredWithoutMotion && (
               <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
                 시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
@@ -425,6 +461,27 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           이사님 조건으로 바뀜
                         </span>
                       )}
+                      {/* "한 끗 차이" 안내(T96): 부결(NO)한 임원이 조건 1~2개만 더
+                          있었으면 찬성이었을지 보여준다. scripted voteRules 기준
+                          계산이라 live에는 보여주지 않는다. */}
+                      {session.mode === 'scripted' &&
+                        row.vote === 'NO' &&
+                        (() => {
+                          const note = oneStepAwayNote(
+                            scenario,
+                            row.memberId,
+                            finalMotion.effectiveConditionIds,
+                            participantStance,
+                          );
+                          return note ? (
+                            <span
+                              className="result-summary__near-miss"
+                              data-testid={`result-near-miss-${row.memberId}`}
+                            >
+                              {note}
+                            </span>
+                          ) : null;
+                        })()}
                     </li>
                   );
                 })}

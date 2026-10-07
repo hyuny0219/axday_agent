@@ -80,8 +80,8 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
-import { STANCE_LABEL } from '../moodLabel';
-import { reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
+import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
+import { changeCauseLabel, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -92,6 +92,7 @@ import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
 // 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
 import '../../styles/screens/discuss.css';
@@ -448,6 +449,25 @@ export function ReactionsScreen({
     );
   }
 
+  // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
+  // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
+  function handleRecommendCondition(conditionId: string) {
+    if (pendingOptionIndex !== null) {
+      return;
+    }
+    const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
+    const index = scenario.followUp.options.findIndex(
+      (option, idx) =>
+        option.proposeConditionId === conditionId &&
+        !option.keepPrevious &&
+        (option.side ?? 'FOR') === resolvedSide &&
+        !selectedOptionIds.includes(String(idx)),
+    );
+    if (index >= 0) {
+      handleToggleOption(index);
+    }
+  }
+
   function handleSubmit() {
     if (!canSubmit) {
       return;
@@ -572,7 +592,7 @@ export function ReactionsScreen({
         opposition ??
         (reactions.length > 0
           ? reactions.map((reaction) => reaction.text).join(' ')
-          : '앞서 말씀드린 입장 그대로입니다.');
+          : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
       const reactionEntry: EvidenceDialogStatementView = {
         memberId,
         stance,
@@ -591,10 +611,21 @@ export function ReactionsScreen({
   // 같은 규칙으로 보여준다(reactionsStep). 오른쪽 종이는 임원 반응 카드 4장(공간이
   // 남아 4줄 클램프를 풀고 전문 표시) + 추가 질문 상자만 크게 보여주고, 추천 답변·
   // 입력창은 여기 없다(2/2로 미룬다).
+  // 설득 현황판(T96)이 쓰는 참가자 입장 — followUpPrompt와 같은 규칙으로 지금 고른
+  // 쪽(side)이 있으면 그것을, 없으면 참가자의 최근 의견 입장을 쓴다.
+  const boardParticipantStance = side ?? lastOpinion?.stance ?? null;
+
   if (step === 'listen') {
     return (
       <>
         <div className="app-body__actions screen reactions-screen reactions-screen--listen">
+          <PersuasionBoard
+            scenario={scenario}
+            confirmedConditionIds={previousConfirmedIds}
+            participantStance={boardParticipantStance}
+            stances={stances}
+            mode={mode}
+          />
           <button
             type="button"
             className="cta"
@@ -648,8 +679,18 @@ export function ReactionsScreen({
                     lastOpinion?.stance ?? null,
                     previousConfirmedIds,
                   );
+                  const baseline = scriptedBaselineStances[memberId];
                   const stance = stances[memberId];
-                  const changed = scriptedBaselineStances[memberId] !== stance;
+                  const changed = baseline !== stance;
+                  // T96: "바뀜"만 보여주던 배지를 "반대 → 찬성"처럼 전후 입장으로 바꾼다
+                  // (사용자 지시 "내 발언에 따라 임원 입장이 변하는 것이 잘 보이게"). 조건
+                  // 없이 입장이 바뀐 경우(opposition 응답)는 조건을 원인으로 쓰면 안 되므로
+                  // 원인 한 줄을 보여주지 않는다.
+                  const badgeText = changed
+                    ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
+                    : '유지';
+                  const causeText =
+                    changed && !opposition ? changeCauseLabel(scenario, reactions) : null;
                   return (
                     <article
                       key={memberId}
@@ -661,16 +702,24 @@ export function ReactionsScreen({
                         <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
                           {STANCE_LABEL[stance]}
                         </span>
-                        <span className="reaction-card__badge" aria-hidden="true">
-                          {changed ? '바뀜' : '유지'}
+                        <span className="reaction-card__badge" aria-hidden="true" data-testid={`reaction-card-badge-${memberId}`}>
+                          {badgeText}
                         </span>
                       </div>
                       <p className="reaction-card__text reaction-card__text--full">
                         {opposition ??
                           (reactions.length > 0
                             ? reactions.map((reaction) => reaction.text).join(' ')
-                            : '앞서 말씀드린 입장 그대로입니다.')}
+                            : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.')}
                       </p>
+                      {causeText && (
+                        <p
+                          className="reaction-card__cause"
+                          data-testid={`reaction-card-cause-${memberId}`}
+                        >
+                          {causeText}
+                        </p>
+                      )}
                     </article>
                   );
                 })}
@@ -697,6 +746,13 @@ export function ReactionsScreen({
   return (
     <>
       <div className="app-body__actions screen reactions-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={previousConfirmedIds}
+          participantStance={boardParticipantStance}
+          stances={stances}
+          mode={mode}
+        />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />
         )}
@@ -738,6 +794,8 @@ export function ReactionsScreen({
             scenario={scenario}
             sessionId={sessionId}
             selectedConditionIds={confirmedConditionIds}
+            participantStance={boardParticipantStance}
+            onRecommendCondition={handleRecommendCondition}
             draftText={textValue}
             draftRevision={draftRevision}
             transcript={transcript}

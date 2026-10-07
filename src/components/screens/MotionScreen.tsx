@@ -23,6 +23,7 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildMotionDisplay } from '../motionDisplay';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 import '../../styles/screens/motion.css';
 import '../../styles/screens/live.css';
 
@@ -110,6 +111,13 @@ export function MotionScreen({
   return (
     <>
       <div className="app-body__actions screen motion-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={confirmedConditionIds}
+          participantStance={participantStance}
+          stances={stances}
+          mode={mode ?? 'scripted'}
+        />
         <ExecStanceList stances={stances} />
         {onRetryFailedRoles && failedRoleIds.length > 0 && (
           <button

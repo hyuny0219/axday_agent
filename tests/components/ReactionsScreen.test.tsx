@@ -236,7 +236,7 @@ describe('ReactionsScreen', () => {
     expect(card).toHaveTextContent('한 게시판에서 시작하면 처리 공수를 가늠할 수 있겠습니다');
   });
 
-  it('scripted 반응 카드: ANON_FULL이 CEO 표를 찬성→반대로 돌려도 연결된 반응 문구가 없으면 배지는 "바뀜"이다(PR #12 Codex 5차 검토 P2-a)', () => {
+  it('scripted 반응 카드: ANON_FULL이 CEO 표를 찬성→반대로 돌려도 연결된 반응 문구가 없으면 배지는 "찬성 → 반대"다(PR #12 Codex 5차 검토 P2-a, T96에서 배지 문구를 전후 입장으로 바꿈)', () => {
     // CEO 표결 규칙: ANON_FULL이면 반대, 그 외는 찬성 — ANON_FULL만으로 표가
     // 바뀐다. 하지만 CEO는 ANON_FULL에 묶인 반응 문구가 없어(반응 데이터는 CEO의
     // conditionId 'none' 기본값 하나뿐), 옛 "반응 문구가 있으면 바뀜" 규칙은 여기서
@@ -267,7 +267,70 @@ describe('ReactionsScreen', () => {
     const card = screen.getByTestId('reaction-card-CEO');
     // 본문이 "기존 의견 유지 — ..."로 시작해(연결된 반응 문구가 없다) 카드 전체
     // 텍스트에는 "유지"가 섞여 있다 — 배지 자체(.reaction-card__badge)만 따로 본다.
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('바뀜');
+    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('찬성 → 반대');
+  });
+
+  it('T96: 반응 카드 "바뀜"에는 원인 조건 한 줄이 함께 보인다(안건① CAIO, LOG 조건)', () => {
+    const opinions: Opinion[] = [
+      {
+        id: 'op1',
+        originalText: '자동 승인마다 승인 사유를 기록합시다.',
+        selectedPhraseIds: ['P2'],
+        confirmedConditionIds: ['LOG'],
+        createdAt: 0,
+      },
+    ];
+    const currentStances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={aiApprovalScenario}
+        opinions={opinions}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={currentStances}
+        step="listen"
+      />,
+    );
+
+    const card = screen.getByTestId('reaction-card-CAIO');
+    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('미정 → 찬성');
+    expect(card.querySelector('.reaction-card__cause')).toHaveTextContent(
+      "이사님의 '승인 사유 기록' 조건으로",
+    );
+  });
+
+  it('T96: 조건이 아직 없어 입장이 "유지"면 holdReasons 문구를 보여준다(빈 대사 대신, 안건① CFO)', () => {
+    const opinions: Opinion[] = [
+      {
+        id: 'op1',
+        originalText: '맡겨도 될지 판단할 근거를 더 제시해 주십시오.',
+        selectedPhraseIds: ['P6'],
+        confirmedConditionIds: [],
+        createdAt: 0,
+      },
+    ];
+    const currentStances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={aiApprovalScenario}
+        opinions={opinions}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={currentStances}
+        step="listen"
+      />,
+    );
+
+    const card = screen.getByTestId('reaction-card-CFO');
+    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('유지');
+    expect(card).toHaveTextContent('돈 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아');
+    expect(card.querySelector('.reaction-card__cause')).toBeNull();
   });
 
   it('RebuildConfirm이 뜬 동안 "답하지 않고 넘어가기"를 눌러도 다음 단계로 넘어가지 않는다(PR #12 Codex 5차 검토 P2-b, T84 #1)', () => {

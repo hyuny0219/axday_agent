@@ -75,6 +75,43 @@
   white-space: pre-wrap;
 }
 
+/* "조건 추천" 행(T96) — 조건 라벨 + 움직이는 임원 + 푸는 걱정 + 적용 버튼을 한 줄
+   묶음으로. */
+[data-testid='assistant-recommend-rows'] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+[data-testid^='assistant-recommend-row-'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-control);
+}
+
+.assistant-panel__recommend-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.assistant-panel__recommend-moves,
+.assistant-panel__recommend-worry {
+  color: var(--ink-muted);
+  font-size: var(--fs-meta);
+}
+
+.assistant-panel__recommend-worry {
+  flex-basis: 100%;
+}
+
 .assistant-panel__evidence {
   display: flex;
   flex-wrap: wrap;
