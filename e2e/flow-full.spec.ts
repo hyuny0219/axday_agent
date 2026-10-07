@@ -71,6 +71,8 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   const followupTextarea = page.getByTestId('followup-textarea');
   await expect(followupTextarea).toBeVisible();
   await followupTextarea.fill('제 의견을 유지하되 진행 상황만 계속 공유해 주세요.');

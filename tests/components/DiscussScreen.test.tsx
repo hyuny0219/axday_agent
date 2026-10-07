@@ -5,9 +5,10 @@
 // "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다 — BriefingScreen.test.tsx와
 // 같은 형태의 테스트를 여기에도 둔다.
 import '@testing-library/jest-dom/vitest';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { DiscussScreen } from '../../src/components/screens/DiscussScreen';
+import { DiscussScreen, type DiscussScreenProps } from '../../src/components/screens/DiscussScreen';
 import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
@@ -15,6 +16,19 @@ import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain
 afterEach(() => {
   cleanup();
 });
+
+// T89: App.tsx StageRouter가 side state를 들고 DiscussScreen에 컨트롤드 props로
+// 내려준다 — 이 테스트 전체에서 그 자리를 흉내 내는 래퍼를 쓴다. 입장 선택과 무관한
+// 테스트는 initialSide를 비워 둬 기존(null) 동작 그대로다.
+function ControlledDiscuss(
+  props: Omit<DiscussScreenProps, 'side' | 'onChooseSide'> & {
+    initialSide?: 'FOR' | 'AGAINST' | null;
+  },
+) {
+  const { initialSide, ...rest } = props;
+  const [side, setSide] = useState<'FOR' | 'AGAINST' | null>(initialSide ?? null);
+  return <DiscussScreen {...rest} side={side} onChooseSide={setSide} />;
+}
 
 const scenario = anonBoardScenario;
 
@@ -64,7 +78,7 @@ describe('DiscussScreen', () => {
     const transcript: Transcript = { revision: 1, statements };
 
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
@@ -106,7 +120,7 @@ describe('DiscussScreen', () => {
     const transcript: Transcript = { revision: 0, statements: [] };
 
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
@@ -139,7 +153,7 @@ describe('DiscussScreen', () => {
     const transcript: Transcript = { revision: 0, statements: [] };
 
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
@@ -180,7 +194,7 @@ describe('DiscussScreen', () => {
     };
     const transcript: Transcript = { revision: 0, statements: [] };
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
@@ -195,7 +209,9 @@ describe('DiscussScreen', () => {
     expect(info.hasAttribute('inert')).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 맡기기' }));
     expect(info.hasAttribute('inert')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
+    // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글 라벨이 "숨기기"로 바뀌지
+    // 않고, 팝업 자체의 닫기 버튼(testid assistant-close)으로 닫는다.
+    fireEvent.click(screen.getByTestId('assistant-close'));
     expect(info.hasAttribute('inert')).toBe(false);
   });
 
@@ -212,7 +228,7 @@ describe('DiscussScreen', () => {
 
     it('입장을 고르기 전에는 추천 문구 그리드 대신 안내가 보인다', () => {
       render(
-        <DiscussScreen
+        <ControlledDiscuss
           scenario={aiApprovalScenario}
           sessionId="s1"
           transcript={emptyTranscript}
@@ -230,7 +246,7 @@ describe('DiscussScreen', () => {
 
     it('찬성을 고르면 FOR·BOTH 문구만 보이고, 반대를 고르면 AGAINST·BOTH 문구만 보인다', () => {
       render(
-        <DiscussScreen
+        <ControlledDiscuss
           scenario={aiApprovalScenario}
           sessionId="s1"
           transcript={emptyTranscript}
@@ -255,7 +271,7 @@ describe('DiscussScreen', () => {
     it('입장을 바꾸면 체크된 문구가 해제된다', () => {
       const phraseP1Text = aiApprovalScenario.phrases.find((phrase) => phrase.id === 'P1')!.text;
       render(
-        <DiscussScreen
+        <ControlledDiscuss
           scenario={aiApprovalScenario}
           sessionId="s1"
           transcript={emptyTranscript}
@@ -283,7 +299,7 @@ describe('DiscussScreen', () => {
     // 취소돼야 한다 — 남겨 두면 확인 뒤 이전 입장의 숨은 문구가 다시 선택된다.
     it('RebuildConfirm이 열린 채 입장을 바꾸면 확인 UI와 대기 중인 문구 선택이 함께 사라진다', () => {
       render(
-        <DiscussScreen
+        <ControlledDiscuss
           scenario={aiApprovalScenario}
           sessionId="s1"
           transcript={emptyTranscript}

@@ -259,6 +259,8 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
   // REACTIONS: 정상 4명. 조건 제안(옵션 0)을 골라 후속 답을 보내 opinions가 2건이 되게
   // 해서 FOLLOWUP 라운드를 트리거한다(KEEP_PREVIOUS는 라운드가 돌지 않는다).
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   await page.getByTestId('submit-followup').click();
 

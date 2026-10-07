@@ -7,10 +7,11 @@
 // 3) 02 발언이 아직 없을 때(아직 응답 전) roundLog에 그 역할의 OPINIONS 실패 기록이
 //    없으면 "판단 중"으로, 있으면 "응답 지연·확인 필요"로 보여준다.
 import '@testing-library/jest-dom/vitest';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { ReactionsScreen } from '../../src/components/screens/ReactionsScreen';
-import { anonBoardScenario } from '../../src/content/scenarios';
+import { ReactionsScreen, type ReactionsScreenProps } from '../../src/components/screens/ReactionsScreen';
+import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../src/domain/types';
 import type { RoundLogEntry } from '../../src/components/minutes';
@@ -43,6 +44,14 @@ function baseProps() {
     sessionId: 's1',
     opinions: [] as Opinion[],
     transcriptRevision: 0,
+    // T89: anonBoard의 followUp.options는 side가 없어(과거 시나리오) 'FOR'로 보는
+    // 기본값에 해당하므로, 이 스위트의 기존 단언들은 side='FOR'에서 바뀌지 않는다.
+    side: 'FOR' as const,
+    onChooseSide: noop,
+    // T89: 이 스위트는 추천 답변·입력창을 다루는 기존 단언이 대부분이라 "다시
+    // 답하기"(2/2) 단계에서 시작한다.
+    step: 'answer' as const,
+    onAdvanceStep: noop,
     onSubmitFollowup: noop,
     onKeepPrevious: noop,
     onAssistantAction: noop,
@@ -217,6 +226,7 @@ describe('ReactionsScreen', () => {
         statements={[]}
         roundLog={[]}
         stances={currentStances}
+        step="listen"
       />,
     );
 
@@ -250,6 +260,7 @@ describe('ReactionsScreen', () => {
         statements={[]}
         roundLog={[]}
         stances={currentStances}
+        step="listen"
       />,
     );
 
@@ -308,5 +319,126 @@ describe('ReactionsScreen', () => {
 
     expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent('이번에는 답을 받지 못했습니다');
     expect(screen.queryByTestId('statement-pending-CAIO-opinions')).not.toBeInTheDocument();
+  });
+
+  // T89(2026-10-07 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할
+  // 수 있도록"): DISCUSS(T87)와 같은 입장 선택 — 고른 쪽(+BOTH)의 추천 답변만 보이고,
+  // 이미 확정된 조건을 다시 제안하는 옵션은 완전히 숨긴다.
+  describe('입장 선택(T89)', () => {
+    const idleRoleStatus2: Record<ExecMemberId, RoleStatus> = {
+      CEO: 'idle',
+      CFO: 'idle',
+      CAIO: 'idle',
+      CISO: 'idle',
+    };
+
+    /** App.tsx StageRouter처럼 side state를 들고 DiscussScreen·ReactionsScreen에
+     * 내려주는 자리를 흉내 낸 테스트용 래퍼 — fireEvent로 입장을 바꾸면 실제로
+     * 다시 렌더되어야 ReactionsScreen의 컨트롤드 side prop이 바뀐 걸 볼 수 있다. */
+    function ControlledReactions(
+      props: Omit<ReactionsScreenProps, 'side' | 'onChooseSide'> & {
+        initialSide?: 'FOR' | 'AGAINST' | null;
+      },
+    ) {
+      const { initialSide, ...rest } = props;
+      const [side, setSide] = useState<'FOR' | 'AGAINST' | null>(initialSide ?? null);
+      return <ReactionsScreen {...rest} side={side} onChooseSide={setSide} />;
+    }
+
+    it('입장을 고르기 전에는 추천 답변 그리드 대신 안내가 보인다', () => {
+      render(
+        <ControlledReactions
+          {...baseProps()}
+          scenario={aiApprovalScenario}
+          mode="scripted"
+          roleStatus={idleRoleStatus2}
+          statements={[]}
+          roundLog={[]}
+          stances={stances}
+          initialSide={null}
+        />,
+      );
+      expect(screen.getByTestId('reactions-side-guide')).toHaveTextContent('먼저 입장을 골라 주세요');
+      expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
+    });
+
+    it('찬성을 고르면 FOR·BOTH 답변만, 반대를 고르면 AGAINST·BOTH 답변만 보인다', () => {
+      render(
+        <ControlledReactions
+          {...baseProps()}
+          scenario={aiApprovalScenario}
+          mode="scripted"
+          roleStatus={idleRoleStatus2}
+          statements={[]}
+          roundLog={[]}
+          stances={stances}
+          initialSide={null}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('reactions-side-for'));
+      // aiApprovalScenario.followUp.options: 0~2=FOR, 3~5=AGAINST, 6=BOTH.
+      expect(screen.getByTestId('followup-option-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('followup-option-3')).not.toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-6')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('reactions-side-against'));
+      expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-3')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-6')).toBeInTheDocument();
+    });
+
+    it('입장을 바꾸면 체크된 추천 답변이 해제된다', () => {
+      render(
+        <ControlledReactions
+          {...baseProps()}
+          scenario={aiApprovalScenario}
+          mode="scripted"
+          roleStatus={idleRoleStatus2}
+          statements={[]}
+          roundLog={[]}
+          stances={stances}
+          initialSide="FOR"
+        />,
+      );
+      fireEvent.click(screen.getByTestId('followup-option-0'));
+      expect(screen.getByTestId('followup-textarea')).not.toHaveValue('');
+
+      fireEvent.click(screen.getByTestId('reactions-side-against'));
+      expect(screen.getByTestId('followup-textarea')).toHaveValue('');
+      fireEvent.click(screen.getByTestId('reactions-side-for'));
+      const checkbox = screen
+        .getByTestId('followup-option-0')
+        .querySelector('input[type="checkbox"]');
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it('이미 확정된 조건을 다시 제안하는 옵션은 숨겨진다', () => {
+      // OWNER(0)가 DISCUSS에서 이미 확정됐다고 가정한다.
+      const opinions: Opinion[] = [
+        {
+          id: 'op1',
+          originalText: '책임자를 지정했습니다.',
+          selectedPhraseIds: ['P4'],
+          confirmedConditionIds: ['OWNER'],
+          createdAt: 0,
+        },
+      ];
+      render(
+        <ControlledReactions
+          {...baseProps()}
+          scenario={aiApprovalScenario}
+          opinions={opinions}
+          mode="scripted"
+          roleStatus={idleRoleStatus2}
+          statements={[]}
+          roundLog={[]}
+          stances={stances}
+          initialSide="FOR"
+        />,
+      );
+      expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
+      // 아직 확정되지 않은 다른 FOR 옵션은 그대로 보인다.
+      expect(screen.getByTestId('followup-option-1')).toBeInTheDocument();
+    });
   });
 });

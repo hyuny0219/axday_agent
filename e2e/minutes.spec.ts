@@ -14,6 +14,8 @@ async function reachVote(page: Page) {
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();

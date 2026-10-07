@@ -90,6 +90,13 @@ interface SessionContextValue {
   retryRound: (stage: StatementStage, roleIds: ExecMemberId[]) => Promise<void>;
   /** 미표결(실패) 역할만 최종표를 다시 요청한다("미표결 임원 다시 요청", T65). */
   retryFinalVotes: (roleIds: ExecMemberId[]) => Promise<void>;
+  /** REACTIONS 단계를 "반응 듣기"·"다시 답하기" 두 화면으로 나눈 서브스텝(T89, 사용자
+   * 지시 "임원들의 의견을 듣고 다시 답하는 화면을 만들어서"). 도메인 session.stage는
+   * REACTIONS 그대로다(서버 페이로드·해시 영향 없음) — AppShell이 "반응 듣기"일 때만
+   * MinutesPanel을 OPINIONS처럼 보여줘야 해서 StageRouter보다 위(SessionProvider)에
+   * 둔다. REACTIONS를 벗어나면 다음 방문을 위해 'listen'으로 되돌린다. */
+  reactionsStep: 'listen' | 'answer';
+  setReactionsStep: (step: 'listen' | 'answer') => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -125,6 +132,15 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // dispatch prop과 orchestratorStore.dispatch 둘 다 같은 함수를 쓴다)이 대상이다.
   // reducer 분기는 건드리지 않는 순수 화면 쪽 부기라 useReducer가 아니라 useState로 둔다.
   const [roundLog, setRoundLog] = useState<RoundLogEntry[]>([]);
+
+  // REACTIONS 서브스텝(T89) — session.stage는 그대로 REACTIONS다. 다른 단계로
+  // 넘어가면(REACTIONS를 벗어나면) 다음 방문을 위해 'listen'으로 되돌린다.
+  const [reactionsStep, setReactionsStep] = useState<'listen' | 'answer'>('listen');
+  useEffect(() => {
+    if (session.stage !== 'REACTIONS') {
+      setReactionsStep('listen');
+    }
+  }, [session.stage]);
 
   const dispatch = useCallback((action: SessionAction) => {
     rawDispatch(action);
@@ -312,8 +328,10 @@ function SessionProvider({ children }: { children: ReactNode }) {
       modeCheckPending,
       retryRound: orchestrator.retryRound,
       retryFinalVotes: orchestrator.retryFinalVotes,
+      reactionsStep,
+      setReactionsStep,
     }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator],
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -340,14 +358,35 @@ function useViewportFit(): ViewportFit {
 
 /** stage별 화면 라우팅. */
 function StageRouter() {
-  const { session, dispatch, followUpPending, modeCheckPending, roundLog, retryRound, retryFinalVotes } =
-    useSession();
+  const {
+    session,
+    dispatch,
+    followUpPending,
+    modeCheckPending,
+    roundLog,
+    retryRound,
+    retryFinalVotes,
+    reactionsStep,
+    setReactionsStep,
+  } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
   const assistantAdapter: AssistantAdapter =
     session.mode === 'live' ? liveAssistantAdapter : scriptedAssistantAdapter;
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
+
+  // 입장 선택(T87이 DiscussScreen 로컬 state로 두던 것을 T89에서 여기로 끌어올렸다 —
+  // 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할 수 있도록": DISCUSS
+  // 에서 고른 쪽이 REACTIONS까지 기본값으로 이어지고(참가자가 REACTIONS에서 바꿀 수
+  // 있다), 두 화면이 같은 state를 공유해야 한다. 도메인 session에는 넣지 않는다 —
+  // 서버 페이로드·해시에 영향이 없어야 하는 화면 쪽 부기라 roundLog와 같은 이유로
+  // useState로 둔다. 세션이 리셋되면(OPERATOR_RESET으로 sessionId가 바뀌면) 함께
+  // 초기화된다.
+  const [sidePick, setSidePick] = useState<'FOR' | 'AGAINST' | null>(null);
+  useEffect(() => {
+    setSidePick(null);
+  }, [session.sessionId]);
 
   switch (session.stage) {
     case 'ATTRACT':
@@ -407,6 +446,8 @@ function StageRouter() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           stances={stancesFor(session, scenario)}
+          side={sidePick}
+          onChooseSide={setSidePick}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
@@ -428,6 +469,10 @@ function StageRouter() {
           roundLog={roundLog}
           stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
+          side={sidePick}
+          onChooseSide={setSidePick}
+          step={reactionsStep}
+          onAdvanceStep={() => setReactionsStep('answer')}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
@@ -564,10 +609,16 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { session, dispatch, roundLog } = useSession();
+  const { session, dispatch, roundLog, reactionsStep } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
-  const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
+  // REACTIONS "반응 듣기"(T89)는 OPINIONS처럼 발언 흐름(MinutesPanel)을 보여준다 —
+  // "다시 답하기"는 DISCUSS와 같이 입력이 왼쪽 열을 이미 채우므로 보여주지 않는다
+  // (기존 MINUTES_STAGES 규칙과 같은 이유).
+  const showMinutes =
+    (MINUTES_STAGES.has(session.stage) ||
+      (session.stage === 'REACTIONS' && reactionsStep === 'listen')) &&
+    scenario !== null;
   const fit = useViewportFit();
   const wrapperStyle: CSSProperties | undefined =
     fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;

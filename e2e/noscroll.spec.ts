@@ -128,8 +128,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
 
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -138,7 +139,11 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await expectNoPageScroll(page, 'REACTIONS');
+  await expectNoPageScroll(page, 'REACTIONS(반응 듣기)');
+
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
+  await expectNoPageScroll(page, 'REACTIONS(다시 답하기)');
 
   // 직접 입력(가장 내용이 많은 경로)으로 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-textarea').fill('잘못된 승인이 나오면 책임자가 확인할 수 있게 절차를 정합니다.');
@@ -146,8 +151,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'REACTIONS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectNoPageScroll(page, 'REACTIONS(비서실장 팝업 열림)');
+  await page.getByTestId('assistant-close').click();
 
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();

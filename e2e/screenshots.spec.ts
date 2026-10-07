@@ -131,14 +131,18 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
 
   await submitOpinion.click();
 
-  // REACTIONS(T74, S4_Reactions): MY REPLY 입력 상자·조건 칩·반응 카드 2×2·추천 답변
-  // 체크 카드를 캡처한 뒤, 후속 질문 없이 앞선 의견을 유지해 확정한 4개 조건을 그대로
-  // 넘긴다.
+  // REACTIONS "반응 듣기"(T89 1/2): 반응 카드 2×2(전문 표시) + 추가 질문 상자를 캡처한다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await expect(page.getByTestId('followup-textarea')).toBeVisible();
   // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
+
+  // REACTIONS "다시 답하기"(T89 2/2, DiscussScreen과 같은 구성): MY REPLY 입력 상자·
+  // 조건 칩·입장 선택·추천 답변 체크 카드를 캡처한 뒤, 후속 질문 없이 앞선 의견을
+  // 유지해 확정한 4개 조건을 그대로 넘긴다.
+  await page.getByTestId('reactions-advance').click();
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
+  await capture(page, testInfo.project.name, 'reactions-answer');
   // T84 #1: "앞서 전달한 의견을 유지하겠습니다" 체크 카드를 보조 버튼 "답하지 않고
   // 넘어가기"로 옮겼다 — 확정한 4개 조건은 그대로 넘어간다.
   await page.getByTestId('keep-previous-answer').click();
@@ -189,7 +193,10 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 그대로 재현된다(e2e/stance.spec.ts의 "조건 없이 진행" 경로와 같다).
   await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
   await page.getByTestId('submit-opinion').click();
-  await page.getByTestId('followup-option-1').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
+  // 조건을 하나도 더하지 않는 BOTH 옵션(T89, 6번 인덱스).
+  await page.getByTestId('followup-option-6').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();

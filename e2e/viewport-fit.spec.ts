@@ -76,9 +76,11 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   // (드로어는 position:absolute라 축소 컨테이닝 블록의 영향을 받을 수 있다).
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectInViewport(page, 'assistant-panel', 'DISCUSS(비서실장 드로어 열림)');
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectInViewport(page, 'assistant-panel', 'DISCUSS(비서실장 팝업 열림)');
+  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글이 닫지 않고 팝업 자체의
+  // 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
 
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -148,6 +150,8 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   await page.getByTestId('submit-followup').click();
 

@@ -20,6 +20,7 @@ import type {
 import { scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
+import { DialogShell } from './DialogShell';
 import '../../styles/screens/assistant.css';
 
 type FeatureKey = 'summary' | 'compare' | 'refine';
@@ -224,30 +225,30 @@ export function AssistantPanel({
 
   // T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
   // 표시도 빼줘"): live·scripted 가리지 않고 이 캡션 자체를 그리지 않는다.
+  // T89(2026-10-07 사용자 — "AI 비서실장의 팝업창을 근거 자료 팝업과 동일한 디자인으로"):
+  // 오른쪽 열 위에 겹치는 드로어에서 EvidenceDialog와 같은 모달 팝업(DialogShell)으로
+  // 바꿨다. 닫기는 이제 팝업 자체의 닫기 버튼이 맡으므로, 토글 버튼은 "숨기기" 상태를
+  // 더 갖지 않고 늘 같은 문구다.
 
   return (
     <div className="assistant-panel">
       <button
         type="button"
         className="cta cta--secondary assistant-panel__toggle"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(true)}
         data-testid="assistant-toggle"
       >
-        {open ? 'AI 비서실장 숨기기' : 'AI 비서실장에게 맡기기'}
+        AI 비서실장에게 맡기기
       </button>
       {open && (
-        <aside className="assistant-panel__body" data-testid="assistant-panel">
-          <div className="assistant-panel__header">
-            <h3 className="assistant-panel__title">AI 비서실장</h3>
-            <button
-              type="button"
-              className="cta cta--secondary assistant-panel__close"
-              onClick={() => setOpen(false)}
-              data-testid="assistant-close"
-            >
-              닫기
-            </button>
-          </div>
+        <DialogShell
+          testId="assistant-panel"
+          titleId="assistant-panel-title"
+          title="AI 비서실장"
+          stamp="CONFIDENTIAL"
+          onClose={() => setOpen(false)}
+          closeTestId="assistant-close"
+        >
           <div className="assistant-panel__actions">
             {(Object.keys(FEATURE_LABELS) as FeatureKey[]).map((feature) => (
               <button
@@ -367,7 +368,7 @@ export function AssistantPanel({
               </div>
             </div>
           )}
-        </aside>
+        </DialogShell>
       )}
     </div>
   );
