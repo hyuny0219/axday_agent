@@ -118,6 +118,13 @@ function latestParticipantOpinion(ctx: BoardAgentsContext): string | undefined {
   return opinions[opinions.length - 1]?.originalText;
 }
 
+/** 참가자가 가장 최근 의견에서 밝힌 입장(T92). 아직 의견이 없거나 입장을 고르지 않았으면
+ * undefined — 서버 스키마가 그 경우를 null과 같게 다룬다. */
+function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | undefined {
+  const stance = ctx.session.opinions[ctx.session.opinions.length - 1]?.stance;
+  return stance ?? undefined;
+}
+
 function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutMs: number) {
   return {
     sessionId: ctx.sessionId,
@@ -126,6 +133,7 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     stage,
     transcript: transcriptPayload(ctx),
     participantOpinion: latestParticipantOpinion(ctx),
+    participantStance: latestParticipantStance(ctx),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,
     roleIds: ctx.roleIds,
@@ -226,6 +234,7 @@ function buildVoteBody(ctx: BoardAgentsContext, timeoutMs: number) {
       effectiveConditionIds: motion.effectiveConditionIds,
       executionMode: motion.executionMode,
     },
+    participantStance: latestParticipantStance(ctx),
     roleIds: ctx.roleIds,
   };
 }

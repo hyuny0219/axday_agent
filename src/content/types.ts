@@ -10,6 +10,9 @@ export type Predicate =
   | { any: Predicate[] }
   | { not: Predicate }
   | { mode: string }
+  /** 참가자가 이번 표결까지 가장 최근에 밝힌 입장(T92, 사용자 지적 "AI 임원들이 찬성
+   * 쪽으로 몰고 가는 경향"). null은 "입장을 고르지 않음". */
+  | { participantStance: 'FOR' | 'AGAINST' | null }
   | { always: true };
 
 export interface EvidenceCard {

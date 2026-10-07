@@ -7,6 +7,7 @@ import {
   CONDITION_IDS,
   EVIDENCE_IDS,
   EXEC_ROLE_IDS,
+  PARTICIPANT_STANCE_VALUES,
   VOTE_VALUES,
   voteResponseSchema,
   type ExecRoleId,
@@ -49,6 +50,10 @@ const voteRequestShape = z.object({
     effectiveConditionIds: z.array(z.enum(CONDITION_IDS)),
     executionMode: z.string().min(1),
   }),
+  /** 참가자가 안건을 고정하기까지 밝힌 입장(T92). 참가자의 "최종 표"가 아니라 토론
+   * 중 입장이라 스펙 6장의 "참가자 표는 보내지 않는다"와 다르다 — 안건에 붙은 조건이
+   * 참가자의 요구였는지 판단하는 데 쓴다. */
+  participantStance: z.enum(PARTICIPANT_STANCE_VALUES).optional(),
   /** 미표결(UNCAST) 임원만 다시 호출할 때 쓰는 선택 필드(T65, "미표결 임원 다시 요청").
    * 없으면 임원 4명 전체를 부른다. */
   roleIds: roleIdsSchema.optional(),
@@ -156,6 +161,7 @@ function buildVoteSystemPrompt(
       effectiveConditionLabels: conditionLabels(materials, input.motion.effectiveConditionIds),
       executionMode: input.motion.executionMode,
     },
+    participantStance: input.participantStance ?? null,
   });
   return [
     buildCommonGuardrails(),

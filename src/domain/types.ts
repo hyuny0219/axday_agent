@@ -84,12 +84,21 @@ export interface Transcript {
 /** 임원 한 명의 현재 라운드 응답 상태. idle은 아직 호출 전, pending은 호출 중이다. */
 export type RoleStatus = 'idle' | 'pending' | 'answered' | 'failed';
 
+/** 참가자가 이 의견에서 밝힌 입장(T92, 사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는
+ * 경향"). DiscussScreen·ReactionsScreen이 이미 로컬 state(App.tsx `sidePick`, T87·T89)로
+ * 들고 있던 선택을 의견 제출 시 세션에 함께 싣는다. null은 입장을 고르지 않고 제출한
+ * 경우(과거 세션 fixture·테스트와 호환). */
+export type ParticipantStance = 'FOR' | 'AGAINST' | null;
+
 /** DISCUSS/REACTIONS 단계에서 참가자가 전달한 의견 한 건의 기록. */
 export interface Opinion {
   id: string;
   originalText: string;
   selectedPhraseIds: string[];
   confirmedConditionIds: string[];
+  /** 이 의견을 전달할 때 참가자가 고른 입장(T92). 선택값 — 생략하면(기존 fixture·테스트)
+   * null과 같게 다룬다. */
+  stance?: ParticipantStance;
   createdAt: number;
 }
 

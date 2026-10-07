@@ -86,6 +86,7 @@ export function scriptedStances(
   const ctx: VoteContext = {
     conditionIds: latestConfirmedConditionIds(session.opinions),
     executionMode: 'DEFAULT',
+    participantStance: session.opinions[session.opinions.length - 1]?.stance ?? null,
   };
   const result: Record<ExecMemberId, Stance> = { ...ALL_UNDECIDED };
   for (const memberId of EXEC_MEMBER_ORDER) {

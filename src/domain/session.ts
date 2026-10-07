@@ -13,6 +13,7 @@ import { freezeMotion } from './motion';
 import type {
   Ballot,
   Opinion,
+  ParticipantStance,
   PendingVote,
   RoleStatus,
   Session,
@@ -37,12 +38,15 @@ export type SessionAction =
       originalText: string;
       selectedPhraseIds: string[];
       confirmedConditionIds: string[];
+      /** 참가자가 고른 입장(T92, App.tsx sidePick). 생략하면 null과 같다. */
+      stance?: ParticipantStance;
     }
   | {
       type: 'SUBMIT_FOLLOWUP';
       originalText: string;
       selectedPhraseIds: string[];
       confirmedConditionIds: string[];
+      stance?: ParticipantStance;
     }
   | { type: 'KEEP_PREVIOUS' }
   | { type: 'FREEZE_MOTION'; scenario: Scenario; confirmedConditionIds: string[] }
@@ -177,6 +181,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         originalText: action.originalText,
         selectedPhraseIds: [...action.selectedPhraseIds],
         confirmedConditionIds: [...action.confirmedConditionIds],
+        stance: action.stance ?? null,
         createdAt: now,
       };
       return withNoWarnings({
@@ -196,6 +201,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         originalText: action.originalText,
         selectedPhraseIds: [...action.selectedPhraseIds],
         confirmedConditionIds: [...action.confirmedConditionIds],
+        stance: action.stance ?? null,
         createdAt: now,
       };
       return withNoWarnings({
@@ -242,7 +248,8 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           execBallotsPending: true,
         });
       }
-      const ballots = decideBoard(action.scenario, finalMotion);
+      const participantStance = session.opinions[session.opinions.length - 1]?.stance ?? null;
+      const ballots = decideBoard(action.scenario, finalMotion, participantStance);
       return withNoWarnings({
         ...session,
         stage: 'VOTE',

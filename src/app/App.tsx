@@ -448,7 +448,7 @@ function StageRouter() {
           stances={stancesFor(session, scenario)}
           side={sidePick}
           onChooseSide={setSidePick}
-          onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
+          onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload, stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
         />
@@ -473,7 +473,7 @@ function StageRouter() {
           onChooseSide={setSidePick}
           step={reactionsStep}
           onAdvanceStep={() => setReactionsStep('answer')}
-          onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
+          onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload, stance: sidePick })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}

@@ -34,4 +34,16 @@
 // 바뀌지 않았지만(evidenceIds·suggestedConditionIds는 여전히 ID), validate.ts의
 // findStrayLatinRun()이 message·reason·draftText에 남은 조건 ID·영문을 응답 단계에서 한 번
 // 더 거절한다(invalid_response). 전후 비교는 docs/eval/tuning-v9.md.
-export const PROMPT_VERSION = 'v9';
+// v10(2026-10-07, T92): 사용자 지적 "반대 의견을 작성해도 AI 임원들 및 프로그램 진행이
+// 찬성 쪽으로 몰고 가는 경향". v9 실측에서 임원 4명이 "붙은 조건 유무"로만 판단해
+// 참가자의 찬성·반대 자체가 프롬프트에 없었다 — 조건 보완 경로 16/16 YES, 조건 없음
+// 16/16 NO로 네 임원이 참가자 논리와 무관하게 함께 움직였다. meeting_record에 참가자
+// 입장(FOR/AGAINST/null, buildMeetingRecordBlock)을 추가하고, 반대 입장일 때는 붙은
+// 조건이 "참가자의 요구"라는 설명을 더했다. EXEC_DECISION_RULE을 참가자 주장 중심으로
+// 바꿔 조건 유무가 아니라 참가자 반대 근거의 타당성으로 판단하게 하고, 네 임원이 매번
+// 같은 쪽으로 함께 움직이지 않도록 role_lens 기준 독립 판단을 명시했다. REACTIONS 단계
+// 지시에 참가자 발언의 핵심 주장 한 가지에 직접 답하라는 요구를 더했다. 요청 스키마에
+// participantStance(round·vote 모두 선택 필드, 생략 시 null과 같음)를 추가했다 — 기존
+// 요청은 필드가 없으므로 동작이 그대로다. 응답 스키마는 바뀌지 않았다. 전후 비교는
+// docs/eval/tuning-v10.md.
+export const PROMPT_VERSION = 'v10';
