@@ -412,8 +412,10 @@ describe('ReactionsScreen', () => {
       expect(checkbox).not.toBeChecked();
     });
 
-    it('이미 확정된 조건을 다시 제안하는 옵션은 숨겨진다', () => {
-      // OWNER(0)가 DISCUSS에서 이미 확정됐다고 가정한다.
+    it('이미 확정된 조건을 다시 제안하는 옵션도 숨기지 않고 선택 가능하게 보여 준다', () => {
+      // OWNER(0)가 DISCUSS에서 이미 확정됐다고 가정한다 — 숨기면 찬성 쪽 카드가 1~2장만
+      // 남아 빈 그리드가 되므로(리드 확인) 그대로 보여 준다. 다시 골라도 조건 칩은
+      // "기존 확정"으로만 표시된다.
       const opinions: Opinion[] = [
         {
           id: 'op1',
@@ -436,8 +438,8 @@ describe('ReactionsScreen', () => {
           initialSide="FOR"
         />,
       );
-      expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
-      // 아직 확정되지 않은 다른 FOR 옵션은 그대로 보인다.
+      expect(screen.getByTestId('followup-option-0')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-0').querySelector('input')).not.toBeDisabled();
       expect(screen.getByTestId('followup-option-1')).toBeInTheDocument();
     });
   });

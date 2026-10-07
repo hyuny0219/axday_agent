@@ -785,15 +785,10 @@ export function ReactionsScreen({
                 if (optionSide !== 'BOTH' && optionSide !== side) {
                   return null;
                 }
-                // 이미 확정된 조건을 다시 제안하는 카드는 숨긴다(T89, 사용자 지시 —
-                // "답하지 않고 넘어가기"로 충분하다, T84 #23의 "(앞서 제안함)" 잠금
-                // 표시를 대체한다).
-                const alreadyProposed =
-                  option.proposeConditionId !== null &&
-                  previousConfirmedIds.includes(option.proposeConditionId);
-                if (alreadyProposed) {
-                  return null;
-                }
+                // 이미 확정된 조건을 다시 제안하는 카드도 그대로 보여 준다(T89 리드 확인 —
+                // 숨기면 찬성 쪽 카드가 1~2장만 남아 빈 그리드가 된다; 다시 골라도 조건 칩은
+                // "기존 확정"으로 표시될 뿐 새 조건이 생기지 않아 무해하다). T84 #23의
+                // "(앞서 제안함)" 잠금 표시는 쓰지 않는다.
                 return (
                   <PhraseCard
                     key={index}

@@ -257,8 +257,9 @@ export const aiApprovalScenario: Scenario = {
         side: 'FOR',
       },
       {
-        text: '사람 검토를 전면 생략하고 전부 자동 승인합시다.',
-        proposeConditionId: 'FULL_AUTO',
+        // "책임을 누구에게"라는 질문에 맞게 — 한도 안의 결과는 이사회가 책임진다는 답.
+        text: '결재 금액 한도를 정해 두고, 그 안에서 생긴 문제는 이사회가 책임집시다.',
+        proposeConditionId: 'LIMIT',
         side: 'FOR',
       },
       {
