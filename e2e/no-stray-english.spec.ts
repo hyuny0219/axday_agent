@@ -15,7 +15,7 @@ import { test, expect } from './fixtures';
  * 지워야 'AI' 예외가 중복 적용되지 않는다. 'Esc'는 팝업 안내("Esc · 닫기 버튼")의
  * 키보드 키 이름 — 물리 키보드 표기 그대로라 디자인 장식 라벨이 아니다(판단 근거:
  * 한국어 UI에서도 "Esc 키"로 흔히 쓴다). */
-const ALLOWED_TOKENS = ['BOARDROOM 2026', 'CEO', 'CFO', 'CAIO', 'CISO', 'AI', 'Esc'];
+const ALLOWED_TOKENS = ['BECOME A BOARD', 'BOARDROOM 2026', 'CEO', 'CFO', 'CAIO', 'CISO', 'AI', 'Esc'];
 const STRAY_LATIN = /[A-Za-z]{2,}/g;
 
 /** 붉은 사각 도장류(T87, 사용자 — "붉은 상자 안의 글씨는 영어로, 더 비밀요원스럽다")만
@@ -54,7 +54,7 @@ function findStrayLatin(text: string): string[] {
   return Array.from(cleaned.matchAll(STRAY_LATIN), (m) => m[0]);
 }
 
-test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 영문 단어가 남아 있지 않다(부결 경로)', async ({
+test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영문 단어가 남아 있지 않다(부결 경로)', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -115,7 +115,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await page.getByTestId('result-transcript-toggle').click();
   await checkScreen('RESULT(회의록 전문)');
 
-  expect(stray, `역할 약자·BOARDROOM 2026·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
+  expect(stray, `역할 약자·브랜드명·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
 });
 
 // T84: 위 경로는 조건을 하나도 붙이지 않아 항상 부결(aiApproval.ts voteRules의
@@ -123,7 +123,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
 // 지나갔다 — PASS 전용 문구(resultCopy.sixMonthsLater.pass, 6개월 뒤 카드)에 남아
 // 있던 영문 "Agent"(T83 정리 누락, T84에서 "AI 에이전트"로 수정)를 이 검사가 끝내
 // 잡아내지 못한 이유다. 조건을 붙여 가결로 이어지는 경로를 따로 둔다.
-test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 영문 단어가 남아 있지 않다(조건부 가결 경로)', async ({
+test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영문 단어가 남아 있지 않다(조건부 가결 경로)', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
@@ -172,5 +172,5 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await expect(page.getByTestId('result-epilogue')).toBeVisible();
   await checkScreen('RESULT(6개월 뒤 카드)');
 
-  expect(stray, `역할 약자·BOARDROOM 2026·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
+  expect(stray, `역할 약자·브랜드명·AI 외의 영문이 남아 있다: ${JSON.stringify(stray)}`).toEqual({});
 });

@@ -6,7 +6,7 @@ import { test, expect } from './fixtures';
 test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장이 모두 활성이다', async ({ page }) => {
   await page.goto('/?mode=scripted');
 
-  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   // T78: 시안(S1_Select) 카드는 2장이고, 둘 다 선택 가능한 안건이다.

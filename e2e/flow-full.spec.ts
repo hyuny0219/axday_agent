@@ -47,7 +47,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
 
   await page.getByTestId('end-session').click();
   await page.getByTestId('end-session-confirm-ok').click();
-  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
 });
 
 test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT부터 RESULT까지 완주한다', async ({
@@ -192,7 +192,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
 
   await page.getByTestId('end-session').click();
   await page.getByTestId('end-session-confirm-ok').click();
-  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
 });
 
 // T87(사용자 — "찬성/반대를 고르면 추천 문구가 뜨도록"): 반대 쪽 문구(N4, 조건과

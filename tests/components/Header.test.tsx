@@ -21,7 +21,7 @@ describe('Header', () => {
     expect(screen.queryByTestId('progress-strip')).not.toBeInTheDocument();
     expect(document.querySelector('.app-header__stage')).not.toBeInTheDocument();
     // 좌·우 구역은 그대로 남는다.
-    expect(screen.getByText('BOARDROOM 2026')).toBeInTheDocument();
+    expect(screen.getByText('BECOME A BOARD')).toBeInTheDocument();
     // T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
     // 표시도 빼줘"): 모드 배지는 live·scripted 가리지 않고 더 이상 그리지 않는다.
     expect(screen.queryByTestId('mode-badge')).not.toBeInTheDocument();

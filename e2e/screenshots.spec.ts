@@ -49,7 +49,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.goto('/?mode=scripted');
 
   // ATTRACT(T71): 시안(S0_Attract) 그대로 — 무대 풀블리드·제목·CTA.
-  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await capture(page, testInfo.project.name, 'attract');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
@@ -177,7 +177,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 새로 완주해 반대를 확정한다. T84 #5부터 "처음 화면으로"는 확인 단계를 먼저 연다.
   await page.getByTestId('end-session').click();
   await page.getByTestId('end-session-confirm-ok').click();
-  await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();

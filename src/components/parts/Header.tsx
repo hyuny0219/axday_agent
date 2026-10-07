@@ -33,7 +33,7 @@ export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
   return (
     <header className="app-header">
       <div className="app-header__left">
-        <span className="app-header__brand">BOARDROOM 2026</span>
+        <span className="app-header__brand">BECOME A BOARD</span>
         {/* "기밀 작전실" 타자기 라벨(T64, Main.html "CASE FILE No. 02 · SESSION 0042",
             T83에서 한국어화). sessionId 앞 4자로 세션을 구분한다 — 장식용 코드라
             sessionId 전체를 노출하지 않는다. */}
