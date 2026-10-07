@@ -396,10 +396,10 @@
   }
 }
 
-/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼·안내 자체
-   스타일(.evidence-open-button·.evidence-open-hint)은 evidenceDialog.css의 공용
-   규칙이고, 여기서는 점선 위 경계 + 배치만 맡는다(discuss-screen__evidence-row와
-   같은 값). */
+/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼은 T86에서
+   공용 .cta.cta--secondary(shell.css)로 바뀌었고, 안내 한 줄(.evidence-open-hint)만
+   evidenceDialog.css의 공용 규칙이다 — 여기서는 점선 위 경계 + 배치만 맡는다
+   (discuss-screen__evidence-row와 같은 값). */
 .reactions-screen__evidence-row {
   flex-shrink: 0;
   display: flex;

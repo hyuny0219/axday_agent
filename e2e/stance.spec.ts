@@ -154,7 +154,7 @@ test.describe('live mock: 무대 표정', () => {
     page,
   }) => {
     await page.goto('/');
-    await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+    await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
     await page.getByRole('button', { name: '체험 시작' }).click();
     await page.getByTestId('scenario-card-ai-approval').click();

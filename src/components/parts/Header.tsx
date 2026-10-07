@@ -16,10 +16,10 @@ import '../../styles/screens/shell.css';
 import { OperatorMenu } from './OperatorMenu';
 import { ProgressStrip } from './ProgressStrip';
 
-const MODE_BADGE_TEXT: Record<Session['mode'], string> = {
-  live: '실시간',
-  scripted: '사전 구성 시뮬레이션',
-};
+// T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
+// 표시도 빼줘"): live든 scripted든 참가자 화면에는 더 이상 모드 배지를 보여주지
+// 않는다(실제 임원처럼 느끼게 하려는 목적). 모드 확인은 운영 메뉴(운영자용, 이
+// 배지와 무관)에서만 한다.
 
 export interface HeaderProps {
   session: Session;
@@ -45,12 +45,6 @@ export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
         <ProgressStrip stage={session.stage} />
       </div>
       <div className="app-header__right">
-        <span
-          className={`mode-badge mode-badge--${session.mode}`}
-          data-testid="mode-badge"
-        >
-          {MODE_BADGE_TEXT[session.mode]}
-        </span>
         <OperatorMenu onNewSession={onOperatorReset} />
       </div>
     </header>

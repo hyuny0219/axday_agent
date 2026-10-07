@@ -179,7 +179,7 @@ export function EvidenceDialog({
           </h2>
           <button
             type="button"
-            className="evidence-dialog__close"
+            className="cta cta--secondary evidence-dialog__close"
             onClick={onClose}
             ref={closeButtonRef}
             aria-label="닫기"

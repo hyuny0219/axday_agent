@@ -88,7 +88,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   page,
 }) => {
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
@@ -107,7 +107,8 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
 
   const refineResult = page.getByTestId('assistant-result-refine');
   await expect(refineResult).toBeVisible({ timeout: 10_000 });
-  await expect(refineResult).toContainText('실시간 AI 응답');
+  // T86: live에서는 '실시간 AI 응답' 캡션 자체를 그리지 않는다.
+  await expect(refineResult.locator('.assistant-panel__badge')).toHaveCount(0);
 
   const refinedText = await page.getByTestId('assistant-refine-draft').textContent();
   expect(refinedText).toBeTruthy();

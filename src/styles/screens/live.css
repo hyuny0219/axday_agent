@@ -415,11 +415,6 @@
   color: var(--ink-muted);
 }
 
-.result-screen__mode-notice {
-  margin: 0;
-  color: var(--ink-muted);
-}
-
 /* RESULT 오른쪽 열은 T66부터 종이 보고서라 --panel(짙은 네이비)·--vote-hold(밝은
    골드)는 종이 위에서 어두운 상자로 튀었다(Codex 리뷰 17차 지적) — 다른 경고 문구와
    같은 종이-2 + 도장 앰버 테두리 + --label 잉크로 맞춘다. */

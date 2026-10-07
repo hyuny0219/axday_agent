@@ -222,14 +222,14 @@ export function AssistantPanel({
     setActiveFeature(null);
   }
 
-  const resultBadge = (mode: SummarizeOpinionsResult['mode']) =>
-    mode === 'live' ? '실시간 AI 응답' : '체험용 사전 구성';
+  // T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
+  // 표시도 빼줘"): live·scripted 가리지 않고 이 캡션 자체를 그리지 않는다.
 
   return (
     <div className="assistant-panel">
       <button
         type="button"
-        className="assistant-panel__toggle"
+        className="cta cta--secondary assistant-panel__toggle"
         onClick={() => setOpen((value) => !value)}
         data-testid="assistant-toggle"
       >
@@ -241,7 +241,7 @@ export function AssistantPanel({
             <h3 className="assistant-panel__title">AI 비서실장</h3>
             <button
               type="button"
-              className="assistant-panel__close"
+              className="cta cta--secondary assistant-panel__close"
               onClick={() => setOpen(false)}
               data-testid="assistant-close"
             >
@@ -253,6 +253,7 @@ export function AssistantPanel({
               <button
                 key={feature}
                 type="button"
+                className="cta cta--secondary"
                 onClick={() => runFeature(feature)}
                 data-testid={`assistant-action-${feature}`}
               >
@@ -281,7 +282,6 @@ export function AssistantPanel({
           )}
           {status === 'done' && activeFeature === 'summary' && summaryResult && (
             <div data-testid="assistant-result-summary">
-              <p className="assistant-panel__badge">{resultBadge(summaryResult.mode)}</p>
               {summaryResult.mode === 'live' ? (
                 <p data-testid="assistant-summary-text">{summaryResult.summaryText}</p>
               ) : (
@@ -311,7 +311,6 @@ export function AssistantPanel({
           )}
           {status === 'done' && activeFeature === 'compare' && compareResult && (
             <div data-testid="assistant-result-compare">
-              <p className="assistant-panel__badge">{resultBadge(compareResult.mode)}</p>
               <h4>원안과의 차이</h4>
               {compareResult.addedConditionIds.length > 0 ? (
                 <ul>
@@ -336,7 +335,6 @@ export function AssistantPanel({
           )}
           {status === 'done' && activeFeature === 'refine' && refineResult && (
             <div data-testid="assistant-result-refine">
-              <p className="assistant-panel__badge">{resultBadge(refineResult.mode)}</p>
               <div className="assistant-panel__refine-compare">
                 <div className="assistant-panel__refine-original">
                   <h4>원문</h4>
@@ -352,6 +350,7 @@ export function AssistantPanel({
               <div className="assistant-panel__refine-choices">
                 <button
                   type="button"
+                  className="cta cta--secondary"
                   onClick={handleApplyRefine}
                   data-testid="assistant-apply-refine"
                 >
@@ -359,6 +358,7 @@ export function AssistantPanel({
                 </button>
                 <button
                   type="button"
+                  className="cta cta--secondary"
                   onClick={handleKeepOriginal}
                   data-testid="assistant-keep-original"
                 >

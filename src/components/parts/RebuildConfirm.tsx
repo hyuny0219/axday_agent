@@ -29,7 +29,7 @@ export function RebuildConfirm({ onKeep, onRebuild }: RebuildConfirmProps) {
         </button>
         <button
           type="button"
-          className="rebuild-confirm__rebuild"
+          className="cta cta--secondary"
           onClick={onRebuild}
           data-testid="rebuild-confirm-rebuild"
         >

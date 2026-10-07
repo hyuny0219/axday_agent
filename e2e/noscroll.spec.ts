@@ -265,7 +265,7 @@ async function expectNoClip(page: Page, selector: string, label: string) {
 test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE가 잘리지 않고 스크롤도 없다', async ({ page }) => {
   await mockLongStatements(page);
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();

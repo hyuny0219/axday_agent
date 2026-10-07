@@ -1,6 +1,6 @@
-// BriefingScreen(T80, Main.html 시안 그대로): EXHIBIT 2×2 요약 카드(evidence-summary-<id>)는
-// 팝업 없이 항상 보이고, 팝업 전용 전문 카드(evidence-card-<id>)는 "전문 보기"를 눌러야
-// 나타난다 — 두 testid가 서로 다르므로 팝업이 열려도 배경 요약 카드와 겹치지 않는다.
+// BriefingScreen(T86, 2026-10-07 사용자 — "예전처럼 버튼으로"): 자료 4장은 팝업 없이는
+// 보이지 않고, "근거 자료 보기" 버튼을 눌러야 EvidenceDialog 팝업 안에 전문
+// (evidence-card-<id>)으로 나타난다. DiscussScreen·ReactionsScreen과 같은 패턴이다.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -12,27 +12,25 @@ afterEach(() => {
 });
 
 describe('BriefingScreen', () => {
-  it('EXHIBIT 요약 카드 4장은 항상 보이고, 팝업 전문 카드는 "전문 보기" 전에는 없다', () => {
+  it('근거 자료 보기 버튼은 있고, 팝업 전문 카드는 누르기 전에는 없다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
+    expect(screen.getByTestId('open-evidence')).toBeInTheDocument();
     for (const card of anonBoardScenario.evidence) {
-      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
       expect(screen.queryByTestId(`evidence-card-${card.id}`)).not.toBeInTheDocument();
     }
-    expect(screen.getByTestId('open-evidence')).toBeInTheDocument();
   });
 
-  it('"전문 보기"를 누르면 팝업에 자료 4장이 전문으로 나타나고, 배경 요약 카드도 그대로 남는다', () => {
+  it('"근거 자료 보기"를 누르면 팝업에 자료 4장이 전문으로 나타난다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     fireEvent.click(screen.getByTestId('open-evidence'));
 
     expect(screen.getByTestId('evidence-dialog')).toBeInTheDocument();
     for (const card of anonBoardScenario.evidence) {
       expect(screen.getByTestId(`evidence-card-${card.id}`)).toBeInTheDocument();
-      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
     }
   });
 
-  it('팝업 닫기 버튼을 누르면 전문 카드만 사라지고 요약 카드는 남는다', () => {
+  it('팝업 닫기 버튼을 누르면 전문 카드가 사라진다', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={vi.fn()} />);
     fireEvent.click(screen.getByTestId('open-evidence'));
     fireEvent.click(screen.getByTestId('evidence-dialog-close'));
@@ -40,7 +38,6 @@ describe('BriefingScreen', () => {
     expect(screen.queryByTestId('evidence-dialog')).not.toBeInTheDocument();
     for (const card of anonBoardScenario.evidence) {
       expect(screen.queryByTestId(`evidence-card-${card.id}`)).not.toBeInTheDocument();
-      expect(screen.getByTestId(`evidence-summary-${card.id}`)).toBeInTheDocument();
     }
   });
 

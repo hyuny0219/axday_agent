@@ -48,7 +48,7 @@ export function EndSessionConfirm({ onConfirm, onCancel }: EndSessionConfirmProp
         </button>
         <button
           type="button"
-          className="end-session-confirm__confirm"
+          className="cta cta--secondary"
           onClick={onConfirm}
           data-testid="end-session-confirm-ok"
         >

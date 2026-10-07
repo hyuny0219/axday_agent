@@ -3,8 +3,7 @@
    그 1.25배다(opinions.css·motion.css 등 T70~T77과 같은 두 해상도 비율, "시안 이탈
    금지" 지시). 블록 순서: 1) CONFIDENTIAL 도장(절대 위치) 2) CASE 칩 + 사건 한 줄
    3) 결정 질문(제목) 4) SITREP·PROPOSAL·UNKNOWN 상자 5) YOUR ORDERS 점선 상자
-   6) EXHIBIT 2×2(남는 높이 채움, EvidenceGrid variant="compact" — evidence.css가
-   카드 자체 치수를 담당하고 여기서는 머리줄·바깥 여백만 맡는다). */
+   6) EXHIBIT(T86에서 2×2 상시 노출을 걷어내고 "근거 자료 보기" 버튼 하나로 되돌림). */
 
 /* 오른쪽 열 전체가 종이 한 장(OpinionsScreen.opinions-screen__paper·
    MotionScreen.motion-screen__paper와 같은 패턴). */
@@ -231,81 +230,12 @@
   color: var(--paper-vote-no);
 }
 
-/* EXHIBIT 블록(시안 2×2 + 이 카드가 더하는 유일한 요소인 머리줄). 남는 세로 공간을
-   그대로 흡수해 2×2가 종이 바닥까지 채운다(카드 명시 "남는 높이 채움"). */
+/* EXHIBIT 블록(T86, 2026-10-07 사용자 — 요약 카드 2×2 상시 노출을 걷어내고 버튼 하나로
+   되돌렸다). 더 이상 남는 세로 공간을 흡수하지 않는다 — 버튼 아래 남는 여백은 그대로
+   종이 바탕으로 둔다(flex-shrink:0, 다른 상자들과 같다). 버튼 자체는 공용
+   .cta.cta--secondary(shell.css)를 그대로 쓴다. */
 .briefing-screen__exhibit {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__exhibit {
-    gap: 8px;
-  }
-}
-
-/* 머리줄(시안에 없는 유일한 추가 요소, 카드 명시): 왼쪽 라벨(다른 화면의
-   motion-screen__box-label과 같은 타자기 라벨) + 오른쪽 "전문 보기" 작은 보조 버튼. */
-.briefing-screen__exhibit-head {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.briefing-screen__exhibit-label {
-  font-family: var(--font-label);
-  font-size: 13.75px;
-  letter-spacing: 0.16em;
-  color: var(--label);
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__exhibit-label {
-    font-size: 11px;
-  }
-}
-
-/* "전문 보기" 버튼: 공용 .evidence-open-button(큰 종이 톤 보조 CTA, DISCUSS가 그대로
-   쓰는 모양)을 EXHIBIT 머리줄에 맞는 작은 치수로 덮어쓴다 — 결합 선택자로 명시도를
-   올려 evidenceDialog.css의 단일 클래스 규칙을 항상 이긴다(이 화면의 허용 경로가
-   evidenceDialog.css 밖이라 공용 규칙 자체는 건드리지 않는다). */
-.evidence-open-button.briefing-screen__evidence-trigger {
-  position: relative;
-  min-height: 0;
-  padding: 5px 15px;
-  border-radius: 10px;
-  border-width: 1px;
-  font-size: 15px;
-  box-shadow: none;
-}
-
-@media (max-width: 1280px) {
-  .evidence-open-button.briefing-screen__evidence-trigger {
-    padding: 4px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-  }
-}
-
-/* PR #14 Codex 1차 검토(P2): 위 override가 min-height를 0으로 낮춰 실제 보이는
-   버튼이 1280에서 약 25px로 줄어 터치 타깃 보장이 깨졌다. 글자 크기·테두리 등
-   보이는 모양은 그대로 작게 두고, 투명한 `::before`로 버튼 중심에 겹치는
-   `--touch-min`(56px, 다른 화면의 최소 클릭 영역과 같은 토큰) 이상의 히트 영역만
-   넓힌다 — 가상 요소는 버튼 자신의 렌더 박스라 그 안을 눌러도 버튼 클릭으로
-   처리된다(배경·테두리 없이 보이지는 않는다). */
-.evidence-open-button.briefing-screen__evidence-trigger::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: max(100%, var(--touch-min));
-  height: var(--touch-min);
-  transform: translate(-50%, -50%);
 }
 
 /* 왼쪽 열 CTA(시안 "의견 듣기 ▶", 240×56/1280·300×70/1920 — AttractScreen.attract-screen__cta와

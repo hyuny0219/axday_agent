@@ -45,7 +45,9 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
 
   await expectNoPageScroll(page, 'ATTRACT');
   const startCta = page.getByRole('button', { name: '체험 시작' });
-  await expectInViewport(page, 'mode-badge', 'ATTRACT'); // 헤더가 잘리지 않았는지 곁다리 확인
+  // T86: 헤더 모드 배지는 없앴다 — 헤더가 잘리지 않았는지는 항상 있는 운영 메뉴
+  // 버튼으로 곁다리 확인한다.
+  await expectInViewport(page, 'operator-menu-button', 'ATTRACT');
   await startCta.click();
 
   await expectNoPageScroll(page, 'SELECT');

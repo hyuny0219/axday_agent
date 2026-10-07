@@ -180,31 +180,10 @@
   gap: var(--space-1);
 }
 
-/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30). 세션 시작 전 고정된 값을 그대로
-   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). T64: LIVE는 Main.html의
-   기울인 붉은 스탬프 칩으로 그린다(문구는 바꾸지 않는다 — e2e가 정확한 텍스트를 단언한다).
-   scripted는 칩 모양만 유지하고 회색 테두리로 눌러, LIVE 스탬프의 긴박함과 구분한다. */
-.mode-badge {
-  padding: 4px var(--space-1);
-  border-radius: 0;
-  border: 2px solid var(--border);
-  font-family: var(--font-label);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
-.mode-badge--live {
-  border-color: var(--stamp-red);
-  color: #e06b6b;
-  transform: rotate(-3deg);
-}
-
-.mode-badge--scripted {
-  border-color: var(--border);
-  color: var(--text-muted);
-}
+/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30)는 T86(2026-10-07 사용자 — "실시간
+   표시는 제거해줘", 이어서 "사전 구성 시뮬레이션 표시도 빼줘")에서 헤더(Header.tsx)
+   자체를 없앴다 — 참가자 화면에는 모드를 전혀 드러내지 않고, 운영 메뉴(운영자용)에서만
+   확인한다. */
 
 .app-header__timer {
   color: var(--text-muted);
@@ -634,24 +613,22 @@
   }
 }
 
-/* 보조 CTA(T64 item 4, Main.html "회의록 전문 보기"): 앰버 테두리만 — 채움·굵은
-   그림자는 주 CTA("체험 종료")만의 것으로 남겨 시각적 위계를 지킨다. 모양(깎인
-   모서리)·최소 크기는 .cta와 같다. */
+/* 보조 CTA(T86, 2026-10-07 사용자 — "버튼 색상을 체험 시작과 동일하게, 모든 버튼은
+   통일"). 이전에는 테두리만 있는 outline 버튼이라 주 CTA와 다른 색 체계로 보였다 —
+   이제는 주 CTA와 같은 앰버 채움 + 검정 글자 + 같은 글꼴 + 같은 깎인 모서리를 그대로
+   쓰고, 크기(최소 높이·패딩·글자 크기·그림자)만 작게 줄여 위계만 구분한다. 비활성
+   모양(점선 테두리·흐린 잉크)은 .cta:disabled를 그대로 물려받는다. */
 .cta.cta--secondary {
-  background-color: transparent;
-  color: var(--amber);
-  border: 2px solid var(--amber);
-  box-shadow: none;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  font-size: 15px;
+  box-shadow: 4px 4px 0 #3a2a12;
 }
 
 .cta.cta--secondary:hover:not(:disabled) {
-  background-color: rgba(224, 163, 74, 0.12);
-  box-shadow: none;
-}
-
-.cta.cta--secondary:disabled {
-  background-color: transparent;
-  border: 2px solid var(--border);
+  box-shadow:
+    4px 4px 0 #3a2a12,
+    0 0 16px rgba(224, 163, 74, 0.35);
 }
 
 /* 진행 스트립(v0.9, T67에서 헤더 가운데로 이동): ① 상황 파악 → ⑤ 표결 5단계를

@@ -139,7 +139,7 @@ test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하
   await mockAllReactionsFail(page);
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
@@ -178,7 +178,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
   await mockReactionsFailureThenRetrySucceeds(page, 'CFO');
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
@@ -209,7 +209,7 @@ test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 
   await mockVoteFailureThenRetrySucceeds(page, 'CAIO');
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
@@ -243,7 +243,7 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
   await mockFollowupFailureThenRetrySucceeds(page, 'CFO');
 
   await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('실시간');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });

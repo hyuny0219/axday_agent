@@ -64,11 +64,6 @@ const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
   UNCAST: '–',
 };
 
-const MODE_NOTICE_TEXT: Record<Session['mode'], string> = {
-  live: '실시간 임원 에이전트 판단입니다.',
-  scripted: '사전 구성 시뮬레이션 결과입니다.',
-};
-
 export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
 
@@ -271,9 +266,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                 시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
               </p>
             )}
-            <p className="result-screen__mode-notice" data-testid="result-mode-notice">
-              {MODE_NOTICE_TEXT[session.mode]}
-            </p>
+            {/* T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성
+                시뮬레이션 표시도 빼줘"): 모드 안내 줄은 live·scripted 가리지 않고
+                완전히 없앴다 — 모드 확인은 운영 메뉴에서만 한다. */}
             {tallyResult.limitedByUnavailable && (
               <p className="result-screen__limited-notice" data-testid="result-limited-notice">
                 일부 임원 미표결로 판단이 제한되었습니다.

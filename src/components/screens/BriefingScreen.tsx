@@ -2,21 +2,20 @@
 // "지금 화면이 승인된 시안과 다르다" — "시안 이탈 금지"). 오른쪽 종이 한 장에 시안
 // 순서 그대로: CONFIDENTIAL 도장 → CASE 칩+사건 한 줄 → 결정 질문(h1 위계, 다른
 // 조종석 화면과 같은 이유로 <h2>를 쓴다, OpinionsScreen·MotionScreen과 같은 관행) →
-// SITREP·PROPOSAL·UNKNOWN 상자 → YOUR ORDERS 점선 상자 → EXHIBIT 2×2(남는 높이
-// 채움). 왼쪽 열(무대·CTA·TRANSCRIPT)은 App.tsx가 StageBand·MinutesPanel로 그리므로
-// 이 화면은 app-body__actions에 CTA 하나만 둔다(T45 조종석 배치).
+// SITREP·PROPOSAL·UNKNOWN 상자 → YOUR ORDERS 점선 상자 → EXHIBIT(근거 자료 버튼).
+// 왼쪽 열(무대·CTA·TRANSCRIPT)은 App.tsx가 StageBand·MinutesPanel로 그리므로 이
+// 화면은 app-body__actions에 CTA 하나만 둔다(T45 조종석 배치).
 //
-// EXHIBIT 2×2(사용자 결정, 2026-10-02): 자료 전문을 다시 상시 펼치지 않고 시안의 압축
-// 요약 카드(EvidenceGrid variant="compact" — 자료명 타자기 라벨 + 해석 13px + 원문
-// 12px, 각 1~2줄 클램프)를 그대로 쓴다. 전문은 기존 T68 "근거 자료 보기" 팝업
-// (EvidenceDialog, STATEMENTS 빈 상태 줄 포함)으로 본다 — 팝업을 여는 "전문 보기"
-// 버튼은 EXHIBIT 블록 머리줄 오른쪽에 작은 보조 버튼으로 두는 것이 시안에 없는 유일한
-// 추가 요소다(카드 명시). 팝업 동작(role="dialog"·포커스 트랩·Esc/딤/닫기 버튼
-// 세 경로·스크롤 잠금)은 전혀 건드리지 않는다.
+// T86(2026-10-07 사용자 — "근거 자료가 버튼 클릭하면 나오는 게 아니고 바로 보이고
+// '전문 보기'로 바뀌었네, 예전처럼 버튼으로"): T80이 넣은 EXHIBIT 2×2 요약 카드 상시
+// 노출("전문 보기"로 전문을 열던 모양)을 걷어내고, DiscussScreen·ReactionsScreen과
+// 같은 패턴(종이 아래쪽 버튼 하나 → EvidenceDialog 팝업)으로 되돌린다. 팝업 동작
+// (role="dialog"·포커스 트랩·Esc/딤/닫기 버튼 세 경로·스크롤 잠금)은 전혀 건드리지
+// 않는다. BRIEFING은 아직 임원 발언이 없어 statements=[]로 넘긴다(기존 그대로).
+// 요약 카드가 빠지며 생기는 종이 아래 여백은 그대로 종이 바탕으로 둔다.
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
-import { EvidenceGrid } from '../parts/EvidenceGrid';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -81,18 +80,14 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
             </p>
           </div>
           <div className="briefing-screen__exhibit">
-            <div className="briefing-screen__exhibit-head">
-              <span className="briefing-screen__exhibit-label">자료 ①~④ · 판단에 참고할 자료</span>
-              <button
-                type="button"
-                className="evidence-open-button briefing-screen__evidence-trigger"
-                onClick={() => setEvidenceOpen(true)}
-                data-testid="open-evidence"
-              >
-                전문 보기
-              </button>
-            </div>
-            <EvidenceGrid evidence={scenario.evidence} variant="compact" />
+            <button
+              type="button"
+              className="cta cta--secondary"
+              onClick={() => setEvidenceOpen(true)}
+              data-testid="open-evidence"
+            >
+              근거 자료 보기 · 자료 4장
+            </button>
           </div>
         </div>
       </div>

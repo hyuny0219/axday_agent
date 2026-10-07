@@ -353,7 +353,6 @@ function StageRouter() {
     case 'ATTRACT':
       return (
         <AttractScreen
-          mode={session.mode}
           onStart={() => dispatch({ type: 'START' })}
           startDisabled={modeCheckPending}
         />

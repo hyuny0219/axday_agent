@@ -329,7 +329,7 @@ export function DiscussScreen({
           <div className="discuss-screen__evidence-row">
             <button
               type="button"
-              className="evidence-open-button"
+              className="cta cta--secondary"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
             >

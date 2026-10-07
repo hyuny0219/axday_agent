@@ -349,16 +349,8 @@
   flex-wrap: wrap;
 }
 
-.end-session-confirm__confirm {
-  min-height: var(--touch-min);
-  padding: 0 var(--space-2);
-  background: transparent;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text);
-  cursor: pointer;
-  font-family: inherit;
-}
+/* "돌아가기"는 T86에서 공용 .cta.cta--secondary(shell.css)로 바꿔 이 파일에는 더
+   이상 버튼 자체의 색·모양 규칙이 없다. */
 
 /* 회의록 전문 패널(T58 흡수, T64 item 7). "VERDICTS" 패널 대신 오른쪽 열 아래 영역을
    통째로 채운다 — MinutesPanel(어두운 TRANSCRIPT 판)을 그대로 재사용한다. */
@@ -384,12 +376,7 @@
   color: var(--vote-hold);
 }
 
-/* live.css가 같은 클래스에 어두운 테마 색(--text-muted)을 명시로 걸어 둬(오래된
-   5석 카드 시절 규칙) 위 .result-screen의 상속(--ink)이 먹히지 않는다 — 종이 위에서
-   흐리게 보이던 실측 문제(리뷰 지적)라 여기서 명시로 되돌린다. */
-.result-screen__mode-notice {
-  color: var(--ink-muted);
-}
+/* .result-screen__mode-notice는 T86에서 모드 안내 줄 자체를 없애며 같이 지웠다. */
 
 /* VERDICTS · 임원별 판단(T66 item 2·3, 종이-2 패널, 전체 폭). 5행(임원 4+나)이 표를
    글자로 다시 적으므로(무대 명패가 이미 표 배지를 보여준다) T64가 남긴 동일 크기

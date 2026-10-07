@@ -157,7 +157,7 @@ test('모델 연결 확인이 실패하면 오류 메시지를 보여준다', as
   await expect(page.getByTestId('operator-probe-fail')).toContainText('401');
 });
 
-test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted 배지를 보인다', async ({
+test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted로 기동한다', async ({
   page,
 }) => {
   await page.goto('/');
@@ -168,5 +168,11 @@ test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 
   await page.getByTestId('operator-confirm-restart-scripted-yes').click();
 
   await page.waitForURL(/mode=scripted/);
-  await expect(page.getByTestId('mode-badge')).toHaveText('사전 구성 시뮬레이션');
+  // T86: 참가자 화면에는 모드 배지를 전혀 보여주지 않는다 — scripted로 떨어졌는지는
+  // 사전 구성된 임원 4열 카드(.opinion-card, live 발언 카드가 아니다)로 확인한다.
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0);
+  await enterScenario(page);
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await expect(page.locator('.opinion-card')).toHaveCount(4);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(0);
 });
