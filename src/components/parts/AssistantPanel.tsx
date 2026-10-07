@@ -245,7 +245,6 @@ export function AssistantPanel({
           testId="assistant-panel"
           titleId="assistant-panel-title"
           title="AI 비서실장"
-          stamp="CONFIDENTIAL"
           onClose={() => setOpen(false)}
           closeTestId="assistant-close"
         >
