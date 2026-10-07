@@ -215,20 +215,25 @@ export function DiscussScreen({
   // 입장을 바꾸면 체크된 추천 문구는 해제한다(다른 입장의 문구가 섞여 보이면 안
   // 되므로). 직접 쓴 글(dirty)은 가장 단순한 규칙대로 텍스트는 그대로 두고 체크만
   // 뗀다 — RebuildConfirm의 '직접 쓴 내용 유지'와 같은 생각이다.
+  // PR #20 Codex 7차 검토 P2: 입장을 바꿀 때 (1) RebuildConfirm이 열려 있으면 그 대기
+  // 선택(pendingPhraseId)도 취소한다 — 남겨 두면 확인 뒤 이전 입장의 숨은 문구가 다시
+  // 선택된다; (2) 초안 텍스트가 바뀌는 경우 draftRevision을 올려 비서실장의 오래된 정리
+  // 결과가 새 초안에 적용되지 않게 한다.
   function handleChooseSide(next: 'FOR' | 'AGAINST') {
     if (sidePick === next) {
       return;
     }
     setSidePick(next);
-    setDraft((previous) => {
-      if (previous.selectedPhraseIds.length === 0) {
-        return previous;
-      }
-      if (previous.dirty) {
-        return { ...previous, selectedPhraseIds: [] };
-      }
-      return { selectedPhraseIds: [], draftText: buildDraftText(scenario, []), dirty: false };
-    });
+    setPendingPhraseId(null);
+    if (draft.selectedPhraseIds.length === 0) {
+      return;
+    }
+    if (draft.dirty) {
+      setDraft({ ...draft, selectedPhraseIds: [] });
+      return;
+    }
+    setDraft({ selectedPhraseIds: [], draftText: buildDraftText(scenario, []), dirty: false });
+    setDraftRevision((value) => value + 1);
   }
 
   function handleTogglePhrase(phraseId: string) {

@@ -278,5 +278,36 @@ describe('DiscussScreen', () => {
       const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
       expect(checkbox).not.toBeChecked();
     });
+
+    // PR #20 Codex 7차 검토 P2: RebuildConfirm이 열린 채 입장을 바꾸면 대기 선택도 함께
+    // 취소돼야 한다 — 남겨 두면 확인 뒤 이전 입장의 숨은 문구가 다시 선택된다.
+    it('RebuildConfirm이 열린 채 입장을 바꾸면 확인 UI와 대기 중인 문구 선택이 함께 사라진다', () => {
+      render(
+        <DiscussScreen
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      fireEvent.change(screen.getByTestId('draft-editor-textarea'), {
+        target: { value: '직접 쓴 의견입니다.' },
+      });
+      fireEvent.click(screen.getByTestId('phrase-card-P1'));
+      expect(screen.getByTestId('rebuild-confirm')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+      // 직접 쓴 텍스트는 유지되고, 이전 입장의 문구는 어디에도 반영되지 않는다.
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('직접 쓴 의견입니다.');
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
+      expect(checkbox).not.toBeChecked();
+    });
   });
 });
