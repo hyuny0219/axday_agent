@@ -80,7 +80,7 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
-import { STANCE_LABEL } from '../moodLabel';
+import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
 import { changeCauseLabel, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
@@ -92,6 +92,7 @@ import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
 // 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
 import '../../styles/screens/discuss.css';
@@ -147,14 +148,6 @@ const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
   FOR: 'for',
   AGAINST: 'against',
   UNDECIDED: 'undecided',
-};
-
-/** 반응 카드 "바뀜" 배지 전용 짧은 입장 라벨(T96) — STANCE_LABEL("찬성 쪽")보다 짧게
- * "찬성/반대/미정"만 써서 "반대 → 찬성"처럼 한 줄에 들어가게 한다. */
-const SHORT_STANCE_LABEL: Record<Stance, string> = {
-  FOR: '찬성',
-  AGAINST: '반대',
-  UNDECIDED: '미정',
 };
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -599,10 +592,21 @@ export function ReactionsScreen({
   // 같은 규칙으로 보여준다(reactionsStep). 오른쪽 종이는 임원 반응 카드 4장(공간이
   // 남아 4줄 클램프를 풀고 전문 표시) + 추가 질문 상자만 크게 보여주고, 추천 답변·
   // 입력창은 여기 없다(2/2로 미룬다).
+  // 설득 현황판(T96)이 쓰는 참가자 입장 — followUpPrompt와 같은 규칙으로 지금 고른
+  // 쪽(side)이 있으면 그것을, 없으면 참가자의 최근 의견 입장을 쓴다.
+  const boardParticipantStance = side ?? lastOpinion?.stance ?? null;
+
   if (step === 'listen') {
     return (
       <>
         <div className="app-body__actions screen reactions-screen reactions-screen--listen">
+          <PersuasionBoard
+            scenario={scenario}
+            confirmedConditionIds={previousConfirmedIds}
+            participantStance={boardParticipantStance}
+            stances={stances}
+            mode={mode}
+          />
           <button
             type="button"
             className="cta"
@@ -723,6 +727,13 @@ export function ReactionsScreen({
   return (
     <>
       <div className="app-body__actions screen reactions-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={previousConfirmedIds}
+          participantStance={boardParticipantStance}
+          stances={stances}
+          mode={mode}
+        />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />
         )}

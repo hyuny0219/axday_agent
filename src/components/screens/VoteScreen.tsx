@@ -25,6 +25,7 @@ import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { buildMotionDisplay } from '../motionDisplay';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 import '../../styles/screens/vote.css';
 import '../../styles/screens/live.css';
 
@@ -112,6 +113,13 @@ export function VoteScreen({
   return (
     <>
       <div className="app-body__actions screen vote-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={motion.effectiveConditionIds}
+          participantStance={participantStance}
+          stances={stances}
+          mode={mode}
+        />
         <ExecStanceList stances={stances} />
         <div className="vote-screen__ballots" data-testid="vote-ballots">
           <div className="vote-screen__ballots-head">

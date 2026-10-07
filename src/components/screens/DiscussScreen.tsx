@@ -37,6 +37,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -294,6 +295,13 @@ export function DiscussScreen({
   return (
     <>
       <div className="app-body__actions screen discuss-screen">
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={[]}
+          participantStance={side}
+          stances={stances}
+          mode={mode}
+        />
         {pendingPhraseId !== null && <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />}
         <div className="discuss-screen__hud" data-testid="discuss-hud">
           <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />

@@ -1,0 +1,102 @@
+/* 설득 현황판(T96, src/components/parts/PersuasionBoard.tsx). 왼쪽 열(app-body__actions)
+   무대 아래 공용 상자 — DISCUSS·REACTIONS·MOTION·VOTE 모두 같은 모양을 쓴다. 1280×720
+   무스크롤 규칙(e2e/noscroll.spec.ts)을 지키기 위해 한 임원당 한 줄로 고정하고, 조건
+   라벨이 길어지면 줄바꿈 대신 말줄임으로 자른다(overflow 밖으로 새지 않는다). */
+.persuasion-board {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  padding: 7px 10px;
+}
+
+@media (max-width: 1280px) {
+  .persuasion-board {
+    padding: 5px 8px;
+    gap: 3px;
+  }
+}
+
+.persuasion-board__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.persuasion-board__title {
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  color: var(--label);
+}
+
+.persuasion-board__count {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .persuasion-board__title,
+  .persuasion-board__count {
+    font-size: 10.5px;
+  }
+}
+
+.persuasion-board__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.persuasion-board__row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.persuasion-board__member {
+  flex-shrink: 0;
+  width: 2.6em;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.persuasion-board__stance {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.persuasion-board__stance--changed {
+  color: var(--label);
+  font-weight: 700;
+}
+
+.persuasion-board__note {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1280px) {
+  .persuasion-board__member,
+  .persuasion-board__stance,
+  .persuasion-board__note {
+    font-size: 10px;
+  }
+}
