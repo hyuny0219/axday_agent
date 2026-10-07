@@ -16,7 +16,6 @@ export interface AttractScreenProps {
   startDisabled?: boolean;
 }
 
-const ATTRACT_SUBTITLE = '4분 이사회';
 
 export function AttractScreen({ onStart, startDisabled = false }: AttractScreenProps) {
   return (
@@ -40,9 +39,6 @@ export function AttractScreen({ onStart, startDisabled = false }: AttractScreenP
         </span>
 
         <div className="attract-screen__center">
-          <p className="attract-screen__badge" data-testid="attract-mode-badge">
-            {ATTRACT_SUBTITLE}
-          </p>
           <h1 className="attract-screen__title">BECOME A BOARD</h1>
           <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
         </div>

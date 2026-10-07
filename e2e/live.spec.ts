@@ -124,8 +124,8 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // 초기값 scripted로 되돌리고 서버 확인은 첫 마운트에만 돌아 이후 세션이 전부 scripted였다).
   await page.getByRole('button', { name: '처음 화면으로' }).click();
   await page.getByTestId('end-session-confirm-ok').click();
-  // T86: live 부제는 '실시간'을 빼고 '4분 이사회'만 남긴다.
-  await expect(page.getByTestId('attract-mode-badge')).toContainText('4분 이사회');
+  // T86·T90: 첫 화면 제목 위 배지('실시간'→'4분 이사회')는 사용자 지시로 아예 없앴다.
+  await expect(page.getByTestId('attract-mode-badge')).toHaveCount(0);
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   // 리셋 뒤 **같은 조건**으로 다시 완주해도 결과에 도달한다. 최종안 hash가 조건 조합에서
@@ -248,7 +248,7 @@ test('서버 상태 확인이 실패하면 scripted로 기존 흐름을 그대�
   // T86: 참가자 화면에는 모드 배지를 전혀 보여주지 않는다(헤더 배지는 항상 없음, ATTRACT
   // 부제는 모드와 무관한 고정 문구) — scripted로 떨어졌는지는 아래 동작으로 확인한다.
   await expect(page.getByTestId('mode-badge')).toHaveCount(0);
-  await expect(page.getByTestId('attract-mode-badge')).toContainText('4분 이사회');
+  await expect(page.getByTestId('attract-mode-badge')).toHaveCount(0);
 
   await enterAiAssistant(page);
 
