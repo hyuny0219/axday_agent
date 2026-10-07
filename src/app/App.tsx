@@ -474,7 +474,7 @@ function StageRouter() {
           step={reactionsStep}
           onAdvanceStep={() => setReactionsStep('answer')}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload, stance: sidePick })}
-          onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
+          onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS', stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
           onRetryFailedRoles={

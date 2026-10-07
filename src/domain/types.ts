@@ -128,6 +128,10 @@ export interface Session {
   draft: DraftState;
   opinions: Opinion[];
   followUpUsed: boolean;
+  /** 후속 질문을 어느 입장 기준으로 보여 줬는지(T93 byStance). 답을 제출하면 둘째 의견의
+   * stance와 같고, "답하지 않고 넘어가기"로 건너뛰면 그때 화면에 보인 입장이 여기만 남는다
+   * — 회의록이 실제로 본 질문을 기록하기 위해(PR #20 Codex 23차 검토 P2). */
+  followUpStance: 'FOR' | 'AGAINST' | null;
   assistantActions: string[];
   /** live 모드 회의 기록. scripted 모드에서는 비어 있는 채로 둔다. */
   transcript: Transcript;

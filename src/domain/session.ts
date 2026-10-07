@@ -48,7 +48,7 @@ export type SessionAction =
       confirmedConditionIds: string[];
       stance?: ParticipantStance;
     }
-  | { type: 'KEEP_PREVIOUS' }
+  | { type: 'KEEP_PREVIOUS'; stance?: 'FOR' | 'AGAINST' | null }
   | { type: 'FREEZE_MOTION'; scenario: Scenario; confirmedConditionIds: string[] }
   | { type: 'SELECT_VOTE'; vote: PendingVote }
   | { type: 'CONFIRM_VOTE' }
@@ -106,6 +106,7 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     draft: EMPTY_DRAFT_STATE,
     opinions: [],
     followUpUsed: false,
+    followUpStance: null,
     assistantActions: [],
     transcript: { revision: 0, statements: [] },
     roleStatus: { ...IDLE_ROLE_STATUS },
@@ -210,6 +211,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         opinions: [...session.opinions, opinion],
         draft: EMPTY_DRAFT_STATE,
         followUpUsed: true,
+        followUpStance: opinion.stance ?? session.followUpStance,
       });
     }
 
@@ -221,6 +223,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ...session,
         stage: 'MOTION',
         followUpUsed: true,
+        followUpStance: action.stance ?? session.followUpStance,
       });
     }
 

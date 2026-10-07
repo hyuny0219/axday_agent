@@ -322,3 +322,18 @@ describe('참가자 입장(stance, T92)', () => {
     expect(session.opinions[1]?.stance).toBe(null);
   });
 });
+
+// PR #20 Codex 23차 검토 P2: 다시 답하기에서 입장을 바꾼 뒤 "답하지 않고 넘어가기"를 눌러도
+// 화면에 보인 질문의 입장이 세션(followUpStance)에 남아 회의록이 실제로 본 질문을 기록한다.
+describe('followUpStance(T93·Codex 23차)', () => {
+  it('KEEP_PREVIOUS가 넘긴 stance를 followUpStance에 보존한다', () => {
+    const session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS', stance: 'AGAINST' }, T0);
+    expect(session.stage).toBe('MOTION');
+    expect(session.followUpStance).toBe('AGAINST');
+  });
+
+  it('stance 없이 KEEP_PREVIOUS 하면 followUpStance는 그대로(null)다', () => {
+    const session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
+    expect(session.followUpStance).toBeNull();
+  });
+});

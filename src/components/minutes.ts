@@ -237,7 +237,7 @@ export function buildMinutes(
     // 답한 질문은 둘째 의견의 입장 기준이다(PR #20 Codex 22차 검토 P2).
     const followUpPrompt = resolveFollowUpPrompt(
       scenario,
-      session.opinions[1]?.stance ?? firstOpinion.stance ?? null,
+      session.followUpStance ?? session.opinions[1]?.stance ?? firstOpinion.stance ?? null,
     );
     entries.push({
       id: 'caio-question',
