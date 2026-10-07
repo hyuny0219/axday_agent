@@ -94,14 +94,10 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               </p>
             )}
           </div>
-          <div className="briefing-screen__role" data-testid="briefing-role">
-            <span className="briefing-screen__label">특별 이사의 임무</span>
-            <p className="briefing-screen__role-text">{scenario.chairBriefing.role}</p>
-            <p className="briefing-screen__final-decision">
-              최종 선택: <span className="briefing-screen__final-yes">찬성</span> /{' '}
-              <span className="briefing-screen__final-no">반대</span>
-            </p>
-          </div>
+          {/* T95(2026-10-08 사용자 — "안건 선택 후에는 앞과 중복되는 내용을 제거하고
+              상황 파악에 집중"): "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자는
+              같은 내용(목적·성공 기준)을 이미 INTRO에서 보여주므로 뺐다. 빈 공간은
+              위 상황·제안·미정 글자 크기를 한 단계 키워 채운다(briefing.css). */}
           {!evidenceSeen && <GuideHint text="먼저 근거 자료 4장을 열어 보세요" testId="briefing-guide-hint" />}
           <div className="briefing-screen__exhibit">
             <button

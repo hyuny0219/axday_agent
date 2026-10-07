@@ -115,27 +115,29 @@
   }
 }
 
-/* SITREP·PROPOSAL·UNKNOWN 상자(시안 — 종이-2 + 갈색 왼쪽 띠). */
+/* SITREP·PROPOSAL·UNKNOWN 상자(시안 — 종이-2 + 갈색 왼쪽 띠). T95: "특별 이사의
+   임무" 점선 상자를 빼며 생긴 빈 공간을 글자 크기 한 단계로 채운다(17.5→20px·
+   14→16px, gap·padding도 비례해 키움) — 레이아웃 구조는 그대로다. */
 .briefing-screen__status {
   flex-shrink: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 7.5px;
-  padding: 15px 17.5px;
+  gap: 10px;
+  padding: 19px 21px;
   border-left: 4px solid var(--label);
   background-color: var(--paper-2);
   color: var(--ink);
-  font-size: 17.5px;
-  line-height: 1.5;
+  font-size: 20px;
+  line-height: 1.55;
 }
 
 @media (max-width: 1280px) {
   .briefing-screen__status {
-    gap: 6px;
-    padding: 12px 14px;
+    gap: 8px;
+    padding: 15px 17px;
     border-left-width: 3px;
-    font-size: 14px;
+    font-size: 16px;
   }
 }
 
@@ -152,14 +154,14 @@
   margin-right: 10px;
   font-family: var(--font-label);
   letter-spacing: 0.16em;
-  font-size: 13.75px;
+  font-size: 15px;
   color: var(--label);
 }
 
 @media (max-width: 1280px) {
   .briefing-screen__label {
     margin-right: 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
@@ -172,63 +174,10 @@
   color: var(--ink-muted);
 }
 
-/* YOUR ORDERS 점선 상자(시안 — 역할 문장 + FINAL CALL). border는 motion-screen의
-   CHAIR 점선 상자와 같은 이유로 해상도별로 다시 스케일하지 않고 시안 값 그대로
-   둔다(2px는 더 가늘게 줄이면 거의 안 보인다). */
-.briefing-screen__role {
-  flex-shrink: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 7.5px;
-  padding: 15px 17.5px;
-  border: 2px dashed var(--label);
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__role {
-    gap: 6px;
-    padding: 12px 14px;
-  }
-}
-
-.briefing-screen__role-text {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.45;
-  color: var(--ink);
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__role-text {
-    font-size: 16px;
-  }
-}
-
-.briefing-screen__final-decision {
-  margin: 0;
-  font-family: var(--font-label);
-  font-size: 16.25px;
-  color: var(--label);
-}
-
-@media (max-width: 1280px) {
-  .briefing-screen__final-decision {
-    font-size: 13px;
-  }
-}
-
-/* "FINAL CALL: 찬성 / 반대"(시안). 어느 쪽도 유도하지 않도록 병기하되, 종이 위 표
-   색(paper-vote-*, WCAG 대비 보정판 — 시안 원본 #1f8f5f는 OPINIONS 등에서 이미
-   대비 미달로 폐기된 색이다)으로만 구분한다. */
-.briefing-screen__final-yes {
-  color: var(--paper-vote-yes);
-}
-
-.briefing-screen__final-no {
-  color: var(--paper-vote-no);
-}
+/* T95(2026-10-08): "YOUR ORDERS" 점선 상자(역할 문장 + FINAL CALL, 옛
+   .briefing-screen__role·__role-text·__final-decision·__final-yes/no)는
+   INTRO 화면이 같은 내용(목적·성공 기준)을 먼저 보여주므로 뺐다 — 위
+   .briefing-screen__status 글자 크기를 키워 그 자리를 채운다. */
 
 /* EXHIBIT 블록(T86, 2026-10-07 사용자 — 요약 카드 2×2 상시 노출을 걷어내고 버튼 하나로
    되돌렸다). 더 이상 남는 세로 공간을 흡수하지 않는다 — 버튼 아래 남는 여백은 그대로

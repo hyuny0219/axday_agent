@@ -646,6 +646,8 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 **소개 화면(INTRO)**: `SessionStage`에 `'INTRO'`를 ATTRACT와 SELECT 사이에 추가한다(`session.ts`: START는 ATTRACT→INTRO, NEXT_STAGE는 INTRO→SELECT). 서버 요청의 `stage`(`StatementStage` — OPINIONS/REACTIONS/FOLLOWUP)와는 이름만 같을 수 있는 전혀 다른 타입이라 서버 쪽에는 영향이 없다. `IntroScreen`(신규)은 아직 `scenario`가 없어 조종석 배치(StageBand)를 쓸 수 없으므로 SelectScreen의 배경 장식(`select-screen__stage` 등)을 그대로 재사용하고, 가운데 종이 한 장(`intro-screen__paper`)에 2열(목적·성공 기준 / 진행 5단계·팁)로 본문을 담아 1280×720에서도 스크롤 없이 다 보이게 했다. 문구는 모두 T93 쉬운 말 규칙을 따른다(금지 어휘 0건). 헤더 진행 스트립(`ProgressStrip`)은 `STAGE_TO_STEP`에 INTRO가 없어 ATTRACT·SELECT와 똑같이 빈 채로 남는다(수정 불필요). 운영 메뉴 "새 체험"·결과 화면 "처음 화면으로"는 `OPERATOR_RESET`으로 `createInitialSession`이 만드는 ATTRACT로 돌아가므로, 참가자가 다시 "체험 시작"을 누르면 자연히 INTRO를 다시 거친다.
 
+**BRIEFING 중복 제거**: "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자(옛 `briefing-screen__role`·`__role-text`·`__final-decision`·`__final-yes`/`__final-no`, testid `briefing-role`)를 뺐다 — 같은 내용(목적·성공 기준)을 INTRO가 이미 보여주므로 BRIEFING은 사건 머리줄 + 결정 질문 + 상황·제안·미정 + 근거 자료 버튼만 남겨 "상황 파악"에 집중한다. 빈 세로 공간은 `.briefing-screen__status`(상황·제안·미정 상자)의 글자 크기·여백을 한 단계 키워(17.5→20px/14→16px) 채웠다 — 레이아웃 구조·클래스 이름은 그대로다. `e2e/briefing.spec.ts`·`screenshots.spec.ts`의 `briefing-role` 단언은 "더 이상 없다"(`toHaveCount(0)`)로 바꿨다.
+
 **공용 `GuideHint`**(`src/components/parts/GuideHint.tsx`): 오른쪽 종이 패널 상단에 한 줄 안내를 보여주는 아주 작은 컴포넌트. 다음 행동 요소에는 `data-guide="next"`를 붙여 `shell.css`의 전역 규칙(`[data-guide='next']`, 앰버 테두리 `guide-pulse` 1.6s 맥동)으로 강조한다 — `prefers-reduced-motion`이면 애니메이션 없이 정적 테두리만 남는다(미디어 쿼리 자체가 처리하므로 컴포넌트 쪽에서 분기할 필요가 없다).
 
 **화면별 가이드·게이팅**:
