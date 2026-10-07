@@ -56,15 +56,18 @@
 .assistant-panel__refine-original,
 .assistant-panel__refine-draft-wrap {
   padding: var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--border);
+  /* T89에서 팝업이 종이(DialogShell) 위로 옮겨졌다 — 어두운 --panel 배경에 종이용 --ink
+     글자가 상속돼 대비 1.2:1로 읽히지 않았다(PR #20 Codex 12차 검토 P2). 종이 토큰으로. */
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  color: var(--ink);
   border-radius: var(--radius-control);
   font-size: var(--fs-meta);
   line-height: 1.55;
 }
 
 .assistant-panel__refine-draft-wrap {
-  border-color: var(--accent);
+  border-color: var(--amber);
 }
 
 .assistant-panel__refine-draft {
@@ -77,7 +80,7 @@
   flex-wrap: wrap;
   gap: var(--space-1);
   margin-top: var(--space-1);
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: 13px;
 }
 
@@ -87,6 +90,6 @@
 }
 
 .assistant-panel [data-testid='assistant-loading'] {
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-meta);
 }
