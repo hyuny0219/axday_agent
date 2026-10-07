@@ -114,16 +114,17 @@ function liveRoundResults(
 
 const NO_REACTION_TEXT = '앞서 말씀드린 입장 그대로입니다.';
 
-/** T92: 순수 반대(조건 없음) 응답이 있으면 그 문구를 쓰고, 없으면(찬성·조건부 반대·과거
- * 시나리오) 기존 규칙(첫 조건 반응 또는 "입장 그대로")으로 되돌아간다. */
+/** T92: 순수 반대(조건 없음) 전용 문구가 있으면 그 문구가 "none" 기본 반응(모든 입장에
+ * 같이 쓰이던 "말씀은 기록했습니다")보다 우선한다. 조건이 있으면(조건 기반 반응) 그대로
+ * 조건 반응이 우선이다 — opposition은 그 경우 undefined(reactionsFor.ts). */
 function scriptedReactionText(
   reactions: Reaction[],
   opposition: string | undefined,
 ): string {
-  if (reactions.length > 0) {
-    return reactions[0]?.text ?? NO_REACTION_TEXT;
+  if (opposition !== undefined) {
+    return opposition;
   }
-  return opposition ?? NO_REACTION_TEXT;
+  return reactions.length > 0 ? reactions[0]?.text ?? NO_REACTION_TEXT : NO_REACTION_TEXT;
 }
 
 /** 참가자 발언 행에 입장을 덧붙인다(T92, "참가자 행에 이사님 입장이 보이게"). 입장을

@@ -55,6 +55,8 @@ export interface EvalCase {
   variant: string;
   effectiveConditionIds: ConditionId[];
   participantOpinion: string;
+  /** T92: 참가자 입장. 생략하면(기존 16케이스) null과 같다 — 요청에 필드를 안 싣는다. */
+  participantStance?: 'FOR' | 'AGAINST';
 }
 
 interface EvalSetFile {
@@ -88,6 +90,8 @@ export interface EvalRow {
   concernCount?: number;
   /** T63: 발언 끝에 실린 stance(FOR/AGAINST/UNDECIDED). OPINIONS/REACTIONS 행에만 실린다. */
   stance?: string;
+  /** T92: 이 케이스의 참가자 입장(EvalCase.participantStance 그대로). --check 집계용. */
+  participantStance?: string;
   latencyMs: number;
   modelId: string;
   promptVersion: string;
@@ -113,6 +117,7 @@ function toRoundRows(
     referencedStatementIds: result.statement?.referencedStatementIds,
     concernCount: result.statement?.concerns.length,
     stance: result.statement?.stance,
+    participantStance: evalCase.participantStance,
     latencyMs: result.latencyMs,
     modelId: result.modelId,
     promptVersion: result.promptVersion,
@@ -210,6 +215,7 @@ export function toVoteRows(
     vote: result.ballot?.vote,
     reason: result.ballot?.reason,
     evidenceIds: result.ballot?.evidenceIds,
+    participantStance: evalCase.participantStance,
     latencyMs: calls.get(result.roleId)?.latencyMs ?? observedMs,
     modelId: calls.get(result.roleId)?.modelId || result.modelId,
     promptVersion: result.promptVersion,
@@ -254,6 +260,7 @@ async function runCase(
     stage: 'REACTIONS',
     transcript: { revision: 1, statements: opinionsStatements },
     participantOpinion: evalCase.participantOpinion,
+    participantStance: evalCase.participantStance,
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -282,6 +289,7 @@ async function runCase(
       effectiveConditionIds: evalCase.effectiveConditionIds,
       executionMode: 'DEFAULT',
     },
+    participantStance: evalCase.participantStance,
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;
@@ -573,6 +581,43 @@ export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplem
   return { eligible, persuaded };
 }
 
+export interface PathVoteDistribution {
+  pathId: string;
+  participantStance: string;
+  yes: number;
+  no: number;
+  total: number;
+}
+
+/**
+ * T92(사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는 경향"): 경로(pathId)별 VOTE 표 분포.
+ * v9까지는 참가자 입장 자체가 없어 조건 보완 경로 16/16 YES·조건 없음 16/16 NO로 임원
+ * 4명이 함께 움직였다 — 이 함수는 모든 경로(새 반대 경로 포함)를 참가자 입장별로 나눠
+ * YES/NO 분포를 보여준다. 기준값을 정하지 않고 관측값만 남긴다(다른 --check 지표와
+ * 같은 원칙) — "네 임원이 매번 같은 쪽으로 움직이지 않는지"는 사람이 이 표를 보고
+ * 판단한다.
+ */
+export function voteDistributionByPath(rows: EvalRow[]): PathVoteDistribution[] {
+  const byKey = new Map<string, PathVoteDistribution>();
+  for (const row of rows) {
+    if (row.stage !== 'VOTE' || row.status !== 'answered' || !row.vote) continue;
+    const stanceKey = row.participantStance ?? '(없음)';
+    const key = `${row.pathId}\u0000${stanceKey}`;
+    const entry = byKey.get(key) ?? {
+      pathId: row.pathId,
+      participantStance: stanceKey,
+      yes: 0,
+      no: 0,
+      total: 0,
+    };
+    entry.total += 1;
+    if (row.vote === 'YES') entry.yes += 1;
+    if (row.vote === 'NO') entry.no += 1;
+    byKey.set(key, entry);
+  }
+  return [...byKey.values()];
+}
+
 function readRows(file: string): EvalRow[] {
   return readFileSync(file, 'utf-8')
     .split('\n')
@@ -591,6 +636,7 @@ function runCheck(files: string[]): void {
     const agreement = stanceVoteAgreement(rows);
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
+    const distribution = voteDistributionByPath(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
@@ -600,6 +646,13 @@ function runCheck(files: string[]): void {
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );
+    // T92: 경로 × 참가자 입장별 VOTE 분포. 네 임원이 매번 같은 쪽으로 몰리는지는 사람이
+    // 이 줄들을 보고 판단한다(기준값 없음, 관측값만).
+    for (const d of distribution) {
+      console.log(
+        `    [표 분포] ${d.pathId} · 참가자 입장=${d.participantStance} · 찬성 ${d.yes} · 반대 ${d.no} / ${d.total}`,
+      );
+    }
     for (const r of openingByRole) {
       console.log(
         `    [OPINIONS 출발 성향] ${r.role} · FOR ${r.distribution.FOR} · AGAINST ${r.distribution.AGAINST}` +

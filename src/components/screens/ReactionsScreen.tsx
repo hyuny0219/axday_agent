@@ -555,10 +555,14 @@ export function ReactionsScreen({
         lastOpinion?.stance ?? null,
         previousConfirmedIds,
       );
+      // 순수 반대(조건 없음) 전용 문구가 있으면 "none" 기본 반응(모든 입장에 같이
+      // 쓰이던 "말씀은 기록했습니다")보다 우선한다 — 조건이 있으면(조건 기반 반응)
+      // 그대로 조건 반응이 우선이다(opposition은 그 경우 undefined).
       const reactionText =
-        reactions.length > 0
+        opposition ??
+        (reactions.length > 0
           ? reactions.map((reaction) => reaction.text).join(' ')
-          : opposition ?? '앞서 말씀드린 입장 그대로입니다.';
+          : '앞서 말씀드린 입장 그대로입니다.');
       const reactionEntry: EvidenceDialogStatementView = {
         memberId,
         stance,
@@ -648,9 +652,10 @@ export function ReactionsScreen({
                         </span>
                       </div>
                       <p className="reaction-card__text reaction-card__text--full">
-                        {reactions.length > 0
-                          ? reactions.map((reaction) => reaction.text).join(' ')
-                          : opposition ?? '앞서 말씀드린 입장 그대로입니다.'}
+                        {opposition ??
+                          (reactions.length > 0
+                            ? reactions.map((reaction) => reaction.text).join(' ')
+                            : '앞서 말씀드린 입장 그대로입니다.')}
                       </p>
                     </article>
                   );
