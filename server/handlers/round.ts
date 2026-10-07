@@ -263,7 +263,7 @@ async function callRole(
   const overallStart = clock.now();
   let attempts = 1;
   let outcome = await attemptRole(roleId, input, materials, timeoutMs, provider, clock);
-  if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason)) {
+  if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason, outcome.providerErrorClass)) {
     // 재시도까지 포함한 전체 시간은 서버 상한(timeoutMs)을 넘지 않는다 — input.budgetMs는
     // 클라이언트가 보낸 값이라 서버 상한보다 클 수 있다(PR #20 Codex 17차 검토 P2).
     const remainingMs = timeoutMs - (clock.now() - overallStart);

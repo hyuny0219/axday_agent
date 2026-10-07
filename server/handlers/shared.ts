@@ -12,8 +12,16 @@ export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_
  * 가치가 있다(T91). timeout은 이미 전체 예산을 다 써서 재시도할 시간이 없으므로 뺀다.
  * round.ts·vote.ts의 RoundRoleResult/VoteRoleResult는 failReason을 string으로 느슨하게
  * 선언해 둬서(공개 응답 타입) 여기서도 string | undefined를 받는다. */
-export function isRetryableFailure(failReason: string | undefined): boolean {
-  return failReason !== undefined && failReason !== 'timeout';
+export function isRetryableFailure(
+  failReason: string | undefined,
+  providerErrorClass?: ProviderErrorClass,
+): boolean {
+  if (failReason === undefined || failReason === 'timeout') return false;
+  // 인증·권한 오류(providerErrorClass 'auth')와 모델 거절(failReason 'refusal')은 같은 요청을
+  // 다시 보내도 성공할 수 없다 — 역할마다 헛된 호출을 한 번씩 더 만들 뿐이다(PR #20 Codex
+  // 26차 검토 P2). 연결·과부하·속도 제한·형식 오류(invalid_response)처럼 회복 가능한 것만.
+  if (failReason === 'refusal' || providerErrorClass === 'auth') return false;
+  return true;
 }
 
 /** 재시도를 허용할 남은 예산 하한(ms, T91). 이보다 적게 남았으면 재시도 대신 그대로

@@ -410,6 +410,21 @@ describe('callRole의 1회 재시도(T91)', () => {
     expect(calls).toBe(1);
   });
 
+  // PR #20 Codex 26차 검토 P2: 인증 오류(401)는 다시 보내도 성공할 수 없으니 재시도하지 않는다.
+  it('인증 오류(401)는 예산이 남아도 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('invalid x-api-key', { httpStatus: 401, errorType: 'authentication_error' });
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-auth', budgetMs: 8000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(results[0]?.status).toBe('failed');
+    expect(calls).toBe(1);
+  });
+
   it('재시도 여부를 로그 한 줄의 attempts 필드로 남긴다', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     let calls = 0;
