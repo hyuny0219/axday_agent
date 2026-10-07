@@ -8,12 +8,14 @@
 // 규칙은 유지). 라운드는 App.tsx가 이 단계에 들어올 때 자동으로 시작하므로 이 화면은
 // 상태만 그린다.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
+import { useMatchMedia } from '../useMatchMedia';
+import { GuideHint } from '../parts/GuideHint';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
 
@@ -71,6 +73,26 @@ export function OpinionsScreen({
   // 한 번 누르면 버튼을 잠가 재요청 의도를 분명히 한다.
   const [retryUsed, setRetryUsed] = useState(false);
 
+  // scripted 카드 순차 노출(T95, 2026-10-08 사용자 — "필수로 보고 넘어가도록"): 네 카드가
+  // 0.8초 간격으로 차례로 나타나고, 다 나올 때까지 CTA를 잠근다. prefers-reduced-motion이면
+  // 즉시 다 보여준다(live는 roleStatus 기반 allExecsSettled 잠금을 그대로 쓰므로 영향 없음).
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  const totalCards = scenario.initialOpinions.length;
+  const [revealedCount, setRevealedCount] = useState(mode === 'live' || reducedMotion ? totalCards : 0);
+  useEffect(() => {
+    if (mode === 'live' || reducedMotion) {
+      setRevealedCount(totalCards);
+      return;
+    }
+    setRevealedCount(0);
+    const timers = Array.from({ length: totalCards }, (_, index) =>
+      setTimeout(() => setRevealedCount((count) => Math.max(count, index + 1)), (index + 1) * 800),
+    );
+    return () => timers.forEach(clearTimeout);
+    // scenario가 바뀔 때만 다시 돈다(mode·reducedMotion도 바뀌면 처음부터).
+  }, [scenario.id, mode, reducedMotion, totalCards]);
+  const allCardsRevealed = mode === 'live' || revealedCount >= totalCards;
+
   function handleRetry() {
     const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
     if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
@@ -87,11 +109,18 @@ export function OpinionsScreen({
   const allExecsSettled = EXEC_MEMBER_ORDER.every(
     (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
   );
-  const locked = mode === 'live' && !allExecsSettled;
+  const locked = mode === 'live' ? !allExecsSettled : !allCardsRevealed;
 
   const actions = (
     <div className="app-body__actions screen opinions-screen">
-      <button type="button" className="cta" onClick={onNext} disabled={locked} data-testid="opinions-next">
+      <button
+        type="button"
+        className="cta"
+        onClick={onNext}
+        disabled={locked}
+        data-testid="opinions-next"
+        data-guide={!locked ? 'next' : undefined}
+      >
         {locked ? '임원 의견을 듣는 중…' : '내 의견 말하기 ▶'}
       </button>
     </div>
@@ -117,6 +146,9 @@ export function OpinionsScreen({
         <span>같은 자료를 읽고 각자의 관점에서 말합니다.</span>
         <span className="opinions-screen__tally">{stanceSummaryLine(stances)}</span>
       </div>
+      {locked ? (
+        <GuideHint text="임원 네 명의 의견을 읽어 보세요" testId="opinions-guide-hint" />
+      ) : null}
     </>
   );
 
@@ -149,7 +181,7 @@ export function OpinionsScreen({
         <div className="opinions-screen__paper">
           {paperHead}
           <div className="opinions-screen__cards">
-            {scenario.initialOpinions.map((opinion) => {
+            {scenario.initialOpinions.slice(0, revealedCount).map((opinion) => {
               const stance = stances[opinion.memberId];
               const evidenceLabel = lastEvidenceLabel(scenario, opinion.evidenceIds);
               return (

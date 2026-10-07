@@ -31,6 +31,7 @@ import {
 } from '../resultStamp';
 import { epilogueText } from '../resultEpilogue';
 import { EndSessionConfirm } from '../parts/EndSessionConfirm';
+import { GuideHint } from '../parts/GuideHint';
 // 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
 // 스킨)에서 오른쪽 종이 보고서의 전용 칸(200px)으로 옮겼다(docs/design/mockups/README.md
 // "도장은 결과 화면 오른쪽 종이 보고서 우상단에 — 무대에는 표 배지만"). 이 화면이
@@ -101,6 +102,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 상태는 건드리지 않는다. 전문 항목은 다른 화면의 "발언 흐름" 패널과 같은 순수
   // 함수(buildMinutes)로 계산해 항목 수·순서가 어긋나지 않는다.
   const [showTranscript, setShowTranscript] = useState(false);
+  // 진행 가이드(T95): "회의록 전문 보기"는 처음 한 번만 강조한다 — 누르면(토글 어느
+  // 쪽이든) 다시는 맥동 테두리를 보여주지 않는다.
+  const [transcriptGuideDismissed, setTranscriptGuideDismissed] = useState(false);
   // "처음 화면으로" 확인 단계(T84, Opus UX 검토 #5 — "'체험 종료'가 확인 없이 즉시
   // 초기화"). 세션 초기화(onReset)는 되돌릴 수 없으므로 한 번 더 확인한다.
   const [endSessionConfirmOpen, setEndSessionConfirmOpen] = useState(false);
@@ -228,13 +232,20 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         {/* "회의록 전문 보기"가 이제 주 CTA다(T84 #5) — 결과 화면에 머무는 동안
             가장 자주 쓰는 동작이고, 세션 상태는 바꾸지 않고 오른쪽 열 기록
             영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
+        {!transcriptGuideDismissed && (
+          <GuideHint text="회의록 전문도 볼 수 있습니다" testId="result-guide-hint" />
+        )}
         <button
           type="button"
           className="cta"
-          onClick={() => setShowTranscript((previous) => !previous)}
+          onClick={() => {
+            setShowTranscript((previous) => !previous);
+            setTranscriptGuideDismissed(true);
+          }}
           aria-pressed={showTranscript}
           disabled={endSessionConfirmOpen}
           data-testid="result-transcript-toggle"
+          data-guide={!transcriptGuideDismissed ? 'next' : undefined}
         >
           {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
         </button>

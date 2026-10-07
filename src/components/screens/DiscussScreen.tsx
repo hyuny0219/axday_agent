@@ -36,6 +36,7 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
+import { GuideHint } from '../parts/GuideHint';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -324,6 +325,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
+            data-guide={canSubmit ? 'next' : undefined}
           >
             의견 전달 ▶
           </button>
@@ -347,7 +349,11 @@ export function DiscussScreen({
           <p className="discuss-screen__guide">
             문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
           </p>
-          <div className="side-select" data-testid="discuss-side-select">
+          <div
+            className="side-select"
+            data-testid="discuss-side-select"
+            data-guide={side === null ? 'next' : undefined}
+          >
             <button
               type="button"
               className="cta cta--secondary side-select__btn"
@@ -373,21 +379,29 @@ export function DiscussScreen({
               먼저 입장을 골라 주세요. 직접 써도 됩니다.
             </p>
           ) : (
-            <div className="discuss-screen__phrase-list">
-              {scenario.phrases
-                .filter((phrase) => {
-                  const phraseSide = phrase.side ?? 'FOR';
-                  return phraseSide === 'BOTH' || phraseSide === side;
-                })
-                .map((phrase) => (
-                  <PhraseCard
-                    key={phrase.id}
-                    phrase={phrase}
-                    selected={draft.selectedPhraseIds.includes(phrase.id)}
-                    onToggle={() => handleTogglePhrase(phrase.id)}
-                  />
-                ))}
-            </div>
+            <>
+              {draft.draftText.trim() === '' && (
+                <GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
+              )}
+              <div
+                className="discuss-screen__phrase-list"
+                data-guide={draft.draftText.trim() === '' ? 'next' : undefined}
+              >
+                {scenario.phrases
+                  .filter((phrase) => {
+                    const phraseSide = phrase.side ?? 'FOR';
+                    return phraseSide === 'BOTH' || phraseSide === side;
+                  })
+                  .map((phrase) => (
+                    <PhraseCard
+                      key={phrase.id}
+                      phrase={phrase}
+                      selected={draft.selectedPhraseIds.includes(phrase.id)}
+                      onToggle={() => handleTogglePhrase(phrase.id)}
+                    />
+                  ))}
+              </div>
+            </>
           )}
           <div className="discuss-screen__evidence-row">
             <button

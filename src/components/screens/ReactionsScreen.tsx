@@ -91,6 +91,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
+import { GuideHint } from '../parts/GuideHint';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
 // 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
 import '../../styles/screens/discuss.css';
@@ -599,6 +600,7 @@ export function ReactionsScreen({
             onClick={onAdvanceStep}
             disabled={listenLocked}
             data-testid="reactions-advance"
+            data-guide={!listenLocked ? 'next' : undefined}
           >
             {listenLocked ? '임원 반응을 듣는 중…' : '답하기 ▶'}
           </button>
@@ -621,6 +623,9 @@ export function ReactionsScreen({
                 이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
               </h2>
             </div>
+            {!listenLocked && (
+              <GuideHint text="임원들의 반응을 읽고 답해 보세요" testId="reactions-listen-guide-hint" />
+            )}
             {mode === 'live' ? (
               <LiveStatementCards
                 scenario={scenario}
@@ -755,6 +760,7 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
+            data-guide={canSubmit ? 'next' : undefined}
           >
             답변 전달 ▶
           </button>
@@ -779,7 +785,11 @@ export function ReactionsScreen({
           </p>
           {/* 입장 선택(T89) — DISCUSS와 같은 두 버튼을 공용 .side-select*(shell.css)로
               쓴다. 기본값은 App.tsx가 DISCUSS에서 고른 쪽을 그대로 내려준 side다. */}
-          <div className="side-select" data-testid="reactions-side-select">
+          <div
+            className="side-select"
+            data-testid="reactions-side-select"
+            data-guide={side === null ? 'next' : undefined}
+          >
             <button
               type="button"
               className="cta cta--secondary side-select__btn"
@@ -805,7 +815,14 @@ export function ReactionsScreen({
               먼저 입장을 골라 주세요. 직접 써도 됩니다.
             </p>
           ) : (
-            <div className="discuss-screen__phrase-list">
+            <>
+              {textValue.trim() === '' && (
+                <GuideHint text="문구를 고르거나 직접 써 주세요" testId="reactions-guide-hint" />
+              )}
+              <div
+                className="discuss-screen__phrase-list"
+                data-guide={textValue.trim() === '' ? 'next' : undefined}
+              >
               {scenario.followUp.options.map((option, index) => {
                 // keepPrevious 카드는 더 이상 여기 그리지 않는다(T84 #1) — 보조 버튼
                 // "답하지 않고 넘어가기"로 옮겼다.
@@ -833,7 +850,8 @@ export function ReactionsScreen({
                   />
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
           <div className="discuss-screen__evidence-row">
             <button
