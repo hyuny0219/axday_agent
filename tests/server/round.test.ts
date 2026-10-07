@@ -373,6 +373,26 @@ describe('callRole의 1회 재시도(T91)', () => {
     expect(results[0]?.status).toBe('failed');
   });
 
+  // PR #20 Codex 17차 검토 P2: 재시도 잔여 시간은 클라이언트 budgetMs가 아니라 서버 상한(timeoutMs)
+  // 기준이다 — budgetMs가 상한보다 커도 역할 하나의 총 소요가 상한을 넘지 않는다.
+  it('budgetMs가 서버 상한보다 커도 재시도 잔여 시간은 서버 상한 기준으로 계산한다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+      },
+    };
+    // 서버 상한 5000ms < MIN_RETRY_REMAINING_MS(6000) → budgetMs가 120초여도 재시도하지 않는다.
+    const input = baseRoundInput({ requestId: 'req-retry-cap', budgetMs: 120_000, roleIds: ['CEO'] });
+    const results = await handleRound(input, {
+      provider: fakeProvider,
+      timeouts: { roundTimeoutMs: 5000, reactionTimeoutMs: 5000 },
+    });
+    expect(results[0]?.status).toBe('failed');
+    expect(calls).toBe(1);
+  });
+
   it('재시도 여부를 로그 한 줄의 attempts 필드로 남긴다', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     let calls = 0;

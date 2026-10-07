@@ -279,7 +279,9 @@ async function callRoleVote(
   let attempts = 1;
   let outcome = await attemptRoleVote(roleId, input, materials, timeoutMs, provider, clock);
   if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason)) {
-    const remainingMs = input.budgetMs - (clock.now() - overallStart);
+    // 재시도까지 포함한 전체 시간은 서버 상한(timeoutMs)을 넘지 않는다 — input.budgetMs는
+    // 클라이언트가 보낸 값이라 서버 상한보다 클 수 있다(PR #20 Codex 17차 검토 P2).
+    const remainingMs = timeoutMs - (clock.now() - overallStart);
     if (remainingMs >= MIN_RETRY_REMAINING_MS) {
       attempts = 2;
       outcome = await attemptRoleVote(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock);
