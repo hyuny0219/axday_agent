@@ -6,6 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
 import { findConflicts, proposeFromText } from '../../src/domain/conditions';
 import type { ExecMemberId, Predicate } from '../../src/content/types';
+import {
+  MAX_SENTENCE_CHARS,
+  findForbiddenWords,
+  sentenceCharLengths,
+} from '../../server/prompts/plainLanguage';
 
 const scenario = experienceFirstScenario;
 
@@ -233,5 +238,31 @@ describe('findConflicts', () => {
       ['DATA_VETO', 'EXP_ONLY'],
     ]);
     expect(findConflicts(scenario, ['DATA_VETO', 'SCOPE'])).toEqual([]);
+  });
+});
+
+// T93(2026-10-07 사용자 지시 "초중학생이 봐도 이해할 수 있는 수준으로"): aiApproval.test.ts와
+// 같은 검사 — scripted 임원 발언이 금지 어휘를 쓰지 않고 문장당 글자 수 상한을 넘지 않는지.
+describe('쉬운 말(T93)', () => {
+  const execStatements: string[] = [
+    ...scenario.initialOpinions.map((o) => o.text),
+    ...scenario.reactions.map((r) => r.text),
+    ...Object.values(scenario.oppositionReactions),
+    ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason)),
+    scenario.followUp.question,
+  ];
+
+  it('금지 어휘를 쓰지 않는다', () => {
+    for (const text of execStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+    }
+  });
+
+  it(`문장당 글자 수가 ${MAX_SENTENCE_CHARS}자를 넘지 않는다`, () => {
+    for (const text of execStatements) {
+      for (const length of sentenceCharLengths(text)) {
+        expect(length, text).toBeLessThanOrEqual(MAX_SENTENCE_CHARS);
+      }
+    }
   });
 });

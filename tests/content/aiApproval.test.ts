@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { findConflicts, proposeFromText } from '../../src/domain/conditions';
 import type { ExecMemberId, Predicate } from '../../src/content/types';
+import {
+  MAX_SENTENCE_CHARS,
+  findForbiddenWords,
+  sentenceCharLengths,
+} from '../../server/prompts/plainLanguage';
 
 const scenario = aiApprovalScenario;
 
@@ -333,5 +338,33 @@ describe('findConflicts', () => {
       ['REVIEW', 'FULL_AUTO'],
     ]);
     expect(findConflicts(scenario, ['REVIEW', 'LIMIT'])).toEqual([]);
+  });
+});
+
+// T93(2026-10-07 사용자 지시 "초중학생이 봐도 이해할 수 있는 수준으로"): scripted 임원
+// 발언(initialOpinions·reactions·oppositionReactions·voteRules reason·followUp.question)
+// 전부가 금지 어휘를 쓰지 않고, 문장당 글자 수 상한을 넘지 않는지 검사한다. 추천
+// 문구(phrases)·후속 추천 답변(followUp.options)은 참가자 말이라 범위 밖이다(T93 카드).
+describe('쉬운 말(T93)', () => {
+  const execStatements: string[] = [
+    ...scenario.initialOpinions.map((o) => o.text),
+    ...scenario.reactions.map((r) => r.text),
+    ...Object.values(scenario.oppositionReactions),
+    ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason)),
+    scenario.followUp.question,
+  ];
+
+  it('금지 어휘를 쓰지 않는다', () => {
+    for (const text of execStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+    }
+  });
+
+  it(`문장당 글자 수가 ${MAX_SENTENCE_CHARS}자를 넘지 않는다`, () => {
+    for (const text of execStatements) {
+      for (const length of sentenceCharLengths(text)) {
+        expect(length, text).toBeLessThanOrEqual(MAX_SENTENCE_CHARS);
+      }
+    }
   });
 });
