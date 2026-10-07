@@ -32,6 +32,7 @@ import type {
   ModelProvider,
 } from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
+import { findForbiddenWords, readabilityStats } from '../server/prompts/plainLanguage';
 
 /** 평가 실행에 쓸 제공자·modelId. mock이면 서버(server/index.ts)와 같이 MODEL_ID와 무관하게 항상
  * MOCK_MODEL_ID다 — 예전에는 MODEL_ID 기본값(claude-sonnet-5)을 mock에도 넘겨 mock 실행의 모든
@@ -618,6 +619,52 @@ export function voteDistributionByPath(rows: EvalRow[]): PathVoteDistribution[] 
   return [...byKey.values()];
 }
 
+export interface PlainLanguageStats {
+  /** message·reason을 가진 행 수(발언당 문장 수 집계의 분모). */
+  statementCount: number;
+  /** 모든 문장의 글자 수 평균(T93 "한 문장 25자 안팎" 목표 대비 관측값). */
+  avgCharsPerSentence: number;
+  /** 발언(행) 하나당 평균 문장 수(T93 "2~3문장" 목표 대비 관측값). */
+  avgSentencesPerStatement: number;
+  /** 금지 어휘(plainLanguage.ts FORBIDDEN_WORDS) 등장 총 횟수. */
+  forbiddenWordMentions: number;
+  /** 등장한 금지 어휘별 횟수(사람이 어떤 말이 새는지 보기 쉽게). */
+  forbiddenWordCounts: Record<string, number>;
+}
+
+/**
+ * T93: "발언당 평균 글자 수·문장 수, 금지 어휘 등장 횟수"를 message·reason 필드 전부에서
+ * 집계한다. 서버 검증에서 거절하지는 않는다(측정만, docs/TASKS.md T93).
+ */
+export function plainLanguageStats(rows: EvalRow[]): PlainLanguageStats {
+  let statementCount = 0;
+  let sentenceTotal = 0;
+  let charTotal = 0;
+  let forbiddenWordMentions = 0;
+  const forbiddenWordCounts: Record<string, number> = {};
+  for (const row of rows) {
+    for (const field of ['message', 'reason'] as const) {
+      const text = row[field];
+      if (!text) continue;
+      statementCount += 1;
+      const stats = readabilityStats(text);
+      sentenceTotal += stats.sentenceCount;
+      charTotal += stats.avgCharsPerSentence * stats.sentenceCount;
+      for (const word of findForbiddenWords(text)) {
+        forbiddenWordMentions += 1;
+        forbiddenWordCounts[word] = (forbiddenWordCounts[word] ?? 0) + 1;
+      }
+    }
+  }
+  return {
+    statementCount,
+    avgCharsPerSentence: sentenceTotal > 0 ? charTotal / sentenceTotal : 0,
+    avgSentencesPerStatement: statementCount > 0 ? sentenceTotal / statementCount : 0,
+    forbiddenWordMentions,
+    forbiddenWordCounts,
+  };
+}
+
 function readRows(file: string): EvalRow[] {
   return readFileSync(file, 'utf-8')
     .split('\n')
@@ -637,6 +684,7 @@ function runCheck(files: string[]): void {
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
     const distribution = voteDistributionByPath(rows);
+    const plainStats = plainLanguageStats(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
@@ -646,6 +694,15 @@ function runCheck(files: string[]): void {
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );
+    // T93: 쉬운 말 가독성 지표(측정만, 거절하지 않음).
+    console.log(
+      `    [쉬운 말] 발언 ${plainStats.statementCount}건 · 문장당 평균 글자 수` +
+        ` ${plainStats.avgCharsPerSentence.toFixed(1)} · 발언당 평균 문장 수` +
+        ` ${plainStats.avgSentencesPerStatement.toFixed(2)} · 금지 어휘 ${plainStats.forbiddenWordMentions}건`,
+    );
+    for (const [word, count] of Object.entries(plainStats.forbiddenWordCounts)) {
+      console.log(`    [금지 어휘] ${word} × ${count}`);
+    }
     // T92: 경로 × 참가자 입장별 VOTE 분포. 네 임원이 매번 같은 쪽으로 몰리는지는 사람이
     // 이 줄들을 보고 판단한다(기준값 없음, 관측값만).
     for (const d of distribution) {
