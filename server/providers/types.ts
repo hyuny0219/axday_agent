@@ -13,6 +13,10 @@ export interface ModelCompleteRequest {
 export interface ModelCompleteUsage {
   inputTokens?: number;
   outputTokens?: number;
+  /** 프롬프트 캐시 적중 토큰 수(T91, anthropic 제공자만 채운다). */
+  cacheReadInputTokens?: number;
+  /** 프롬프트 캐시에 새로 쓴 토큰 수(T91, anthropic 제공자만 채운다). */
+  cacheCreationInputTokens?: number;
 }
 
 export interface ModelCompleteResult {

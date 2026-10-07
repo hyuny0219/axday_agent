@@ -1,10 +1,10 @@
 // server/handlers/round.ts: 임원 4명 병렬 호출, mock 장애(timeout/invalid) 처리, 지연 예산
 // 준수, 참가자 발언 프롬프트 주입 격리. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleRound, roundRequestSchema, type RoundRequest } from '../../server/handlers/round';
 import { createMockProvider } from '../../server/providers/mock';
-import type { ModelProvider } from '../../server/providers/types';
+import { ProviderCallError, type ModelProvider } from '../../server/providers/types';
 import { PROMPT_VERSION } from '../../server/prompts/version';
 
 function baseRoundInput(overrides: Partial<RoundRequest> = {}): RoundRequest {
@@ -151,7 +151,7 @@ describe('handleRound with the mock provider', () => {
     expect(results.every((r) => r.status === 'answered')).toBe(true);
   });
 
-  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 12000)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 8000)를 쓴다(T65)', async () => {
+  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 20000, T91)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 15000, T91)를 쓴다(T65)', async () => {
     const timeoutsSeen: number[] = [];
     const fakeProvider: ModelProvider = {
       async complete(req) {
@@ -181,7 +181,7 @@ describe('handleRound with the mock provider', () => {
       { provider: fakeProvider },
     );
 
-    expect(timeoutsSeen).toEqual([8000, 12000]);
+    expect(timeoutsSeen).toEqual([15000, 20000]);
   });
 
   it('deps.timeouts로 상한을 바꿀 수 있다(T65)', async () => {
@@ -305,4 +305,103 @@ describe('안건별 suggestedConditionIds 검증(PR #13 Codex 1차 검토 P2)', 
       expect(results.every((r) => r.status === 'answered')).toBe(true);
     },
   );
+});
+
+// T91: 빠르게(timeout 외 이유로) 실패했고 남은 예산이 충분하면 1회 재시도한다.
+describe('callRole의 1회 재시도(T91)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('연결 오류로 빠르게 실패해도 남은 예산이 충분하면 1회 재시도해 성공으로 끝난다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        if (calls === 1) {
+          throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+        }
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-success', budgetMs: 8000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(2);
+    expect(results[0]?.status).toBe('answered');
+  });
+
+  it('timeout으로 실패하면 예산이 남아도 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        const err = new Error('aborted');
+        err.name = 'AbortError';
+        throw err;
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-timeout', budgetMs: 999_999, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+    expect(results[0]?.failReason).toBe('timeout');
+  });
+
+  it('남은 예산이 MIN_RETRY_REMAINING_MS(6000)보다 적으면 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-budget', budgetMs: 5000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+  });
+
+  it('재시도 여부를 로그 한 줄의 attempts 필드로 남긴다', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        if (calls === 1) {
+          throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+        }
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-log', budgetMs: 8000, roleIds: ['CEO'] });
+    await handleRound(input, { provider: fakeProvider });
+    const line = consoleSpy.mock.calls[0]?.[0] as string;
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    expect(parsed.attempts).toBe(2);
+    expect(parsed.status).toBe('answered');
+  });
 });

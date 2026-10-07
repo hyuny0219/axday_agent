@@ -2,7 +2,8 @@
 // 호출해 서버가 검증까지 끝낸 응답만 Statement/Ballot으로 옮긴다. 실제 판단은 서버(T28
 // handlers)가 하며 이 파일은 요청 조립·시간 예산·응답 형태 변환만 담당한다.
 //
-// 대기 시간은 stage별 상한(OPINIONS·VOTE 8초, REACTIONS·FOLLOWUP 12초, T65)과 ctx.budgetMs
+// 대기 시간은 stage별 상한(OPINIONS·VOTE·REACTIONS·FOLLOWUP, T65·T91 — 기본값은
+// server/config.ts, /api/health로 내려온다)과 ctx.budgetMs
 // 중 작은 쪽을 넘기지 않는다(스펙 6장). 값은 서버 /api/health가 내려준 것을 services/
 // transport/roundTimeouts.ts가 캐시해 두며, 하드코딩하지 않는다. ctx.signal이 먼저
 // abort되면(세션 리셋 등) 그 즉시 요청도 취소한다. 서버 응답이 배열이 아니거나 개별 항목이

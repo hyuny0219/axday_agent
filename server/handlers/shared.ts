@@ -8,6 +8,19 @@ import { ModelRefusalError, ProviderCallError } from '../providers/types';
 
 export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_error';
 
+/** 빠르게 실패한 호출(연결 오류·5xx·invalid_response/스키마 거절 등)만 한 번 더 시도할
+ * 가치가 있다(T91). timeout은 이미 전체 예산을 다 써서 재시도할 시간이 없으므로 뺀다.
+ * round.ts·vote.ts의 RoundRoleResult/VoteRoleResult는 failReason을 string으로 느슨하게
+ * 선언해 둬서(공개 응답 타입) 여기서도 string | undefined를 받는다. */
+export function isRetryableFailure(failReason: string | undefined): boolean {
+  return failReason !== undefined && failReason !== 'timeout';
+}
+
+/** 재시도를 허용할 남은 예산 하한(ms, T91). 이보다 적게 남았으면 재시도 대신 그대로
+ * failed로 돌려준다 — 2026-10-07 시연에서 CISO 응답이 8초 예산을 다 쓰고 provider_error로
+ * 끝난 사례를 보고, "빠르게 실패했고 남은 예산이 충분하면 1회만 더 시도"하는 규칙을 더했다. */
+export const MIN_RETRY_REMAINING_MS = 6000;
+
 /** logs/board-<날짜>.jsonl의 providerErrorClass 필드가 쓰는 값(T65 카드). */
 export type ProviderErrorClass =
   | 'timeout'

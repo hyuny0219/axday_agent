@@ -1,8 +1,8 @@
 // 서버 /api/health가 내려주는 라운드/반응 타임아웃 값의 클라이언트 캐시(T65). live.ts가
-// 8초를 하드코딩하지 않고 이 값을 읽는다. app/mode.ts가 세션 시작 전 서버 가용성 확인
+// 타임아웃을 하드코딩하지 않고 이 값을 읽는다. app/mode.ts가 세션 시작 전 서버 가용성 확인
 // 응답에서 setRoundTimeouts()로 채우고, 서버가 없거나(scripted) 값이 없으면 기본값
-// (8000/12000)을 그대로 쓴다 — AGENT_BOARDROOM_SPEC.md 6장의 OPINIONS·VOTE 8초,
-// REACTIONS·FOLLOWUP 12초 기본값과 같다.
+// (15000/20000, T91)을 그대로 쓴다 — AGENT_BOARDROOM_SPEC.md 6장의 OPINIONS·VOTE,
+// REACTIONS·FOLLOWUP 기본값과 같다.
 
 export interface RoundTimeouts {
   roundTimeoutMs: number;
@@ -10,8 +10,8 @@ export interface RoundTimeouts {
 }
 
 export const DEFAULT_ROUND_TIMEOUTS: RoundTimeouts = {
-  roundTimeoutMs: 8000,
-  reactionTimeoutMs: 12000,
+  roundTimeoutMs: 15000,
+  reactionTimeoutMs: 20000,
 };
 
 /** 클라이언트 fetch abort 타이머는 서버 per-role 타임아웃(roundTimeoutMs)보다 이만큼 더

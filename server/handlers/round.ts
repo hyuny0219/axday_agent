@@ -22,7 +22,7 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { classifyFailure, roleIdsSchema } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -151,14 +151,25 @@ function buildRoundSystemPrompt(
   ].join('\n\n');
 }
 
-async function callRole(
+/** callRole 내부에서만 쓰는 시도 1회 결과 — 로그 전용 providerErrorClass·httpStatus·캐시
+ * 토큰 수까지 담아 둔다(T91, 재시도 판단과 최종 로그 한 줄에 쓴다). */
+interface RoleAttemptResult extends RoundRoleResult {
+  providerErrorClass?: ProviderErrorClass;
+  httpStatus?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+}
+
+/** 제공자 호출 1회(파싱·조건 ID 검증 포함). 로그를 남기지 않는다 — callRole이 재시도
+ * 여부를 정한 뒤 최종 결과만 한 줄로 남긴다(T91). */
+async function attemptRole(
   roleId: ExecRoleId,
   input: RoundRequest,
   materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   timeoutMs: number,
   provider: ModelProvider,
   clock: Clock,
-): Promise<RoundRoleResult> {
+): Promise<RoleAttemptResult> {
   const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -193,41 +204,16 @@ async function callRole(
       parsed.success &&
       parsed.data.suggestedConditionIds.some((id) => !validConditionIds.has(id));
     if (!parsed.success || parsed.data.roleId !== roleId || hasForeignCondition) {
-      logCall({
-        ts: new Date(clock.now()).toISOString(),
-        kind: 'round',
-        sessionId: input.sessionId,
-        stage: input.stage,
+      return {
         roleId,
         status: 'failed',
         failReason: 'invalid_response',
         providerErrorClass: 'invalid_response',
         latencyMs,
-        timeoutMs,
-        promptVersion: PROMPT_VERSION,
-        modelId: result.modelId,
-      });
-      return {
-        roleId,
-        status: 'failed',
-        failReason: 'invalid_response',
-        latencyMs,
         modelId: result.modelId,
         promptVersion: PROMPT_VERSION,
       };
     }
-    logCall({
-      ts: new Date(clock.now()).toISOString(),
-      kind: 'round',
-      sessionId: input.sessionId,
-      stage: input.stage,
-      roleId,
-      status: 'answered',
-      latencyMs,
-      timeoutMs,
-      promptVersion: PROMPT_VERSION,
-      modelId: result.modelId,
-    });
     return {
       roleId,
       status: 'answered',
@@ -235,29 +221,18 @@ async function callRole(
       latencyMs,
       modelId: result.modelId,
       promptVersion: PROMPT_VERSION,
+      cacheReadTokens: result.usage?.cacheReadInputTokens,
+      cacheWriteTokens: result.usage?.cacheCreationInputTokens,
     };
   } catch (err) {
     const latencyMs = clock.now() - start;
     const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
-    logCall({
-      ts: new Date(clock.now()).toISOString(),
-      kind: 'round',
-      sessionId: input.sessionId,
-      stage: input.stage,
+    return {
       roleId,
       status: 'failed',
       failReason,
       providerErrorClass,
       httpStatus,
-      latencyMs,
-      timeoutMs,
-      promptVersion: PROMPT_VERSION,
-      modelId: '',
-    });
-    return {
-      roleId,
-      status: 'failed',
-      failReason,
       latencyMs,
       modelId: '',
       promptVersion: PROMPT_VERSION,
@@ -267,7 +242,60 @@ async function callRole(
   }
 }
 
-/** 임원(기본 4명, roleIds가 있으면 그 역할만)을 병렬 호출한다(재시도 0회). 알 수 없는
+/** 임원 한 명을 호출하고, 빠르게(timeout 외 이유로) 실패했는데 남은 예산이 충분하면
+ * (MIN_RETRY_REMAINING_MS 이상) 같은 요청을 1회만 더 보낸다(T91). 최종 결과 한 줄만
+ * attempts 필드(1 또는 2)와 함께 로그에 남긴다 — latencyMs는 재시도까지 포함한 총
+ * 소요 시간이다. */
+async function callRole(
+  roleId: ExecRoleId,
+  input: RoundRequest,
+  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
+  timeoutMs: number,
+  provider: ModelProvider,
+  clock: Clock,
+): Promise<RoundRoleResult> {
+  const overallStart = clock.now();
+  let attempts = 1;
+  let outcome = await attemptRole(roleId, input, materials, timeoutMs, provider, clock);
+  if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason)) {
+    const remainingMs = input.budgetMs - (clock.now() - overallStart);
+    if (remainingMs >= MIN_RETRY_REMAINING_MS) {
+      attempts = 2;
+      outcome = await attemptRole(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock);
+    }
+  }
+  const latencyMs = clock.now() - overallStart;
+  logCall({
+    ts: new Date(clock.now()).toISOString(),
+    kind: 'round',
+    sessionId: input.sessionId,
+    stage: input.stage,
+    roleId,
+    status: outcome.status,
+    failReason: outcome.failReason,
+    providerErrorClass: outcome.providerErrorClass,
+    httpStatus: outcome.httpStatus,
+    latencyMs,
+    timeoutMs,
+    attempts,
+    cacheReadTokens: outcome.cacheReadTokens,
+    cacheWriteTokens: outcome.cacheWriteTokens,
+    promptVersion: PROMPT_VERSION,
+    modelId: outcome.modelId,
+  });
+  return {
+    roleId,
+    status: outcome.status,
+    statement: outcome.statement,
+    failReason: outcome.failReason,
+    latencyMs,
+    modelId: outcome.modelId,
+    promptVersion: PROMPT_VERSION,
+  };
+}
+
+/** 임원(기본 4명, roleIds가 있으면 그 역할만)을 병렬 호출한다(역할당 최대 2회 — timeout
+ * 외 이유로 빠르게 실패하고 예산이 남아 있으면 callRole이 1회 재시도한다, T91). 알 수 없는
  * scenarioId는 예외를 던진다(호출자가 400 등으로 변환). 개별 임원 실패는 failed 결과로만
  * 남고 다른 임원 호출에 영향을 주지 않는다. roleIds는 실패한 역할만 다시 부르는 "다시
  * 요청"(T65)이 쓴다 — 응답은 요청한 역할만큼만 돌아온다. */
