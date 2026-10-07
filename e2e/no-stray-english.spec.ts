@@ -95,7 +95,11 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
-  await checkScreen('REACTIONS');
+  await checkScreen('REACTIONS(반응 듣기)');
+
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
+  await checkScreen('REACTIONS(다시 답하기)');
 
   // T84 #1: "앞서 전달한 의견을 유지하겠습니다" 체크 카드(followup-option-2)를 보조
   // 버튼 "답하지 않고 넘어가기"로 옮겼다 — 조건을 더 붙이지 않는 경로(부결로
@@ -153,6 +157,8 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   // 결재 규칙 책임자(OWNER) 조건을 REACTIONS 후속 질문에서 더 확정한다 — LOG+OWNER면
   // CAIO·CISO가 모두 찬성으로 바뀌어 CEO까지 3석 찬성으로 가결이 결정된다(참가자
   // 표와 무관하게, aiApproval.ts voteRules).
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();

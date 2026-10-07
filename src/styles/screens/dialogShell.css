@@ -1,0 +1,158 @@
+/* 공용 모달 팝업 껍데기(T89). EvidenceDialog(T68)의 종이 패널·도장·CASE 칩·제목·
+   닫기 버튼·하단 안내 구조를 그대로 떼어낸 것이다 — 치수·토큰·애니메이션은 기존
+   evidenceDialog.css와 완전히 같다. EvidenceDialog·AssistantPanel이 함께 쓴다. */
+.dialog-shell__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgba(5, 11, 20, 0.72);
+  animation: dialog-shell-backdrop-enter var(--transition-screen) ease-out both;
+}
+
+@keyframes dialog-shell-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.dialog-shell {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: min(1300px, 94vw);
+  height: min(750px, 90vh);
+  padding: 25px 30px;
+  background-color: var(--paper);
+  color: var(--ink);
+  box-shadow: 10px 10px 0 #1f2126;
+  animation: dialog-shell-enter var(--transition-screen) ease-out both;
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell {
+    gap: 12px;
+    width: min(1040px, 94vw);
+    height: min(600px, 90vh);
+    padding: 20px 24px;
+  }
+}
+
+@keyframes dialog-shell-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 우상단 도장(시안, EvidenceDialog의 CONFIDENTIAL과 같은 자리). */
+.dialog-shell__stamp {
+  position: absolute;
+  top: 17.5px;
+  right: 112.5px;
+  padding: 6px 15px;
+  border: 4px solid var(--stamp-red);
+  color: var(--stamp-red);
+  font-family: var(--font-label);
+  font-size: 19px;
+  letter-spacing: 0.24em;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell__stamp {
+    top: 14px;
+    right: 90px;
+    padding: 5px 12px;
+    border-width: 3px;
+    font-size: 15px;
+  }
+}
+
+.dialog-shell__header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell__header {
+    gap: 12px;
+  }
+}
+
+/* 좌상단 CASE류 보조 라벨(SelectScreen의 scenario-card__case와 같은 라벨 스킨). */
+.dialog-shell__eyebrow {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--label);
+  font-family: var(--font-label);
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell__eyebrow {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
+.dialog-shell__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 33px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell__title {
+    font-size: 26px;
+  }
+}
+
+.dialog-shell__close {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.dialog-shell__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.dialog-shell__footer {
+  display: flex;
+  justify-content: space-between;
+  flex-shrink: 0;
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--label);
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell__footer {
+    font-size: 11px;
+  }
+}

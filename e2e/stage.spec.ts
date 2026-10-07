@@ -27,6 +27,10 @@ async function enterReactions(page: Page) {
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다 — 이 헬퍼를 쓰는
+  // 테스트는 모두 입력창·비서실장 토글(2/2 전용) 또는 무대 말풍선(두 단계 공통)을
+  // 확인하므로 2/2로 이동해도 문제없다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 /** REACTIONS에서 시작해 VOTE까지 이동한다(빠른 답 3번 선택 → 최종안 고정). */

@@ -108,8 +108,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
 
-    // 조건을 제안하지 않는 빠른 답을 고른다.
-    await page.getByTestId('followup-option-1').click();
+    // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션, 6번 인덱스).
+    await page.getByTestId('followup-option-6').click();
     await page.getByTestId('submit-followup').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();

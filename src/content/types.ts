@@ -109,10 +109,17 @@ export interface Reaction {
   text: string;
 }
 
+/** 추천 답변이 어느 입장에서 하는 말인지(T89, 사용자 지시 "반응에 답하기에서도 내
+ * 의견에서와 마찬가지로 선택할 수 있도록"). Phrase.side와 같은 뜻·같은 기본값
+ * 규칙이다 — 값이 없는 과거 시나리오(anonBoard·aiAssistant, 레지스트리에서 뺀 파일)는
+ * ReactionsScreen이 'FOR'로 본다. */
+export type FollowUpSide = 'FOR' | 'AGAINST' | 'BOTH';
+
 export interface FollowUpOption {
   text: string;
   proposeConditionId: string | null;
   keepPrevious?: boolean;
+  side?: FollowUpSide;
 }
 
 export interface FollowUp {

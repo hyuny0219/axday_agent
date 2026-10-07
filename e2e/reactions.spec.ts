@@ -23,6 +23,8 @@ async function reachReactionsWithDataVetoConfirmed(page: Page) {
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 /** P2 = RECORD(판단 근거 기록)를 확정한 채 첫 의견을 전달한다. followUp 체크 카드로
@@ -35,6 +37,8 @@ async function reachReactionsWithRecordConfirmed(page: Page) {
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확정하려 하면 전달이 막힌다', async ({
@@ -291,7 +295,8 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
   });
   expect(focusedInside).toBe(false);
 
-  await page.getByRole('button', { name: 'AI 비서실장 숨기기' }).click();
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
   await expect(info).not.toHaveAttribute('inert', '');
 });
 

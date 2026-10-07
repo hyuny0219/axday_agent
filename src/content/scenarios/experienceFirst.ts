@@ -237,6 +237,12 @@ export const experienceFirstScenario: Scenario = {
       text: '말씀은 기록했습니다. 다른 확인 조건이 없다면 현재 안건으로 판단하겠습니다.',
     },
   ],
+  // 추천 답변(T89, aiApproval.ts followUp 주석과 같은 근거). FOR 세 문구는 P3(DATA_VETO)·
+  // P5(EXP_ONLY)·P1(SCOPE)과 같은 문장을 재사용한다 — DATA_VETO·EXP_ONLY는 상충쌍이라
+  // 같은 입장 안에 함께 두면(DISCUSS와 달리 여기는 "경험을 따르겠다/멈추겠다" 자체가
+  // 질문이라 둘 다 그 질문에 직접 답하는 모양이다) ConditionChips 충돌 안내가 그대로
+  // 작동하는지 보는 e2e(reactions.spec.ts)도 그대로 통과한다. AGAINST는 "이대로는
+  // 반대하지만 ~라면 다시 생각해 보겠습니다" 꼴로 조건 키워드를 부정 없이 담는다.
   followUp: {
     question: '데이터가 분명히 경고해도 경험을 따르시겠습니까, 잠시 멈추시겠습니까?',
     askedBy: 'CFO',
@@ -244,15 +250,37 @@ export const experienceFirstScenario: Scenario = {
       {
         text: '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
         proposeConditionId: 'DATA_VETO',
+        side: 'FOR',
       },
       {
         text: '최종 결정은 언제나 경험 판단을 따르도록 합시다.',
         proposeConditionId: 'EXP_ONLY',
+        side: 'FOR',
       },
       {
-        text: '앞서 전달한 의견을 유지하겠습니다.',
+        text: '전례 없는 상황에 한정해 경험을 우선합시다.',
+        proposeConditionId: 'SCOPE',
+        side: 'FOR',
+      },
+      {
+        text: '숫자가 분명한 경고를 보내면 경험보다 데이터를 믿어야 한다고 생각합니다.',
         proposeConditionId: null,
-        keepPrevious: true,
+        side: 'AGAINST',
+      },
+      {
+        text: '이대로는 반대하지만, 판단 근거를 기록한다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'RECORD',
+        side: 'AGAINST',
+      },
+      {
+        text: '이대로는 반대하지만, 결정 결과를 복기해 되짚는다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'REVIEW',
+        side: 'AGAINST',
+      },
+      {
+        text: '데이터와 경험을 어떻게 같이 쓸지는 더 논의가 필요하다고 생각합니다.',
+        proposeConditionId: null,
+        side: 'BOTH',
       },
     ],
   },

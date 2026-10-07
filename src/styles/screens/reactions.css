@@ -310,6 +310,13 @@
   }
 }
 
+/* "반응 듣기"(T89 1/2) 전용 — 추천 답변·입력창이 빠져 공간이 남으므로 클램프를
+   풀고 전문을 그대로 보여준다. */
+.reaction-card__text--full {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
 /* 점선 상자 "FOLLOW-UP · <역할>가 묻습니다" + 질문(시안). */
 .reactions-screen__followup {
   flex-shrink: 0;
@@ -355,38 +362,11 @@
   }
 }
 
-/* "추천 답변 · 여러 개 선택 가능 · 고르면 왼쪽 내 답변에 이어 붙습니다"(시안). */
-.reactions-screen__recommend-hint {
-  margin: 0;
-  flex-shrink: 0;
-  font-family: var(--font-label);
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  color: var(--label);
-}
-
-@media (max-width: 1280px) {
-  .reactions-screen__recommend-hint {
-    font-size: 12px;
-  }
-}
-
-/* 추천 답변 체크 카드 2열(시안 — followUp.options 3개, PhraseCard 재사용). 열
-   높이를 채운다(DISCUSS 추천 문구와 같은 원칙). */
-.reactions-screen__option-list {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-content: stretch;
-}
-
-@media (max-width: 1280px) {
-  .reactions-screen__option-list {
-    gap: 8px;
-  }
-}
+/* "추천 답변 · 여러 개 선택 가능" 힌트·체크 카드 그리드는 T89 2차("다시 답하기"가
+   DiscussScreen과 같은 구성으로 바뀜)부터 discuss.css의 discuss-screen__phrase-hint·
+   discuss-screen__phrase-list를 그대로 재사용한다 — 이 파일의 전용 규칙
+   (.reactions-screen__recommend-hint·.reactions-screen__option-list)은 더 이상
+   쓰지 않아 지웠다. */
 
 /* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼은 T86에서
    공용 .cta.cta--secondary(shell.css)로 바뀌었고, 안내 한 줄(.evidence-open-hint)만

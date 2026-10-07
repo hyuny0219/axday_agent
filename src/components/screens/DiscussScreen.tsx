@@ -58,6 +58,10 @@ export interface DiscussScreenProps {
   roleStatus: Record<ExecMemberId, RoleStatus>;
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63)이자 오른쪽 열 STANCE 칩의 근거다. */
   stances: Record<ExecMemberId, Stance>;
+  /** 입장 선택(T87→T89, App.tsx StageRouter의 state로 올렸다) — REACTIONS까지 이어지는
+   * 기본값이라 이 화면 로컬 state가 아니라 부모가 들고 내려준다. */
+  side: 'FOR' | 'AGAINST' | null;
+  onChooseSide: (next: 'FOR' | 'AGAINST') => void;
   onSubmit: (payload: DiscussSubmitPayload) => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
   onAssistantAction: (event: AssistantActionEvent) => void;
@@ -101,6 +105,8 @@ export function DiscussScreen({
   mode,
   roleStatus,
   stances,
+  side,
+  onChooseSide,
   onSubmit,
   onAssistantAction,
   assistantAdapter,
@@ -119,10 +125,6 @@ export function DiscussScreen({
   }, [assistantOpen]);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
-  // 입장 선택(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중") — 추천 문구를 찬성/반대
-  // 어느 쪽에서 볼지 고르는 것으로, 마지막 표결(VoteScreen)과는 별개다. 세션 상태에는
-  // 기록하지 않는다(도메인 변경 최소화 — 무대·회의록에 영향 없음).
-  const [sidePick, setSidePick] = useState<'FOR' | 'AGAINST' | null>(null);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -220,10 +222,10 @@ export function DiscussScreen({
   // 선택된다; (2) 초안 텍스트가 바뀌는 경우 draftRevision을 올려 비서실장의 오래된 정리
   // 결과가 새 초안에 적용되지 않게 한다.
   function handleChooseSide(next: 'FOR' | 'AGAINST') {
-    if (sidePick === next) {
+    if (side === next) {
       return;
     }
-    setSidePick(next);
+    onChooseSide(next);
     setPendingPhraseId(null);
     if (draft.selectedPhraseIds.length === 0) {
       return;
@@ -345,11 +347,11 @@ export function DiscussScreen({
           <p className="discuss-screen__guide">
             문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
           </p>
-          <div className="discuss-screen__side-select" data-testid="discuss-side-select">
+          <div className="side-select" data-testid="discuss-side-select">
             <button
               type="button"
-              className="cta cta--secondary discuss-screen__side-btn"
-              aria-pressed={sidePick === 'FOR'}
+              className="cta cta--secondary side-select__btn"
+              aria-pressed={side === 'FOR'}
               onClick={() => handleChooseSide('FOR')}
               data-testid="discuss-side-for"
             >
@@ -357,25 +359,25 @@ export function DiscussScreen({
             </button>
             <button
               type="button"
-              className="cta cta--secondary discuss-screen__side-btn"
-              aria-pressed={sidePick === 'AGAINST'}
+              className="cta cta--secondary side-select__btn"
+              aria-pressed={side === 'AGAINST'}
               onClick={() => handleChooseSide('AGAINST')}
               data-testid="discuss-side-against"
             >
               반대 쪽에서 말하기
             </button>
-            <span className="discuss-screen__side-hint">표결은 마지막에 따로 합니다</span>
+            <span className="side-select__hint">표결은 마지막에 따로 합니다</span>
           </div>
-          {sidePick === null ? (
-            <p className="discuss-screen__side-guide" data-testid="discuss-side-guide">
+          {side === null ? (
+            <p className="side-select__guide" data-testid="discuss-side-guide">
               먼저 입장을 골라 주세요. 직접 써도 됩니다.
             </p>
           ) : (
             <div className="discuss-screen__phrase-list">
               {scenario.phrases
                 .filter((phrase) => {
-                  const side = phrase.side ?? 'FOR';
-                  return side === 'BOTH' || side === sidePick;
+                  const phraseSide = phrase.side ?? 'FOR';
+                  return phraseSide === 'BOTH' || phraseSide === side;
                 })
                 .map((phrase) => (
                   <PhraseCard

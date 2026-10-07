@@ -52,6 +52,14 @@
 // 의견 단계)는 아직 아무 조건도 확정되지 않았을 때의 입장이어야 하므로,
 // domain/stance.ts의 scriptedStances를 opinions=[]로 다시 불러(조건 없는 표결
 // 규칙표 결과) 02 전용 stance를 따로 계산한다. 04는 그대로 현재 stances를 쓴다.
+// T89(2026-10-07 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할 수
+// 있도록"): 추천 답변도 DISCUSS(T87)와 같은 구조로 바뀌었다 — 입장(찬성 쪽/반대 쪽)을
+// 먼저 고르고, 그 쪽(+BOTH)의 추천 답변만 체크 카드로 보여준다(FollowUpOption.side).
+// 입장 state(side·onChooseSide)는 App.tsx StageRouter가 들고 DiscussScreen과 함께
+// 내려준다 — DISCUSS에서 고른 쪽이 기본값으로 이어지고 여기서 바꿀 수도 있다(바꾸면
+// 체크된 답변은 해제, handleChooseSide). T84 #23이 "(앞서 제안함)" 잠금 표시로 두던
+// "이미 확정된 조건을 다시 제안하는 옵션"은 이제 완전히 숨긴다 — 그 역할은 보조 버튼
+// "답하지 않고 넘어가기"로 충분하다(keepPrevious 옵션도 데이터에서 아예 뺐다).
 // PR #12 Codex 5차 검토: (P2-a) scripted 반응 카드의 유지/바뀜 배지가 "반응 문구가
 // 있는지"(reactionsFor 결과)로 갈렸는데, 조건 하나만으로는 표가 안 바뀌어도 그
 // 조건에 묶인 반응 문구가 있으면 "바뀜"으로, 반대로 표가 바뀌어도 그 전환을 설명하는
@@ -83,6 +91,9 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
+// T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
+// 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
+import '../../styles/screens/discuss.css';
 import '../../styles/screens/reactions.css';
 
 export interface ReactionsFollowupPayload {
@@ -107,6 +118,18 @@ export interface ReactionsScreenProps {
   stances: Record<ExecMemberId, Stance>;
   /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
   transcriptRevision: number;
+  /** 입장 선택(T89, 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할
+   * 수 있도록") — App.tsx StageRouter의 state를 DiscussScreen과 공유한다. DISCUSS에서
+   * 고른 쪽이 기본값으로 이어지고, 여기서 바꿀 수도 있다. */
+  side: 'FOR' | 'AGAINST' | null;
+  onChooseSide: (next: 'FOR' | 'AGAINST') => void;
+  /** REACTIONS 서브스텝(T89, 사용자 지시 "임원들의 의견을 듣고 다시 답하는 화면을
+   * 만들어서") — App.tsx StageRouter의 state. 'listen'(반응 듣기)에서는 임원 반응
+   * 카드만 크게 보여주고, 'answer'(다시 답하기)에서만 입장 선택·추천 답변·입력창을
+   * 보여준다. 도메인 session.stage는 두 서브스텝 모두 REACTIONS다. */
+  step: 'listen' | 'answer';
+  /** "답하기 ▶"를 눌러 'listen' → 'answer'로 넘어간다(뒤로가기는 없다). */
+  onAdvanceStep: () => void;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
   onKeepPrevious: () => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
@@ -157,6 +180,10 @@ export function ReactionsScreen({
   roundLog,
   stances,
   transcriptRevision,
+  side,
+  onChooseSide,
+  step,
+  onAdvanceStep,
   onSubmitFollowup,
   onKeepPrevious,
   onAssistantAction,
@@ -189,6 +216,15 @@ export function ReactionsScreen({
     onRetryFailedRoles(failedRoleIds);
   }
 
+  // "반응 듣기"(T89) → "다시 답하기" 전환 잠금: live에서 임원 네 명이 모두 REACTIONS
+  // 라운드에 답하거나(answered) 실패로 끝날 때까지(failed) "답하기 ▶"를 잠근다
+  // (OpinionsScreen의 allExecsSettled와 같은 규칙). scripted는 반응 문구가 항상 즉시
+  // 다 있으므로 영향받지 않는다.
+  const allExecsSettled = EXEC_MEMBER_ORDER.every(
+    (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
+  );
+  const listenLocked = mode === 'live' && !allExecsSettled;
+
   // 추천 답변 체크 카드(T74): 선택된 것(문자열 인덱스)을 followUp.options 순서대로
   // 이어 붙여 textValue를 구성한다 — DISCUSS의 selectedPhraseIds·buildDraftText와 같은
   // 규칙이지만 scenario.phrases가 아니라 followUp.options를 조합 대상으로 쓰므로
@@ -218,6 +254,28 @@ export function ReactionsScreen({
         .join(' '),
     [scenario],
   );
+
+  // 입장을 바꾸면 체크된 추천 답변은 해제한다(DiscussScreen.handleChooseSide와 같은
+  // 규칙, T89). 직접 쓴 답(dirty)은 텍스트를 그대로 두고 체크만 뗀다. RebuildConfirm이
+  // 뜬 동안 입장을 바꾸면 그 대기 선택(pendingOptionIndex)도 함께 취소한다(PR #20 Codex
+  // 7차 검토와 같은 이유 — 남겨 두면 확인 뒤 이전 입장의 숨은 옵션이 다시 선택된다).
+  function handleChooseSide(next: 'FOR' | 'AGAINST') {
+    if (side === next) {
+      return;
+    }
+    onChooseSide(next);
+    setPendingOptionIndex(null);
+    if (selectedOptionIds.length === 0) {
+      return;
+    }
+    if (dirty) {
+      setSelectedOptionIds([]);
+      return;
+    }
+    setSelectedOptionIds([]);
+    setTextValue(composeText([]));
+    setDraftRevision((value) => value + 1);
+  }
 
   const newProposedIds = useMemo(() => {
     // P1-a: dirty(직접 수정)인 동안은 체크된 옵션의 조건 제안을 쓰지 않는다 — 고친
@@ -500,6 +558,103 @@ export function ReactionsScreen({
     });
   }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds, scriptedBaselineStances]);
 
+  // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
+  // 않고 넘어가기")뿐이고, 발언 흐름(MinutesPanel)은 App.tsx AppShell이 OPINIONS와
+  // 같은 규칙으로 보여준다(reactionsStep). 오른쪽 종이는 임원 반응 카드 4장(공간이
+  // 남아 4줄 클램프를 풀고 전문 표시) + 추가 질문 상자만 크게 보여주고, 추천 답변·
+  // 입력창은 여기 없다(2/2로 미룬다).
+  if (step === 'listen') {
+    return (
+      <>
+        <div className="app-body__actions screen reactions-screen reactions-screen--listen">
+          <button
+            type="button"
+            className="cta"
+            onClick={onAdvanceStep}
+            disabled={listenLocked}
+            data-testid="reactions-advance"
+          >
+            {listenLocked ? '임원 반응을 듣는 중…' : '답하기 ▶'}
+          </button>
+          <button
+            type="button"
+            className="cta cta--secondary"
+            onClick={handleKeepPrevious}
+            data-testid="keep-previous-answer"
+          >
+            답하지 않고 넘어가기
+          </button>
+        </div>
+        <div className="app-body__content screen reactions-screen__info" data-testid="reactions-info">
+          <div className="reactions-screen__paper">
+            <div className="reactions-screen__head">
+              <span className="reactions-screen__step">4단계 · 1/2 반응 듣기</span>
+              {/* 기존 heading 문구는 그대로 둔다 — 다수의 e2e가 이 문구를 "REACTIONS
+                  진입" 신호로 쓴다. */}
+              <h2 className="reactions-screen__title">
+                이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
+              </h2>
+            </div>
+            {mode === 'live' ? (
+              <LiveStatementCards
+                scenario={scenario}
+                stage="REACTIONS"
+                roleStatus={roleStatus}
+                statements={statements}
+                stances={stances}
+                variant="reaction"
+                onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
+                retryDisabled={retryUsed}
+              />
+            ) : (
+              <div className="reactions-screen__cards">
+                {EXEC_MEMBER_ORDER.map((memberId) => {
+                  const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
+                  const stance = stances[memberId];
+                  const changed = scriptedBaselineStances[memberId] !== stance;
+                  return (
+                    <article
+                      key={memberId}
+                      className={`reaction-card reaction-card--${STANCE_MODIFIER[stance]}`}
+                      data-testid={`reaction-card-${memberId}`}
+                    >
+                      <div className="reaction-card__head">
+                        <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
+                        <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
+                          {STANCE_LABEL[stance]}
+                        </span>
+                        <span className="reaction-card__badge" aria-hidden="true">
+                          {changed ? '바뀜' : '유지'}
+                        </span>
+                      </div>
+                      <p className="reaction-card__text reaction-card__text--full">
+                        {reactions.length > 0
+                          ? reactions.map((reaction) => reaction.text).join(' ')
+                          : '앞서 말씀드린 입장 그대로입니다.'}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            <div className="reactions-screen__followup" data-testid="followup-question">
+              <span className="reactions-screen__followup-label">
+                추가 질문 · {scenario.followUp.askedBy}가 묻습니다
+              </span>
+              <p className="reactions-screen__followup-text">{scenario.followUp.question}</p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // "다시 답하기"(T89 2/2): DiscussScreen과 같은 구성 — 왼쪽 열은 무대 + 내 답변
+  // 편집기(discuss-screen__hud와 같은 모양) + [AI 비서실장에게 맡기기][답하지 않고
+  // 넘어가기][답변 전달 ▶], 오른쪽 종이는 질문 한 줄 + 입장 선택 + 그 쪽(+BOTH)
+  // 추천 답변 그리드 + 근거 자료 버튼이다. 레이아웃·CSS는 discuss.css의
+  // discuss-screen__paper·head·step·title·phrase-hint·guide·phrase-list·
+  // evidence-row 클래스를 그대로 재사용한다(최대한 공유, 사용자 지시).
   return (
     <>
       <div className="app-body__actions screen reactions-screen">
@@ -578,104 +733,81 @@ export function ReactionsScreen({
         </div>
       </div>
       <div className="app-body__content screen reactions-screen__info" ref={infoRef} data-testid="reactions-info">
-        <div className="reactions-screen__paper">
-          <div className="reactions-screen__head">
-            <span className="reactions-screen__step">4단계</span>
-            {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T73과
-                같은 이유) — 글자 크기는 시안 값 그대로다. */}
-            <h2 className="reactions-screen__title">
-              이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
-            </h2>
+        {/* DiscussScreen과 같은 종이·머리·입장 선택·문구 그리드(T89 사용자 지시
+            "내 의견과 동일한 구성") — discuss.css 클래스를 그대로 재사용한다. */}
+        <div className="discuss-screen__paper">
+          <div className="discuss-screen__head">
+            <span className="discuss-screen__step">4단계 · 2/2</span>
+            <h2 className="discuss-screen__title">다시 답하기</h2>
+            <span className="discuss-screen__phrase-hint">추천 답변 · 여러 개 선택 가능</span>
           </div>
-          {mode === 'live' ? (
-            <LiveStatementCards
-              scenario={scenario}
-              stage="REACTIONS"
-              roleStatus={roleStatus}
-              statements={statements}
-              stances={stances}
-              variant="reaction"
-              onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
-              retryDisabled={retryUsed}
-            />
+          <p className="discuss-screen__guide" data-testid="followup-question">
+            {scenario.followUp.askedBy}가 묻습니다 · {scenario.followUp.question}
+          </p>
+          {/* 입장 선택(T89) — DISCUSS와 같은 두 버튼을 공용 .side-select*(shell.css)로
+              쓴다. 기본값은 App.tsx가 DISCUSS에서 고른 쪽을 그대로 내려준 side다. */}
+          <div className="side-select" data-testid="reactions-side-select">
+            <button
+              type="button"
+              className="cta cta--secondary side-select__btn"
+              aria-pressed={side === 'FOR'}
+              onClick={() => handleChooseSide('FOR')}
+              data-testid="reactions-side-for"
+            >
+              찬성 쪽에서 말하기
+            </button>
+            <button
+              type="button"
+              className="cta cta--secondary side-select__btn"
+              aria-pressed={side === 'AGAINST'}
+              onClick={() => handleChooseSide('AGAINST')}
+              data-testid="reactions-side-against"
+            >
+              반대 쪽에서 말하기
+            </button>
+            <span className="side-select__hint">표결은 마지막에 따로 합니다</span>
+          </div>
+          {side === null ? (
+            <p className="side-select__guide" data-testid="reactions-side-guide">
+              먼저 입장을 골라 주세요. 직접 써도 됩니다.
+            </p>
           ) : (
-            <div className="reactions-screen__cards">
-              {EXEC_MEMBER_ORDER.map((memberId) => {
-                const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
-                const stance = stances[memberId];
-                // PR #12 Codex 5차 검토 P2: 유지/바뀜 배지는 반응 문구가 있는지가
-                // 아니라 실제 stance가 바뀌었는지로 가른다 — 조건 하나만으로는 표가
-                // 안 바뀌는데 그 조건에 묶인 반응 문구만 있어 "바뀜"으로 잘못 보이거나
-                // (예: PILOT만 확정해도 CFO는 그대로 반대지만 PILOT에 묶인 반응 문구가
-                // 있다), 반대로 표는 바뀌었는데 그 전환을 설명하는 반응 문구가 시나리오
-                // 데이터에 없어 "유지"로 잘못 보이는 경우(예: ANON_FULL이 CEO를 찬성→
-                // 반대로 돌리지만 CEO에 연결된 반응 문구가 없다)를 모두 막는다. 반응
-                // 문구(reactions)는 본문 표시에만 쓴다(아래 .reaction-card__text).
-                const changed = scriptedBaselineStances[memberId] !== stance;
+            <div className="discuss-screen__phrase-list">
+              {scenario.followUp.options.map((option, index) => {
+                // keepPrevious 카드는 더 이상 여기 그리지 않는다(T84 #1) — 보조 버튼
+                // "답하지 않고 넘어가기"로 옮겼다.
+                if (option.keepPrevious) {
+                  return null;
+                }
+                // 고른 입장(+BOTH)만 보인다(T89, DiscussScreen의 Phrase.side 필터와
+                // 같은 규칙). 값이 없는 과거 옵션(anonBoard·aiAssistant)은 'FOR'로 본다.
+                const optionSide = option.side ?? 'FOR';
+                if (optionSide !== 'BOTH' && optionSide !== side) {
+                  return null;
+                }
+                // 이미 확정된 조건을 다시 제안하는 카드는 숨긴다(T89, 사용자 지시 —
+                // "답하지 않고 넘어가기"로 충분하다, T84 #23의 "(앞서 제안함)" 잠금
+                // 표시를 대체한다).
+                const alreadyProposed =
+                  option.proposeConditionId !== null &&
+                  previousConfirmedIds.includes(option.proposeConditionId);
+                if (alreadyProposed) {
+                  return null;
+                }
                 return (
-                  <article
-                    key={memberId}
-                    className={`reaction-card reaction-card--${STANCE_MODIFIER[stance]}`}
-                    data-testid={`reaction-card-${memberId}`}
-                  >
-                    <div className="reaction-card__head">
-                      <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
-                      <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
-                        {STANCE_LABEL[stance]}
-                      </span>
-                      <span className="reaction-card__badge" aria-hidden="true">
-                        {changed ? '바뀜' : '유지'}
-                      </span>
-                    </div>
-                    <p className="reaction-card__text">
-                      {reactions.length > 0
-                        ? reactions.map((reaction) => reaction.text).join(' ')
-                        : '앞서 말씀드린 입장 그대로입니다.'}
-                    </p>
-                  </article>
+                  <PhraseCard
+                    key={index}
+                    phrase={{ id: String(index), text: option.text }}
+                    selected={selectedOptionIds.includes(String(index))}
+                    onToggle={() => handleToggleOption(index)}
+                    testId={`followup-option-${index}`}
+                    disabled={pendingOptionIndex !== null}
+                  />
                 );
               })}
             </div>
           )}
-          <div className="reactions-screen__followup" data-testid="followup-question">
-            <span className="reactions-screen__followup-label">
-              추가 질문 · {scenario.followUp.askedBy}가 묻습니다
-            </span>
-            <p className="reactions-screen__followup-text">{scenario.followUp.question}</p>
-          </div>
-          <p className="reactions-screen__recommend-hint">
-            추천 답변 · 여러 개 선택 가능 · 답하지 않으려면 '답하지 않고 넘어가기'
-          </p>
-          <div className="reactions-screen__option-list">
-            {scenario.followUp.options.map((option, index) => {
-              // keepPrevious 카드는 더 이상 여기 그리지 않는다(T84 #1) — 보조 버튼
-              // "답하지 않고 넘어가기"로 옮겼다.
-              if (option.keepPrevious) {
-                return null;
-              }
-              // 이미 확정된 조건을 다시 제안하는 카드(T84 #23, Opus UX 검토) — 숨기지
-              // 않고 "(앞서 제안함)" 표시 + 체크 상태로 보여 주되, 다시 제안되지
-              // 않게(이미 previousConfirmedIds로 proposedConditionIds에 들어 있으므로
-              // 이 카드를 다시 토글해도 새 제안이 되지 않는다) 토글 자체를 잠근다.
-              const alreadyProposed =
-                option.proposeConditionId !== null &&
-                previousConfirmedIds.includes(option.proposeConditionId);
-              return (
-                <PhraseCard
-                  key={index}
-                  phrase={{
-                    id: String(index),
-                    text: alreadyProposed ? `${option.text} (앞서 제안함)` : option.text,
-                  }}
-                  selected={alreadyProposed || selectedOptionIds.includes(String(index))}
-                  onToggle={() => handleToggleOption(index)}
-                  testId={`followup-option-${index}`}
-                  disabled={pendingOptionIndex !== null || alreadyProposed}
-                />
-              );
-            })}
-          </div>
-          <div className="reactions-screen__evidence-row">
+          <div className="discuss-screen__evidence-row">
             <button
               type="button"
               className="cta cta--secondary"

@@ -175,6 +175,9 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
+
   // 조건 제안(followup-option-0)을 골라 후속 답을 전달한다 — opinions가 2건이 되어
   // FOLLOWUP 라운드가 트리거된다.
   await page.getByTestId('followup-option-0').click();

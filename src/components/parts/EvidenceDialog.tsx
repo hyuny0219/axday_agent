@@ -20,10 +20,14 @@
 // 안에서만 순환한다. 닫히면(Esc·딤 클릭·닫기 버튼 세 경로 모두) 팝업을 열기 직전
 // 포커스였던 요소로 되돌린다 — 트리거를 prop으로 받지 않고 마운트 시점의
 // document.activeElement를 그대로 기억한다(어느 버튼에서 열든 같은 규칙으로 동작).
-import { useEffect, useRef } from 'react';
+// T89(2026-10-07 사용자 — "AI 비서실장의 팝업창을 근거 자료 팝업과 동일한 디자인으로"):
+// 위 껍데기(딤·포커스 트랩·Esc·스크롤 잠금·도장·제목·닫기·하단 안내)를 공용
+// DialogShell(parts/DialogShell.tsx)로 떼어내 AssistantPanel과 함께 쓴다. 이 파일은
+// 이제 EXHIBIT·STATEMENTS 2열 본문만 그린다 — 동작·testid는 전혀 바뀌지 않았다.
 import type { EvidenceCard as EvidenceCardData, ExecMemberId } from '../../content/types';
 import type { Stance, StatementStage } from '../../domain/types';
 import { EvidenceGrid } from './EvidenceGrid';
+import { DialogShell } from './DialogShell';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/evidenceDialog.css';
@@ -67,9 +71,6 @@ export interface EvidenceDialogProps {
   onClose: () => void;
 }
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 /** 발언 카드 왼쪽 띠·stance 글자색에 쓰는 소문자 modifier(OpinionsScreen의
  * STANCE_MODIFIER와 같은 값, evidenceDialog.css가 읽는다). */
 const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
@@ -92,162 +93,68 @@ export function EvidenceDialog({
   statementsColumnLabel = '임원이 한 말(02 임원 의견)',
   onClose,
 }: EvidenceDialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
-
-  // 마운트 시점(열릴 때)의 포커스 요소를 기억해 뒀다가 언마운트(닫힐 때) 되돌린다.
-  useEffect(() => {
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-    return () => {
-      previouslyFocusedRef.current?.focus();
-    };
-  }, []);
-
-  // 팝업이 열린 동안 배경 문서 스크롤을 잠근다. 1200px 미만·700px 미만 reflow 경로에서는
-  // shell.css가 문서 스크롤을 허용하므로, 딤 위 휠·터치나 팝업 본문 끝에서의 스크롤이 뒤의
-  // 회의 화면을 움직였다(PR #11 Codex 29차). 언마운트 시 원래 값을 되돌린다.
-  useEffect(() => {
-    const root = document.documentElement;
-    const previousOverflow = root.style.overflow;
-    root.style.overflow = 'hidden';
-    return () => {
-      root.style.overflow = previousOverflow;
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== 'Tab') {
-        return;
-      }
-      const container = dialogRef.current;
-      if (!container) {
-        return;
-      }
-      const focusables = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      if (focusables.length === 0) {
-        return;
-      }
-      const first = focusables[0]!;
-      const last = focusables[focusables.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  function handleBackdropClick(event: React.MouseEvent<HTMLDivElement>) {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  }
-
   return (
-    <div
-      className="evidence-dialog__backdrop"
-      data-testid="evidence-dialog-backdrop"
-      onClick={handleBackdropClick}
+    <DialogShell
+      testId="evidence-dialog"
+      titleId="evidence-dialog-title"
+      title="근거 자료 · 임원 발언"
+      stamp="CONFIDENTIAL"
+      eyebrow={caseTag}
+      onClose={onClose}
+      closeTestId="evidence-dialog-close"
     >
-      <div
-        className="evidence-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="evidence-dialog-title"
-        ref={dialogRef}
-        data-testid="evidence-dialog"
-      >
-        {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): BRIEFING·OPINIONS·VOTE와 같은
-            도장이라(DESIGN_SPEC.md T83 대응표) 함께 영문으로 되돌렸다(카드 목록에는
-            없었지만 같은 붉은 도장이라 빠뜨리면 화면마다 달라 보인다). */}
-        <span className="evidence-dialog__stamp" aria-hidden="true">
-          CONFIDENTIAL
-        </span>
-        <div className="evidence-dialog__header">
-          <span className="evidence-dialog__case">{caseTag}</span>
-          <h2 id="evidence-dialog-title" className="evidence-dialog__title">
-            근거 자료 · 임원 발언
-          </h2>
-          <button
-            type="button"
-            className="cta cta--secondary evidence-dialog__close"
-            onClick={onClose}
-            ref={closeButtonRef}
-            aria-label="닫기"
-            data-testid="evidence-dialog-close"
-          >
-            닫기
-          </button>
+      <div className="evidence-dialog__body">
+        <div className="evidence-dialog__column evidence-dialog__column--exhibits">
+          <span className="evidence-dialog__column-label">자료 ①~④ · 판단에 참고할 자료</span>
+          <EvidenceGrid evidence={evidence} />
         </div>
-        <div className="evidence-dialog__body">
-          <div className="evidence-dialog__column evidence-dialog__column--exhibits">
-            <span className="evidence-dialog__column-label">자료 ①~④ · 판단에 참고할 자료</span>
-            <EvidenceGrid evidence={evidence} />
-          </div>
-          <div className="evidence-dialog__column evidence-dialog__column--statements">
-            <span className="evidence-dialog__column-label">{statementsColumnLabel}</span>
-            {statements.length === 0 ? (
-              <p className="evidence-dialog__statements-empty" data-testid="evidence-dialog-statements-empty">
-                02 단계에서 임원이 말하면 여기에 쌓입니다
-              </p>
-            ) : (
-              <div className="evidence-dialog__statements">
-                {statements.map((item) => {
-                  const stageSuffix = item.stage ? `-${item.stage.toLowerCase()}` : '';
-                  return (
-                  <article
-                    key={`${item.memberId}${stageSuffix}`}
-                    className={`evidence-dialog__statement evidence-dialog__statement--${STANCE_MODIFIER[item.stance]}`}
-                  >
-                    <div className="evidence-dialog__statement-head">
-                      {item.stage && (
-                        <span className="evidence-dialog__statement-stage">{STAGE_TAG_LABEL[item.stage]}</span>
-                      )}
-                      <h3 className="evidence-dialog__statement-member">{MEMBER_LABELS[item.memberId]}</h3>
-                      <span className="evidence-dialog__statement-mood">{STANCE_LABEL[item.stance]}</span>
-                      {item.status === 'answered' && item.evidenceLabel && (
-                        <span className="evidence-dialog__statement-evidence">근거 · {item.evidenceLabel}</span>
-                      )}
-                    </div>
-                    {item.status === 'answered' ? (
-                      <p
-                        className="evidence-dialog__statement-text"
-                        data-testid={item.testable ? `statement-card-${item.memberId}${stageSuffix}` : undefined}
-                      >
-                        {item.text}
-                      </p>
-                    ) : (
-                      <p
-                        className="evidence-dialog__statement-text"
-                        data-testid={`statement-${item.status}-${item.memberId}${stageSuffix}`}
-                      >
-                        {STATUS_TEXT[item.status]}
-                      </p>
+        <div className="evidence-dialog__column evidence-dialog__column--statements">
+          <span className="evidence-dialog__column-label">{statementsColumnLabel}</span>
+          {statements.length === 0 ? (
+            <p className="evidence-dialog__statements-empty" data-testid="evidence-dialog-statements-empty">
+              02 단계에서 임원이 말하면 여기에 쌓입니다
+            </p>
+          ) : (
+            <div className="evidence-dialog__statements">
+              {statements.map((item) => {
+                const stageSuffix = item.stage ? `-${item.stage.toLowerCase()}` : '';
+                return (
+                <article
+                  key={`${item.memberId}${stageSuffix}`}
+                  className={`evidence-dialog__statement evidence-dialog__statement--${STANCE_MODIFIER[item.stance]}`}
+                >
+                  <div className="evidence-dialog__statement-head">
+                    {item.stage && (
+                      <span className="evidence-dialog__statement-stage">{STAGE_TAG_LABEL[item.stage]}</span>
                     )}
-                  </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="evidence-dialog__footer">
-          <span>Esc나 바깥을 누르면 닫힙니다</span>
-          <span>열린 동안 뒤 화면은 멈춤</span>
+                    <h3 className="evidence-dialog__statement-member">{MEMBER_LABELS[item.memberId]}</h3>
+                    <span className="evidence-dialog__statement-mood">{STANCE_LABEL[item.stance]}</span>
+                    {item.status === 'answered' && item.evidenceLabel && (
+                      <span className="evidence-dialog__statement-evidence">근거 · {item.evidenceLabel}</span>
+                    )}
+                  </div>
+                  {item.status === 'answered' ? (
+                    <p
+                      className="evidence-dialog__statement-text"
+                      data-testid={item.testable ? `statement-card-${item.memberId}${stageSuffix}` : undefined}
+                    >
+                      {item.text}
+                    </p>
+                  ) : (
+                    <p
+                      className="evidence-dialog__statement-text"
+                      data-testid={`statement-${item.status}-${item.memberId}${stageSuffix}`}
+                    >
+                      {STATUS_TEXT[item.status]}
+                    </p>
+                  )}
+                </article>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </DialogShell>
   );
 }
