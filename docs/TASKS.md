@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T95 | 완료 | 소개 화면(INTRO)·화면별 진행 가이드·게이팅(2026-10-08 사용자 지시). `SessionStage`에 INTRO 추가, `IntroScreen`(목적·5단계·성공 기준·팁) 신설, 공용 `GuideHint`+`data-guide="next"` 맥동 테두리(`prefers-reduced-motion` 대응)로 BRIEFING(자료 팝업 게이팅)·OPINIONS(0.8초 순차 노출·잠금)·DISCUSS/REACTIONS·MOTION·VOTE·RESULT에 하이라이트. 1라운드 PASS. `npm run check`(단위 609)·e2e 152건(mock 8796·preview 4177) 통과, `docs/screenshots`에 `intro.png` 추가. 상세는 아래 T95 카드와 `docs/design/DESIGN_SPEC.md` T95 단락 |
 | T01~T02 | 완료 | M0 스캐폴드·기반. 각 1라운드 PASS, 커밋 e61e907·c7dfa90 |
 | T03~T07 | 완료 | M1 엔진. T06만 수정 1라운드(reducer 순수성), 나머지 1라운드 PASS. 단위 테스트 83개 |
 | T08~T10 | 완료 | M2 화면 흐름. 모두 1라운드 PASS. T08에서 발견된 reducer 버그(브리핑 요약 기록)는 오케스트레이터가 수정. 단위 86·E2E 12 |
@@ -75,6 +76,24 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T95 소개 화면(INTRO)과 화면별 진행 가이드·게이팅
+
+- 목표(2026-10-08 사용자 지시): "참석자가 진행할 때 어떤 걸 먼저 보고 진행해야 하는지 가이드/하이라이트, 또는 필수로 보고 넘어가도록 버튼 활성/비활성을 넣어 자연스럽고 매끄럽게. 첫 페이지 다음, 안건 선택 전에 게임의 목적과 어떻게 해야 성공하는지 소개 한 장. 안건 선택 후에는 앞과 중복되는 내용을 제거하고 상황 파악에 집중."
+- 읽을 것: `src/domain/types.ts`(SessionStage)·`session.ts`(reduce)·`publicPayload.ts`(STAGE_ORDER), `src/app/App.tsx`(StageRouter·AppShell), `src/components/screens/{AttractScreen,SelectScreen,BriefingScreen,OpinionsScreen,DiscussScreen,ReactionsScreen,MotionScreen,VoteScreen,ResultScreen}.tsx`, `src/components/parts/{EvidenceDialog,OperatorMenu}.tsx`, `src/components/useMatchMedia.ts`, `src/styles/screens/{shell.css,select.css,briefing.css}`, `server/prompts/plainLanguage.ts`(FORBIDDEN_WORDS), `docs/FACILITATOR_GUIDE.md`, `.cta-disabled-hint` 패턴(T85).
+- 만들 것:
+  1. `src/domain/types.ts`에 `SessionStage` `'INTRO'`를 ATTRACT·SELECT 사이에 추가. `session.ts`: START는 ATTRACT→INTRO, NEXT_STAGE는 INTRO→SELECT. `publicPayload.ts`의 `STAGE_ORDER`에도 추가.
+  2. `src/components/screens/IntroScreen.tsx`(신규): 제목 "오늘 당신은 특별 이사입니다", 목적 2줄, 진행 5단계(약 4분), 성공 기준("임원을 설득해 이사님과 같은 표가 3석 이상이면 '설득 성공' 도장을 받습니다"), 팁 2개, CTA "안건 고르러 가기 ▶". SelectScreen의 배경 장식을 재사용. `src/styles/screens/intro.css`(신규).
+  3. `src/components/parts/GuideHint.tsx`(신규) — 오른쪽 종이 상단 한 줄 안내. `shell.css`에 `[data-guide='next']` 맥동 테두리 전역 규칙(`prefers-reduced-motion`이면 정적 테두리).
+  4. 화면별 가이드·게이팅: BRIEFING(자료 팝업 한 번 열어 닫기 전 CTA 비활성)·OPINIONS(scripted 카드 0.8초 순차 노출 + 잠금, reduced-motion이면 즉시, live는 기존 잠금)·DISCUSS/REACTIONS(입장→문구→전달 순 하이라이트)·MOTION(문장 확인 2초 뒤 CTA로 하이라이트 전환, 게이팅 없음)·VOTE(도장→확정 순 하이라이트)·RESULT(회의록 전문 보기 1회 하이라이트). 상세 문구는 `docs/design/DESIGN_SPEC.md` T95 단락 표.
+  5. `docs/FACILITATOR_GUIDE.md`에 소개 화면·게이팅 안내 행과 가이드 문구 표 추가.
+  6. 테스트: `tests/domain/session.test.ts`(INTRO 전이)·`tests/components/{IntroScreen,GuideHint,OpinionsScreen}.test.tsx`(신규)·`BriefingScreen.test.tsx`(게이팅). e2e 전체에 ATTRACT→INTRO 클릭, BRIEFING 자료 팝업 열고 닫는 단계 추가. `screenshots.spec.ts`에 `intro.png` 추가.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 시나리오 데이터(안건 문장·조건 라벨·추천 문구) 수정, 서버 요청 stage(StatementStage) 변경, 표결·조건 로직 변경.
+- 완료 확인: `npm run check` 성공, `npx playwright test -c playwright.local.config.ts` 성공(8787·8789·8792·4175·8796·4177 제외), 1280 스크린샷 확인.
+- 크기: L.
 
 ---
 

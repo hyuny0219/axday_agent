@@ -24,6 +24,7 @@ const STRAY_LATIN = /[A-Za-z]{2,}/g;
  * 지워 "그 요소 안에서만" 예외가 적용되게 좁힌다. */
 const STAMP_SELECTORS = [
   '.attract-screen__stamp',
+  '.intro-screen__stamp',
   '.opinions-screen__stamp',
   '.briefing-screen__stamp',
   '.vote-screen__stamp',
@@ -74,6 +75,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await checkScreen('ATTRACT');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await checkScreen('INTRO');
   await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await checkScreen('SELECT');
 
