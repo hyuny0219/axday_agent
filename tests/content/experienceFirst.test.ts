@@ -269,3 +269,40 @@ describe('쉬운 말(T93)', () => {
     }
   });
 });
+
+// T94(2026-10-08 사용자 지시 "상황·제안·미정 문장도 같은 톤으로"): aiApproval.test.ts와
+// 같은 검사 — 상황 파악·안건 분해·결과 문구의 금지 어휘, 발언형 문구의 문장당 글자 수 상한.
+describe('쉬운 말(T94)', () => {
+  const structuralStatements: string[] = [
+    scenario.subtitle,
+    scenario.motionBreakdown.proposal,
+    ...scenario.motionBreakdown.undecidedItems.map((item) => item.text),
+  ];
+  const conversationalStatements: string[] = [
+    scenario.chairBriefing.situation,
+    scenario.chairBriefing.role,
+    scenario.incident.headline,
+    scenario.incident.hook,
+    ...scenario.remainingTasks.map((item) => item.text),
+    scenario.resultCopy.pass,
+    scenario.resultCopy.reject,
+    scenario.resultCopy.sixMonthsLater.pass,
+    scenario.resultCopy.sixMonthsLater.passOriginal,
+    scenario.resultCopy.sixMonthsLater.reject,
+  ];
+
+  it('구조적 문구(subtitle·motionBreakdown)에 금지 어휘가 없다', () => {
+    for (const text of structuralStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+    }
+  });
+
+  it('상황·결과 문구에 금지 어휘가 없고 문장당 글자 수 상한을 넘지 않는다', () => {
+    for (const text of conversationalStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+      for (const length of sentenceCharLengths(text)) {
+        expect(length, text).toBeLessThanOrEqual(MAX_SENTENCE_CHARS);
+      }
+    }
+  });
+});

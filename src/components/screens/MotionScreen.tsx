@@ -168,9 +168,11 @@ export function MotionScreen({
           </div>
           <div className="motion-screen__chair-box">
             <span className="motion-screen__box-label">의장</span>
+            {/* T94(2026-10-08 사용자 지시): "문안"을 이미 화면 전체가 쓰는 "안건"으로
+                바꿔 쉬운 말 톤을 맞춘다(의미는 그대로). */}
             <p className="motion-screen__chair-text">
-              이 문안을 고정하고 표결로 넘어갑니다. 고정한 뒤에는 조건을 바꿀 수 없습니다. 임원 네
-              명은 같은 문안을 읽고 각자 표를 정합니다.
+              이 안건을 고정하고 표결로 넘어갑니다. 고정한 뒤에는 조건을 바꿀 수 없습니다. 임원 네
+              명은 같은 안건을 보고 각자 표를 정합니다.
             </p>
           </div>
           <div className="motion-screen__cta-row">
