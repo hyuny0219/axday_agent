@@ -449,6 +449,25 @@ export function ReactionsScreen({
     );
   }
 
+  // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
+  // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
+  function handleRecommendCondition(conditionId: string) {
+    if (pendingOptionIndex !== null) {
+      return;
+    }
+    const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
+    const index = scenario.followUp.options.findIndex(
+      (option, idx) =>
+        option.proposeConditionId === conditionId &&
+        !option.keepPrevious &&
+        (option.side ?? 'FOR') === resolvedSide &&
+        !selectedOptionIds.includes(String(idx)),
+    );
+    if (index >= 0) {
+      handleToggleOption(index);
+    }
+  }
+
   function handleSubmit() {
     if (!canSubmit) {
       return;
@@ -775,6 +794,8 @@ export function ReactionsScreen({
             scenario={scenario}
             sessionId={sessionId}
             selectedConditionIds={confirmedConditionIds}
+            participantStance={boardParticipantStance}
+            onRecommendCondition={handleRecommendCondition}
             draftText={textValue}
             draftRevision={draftRevision}
             transcript={transcript}

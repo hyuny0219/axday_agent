@@ -8,9 +8,10 @@
 // 초안을 폐기한다. '의견 한눈에 보기'가 실패하면(5초 초과 등) 실제 발언 카드 목록
 // (transcript.statements)을 그대로 보여준다 — 지어낸 요약으로 대신하지 않는다.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Scenario } from '../../content/types';
-import type { Transcript } from '../../domain/types';
+import type { ParticipantStance, Transcript } from '../../domain/types';
+import { buildConditionRecommendation } from '../conditionRecommendation';
 import type {
   AssistantAdapter,
   CompareConditionsResult,
@@ -26,9 +27,13 @@ import '../../styles/screens/assistant.css';
 type FeatureKey = 'summary' | 'compare' | 'refine';
 type Status = 'idle' | 'loading' | 'done' | 'error';
 
+// T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
+// 고르는 데 큰 도움이 된다고 느끼게"): "조건 비교하기"를 "조건 추천"으로 강화한다 —
+// 내부 feature key(compare)·기존 결과(CompareConditionsResult)는 그대로 두고 라벨과
+// 렌더 내용만 늘린다.
 const FEATURE_LABELS: Record<FeatureKey, string> = {
   summary: '의견 한눈에 보기',
-  compare: '조건 비교하기',
+  compare: '조건 추천',
   refine: '내 발언 정리',
 };
 
@@ -40,8 +45,14 @@ const REFINE_FALLBACK_MESSAGE = '정리하지 못했습니다. 원문으로 계�
 export interface AssistantPanelProps {
   scenario: Scenario;
   sessionId: string;
-  /** 참가자가 지금까지 확정한 조건 ID(조건 비교하기에 씀). */
+  /** 참가자가 지금까지 확정한 조건 ID(조건 추천에 씀). */
   selectedConditionIds: string[];
+  /** 조건 추천의 "반대 입장이면 뒤집어 보여준다" 판단에 쓴다(T96, PersuasionBoard와
+   * 같은 입력). 없으면 'FOR'와 같게 다룬다. */
+  participantStance?: ParticipantStance;
+  /** 추천 조건 행의 "적용"을 눌렀을 때 호출된다(T96). 화면(Discuss·Reactions)이 그
+   * 조건과 연결된 추천 문구를 체크하는 역할을 한다. */
+  onRecommendCondition?: (conditionId: string) => void;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -75,6 +86,8 @@ export function AssistantPanel({
   scenario,
   sessionId,
   selectedConditionIds,
+  participantStance = null,
+  onRecommendCondition,
   draftText,
   draftRevision,
   transcript,
@@ -171,10 +184,15 @@ export function AssistantPanel({
         if (!isStillCurrent(requestId)) return;
         setCompareResult(result);
         setStatus('done');
+        // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 ... 큰 도움이 된다고
+        // 느끼게"): "조건 비교하기"를 "조건 추천"으로 강화하면서, 결과 화면에도 옛
+        // CONDITION_COMPARE 한 줄 대신 "조건 추천 N회"(countConditionRecommendation)로
+        // 보여준다 — 같은 버튼이 두 줄로 중복 기록되지 않게 CONDITION_COMPARE는 더
+        // 남기지 않는다.
         onAssistantAction({
-          type: 'CONDITION_COMPARE',
+          type: 'CONDITION_RECOMMEND_VIEW',
           mode: result.mode,
-          evidenceIds: result.evidenceIds,
+          evidenceIds: [],
         });
       } else {
         const result = await withTimeout(
@@ -200,6 +218,25 @@ export function AssistantPanel({
       if (!isStillCurrent(requestId)) return;
       setStatus('error');
     }
+  }
+
+  // T96 "조건 추천" 본문(규칙 기반, scripted·live 공통·즉시 — adapter 응답과 무관하게
+  // scenario.voteRules·requiredConditionsFor로 바로 계산한다). 아직 찬성이 아닌 임원들을
+  // 움직이는 데 필요한 조건만 골라 "이 조건이 움직이는 임원 · 푸는 걱정"으로 보여준다.
+  const recommendation = useMemo(
+    () => buildConditionRecommendation(scenario, selectedConditionIds, participantStance),
+    [scenario, selectedConditionIds, participantStance],
+  );
+
+  function handleApplyRecommendation(conditionId: string) {
+    onRecommendCondition?.(conditionId);
+    onAssistantAction({
+      type: 'CONDITION_RECOMMEND_APPLY',
+      // "적용" 버튼은 조건 추천 결과(compareResult)가 이미 보이는 동안에만 눌릴 수
+      // 있어 compareResult.mode가 항상 있지만, 방어적으로 scripted를 기본값으로 둔다.
+      mode: compareResult?.mode ?? 'scripted',
+      evidenceIds: [conditionId],
+    });
   }
 
   function handleApplyRefine() {
@@ -311,6 +348,33 @@ export function AssistantPanel({
           )}
           {status === 'done' && activeFeature === 'compare' && compareResult && (
             <div data-testid="assistant-result-compare">
+              {/* T96 조건 추천(규칙 기반, scripted·live 공통): 아직 설득되지 않은
+                  임원을 움직이는 조건과, 그 조건이 푸는 걱정을 먼저 보여준다. */}
+              <h4>조건 추천</h4>
+              <p data-testid="assistant-recommend-opening">{recommendation.openingLine}</p>
+              {recommendation.rows.length > 0 && (
+                <ul data-testid="assistant-recommend-rows">
+                  {recommendation.rows.map((row) => (
+                    <li key={row.conditionId} data-testid={`assistant-recommend-row-${row.conditionId}`}>
+                      <span className="assistant-panel__recommend-label">{row.label}</span>
+                      <span className="assistant-panel__recommend-moves">
+                        움직이는 임원 · {row.movedMemberIds.join('·')}
+                      </span>
+                      {row.worry && (
+                        <span className="assistant-panel__recommend-worry">푸는 걱정 · {row.worry}</span>
+                      )}
+                      <button
+                        type="button"
+                        className="cta cta--secondary"
+                        onClick={() => handleApplyRecommendation(row.conditionId)}
+                        data-testid={`assistant-recommend-apply-${row.conditionId}`}
+                      >
+                        적용
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <h4>원안과의 차이</h4>
               {compareResult.addedConditionIds.length > 0 ? (
                 <ul>
