@@ -72,7 +72,8 @@ export const aiApprovalScenario: Scenario = {
     undecidedItems: [
       { text: '결재 범위와 금액 한도', resolvedBy: 'LIMIT' },
       { text: '잘못 승인했을 때 책임', resolvedBy: 'OWNER' },
-      { text: '사람이 다시 보는 절차', resolvedBy: 'REVIEW' },
+      // 표본 재검토(REVIEW)로도, 검토 전면 생략(FULL_AUTO — 절차 '없음'으로 결정)으로도 해소.
+      { text: '사람이 다시 보는 절차', resolvedBy: ['REVIEW', 'FULL_AUTO'] },
     ],
   },
   initialOpinions: [

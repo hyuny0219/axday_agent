@@ -69,7 +69,8 @@ export const experienceFirstScenario: Scenario = {
     // resolvedBy(T84): aiApproval.ts 주석과 같은 규칙.
     undecidedItems: [
       { text: '"중요한 의사결정"의 기준', resolvedBy: 'SCOPE' },
-      { text: '경험을 우선할 때 데이터는 어떻게 쓰나', resolvedBy: 'DATA_VETO' },
+      // 데이터 경고 시 멈춤(DATA_VETO)으로도, 경험 절대 우선(EXP_ONLY — 데이터를 따르지 않기로)으로도 해소.
+      { text: '경험을 우선할 때 데이터는 어떻게 쓰나', resolvedBy: ['DATA_VETO', 'EXP_ONLY'] },
       { text: '판단이 틀렸을 때 되짚는 방법', resolvedBy: 'REVIEW' },
     ],
   },

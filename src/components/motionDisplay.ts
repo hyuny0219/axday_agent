@@ -23,7 +23,11 @@ function filterUnresolved(
   confirmedConditionIds: readonly string[],
 ): string[] {
   return items
-    .filter((item) => !item.resolvedBy || !confirmedConditionIds.includes(item.resolvedBy))
+    .filter((item) => {
+      if (!item.resolvedBy) return true;
+      const resolvers = typeof item.resolvedBy === 'string' ? [item.resolvedBy] : item.resolvedBy;
+      return !resolvers.some((id) => confirmedConditionIds.includes(id));
+    })
     .map((item) => item.text);
 }
 

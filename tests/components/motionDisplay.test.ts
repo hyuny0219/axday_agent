@@ -6,7 +6,9 @@ import { buildMotionDisplay, buildRemainingTaskLabels } from '../../src/componen
 
 const scenario = aiApprovalScenario;
 const allTasks = scenario.remainingTasks.map((item) => item.text);
-const resolvedByLimit = scenario.remainingTasks.filter((item) => item.resolvedBy === 'LIMIT');
+const resolves = (item: { resolvedBy?: string | readonly string[] }, id: string) =>
+  typeof item.resolvedBy === 'string' ? item.resolvedBy === id : (item.resolvedBy ?? []).includes(id);
+const resolvedByLimit = scenario.remainingTasks.filter((item) => resolves(item, 'LIMIT'));
 
 describe('buildMotionDisplay', () => {
   it('조건이 없으면 제안 문장 그대로, 미정 항목 전체를 보여준다', () => {
@@ -21,12 +23,21 @@ describe('buildMotionDisplay', () => {
     const display = buildMotionDisplay(scenario, ['LIMIT']);
     expect(display.sentence).toBe(`${scenario.motionBreakdown.proposal} 단, 아래 조건을 붙입니다.`);
     const resolved = scenario.motionBreakdown.undecidedItems
-      .filter((item) => item.resolvedBy === 'LIMIT')
+      .filter((item) => resolves(item, 'LIMIT'))
       .map((item) => item.text);
     expect(resolved.length).toBeGreaterThan(0);
     for (const text of resolved) {
       expect(display.undecidedLabels).not.toContain(text);
     }
+  });
+
+  // PR #20 Codex 5차 검토 P2: 상반된 조건(REVIEW / FULL_AUTO)이 같은 미정 항목을 해소한다.
+  it('"사람이 다시 보는 절차"는 REVIEW로도 FULL_AUTO로도 미정에서 빠진다', () => {
+    const text = '사람이 다시 보는 절차';
+    expect(buildMotionDisplay(scenario, []).undecidedLabels).toContain(text);
+    expect(buildMotionDisplay(scenario, ['REVIEW']).undecidedLabels).not.toContain(text);
+    expect(buildMotionDisplay(scenario, ['FULL_AUTO']).undecidedLabels).not.toContain(text);
+    expect(buildMotionDisplay(scenario, ['LIMIT']).undecidedLabels).toContain(text);
   });
 });
 

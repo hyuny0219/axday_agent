@@ -46,7 +46,10 @@ export interface ChairBriefing {
  * remainingTasks 문자열에 대응 조건 id만 더한 것이다. */
 export interface UndecidedItem {
   text: string;
-  resolvedBy?: string;
+  /** 하나 또는 여럿 — 상반된 방향의 조건이 같은 미정 항목을 해소할 수 있다(예: "사람이 다시
+   * 보는 절차"는 REVIEW(표본 재검토)로도, FULL_AUTO(검토 전면 생략 = 절차 없음)로도
+   * 결정된다, PR #20 Codex 5차 검토 P2). */
+  resolvedBy?: string | readonly string[];
 }
 
 /** 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 표시용 필드(T52, 브리핑 오른쪽
