@@ -185,6 +185,10 @@ test.describe('1920×1080에서 무대 열', () => {
     await expect(submitOpinion).toBeInViewport();
     await submitOpinion.click();
 
+    // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+    await expect(page.getByTestId('reactions-advance')).toBeInViewport();
+    await expectNoPageScroll(page);
+    await page.getByTestId('reactions-advance').click();
     await expect(page.getByTestId('assistant-toggle')).toBeInViewport();
     await expect(page.getByTestId('submit-followup')).toBeInViewport();
     await expectNoPageScroll(page);

@@ -108,6 +108,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
 
+    // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+    await page.getByTestId('reactions-advance').click();
     // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션, 6번 인덱스).
     await page.getByTestId('followup-option-6').click();
     await page.getByTestId('submit-followup').click();

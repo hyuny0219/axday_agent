@@ -30,7 +30,9 @@ const STAMP_SELECTORS = [
   '.motion-screen__stamp',
   '.scenario-card__stamp',
   '.stage-band__classified',
-  '.evidence-dialog__stamp',
+  // T89: EvidenceDialog·AssistantPanel 둘 다 공용 DialogShell의 도장을 쓴다
+  // (옛 .evidence-dialog__stamp에서 이름이 바뀌었다).
+  '.dialog-shell__stamp',
 ];
 
 /** 운영자 전용 메뉴·헤더 세션 코드·붉은 도장을 DOM에서 지운 뒤 보이는 텍스트만

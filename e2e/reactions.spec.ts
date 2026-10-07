@@ -112,6 +112,8 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
   // P1 = SCOPE만 확정한 채 첫 의견을 전달한다(DATA_VETO는 아직 없다).
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 
   await page
     .getByTestId('followup-textarea')
