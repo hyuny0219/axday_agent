@@ -359,26 +359,28 @@ export function ReactionsScreen({
     textValue.length <= DRAFT_MAX_LENGTH &&
     conflictPairs.length === 0;
 
-  function handleToggleOption(index: number) {
+  /** true면 즉시 적용됨, false면 막혔거나(RebuildConfirm 등) 적용되지 않음(Codex 27차
+   * 검토 P2-3 — handleRecommendCondition이 이 값으로 "실제로 반영됐는지"를 가른다). */
+  function handleToggleOption(index: number): boolean {
     // PR #12 Codex 5차 검토 P2: RebuildConfirm이 뜬 동안(pendingOptionIndex !== null)은
     // 아직 "직접 쓴 내용 유지/다시 구성"을 고르지 않았으므로 추천 답변 카드를 모두
     // 잠근다 — 특히 "앞서 전달한 의견을 유지하겠습니다"(keepPrevious)는 onKeepPrevious로
     // 즉시 다음 단계로 넘어가므로, 이 가드가 없으면 확인을 건너뛰고 직접 쓴 답변을
     // 그대로 버리게 된다. PhraseCard에도 disabled를 넘겨 시각적으로도 잠근다(이중 방어).
     if (pendingOptionIndex !== null) {
-      return;
+      return false;
     }
     const option = scenario.followUp.options[index];
     if (!option || option.keepPrevious) {
       // keepPrevious 옵션은 더 이상 체크 카드로 그리지 않는다(T84 #1 참고) — 여기
       // 걸릴 일은 없지만, 혹시 인덱스가 섞여도 조합을 깨지 않도록 조용히 막는다.
-      return;
+      return false;
     }
     // P1-b: 직접 고친 내용이 있으면(dirty) 조용히 덮어쓰지 않고 DISCUSS와 같은 확인
     // UI를 먼저 띄운다.
     if (dirty) {
       setPendingOptionIndex(index);
-      return;
+      return false;
     }
     const idStr = String(index);
     setSelectedOptionIds((previous) => {
@@ -389,6 +391,7 @@ export function ReactionsScreen({
       return next;
     });
     setDraftRevision((value) => value + 1);
+    return true;
   }
 
   /** RebuildConfirm '직접 쓴 내용 유지': 체크 상태만 바꾸고 textValue는 그대로 둔다
@@ -451,9 +454,9 @@ export function ReactionsScreen({
 
   // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
   // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
-  function handleRecommendCondition(conditionId: string) {
+  function handleRecommendCondition(conditionId: string): boolean {
     if (pendingOptionIndex !== null) {
-      return;
+      return false;
     }
     const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
     const index = scenario.followUp.options.findIndex(
@@ -463,9 +466,12 @@ export function ReactionsScreen({
         (option.side ?? 'FOR') === resolvedSide &&
         !selectedOptionIds.includes(String(idx)),
     );
-    if (index >= 0) {
-      handleToggleOption(index);
+    if (index < 0) {
+      // 예: REACTIONS 찬성 경로에 REVIEW 쪽 추천 답변이 없는 안건(Codex 27차 검토
+      // P2-3) — 매칭되는 문구가 없으면 아무것도 체크되지 않았으므로 false.
+      return false;
     }
+    return handleToggleOption(index);
   }
 
   function handleSubmit() {
@@ -795,6 +801,8 @@ export function ReactionsScreen({
             sessionId={sessionId}
             selectedConditionIds={confirmedConditionIds}
             participantStance={boardParticipantStance}
+            mode={mode}
+            stances={stances}
             onRecommendCondition={handleRecommendCondition}
             draftText={textValue}
             draftRevision={draftRevision}

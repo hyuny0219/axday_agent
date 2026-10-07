@@ -8,7 +8,7 @@ import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
 import { decideBoard } from '../../src/domain/voting';
 import {
-  countVotesChangedFromOpening,
+  countVotesChangedByFinalConditions,
   nextTrySuggestionLabel,
   oneStepAwayNote,
 } from '../../src/components/persuasionSummary';
@@ -56,19 +56,23 @@ function buildSession(conditionIds: string[]): Session {
   };
 }
 
-describe('countVotesChangedFromOpening(T96)', () => {
-  it('LOG+OWNER 확정: CAIO(미정→찬성)·CISO(반대→찬성) 2명이 첫 의견과 다르다', () => {
+describe('countVotesChangedByFinalConditions(T96, Codex 27차 검토 P2-2)', () => {
+  it('LOG+OWNER 확정: 같은 최종안에서 조건만 뺀 baseline과 비교해 CAIO·CISO 2명의 표가 실제로 다르다', () => {
     const session = buildSession(['LOG', 'OWNER']);
-    expect(countVotesChangedFromOpening(scenario, session)).toBe(2);
+    expect(countVotesChangedByFinalConditions(scenario, session)).toBe(2);
   });
 
-  it('조건 없음: CEO·CFO·CISO는 첫 의견과 같고, CAIO만 "미정"에서 반대로 정해져 1명 바뀐다', () => {
-    // CAIO의 첫 의견은 openingStance가 'UNDECIDED'(미정)다 — voteRules의 always 분기(NO)로
-    // 정해지는 순간 "미정 → 반대"로 분명한 입장이 된 것이라 바뀜으로 센다(src/content/
-    // scenarios/aiApproval.ts initialOpinions 주석 — 미정은 voteRules의 always 분기와 다른
-    // 개념이다).
+  it('조건 없음: baseline(조건 없음)과 실제 안건(조건 없음)이 같으므로 0명이다', () => {
+    // CAIO의 첫 의견은 'UNDECIDED'(미정)였다가 조건 없이도 voteRules의 always 분기로
+    // NO가 되지만, 이건 "조건이 바꾼 표"가 아니다(baseline도 똑같이 NO). 옛 구현은
+    // "첫 의견 stance"와 비교해 이 경우를 1명으로 잘못 셌다(Codex 27차 검토 P2-2).
     const session = buildSession([]);
-    expect(countVotesChangedFromOpening(scenario, session)).toBe(1);
+    expect(countVotesChangedByFinalConditions(scenario, session)).toBe(0);
+  });
+
+  it('live는 scripted 규칙표로 "조건 없었다면"을 가정할 수 없어 항상 0이다', () => {
+    const session = { ...buildSession(['LOG', 'OWNER']), mode: 'live' as const };
+    expect(countVotesChangedByFinalConditions(scenario, session)).toBe(0);
   });
 });
 

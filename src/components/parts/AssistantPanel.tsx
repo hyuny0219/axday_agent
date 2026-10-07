@@ -9,8 +9,8 @@
 // (transcript.statements)을 그대로 보여준다 — 지어낸 요약으로 대신하지 않는다.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Scenario } from '../../content/types';
-import type { ParticipantStance, Transcript } from '../../domain/types';
+import type { ExecMemberId, Scenario } from '../../content/types';
+import type { ParticipantStance, SessionMode, Stance, Transcript } from '../../domain/types';
 import { buildConditionRecommendation } from '../conditionRecommendation';
 import type {
   AssistantAdapter,
@@ -50,9 +50,20 @@ export interface AssistantPanelProps {
   /** 조건 추천의 "반대 입장이면 뒤집어 보여준다" 판단에 쓴다(T96, PersuasionBoard와
    * 같은 입력). 없으면 'FOR'와 같게 다룬다. */
   participantStance?: ParticipantStance;
+  /** live/scripted(T96 Codex 27차 검토 P2-4) — "아직 찬성이 아닌 임원"을 scripted
+   * 규칙표가 아니라 실제 표정(stances)으로 가르는 데 쓴다. PersuasionBoard와 같은 입력. */
+  mode: SessionMode;
+  /** 무대 표정과 같은 기준의 "지금" 입장(PersuasionBoard와 같은 입력). */
+  stances: Record<ExecMemberId, Stance>;
+  /** live 전용 참고 자료 — 임원별 가장 최근 발언에 실린 제안 조건(있으면,
+   * PersuasionBoard와 같은 입력). 아직 화면이 넘기지 않으면 규칙표 값을 "참고"로
+   * 대신 쓴다. */
+  liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>;
   /** 추천 조건 행의 "적용"을 눌렀을 때 호출된다(T96). 화면(Discuss·Reactions)이 그
-   * 조건과 연결된 추천 문구를 체크하는 역할을 한다. */
-  onRecommendCondition?: (conditionId: string) => void;
+   * 조건과 연결된 추천 문구를 실제로 체크했으면 true(또는 그 결과의 Promise)를
+   * 돌려준다 — 매칭되는 문구가 없거나 확인 대기(RebuildConfirm)만 열렸으면 false다
+   * (Codex 27차 검토 P2-3, 실제로 반영됐을 때만 "추천 조건 N개 반영"을 기록한다). */
+  onRecommendCondition?: (conditionId: string) => boolean | Promise<boolean>;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -87,6 +98,9 @@ export function AssistantPanel({
   sessionId,
   selectedConditionIds,
   participantStance = null,
+  mode,
+  stances,
+  liveSuggestedConditionIds,
   onRecommendCondition,
   draftText,
   draftRevision,
@@ -224,12 +238,27 @@ export function AssistantPanel({
   // scenario.voteRules·requiredConditionsFor로 바로 계산한다). 아직 찬성이 아닌 임원들을
   // 움직이는 데 필요한 조건만 골라 "이 조건이 움직이는 임원 · 푸는 걱정"으로 보여준다.
   const recommendation = useMemo(
-    () => buildConditionRecommendation(scenario, selectedConditionIds, participantStance),
-    [scenario, selectedConditionIds, participantStance],
+    () =>
+      buildConditionRecommendation(
+        scenario,
+        selectedConditionIds,
+        participantStance,
+        mode,
+        stances,
+        liveSuggestedConditionIds,
+      ),
+    [scenario, selectedConditionIds, participantStance, mode, stances, liveSuggestedConditionIds],
   );
 
-  function handleApplyRecommendation(conditionId: string) {
-    onRecommendCondition?.(conditionId);
+  // Codex 27차 검토 P2-3: "적용"을 눌러도 매칭되는 추천 문구가 없거나(예: REACTIONS
+  // 찬성 경로에 REVIEW 쪽 옵션이 없는 경우) 직접 쓴 내용이 있어 RebuildConfirm만 뜨고
+  // 아직 반영되지 않았으면, 실제로 체크되지 않았으므로 사용 기록을 남기지 않는다.
+  // onRecommendCondition이 "실제로 반영됐는지"를 true/false(또는 그 Promise)로 돌려준다.
+  async function handleApplyRecommendation(conditionId: string) {
+    const applied = await onRecommendCondition?.(conditionId);
+    if (!applied) {
+      return;
+    }
     onAssistantAction({
       type: 'CONDITION_RECOMMEND_APPLY',
       // "적용" 버튼은 조건 추천 결과(compareResult)가 이미 보이는 동안에만 눌릴 수
@@ -237,6 +266,14 @@ export function AssistantPanel({
       mode: compareResult?.mode ?? 'scripted',
       evidenceIds: [conditionId],
     });
+  }
+
+  /** 복합 조합 묶음("○○ + △△ 모두 있어야 움직임")의 "적용" — 조합 안의 조건을
+   * 하나씩 같은 규칙으로 적용한다. */
+  async function handleApplyBundle(conditionIds: readonly string[]) {
+    for (const conditionId of conditionIds) {
+      await handleApplyRecommendation(conditionId);
+    }
   }
 
   function handleApplyRefine() {
@@ -351,7 +388,10 @@ export function AssistantPanel({
               {/* T96 조건 추천(규칙 기반, scripted·live 공통): 아직 설득되지 않은
                   임원을 움직이는 조건과, 그 조건이 푸는 걱정을 먼저 보여준다. */}
               <h4>조건 추천</h4>
-              <p data-testid="assistant-recommend-opening">{recommendation.openingLine}</p>
+              <p data-testid="assistant-recommend-opening">
+                {recommendation.openingLine}
+                {recommendation.usedRuleFallback && ' (참고)'}
+              </p>
               {recommendation.rows.length > 0 && (
                 <ul data-testid="assistant-recommend-rows">
                   {recommendation.rows.map((row) => (
@@ -373,6 +413,34 @@ export function AssistantPanel({
                       </button>
                     </li>
                   ))}
+                </ul>
+              )}
+              {/* Codex 27차 검토 P2-1: 조건 2개 이상을 모두 확정해야 YES가 되는 임원은
+                  단일 조건 행 대신 묶음으로 보여준다 — "LIMIT 하나만 있으면 CFO가
+                  움직인다"는 거짓 정보를 막는다. */}
+              {recommendation.bundles.length > 0 && (
+                <ul data-testid="assistant-recommend-bundles">
+                  {recommendation.bundles.map((bundle) => {
+                    const bundleKey = bundle.conditionIds.join('+');
+                    return (
+                      <li key={bundleKey} data-testid={`assistant-recommend-bundle-${bundleKey}`}>
+                        <span className="assistant-panel__recommend-label">
+                          {bundle.labels.join(' + ')} 모두 있어야 움직임
+                        </span>
+                        <span className="assistant-panel__recommend-moves">
+                          움직이는 임원 · {bundle.movedMemberIds.join('·')}
+                        </span>
+                        <button
+                          type="button"
+                          className="cta cta--secondary"
+                          onClick={() => handleApplyBundle(bundle.conditionIds)}
+                          data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
+                        >
+                          모두 적용
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               <h4>원안과의 차이</h4>

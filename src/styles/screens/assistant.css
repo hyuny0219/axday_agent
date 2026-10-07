@@ -77,7 +77,8 @@
 
 /* "조건 추천" 행(T96) — 조건 라벨 + 움직이는 임원 + 푸는 걱정 + 적용 버튼을 한 줄
    묶음으로. */
-[data-testid='assistant-recommend-rows'] {
+[data-testid='assistant-recommend-rows'],
+[data-testid='assistant-recommend-bundles'] {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -86,7 +87,8 @@
   gap: var(--space-1);
 }
 
-[data-testid^='assistant-recommend-row-'] {
+[data-testid^='assistant-recommend-row-'],
+[data-testid^='assistant-recommend-bundle-'] {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
