@@ -640,6 +640,29 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 영향받은 파일: `src/app/App.tsx`(SessionContextValue·SessionProvider·AppShell·StageRouter), `src/components/screens/ReactionsScreen.tsx`(두 서브스텝 분기), `src/components/parts/DialogShell.tsx`(신규)·`src/components/parts/EvidenceDialog.tsx`·`src/components/parts/AssistantPanel.tsx`, `src/styles/screens/dialogShell.css`(신규)·`evidenceDialog.css`(본문만 남김)·`assistant.css`(드로어 규칙 삭제)·`reactions.css`(`.reaction-card__text--full`). 영향받은 테스트: `tests/components/DiscussScreen.test.tsx`(비서실장 팝업 닫기를 `assistant-close`로), `tests/components/ReactionsScreen.test.tsx`(`step`·`onAdvanceStep` prop 추가, 반응 카드 배지 테스트는 `step="listen"`). e2e는 REACTIONS를 지나는 거의 모든 spec에 `reactions-advance` 클릭 한 줄을 추가했다(`reactions.spec.ts`의 두 헬퍼, `stage.spec.ts`의 `enterReactions`, `minutes.spec.ts`·`retry.spec.ts`·`viewport-fit.spec.ts`·`no-stray-english.spec.ts`·`flow-full.spec.ts`의 개별 테스트) — "답하지 않고 넘어가기"만 쓰는 spec(대부분의 완주 경로)은 그 버튼이 "반응 듣기"에도 그대로 있어 무수정 통과했다. 비서실장 드로어 관련 e2e(`reactions.spec.ts`·`viewport-fit.spec.ts`·`noscroll.spec.ts`)는 "AI 비서실장 숨기기" 역할 이름 클릭을 `assistant-close` testid 클릭으로 바꿨다. `screenshots.spec.ts`는 `reactions.png`(반응 듣기)에 더해 `reactions-answer.png`(다시 답하기)를 새로 캡처한다.
 
+## T95 — 소개 화면(INTRO)과 화면별 진행 가이드·게이팅 (2026-10-08)
+
+**사용자 지시**: "참석자가 진행할 때 어떤 걸 먼저 보고 진행해야 하는지 가이드/하이라이트, 또는 필수로 보고 넘어가도록 버튼 활성/비활성을 넣어 자연스럽고 매끄럽게. 첫 페이지 다음, 안건 선택 전에 게임의 목적과 어떻게 해야 성공하는지 소개 한 장. 안건 선택 후에는 앞과 중복되는 내용을 제거하고 상황 파악에 집중."
+
+**소개 화면(INTRO)**: `SessionStage`에 `'INTRO'`를 ATTRACT와 SELECT 사이에 추가한다(`session.ts`: START는 ATTRACT→INTRO, NEXT_STAGE는 INTRO→SELECT). 서버 요청의 `stage`(`StatementStage` — OPINIONS/REACTIONS/FOLLOWUP)와는 이름만 같을 수 있는 전혀 다른 타입이라 서버 쪽에는 영향이 없다. `IntroScreen`(신규)은 아직 `scenario`가 없어 조종석 배치(StageBand)를 쓸 수 없으므로 SelectScreen의 배경 장식(`select-screen__stage` 등)을 그대로 재사용하고, 가운데 종이 한 장(`intro-screen__paper`)에 2열(목적·성공 기준 / 진행 5단계·팁)로 본문을 담아 1280×720에서도 스크롤 없이 다 보이게 했다. 문구는 모두 T93 쉬운 말 규칙을 따른다(금지 어휘 0건). 헤더 진행 스트립(`ProgressStrip`)은 `STAGE_TO_STEP`에 INTRO가 없어 ATTRACT·SELECT와 똑같이 빈 채로 남는다(수정 불필요). 운영 메뉴 "새 체험"·결과 화면 "처음 화면으로"는 `OPERATOR_RESET`으로 `createInitialSession`이 만드는 ATTRACT로 돌아가므로, 참가자가 다시 "체험 시작"을 누르면 자연히 INTRO를 다시 거친다.
+
+**BRIEFING 중복 제거**: "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자(옛 `briefing-screen__role`·`__role-text`·`__final-decision`·`__final-yes`/`__final-no`, testid `briefing-role`)를 뺐다 — 같은 내용(목적·성공 기준)을 INTRO가 이미 보여주므로 BRIEFING은 사건 머리줄 + 결정 질문 + 상황·제안·미정 + 근거 자료 버튼만 남겨 "상황 파악"에 집중한다. 빈 세로 공간은 `.briefing-screen__status`(상황·제안·미정 상자)의 글자 크기·여백을 한 단계 키워(17.5→20px/14→16px) 채웠다 — 레이아웃 구조·클래스 이름은 그대로다. `e2e/briefing.spec.ts`·`screenshots.spec.ts`의 `briefing-role` 단언은 "더 이상 없다"(`toHaveCount(0)`)로 바꿨다.
+
+**공용 `GuideHint`**(`src/components/parts/GuideHint.tsx`): 오른쪽 종이 패널 상단에 한 줄 안내를 보여주는 아주 작은 컴포넌트. 다음 행동 요소에는 `data-guide="next"`를 붙여 `shell.css`의 전역 규칙(`[data-guide='next']`, 앰버 테두리 `guide-pulse` 1.6s 맥동)으로 강조한다 — `prefers-reduced-motion`이면 애니메이션 없이 정적 테두리만 남는다(미디어 쿼리 자체가 처리하므로 컴포넌트 쪽에서 분기할 필요가 없다).
+
+**화면별 가이드·게이팅**:
+
+| 화면 | 가이드 문구 | 게이팅 |
+| --- | --- | --- |
+| BRIEFING | "먼저 근거 자료 4장을 열어 보세요"(자료 버튼에 하이라이트) | 자료 팝업을 한 번 열어 닫기 전까지 "의견 듣기 ▶" 비활성(`.cta-disabled-hint`로 "근거 자료를 먼저 확인해 주세요"). 닫으면(닫기 버튼·Esc·딤 클릭 모두) CTA로 하이라이트 이동 |
+| OPINIONS | "임원 네 명의 의견을 읽어 보세요" | scripted는 카드 4장이 0.8초 간격으로 차례로 나타나고(`reduced-motion`이면 즉시) 다 나올 때까지 CTA 비활성. live는 기존 `allExecsSettled` 잠금 그대로 |
+| DISCUSS·REACTIONS(다시 답하기) | 미선택 "먼저 입장을 골라 주세요"(기존 문구) → 선택 뒤 "문구를 고르거나 직접 써 주세요" → 텍스트 생기면 전달 버튼 하이라이트 | 기존 CTA 비활성 규칙(`isSubmittable`/`canSubmit`) 그대로, 추가 게이팅 없음 — 하이라이트만 이동 |
+| REACTIONS(반응 듣기) | "임원들의 반응을 읽고 답해 보세요" | 반응이 다 모이면(scripted는 즉시, live는 `listenLocked` 해제 시) "답하기 ▶" 하이라이트 |
+| MOTION | "표결할 문장을 확인하세요" → 2초 뒤 CTA로 전환 | 게이팅 없음(시간 기반 하이라이트 전환뿐) |
+| VOTE | "찬성 또는 반대 도장을 고르세요" → 선택 뒤 CTA 하이라이트 | 기존 비활성 규칙 그대로 |
+| RESULT | "회의록 전문도 볼 수 있습니다"(처음 한 번만) | 게이팅 없음, 누르면 다시 보여주지 않음 |
+
+가이드 문구는 `docs/FACILITATOR_GUIDE.md`의 요원 안내 문구와 맞춘다. 영향받은 파일: `src/domain/types.ts`·`session.ts`·`publicPayload.ts`(STAGE_ORDER), `src/components/screens/{IntroScreen(신규),BriefingScreen,OpinionsScreen,DiscussScreen,ReactionsScreen,MotionScreen,VoteScreen,ResultScreen}.tsx`, `src/components/parts/GuideHint.tsx`(신규), `src/styles/screens/{intro.css(신규),shell.css}`. 영향받은 테스트: `tests/domain/session.test.ts`·`publicPayload.test.ts`·`liveMode.test.ts`·`tests/components/minutes.test.ts`·`tests/services/{orchestrator,live}.test.ts`(START 뒤 NEXT_STAGE로 INTRO를 지나가게 헬퍼 수정), `tests/components/{IntroScreen,GuideHint,OpinionsScreen,BriefingScreen}.test.tsx`(신규/수정). e2e는 전체 spec에 ATTRACT→INTRO 전환 클릭(공용 패턴)과 BRIEFING 자료 팝업 열고 닫는 단계를 추가했고, `screenshots.spec.ts`에 `intro.png`를 새로 캡처한다.
 ## T94 — 안건 상황·제안·결과 문구 쉬운 말 (2026-10-08)
 
 T93(임원 발언)에 이어 **사용자 지시** "상황·제안·미정 문장도 같은 톤으로". 두 안건(ai-approval·experience-first)의 `chairBriefing.situation`·`incident.headline`·`incident.hook`을 중학생이 한 번에 읽을 짧은 문장으로 다시 썼다(의미·판단 방향은 그대로, hook은 숫자를 하나만 남겼다). `MotionScreen.tsx` 의장 말풍선의 "문안"(화면 다른 곳은 전부 "안건")을 "안건"으로 바꿨다. `subtitle`·`motionBreakdown`(proposal·undecidedItems)·`chairBriefing.question`·`role`은 손대지 않았다 — `subtitle`은 "원안을 그대로 쪼갠" 구조적 문구이고 `chairBriefing.question`과 단어 선택이 묶여 있어, question을 그대로 두면서 subtitle만 바꾸면 한 화면 안에서 같은 개념("중요한 의사결정" 등)을 다른 말로 부르게 된다. `remainingTasks`·`resultCopy`는 이미 금지 어휘 없고 문장이 짧아 검사만 추가하고 손대지 않았다.

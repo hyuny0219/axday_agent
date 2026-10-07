@@ -24,6 +24,7 @@ const STRAY_LATIN = /[A-Za-z]{2,}/g;
  * 지워 "그 요소 안에서만" 예외가 적용되게 좁힌다. */
 const STAMP_SELECTORS = [
   '.attract-screen__stamp',
+  '.intro-screen__stamp',
   '.opinions-screen__stamp',
   '.briefing-screen__stamp',
   '.vote-screen__stamp',
@@ -74,6 +75,8 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await checkScreen('ATTRACT');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await checkScreen('INTRO');
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await checkScreen('SELECT');
 
   // T84 #10: 카드 클릭으로 바로 입장한다("이사회 입장" 버튼은 없앴다).
@@ -86,6 +89,8 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await checkScreen('BRIEFING(근거 자료 팝업)');
   await page.getByTestId('evidence-dialog-close').click();
 
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await checkScreen('OPINIONS');
 
@@ -145,7 +150,10 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   }
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();

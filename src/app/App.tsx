@@ -53,6 +53,7 @@ import type { RoundLogEntry } from '../components/minutes';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../components/opinionConditions';
 import { chairMotionLine } from '../components/chairMotionLine';
 import { AttractScreen } from '../components/screens/AttractScreen';
+import { IntroScreen } from '../components/screens/IntroScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
 import { OpinionsScreen } from '../components/screens/OpinionsScreen';
@@ -396,6 +397,9 @@ function StageRouter() {
           startDisabled={modeCheckPending}
         />
       );
+
+    case 'INTRO':
+      return <IntroScreen onNext={() => dispatch({ type: 'NEXT_STAGE' })} />;
 
     case 'SELECT':
       return (

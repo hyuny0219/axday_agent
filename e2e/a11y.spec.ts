@@ -11,13 +11,26 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.getByRole('button', { name: '체험 시작' }).focus();
   await page.keyboard.press('Enter');
 
+  // INTRO(T95): 소개 한 장 — CTA에 포커스를 옮겨 Enter로 넘어간다.
+  await page.getByRole('button', { name: '안건 고르러 가기' }).focus();
+  await page.keyboard.press('Enter');
+
   // SELECT: 카드 자체가 버튼이라(T84 #10) 포커스+Enter만으로 바로 입장한다 —
   // 별도 입장 CTA가 없다.
   await page.getByTestId('scenario-card-ai-approval').focus();
   await page.keyboard.press('Enter');
 
-  // BRIEFING
-  await page.getByRole('button', { name: '의견 듣기' }).focus();
+  // BRIEFING: 근거 자료를 한 번 열어 닫기 전에는 "의견 듣기 ▶"가 잠겨 있다(T95).
+  await page.getByTestId('open-evidence').focus();
+  await page.keyboard.press('Enter');
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
+
+  const hearOpinions = page.getByRole('button', { name: '의견 듣기' });
+  await expect(hearOpinions).toBeEnabled();
+  await hearOpinions.focus();
   await page.keyboard.press('Enter');
 
   // OPINIONS
@@ -69,6 +82,7 @@ test('prefers-reduced-motion에서는 화면 전환에 애니메이션이 남지
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
 
   const selectScreen = page.locator('.screen.select-screen');
   await expect(selectScreen).toBeVisible();
@@ -88,7 +102,10 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.setViewportSize({ width: 960, height: 540 });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();

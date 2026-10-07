@@ -41,6 +41,36 @@ describe('BriefingScreen', () => {
     }
   });
 
+  // T95(2026-10-08 사용자 — "필수로 보고 넘어가도록 버튼 활성/비활성"): 자료 팝업을
+  // 한 번 열어 닫기 전까지 "의견 듣기 ▶"는 눌러도 onNext가 불리지 않는다.
+  it('근거 자료를 열어 닫기 전에는 "의견 듣기"가 비활성이고, onNext를 부르지 않는다', () => {
+    const onNext = vi.fn();
+    render(<BriefingScreen scenario={anonBoardScenario} onNext={onNext} />);
+    const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
+    expect(nextButton).toBeDisabled();
+    expect(screen.getByTestId('briefing-guide-hint')).toBeInTheDocument();
+    expect(screen.getByTestId('briefing-cta-hint')).toBeInTheDocument();
+    expect(screen.getByTestId('open-evidence')).toHaveAttribute('data-guide', 'next');
+
+    fireEvent.click(nextButton);
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it('근거 자료를 한 번 열어 닫으면 "의견 듣기"가 활성화되고 하이라이트가 CTA로 옮긴다', () => {
+    const onNext = vi.fn();
+    render(<BriefingScreen scenario={anonBoardScenario} onNext={onNext} />);
+    fireEvent.click(screen.getByTestId('open-evidence'));
+    fireEvent.click(screen.getByTestId('evidence-dialog-close'));
+
+    const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
+    expect(nextButton).toBeEnabled();
+    expect(nextButton).toHaveAttribute('data-guide', 'next');
+    expect(screen.queryByTestId('briefing-guide-hint')).not.toBeInTheDocument();
+
+    fireEvent.click(nextButton);
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
   // T81(2026-10-07): 시안의 마지막 UNKNOWN 항목 먹칠을 제거했다 — 모든 미정 항목이
   // 가려지지 않은 평문으로 보이고, 먹칠용 클래스·aria-label은 남지 않는다.
   it('UNKNOWN 항목은 전부 평문으로 보이고 먹칠 요소가 없다', () => {

@@ -10,6 +10,7 @@ const T0 = 1_700_000_000_000;
 function sessionAtReactions(now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   // BRIEFING은 기록을 남기지 않는다 — 자동 정리 카드는 T52에서 제거됐고, 그 표시 기록
   // MARK_SUMMARY_SHOWN도 PR #10 Codex 27차 검토(P2)에서 없앴다.
@@ -225,8 +226,22 @@ describe('단계 밖 액션 무시', () => {
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 
+  it('INTRO에서 NEXT_STAGE는 SELECT로, SELECT_SCENARIO는 무시된다', () => {
+    const intro = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    expect(intro.stage).toBe('INTRO');
+    const ignored = reduce(intro, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
+    expect(ignored.stage).toBe('INTRO');
+    expect(ignored.warnings.length).toBeGreaterThan(0);
+    const select = reduce(intro, { type: 'NEXT_STAGE' }, T0);
+    expect(select.stage).toBe('SELECT');
+  });
+
   it('SELECT 단계에서 SUBMIT_OPINION은 무시된다', () => {
-    const session = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    const session = reduce(
+      reduce(createInitialSession(T0), { type: 'START' }, T0),
+      { type: 'NEXT_STAGE' },
+      T0,
+    );
     const result = reduce(
       session,
       { type: 'SUBMIT_OPINION', originalText: '아직 이르다', selectedPhraseIds: [], confirmedConditionIds: [] },
@@ -253,6 +268,7 @@ describe('단계 밖 액션 무시', () => {
 
   it('RECORD_ASSISTANT_ACTION은 mode·evidenceIds·applied·requestedAt(now)을 그대로 기록한다', () => {
     let session = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // INTRO -> SELECT
     session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // BRIEFING -> OPINIONS
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // OPINIONS -> DISCUSS
@@ -293,6 +309,7 @@ describe('참가자 입장(stance, T92)', () => {
   it('stance를 실으면 그대로 저장되고, 생략하면 null로 저장된다', () => {
     let session = createInitialSession(T0);
     session = reduce(session, { type: 'START' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // INTRO -> SELECT
     session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);

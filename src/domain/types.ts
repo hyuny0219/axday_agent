@@ -104,6 +104,10 @@ export interface Opinion {
 
 export type SessionStage =
   | 'ATTRACT'
+  /** 체험 시작과 안건 선택 사이의 소개 한 장(T95) — 목적·진행 5단계·성공 기준·팁을
+   * 보여준다. 서버 요청의 stage(StatementStage, round.ts)와는 이름이 겹치지 않는
+   * 별도 값이라 서버 쪽에는 영향이 없다. */
+  | 'INTRO'
   | 'SELECT'
   | 'BRIEFING'
   | 'OPINIONS'

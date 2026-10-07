@@ -12,19 +12,20 @@ import { test, expect } from './fixtures';
 
 const EVIDENCE_IDS = ['E1', 'E2', 'E3', 'E4'];
 
-test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNOWN → YOUR ORDERS → 근거 자료 버튼 순으로 보이고, 버튼으로 자료 4장을 전문으로 본다', async ({
+test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNOWN → 근거 자료 버튼 순으로 보이고, 버튼으로 자료 4장을 전문으로 본다', async ({
   page,
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
-  await expect(page.getByTestId('briefing-role')).toBeVisible();
-  // 최종 선택 한 줄은 찬성 쪽으로도 반대 쪽으로도 유도하지 않고 그대로 병기된다(시안
-  // "FINAL CALL: 찬성 / 반대", T83에서 "최종 선택: 찬성 / 반대"로 한국어화).
-  await expect(page.getByTestId('briefing-role')).toContainText('최종 선택: 찬성 / 반대');
+  // T95(2026-10-08): "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자는 INTRO
+  // 화면이 같은 내용(목적·성공 기준)을 먼저 보여주므로 뺐다 — briefing-role은 더
+  // 이상 없다.
+  await expect(page.getByTestId('briefing-role')).toHaveCount(0);
 
   // T52: "체험용 사전 구성" 배지·조건 미리보기 4칩·핵심 쟁점 목록은 제거됐다.
   await expect(page.getByTestId('briefing-issues')).toHaveCount(0);
@@ -87,6 +88,8 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
   // 진행 스트립: BRIEFING에서는 ①이 현재 단계다.
   await expect(page.getByTestId('progress-step-1')).toHaveAttribute('aria-current', 'step');
 
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -100,6 +103,7 @@ test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법�
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   const openEvidence = page.getByTestId('open-evidence');
@@ -141,6 +145,7 @@ test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법�
 test('무대 명패 4개가 서로 겹치지 않고 참가자 좌석에는 명패가 없다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   // 참가자 좌석은 명패 없이 글로우·말풍선·표 배지만 둔다(2026-09-28 사용자).

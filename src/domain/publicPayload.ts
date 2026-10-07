@@ -34,6 +34,7 @@ export interface PublicPayload {
 
 const STAGE_ORDER: readonly SessionStage[] = [
   'ATTRACT',
+  'INTRO',
   'SELECT',
   'BRIEFING',
   'OPINIONS',

@@ -52,6 +52,11 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
 
   await page.getByRole('button', { name: '체험 시작' }).click();
 
+  // INTRO(T95): 목적·진행 5단계·성공 기준·팁 한 장.
+  await expect(page.getByRole('heading', { name: '오늘 당신은 특별 이사입니다' })).toBeVisible();
+  await capture(page, testInfo.project.name, 'intro');
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+
   // SELECT(T70): 시안(S1_Select) 카드 2장이 보이는 상태. T84 #10부터 카드를 누르면
   // 바로 입장하므로(별도 선택 상태·CTA가 없다) 입장 전 화면을 그대로 캡처한다.
   await expect(page.getByTestId('scenario-card-ai-approval')).toBeVisible();
@@ -59,11 +64,13 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('scenario-card-ai-approval').click();
 
 
-  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·할 일/최종 결정·근거 자료 버튼·CTA(T68).
+  // BRIEFING: 사건·결정 질문·현재 상황/제안/미정·근거 자료 버튼·CTA(T68, T95로
+  // "특별 이사의 임무" 상자는 INTRO로 옮겨 뺐다).
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expect(page.getByTestId('briefing-status')).toBeVisible();
-  await expect(page.getByTestId('briefing-role')).toBeVisible();
   await expect(page.getByTestId('open-evidence')).toBeVisible();
+  // T95: 자료를 열어 닫기 전에는 "의견 듣기 ▶"가 비활성이다 — 캡처 전에 확인한다.
+  await expect(page.getByRole('button', { name: '의견 듣기 ▶' })).toBeDisabled();
   await capture(page, testInfo.project.name, 'briefing');
 
   // BRIEFING(팝업 열림, T68): "근거 자료 보기"를 눌러 EvidenceDialog에서 자료 4장
@@ -82,6 +89,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.keyboard.press('Escape');
   await expect(evidenceDialog).toHaveCount(0);
 
+  // T95: 자료 팝업을 한 번 열어 닫았으니(위) "의견 듣기 ▶"는 이미 활성 상태다.
   await page.getByRole('button', { name: '의견 듣기' }).click();
 
   // OPINIONS: 임원 4명의 첫 의견 카드(오른쪽)와 무대 말풍선·회의록 패널(왼쪽). 말풍선
@@ -181,7 +189,10 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();

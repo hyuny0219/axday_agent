@@ -9,7 +9,10 @@ import { test, expect, type Page, type Route } from './fixtures';
 async function enterExperienceFirstReactions(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -365,7 +368,10 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await page.goto('/');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 

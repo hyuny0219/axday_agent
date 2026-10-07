@@ -17,6 +17,7 @@ async function advanceClock(page: Page, ms: number): Promise<void> {
 
 async function enterScenario(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 }
 
@@ -78,6 +79,8 @@ test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 
 test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await enterScenario(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -173,6 +176,8 @@ test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 
   // 사전 구성된 임원 4열 카드(.opinion-card, live 발언 카드가 아니다)로 확인한다.
   await expect(page.getByTestId('mode-badge')).toHaveCount(0);
   await enterScenario(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('.opinion-card')).toHaveCount(4);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(0);

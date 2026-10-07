@@ -16,12 +16,13 @@
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
 import type { RoleStatus, SessionMode, Stance } from '../../domain/types';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildMotionDisplay } from '../motionDisplay';
+import { GuideHint } from '../parts/GuideHint';
 import '../../styles/screens/motion.css';
 import '../../styles/screens/live.css';
 
@@ -61,6 +62,14 @@ export function MotionScreen({
   // 소진), 이미 다른 단계에서 재요청을 썼으면 이 버튼을 눌러도 서버가 call_limit으로
   // 거절해 실패로 남는다(자동 재시도는 없다).
   const [retryUsed, setRetryUsed] = useState(false);
+
+  // 진행 가이드(T95): 먼저 안건 문장·조건을 보게 하고, 2초 뒤 CTA로 강조를 옮긴다 —
+  // 게이팅(비활성)은 아니고 강조만 바뀐다.
+  const [motionGuidePhase, setMotionGuidePhase] = useState<'motion' | 'cta'>('motion');
+  useEffect(() => {
+    const timer = setTimeout(() => setMotionGuidePhase('cta'), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // FOLLOWUP은 opinions가 2건이 될 때만 돈다(App.tsx의 트리거 조건과 같다, T46). 그 전에는
   // roleStatus가 REACTIONS 결과를 그대로 들고 있을 뿐이라 재요청 대상으로 보지 않는다.
@@ -127,7 +136,14 @@ export function MotionScreen({
                 같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
             <h2 className="motion-screen__title">지금 표결할 안건</h2>
           </div>
-          <div className="motion-screen__motion-box" data-testid="motion-card">
+          {motionGuidePhase === 'motion' && (
+            <GuideHint text="표결할 문장을 확인하세요" testId="motion-guide-hint" />
+          )}
+          <div
+            className="motion-screen__motion-box"
+            data-testid="motion-card"
+            data-guide={motionGuidePhase === 'motion' ? 'next' : undefined}
+          >
             <span className="motion-screen__box-label">표결 안건 · {motionKindLabel}</span>
             <p className="motion-screen__motion-text">{motionDisplay.sentence}</p>
             {motionDisplay.undecidedLabels.length > 0 && (
@@ -182,6 +198,7 @@ export function MotionScreen({
               disabled={freezeDisabled}
               onClick={() => onFreeze(confirmedConditionIds)}
               data-testid="freeze-motion"
+              data-guide={motionGuidePhase === 'cta' && !freezeDisabled ? 'next' : undefined}
             >
               이 안건으로 표결 ▶
             </button>
