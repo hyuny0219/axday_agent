@@ -1,0 +1,170 @@
+/* 소개 화면(INTRO, T95). select.css의 배경 장식(select-screen__stage 등)을 그대로
+   불러 쓰고, 이 파일은 가운데 종이 한 장(intro-screen__paper)의 레이아웃만 책임진다.
+   .app-main이 overflow:hidden이라(shell.css) 스크롤이 없다 — 1280×720에서도 한
+   화면에 다 보이도록 2열(목적·성공 기준 / 5단계·팁)로 나누고 글자 크기를 작게 둔다. */
+
+.intro-screen {
+  max-width: none;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-8));
+  padding: 24px 30px;
+}
+
+@media (max-width: 1280px) {
+  .intro-screen {
+    margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-3)) calc(-1 * var(--space-2));
+    padding: 18px 20px;
+  }
+}
+
+.intro-screen__paper {
+  position: relative;
+  z-index: 1;
+  width: 940px;
+  max-width: 92vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 26px 34px;
+  background-color: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-paper-main);
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__paper {
+    width: 760px;
+    gap: 10px;
+    padding: 18px 24px;
+  }
+}
+
+.intro-screen__stamp {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  padding: 5px 13px;
+  border: 4px solid var(--stamp-red);
+  color: var(--stamp-red);
+  font-family: var(--font-label);
+  font-size: 17px;
+  letter-spacing: 0.22em;
+  transform: rotate(-8deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__stamp {
+    top: 12px;
+    right: 16px;
+    padding: 4px 10px;
+    border-width: 3px;
+    font-size: 13px;
+  }
+}
+
+.intro-screen__eyebrow {
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+}
+
+.intro-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__eyebrow {
+    font-size: 11px;
+  }
+
+  .intro-screen__title {
+    font-size: 22px;
+  }
+}
+
+.intro-screen__columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__columns {
+    gap: 16px;
+  }
+}
+
+.intro-screen__col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.intro-screen__block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intro-screen__label {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: var(--label);
+}
+
+.intro-screen__purpose,
+.intro-screen__success {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.intro-screen__steps,
+.intro-screen__tips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__purpose,
+  .intro-screen__success {
+    font-size: 13px;
+  }
+
+  .intro-screen__steps,
+  .intro-screen__tips {
+    font-size: 12px;
+  }
+
+  .intro-screen__label {
+    font-size: 11px;
+  }
+}
+
+.intro-screen__cta {
+  align-self: center;
+  margin-top: 4px;
+}

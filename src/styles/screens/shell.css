@@ -758,3 +758,53 @@
     font-size: 13px;
   }
 }
+
+/* 진행 가이드 한 줄(T95, GuideHint 컴포넌트). 종이 패널 안에서 쓰므로 --ink 계열
+   색을 쓰되, CTA와 같은 앰버 톤으로 "지금 볼 곳"임을 드러낸다. */
+.guide-hint {
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  background-color: rgba(224, 163, 74, 0.16);
+  border-left: 3px solid var(--amber);
+  color: var(--label);
+  font-family: var(--font-label);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 1280px) {
+  .guide-hint {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+}
+
+/* 다음 행동 강조(T95, data-guide="next"): 가이드가 가리키는 요소에 맥동 테두리를
+   그린다. 버튼·입력 등 자체 테두리가 있는 요소도 outline은 레이아웃에 영향을 주지
+   않아 안전하게 겹쳐 그릴 수 있다. */
+@keyframes guide-pulse {
+  0%,
+  100% {
+    outline-color: var(--amber);
+    outline-offset: 2px;
+  }
+
+  50% {
+    outline-color: rgba(224, 163, 74, 0.25);
+    outline-offset: 5px;
+  }
+}
+
+[data-guide='next'] {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+  animation: guide-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-guide='next'] {
+    animation: none;
+    outline: 3px solid var(--amber);
+    outline-offset: 3px;
+  }
+}
