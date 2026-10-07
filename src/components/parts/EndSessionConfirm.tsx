@@ -13,9 +13,16 @@ export interface EndSessionConfirmProps {
 
 export function EndSessionConfirm({ onConfirm, onCancel }: EndSessionConfirmProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  // 열릴 때 포커스가 있던 요소("처음 화면으로" 버튼)를 기억했다가 닫힐 때 되돌린다 — 취소하면
+  // 포커스된 버튼이 함께 사라져 문서 본문으로 떨어졌다(PR #20 Codex 15차 검토 P2).
+  const openerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelButtonRef.current?.focus();
+    return () => {
+      openerRef.current?.focus();
+    };
   }, []);
 
   useEffect(() => {

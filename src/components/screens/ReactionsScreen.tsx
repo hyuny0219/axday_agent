@@ -220,8 +220,16 @@ export function ReactionsScreen({
   // 라운드에 답하거나(answered) 실패로 끝날 때까지(failed) "답하기 ▶"를 잠근다
   // (OpinionsScreen의 allExecsSettled와 같은 규칙). scripted는 반응 문구가 항상 즉시
   // 다 있으므로 영향받지 않는다.
+  // roleStatus만 보면 안 된다 — live에서 REACTIONS에 막 들어온 첫 프레임에는 직전 OPINIONS
+  // 라운드의 answered/failed가 그대로 남아 있어 반응이 하나도 안 왔는데 잠금이 풀린다
+  // (PR #20 Codex 15차 검토 P2). 그 역할의 REACTIONS 발언이 실제로 도착했거나, roundLog에
+  // REACTIONS 단계 failed가 기록된 경우만 "끝난 것"으로 본다.
   const allExecsSettled = EXEC_MEMBER_ORDER.every(
-    (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
+    (roleId) =>
+      statements.some((statement) => statement.stage === 'REACTIONS' && statement.roleId === roleId) ||
+      roundLog.some(
+        (entry) => entry.stage === 'REACTIONS' && entry.roleId === roleId && entry.status === 'failed',
+      ),
   );
   const listenLocked = mode === 'live' && !allExecsSettled;
 

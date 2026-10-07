@@ -444,3 +444,61 @@ describe('ReactionsScreen', () => {
     });
   });
 });
+
+// PR #20 Codex 15차 검토 P2: live에서 REACTIONS 첫 프레임에는 roleStatus가 직전 OPINIONS의
+// answered로 남아 있어 반응이 하나도 없는데 "답하기 ▶"가 풀렸다. REACTIONS 발언 도착 또는
+// roundLog의 REACTIONS failed만 "끝난 것"으로 본다.
+describe('반응 듣기 잠금(T89, live)', () => {
+  const allAnswered: Record<ExecMemberId, RoleStatus> = {
+    CEO: 'answered',
+    CFO: 'answered',
+    CAIO: 'answered',
+    CISO: 'answered',
+  };
+  function reactionStatement(roleId: ExecMemberId): Statement {
+    return {
+      id: `r-${roleId}`,
+      roleId,
+      stage: 'REACTIONS',
+      text: `${roleId} 반응`,
+      evidenceIds: [],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      stance: 'FOR',
+      source: 'live',
+      createdAt: 1,
+    };
+  }
+
+  it('roleStatus가 직전 라운드의 answered여도 REACTIONS 발언이 없으면 "답하기 ▶"는 잠겨 있다', () => {
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        step="listen"
+        mode="live"
+        roleStatus={allAnswered}
+        statements={[]}
+        roundLog={[]}
+        stances={stances}
+      />,
+    );
+    expect(screen.getByTestId('reactions-advance')).toBeDisabled();
+  });
+
+  it('임원 네 명의 REACTIONS 발언이 도착하거나 REACTIONS 단계에서 failed로 끝나면 풀린다', () => {
+    const roundLog: RoundLogEntry[] = [{ stage: 'REACTIONS', roleId: 'CISO', status: 'failed' }];
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        step="listen"
+        mode="live"
+        roleStatus={{ ...allAnswered, CISO: 'failed' }}
+        statements={[reactionStatement('CEO'), reactionStatement('CFO'), reactionStatement('CAIO')]}
+        roundLog={roundLog}
+        stances={stances}
+      />,
+    );
+    expect(screen.getByTestId('reactions-advance')).toBeEnabled();
+  });
+});
