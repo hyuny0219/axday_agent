@@ -78,6 +78,24 @@
 
 ---
 
+## T93 임원 발언 쉬운 말(초중학생 기준) — live 프롬프트 v11·scripted 발언 전부
+
+- 목표(2026-10-07 사용자 지적): "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수 있는 수준으로 말하게 하자. 지금은 한참 들여다보고 생각해야 하는 게 있다." 리드 결정: 범위는 (1) live 임원 발언 프롬프트, (2) scripted 임원 발언 전부. 자료 카드 4장·안건 문장·조건 라벨(키워드 규칙과 묶여 있음)·추천 문구(P1~P6·N1~N4)·후속 추천 답변(참가자 말)은 건드리지 않는다.
+- 읽을 것: `server/prompts/roles/index.ts`(EXEC_STYLE_RULE)·`server/prompts/common.ts`·`server/prompts/version.ts`·`server/prompts/assistant.ts`, `server/handlers/round.ts`(stageInstruction·message 120자 제약), `scripts/eval-set-run.ts`(`--check`), `src/content/scenarios/{aiApproval,experienceFirst}.ts`(initialOpinions·reactions·oppositionReactions·voteRules·followUp.question), `tests/content/{aiApproval,experienceFirst}.test.ts`, `docs/SCENARIO_{AI_APPROVAL,EXPERIENCE_FIRST}.md`.
+- 만들 것:
+  1. `server/prompts/plainLanguage.ts` — 쉬운 말 규칙(`PLAIN_LANGUAGE_RULE`: 문장은 25자 안팎으로 짧게, 발언은 2~3문장, 한자어·업무 용어 대신 일상어, 숫자는 발언당 하나, 조건·자료는 라벨 그대로 불러도 되지만 뜻을 쉬운 말로 한 번 풀어 말하기)와 금지 어휘 목록(`FORBIDDEN_WORDS`, 20개 안팎)·가독성 측정 함수(문장 분리, 문장당 글자 수, 발언당 문장 수)를 상수로 둔다. 프롬프트(roles/index.ts)와 검사기(eval-set-run.ts)·콘텐츠 테스트가 이 파일을 같이 쓴다.
+  2. `EXEC_STYLE_RULE` 조합에 `PLAIN_LANGUAGE_RULE`을 더한다(roles/index.ts의 withExecStyle). `PROMPT_VERSION` v10→v11(`server/prompts/version.ts`에 이력 주석).
+  3. `scripts/eval-set-run.ts --check`에 가독성 지표(문장당 평균 글자 수, 발언당 문장 수, 금지 어휘 등장 횟수) 출력 추가. 서버 검증에서 거절하지는 않는다(측정만).
+  4. 실측: 키 있으면 `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v11-after.jsonl` 1회(20케이스), `docs/eval/tuning-v11.md`에 v10 대비(가독성 지표 + 기존 구조 지표 + 표 분포) + 발언 예문 전/후.
+  5. scripted 발언 전부 재작성(aiApproval.ts·experienceFirst.ts): `initialOpinions`·`reactions`·`oppositionReactions`·`voteRules` reason·`followUp.question`을 같은 쉬운 말 기준으로 다시 쓴다(의미·판단 분기·참조 자료는 그대로). `docs/SCENARIO_*.md` 발언 표 동기화.
+  6. 테스트: 콘텐츠 테스트에 금지 어휘 검사(scripted 발언 전부 0건)·문장당 글자 수 상한 검사 추가.
+- 허용 경로: `server/prompts/`, `server/handlers/round.ts`(주석만, 필요 시), `scripts/eval-set-run.ts`, `src/content/scenarios/{aiApproval,experienceFirst}.ts`, `tests/content/`, `docs/`.
+- 하지 말 것: 평가 세트 2회 이상 실행(크레딧), 자료 카드·조건 라벨·추천 문구·후속 추천 답변 수정, 표결 로직·조건 키워드 규칙 변경.
+- 완료 확인: `npm run check` 성공, `npx playwright test -c playwright.local.config.ts` 성공(8787·8789·8792·4175·8796·4177 제외), 실측 문서(`docs/eval/tuning-v11.md`)에 v10 대비 가독성·구조 지표 기록.
+- 크기: L.
+
+---
+
 ## T92 참가자 반대 입장 반영(A안) — live 프롬프트 v10·scripted 반응·화면 문구
 
 - 목표(2026-10-07 사용자 지적, 리드 검토 A안 채택): "반대 의견을 작성해도 AI 임원들 및 프로그램 진행이 찬성 쪽으로 몰고 가는 경향." 원인은 live 임원 판단 규칙(EXEC_DECISION_RULE)이 "붙은 조건 유무"로만 판단하고 참가자의 입장(찬성/반대) 자체는 프롬프트에 없었다(v9 실측: 조건 보완 경로 16/16 YES·조건 없음 16/16 NO로 네 임원이 참가자 논리와 무관하게 함께 움직임). A안: 반대 입장에서 조건 연결 문구를 고르면 조건은 그대로 안건에 붙되, 임원에게 "참가자는 반대이며 이 조건은 참가자의 요구"임을 전달하고 임원은 참가자 주장에 설득됐는지로 판단한다. 순수 반대(조건 없음)는 반대 사유로 다룬다.
