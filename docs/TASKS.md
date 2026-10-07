@@ -78,6 +78,23 @@
 
 ---
 
+## T94 안건 문장 쉬운 말(초중학생 기준) — 상황·제안·미정·결과·안건 화면 접속 문구
+
+- 목표(2026-10-08 사용자 지시): T93(임원 발언)에 이어 "상황·제안·미정 문장도 같은 톤으로". 범위는 두 안건(ai-approval·experience-first)의 `chairBriefing.situation`·`incident.headline`·`incident.hook`·`remainingTasks[].text`·`resultCopy.pass/reject/sixMonthsLater.*`와 MOTION 화면 의장 문구(`MotionScreen.tsx`). `subtitle`·`motionBreakdown`(proposal·undecidedItems)은 "원안을 그대로 쪼갠" 구조적 문구이자 `chairBriefing.question`(그대로)과 한 쌍이라 단어 선택을 바꾸지 않는다(실제로 experience-first의 subtitle 둘째 문장은 61자로 이미 발언형 상한 50자를 넘어 있었다 — 손대지 않고 그대로 둔다). 조건 라벨·추천 문구(P/N)·후속 추천 답변·안건 제목·`chairBriefing.question`·`chairBriefing.role`(이미 짧고 쉬움)은 그대로.
+- 읽을 것: `server/prompts/plainLanguage.ts`, `src/content/scenarios/{aiApproval,experienceFirst}.ts`, `src/components/motionDisplay.ts`·`chairMotionLine.ts`·`screens/{MotionScreen,VoteScreen,ResultScreen,BriefingScreen}.tsx`, `tests/content/{aiApproval,experienceFirst}.test.ts`, `docs/SCENARIO_{AI_APPROVAL,EXPERIENCE_FIRST}.md`.
+- 만들 것:
+  1. `aiApproval.ts`: `incident.headline`("결재는 쌓이는데 담당자는 자리에 없다")·`incident.hook`(숫자 하나만, "결재자가 자리를 비우면 결재가 사흘 가까이 멈춘다.")·`chairBriefing.situation`(두 문장으로)을 다시 쓴다. `briefingSummary.text`는 범위 밖(숫자 그대로 "1,240건" 유지)이라 손대지 않는다.
+  2. `experienceFirst.ts`: `incident.hook`(숫자 하나만, "지난 2년 동안 데이터와 베테랑의 생각이 자주 갈렸다.")·`chairBriefing.situation`(두 문장으로, "의사결정"은 question과 맞춰 그대로 둔다)을 다시 쓴다. `headline`은 이미 짧고 쉬워 그대로.
+  3. `MotionScreen.tsx` 의장 문구의 "문안"(한자어, 화면 다른 곳은 전부 "안건")을 "안건"으로 바꾼다(의미 동일).
+  4. `tests/content/{aiApproval,experienceFirst}.test.ts`에 "쉬운 말(T94)" describe 추가: `subtitle`·`motionBreakdown`(구조적 문구, 금지 어휘만 검사)과 `chairBriefing.situation`·`role`·`incident.headline`·`hook`·`remainingTasks`·`resultCopy`(발언형, 금지 어휘+문장당 글자 수 상한 둘 다 검사).
+  5. `docs/SCENARIO_{AI_APPROVAL,EXPERIENCE_FIRST}.md`의 사건·SITREP 줄 동기화. `server/scenario-data.ts`에는 이 필드들(situation·headline·hook·remainingTasks·resultCopy)이 없어 동기화 대상 아님(서버 사본은 `originalMotionText`·`evidence`·`conditions`만 가진다).
+- 허용 경로: `src/content/scenarios/`, `src/components/screens/MotionScreen.tsx`, `tests/content/`, `docs/SCENARIO_AI_APPROVAL.md`, `docs/SCENARIO_EXPERIENCE_FIRST.md`, `docs/design/DESIGN_SPEC.md`, `docs/TASKS.md`(이 카드).
+- 하지 말 것: `subtitle`·`motionBreakdown`·`chairBriefing.question`·`chairBriefing.role`·조건 라벨·추천 문구·후속 추천 답변·안건 제목·`briefingSummary`·`originalMotion.text`·서버 `originalMotionText`(해시 원천) 수정, 표결 로직·조건 키워드 규칙 변경.
+- 완료 확인: `npm run check` 성공, `npx playwright test -c playwright.local.config.ts` 성공(8787·8789·8792·4175·8796·4177 제외).
+- 크기: S.
+
+---
+
 ## T93 임원 발언 쉬운 말(초중학생 기준) — live 프롬프트 v11·scripted 발언 전부
 
 - 목표(2026-10-07 사용자 지적): "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수 있는 수준으로 말하게 하자. 지금은 한참 들여다보고 생각해야 하는 게 있다." 리드 결정: 범위는 (1) live 임원 발언 프롬프트, (2) scripted 임원 발언 전부. 자료 카드 4장·안건 문장·조건 라벨(키워드 규칙과 묶여 있음)·추천 문구(P1~P6·N1~N4)·후속 추천 답변(참가자 말)은 건드리지 않는다.
