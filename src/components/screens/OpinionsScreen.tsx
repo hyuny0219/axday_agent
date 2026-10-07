@@ -82,8 +82,8 @@ export function OpinionsScreen({
 
   // live에서 임원이 아직 판단 중일 때도 CTA가 열려 있던 문제(T84, Opus UX 검토 #21).
   // scripted는 initialOpinions가 항상 즉시 다 있으므로 영향받지 않는다(always
-  // unlocked). live는 4명 전원이 answered·failed로 settle될 때까지 잠근다 — 8초
-  // 상한·1회 재요청은 기존 roleStatus·onRetryFailedRoles 규칙(T65) 그대로다.
+  // unlocked). live는 4명 전원이 answered·failed로 settle될 때까지 잠근다 — 라운드
+  // 타임아웃 상한·1회 재요청은 기존 roleStatus·onRetryFailedRoles 규칙(T65) 그대로다.
   const allExecsSettled = EXEC_MEMBER_ORDER.every(
     (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
   );
