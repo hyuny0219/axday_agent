@@ -201,6 +201,11 @@ export interface Scenario {
    * 반대 입장이면 대신 이 문구를 쓴다(ReactionsScreen·minutes.ts). 없으면(과거 시나리오)
    * 기존 'none' 반응으로 되돌아간다. */
   oppositionReactions?: Record<ExecMemberId, string>;
+  /** REACTIONS 카드가 "유지"일 때(T96) 보여줄 임원별 유지 이유 한 문장. 조건별이 아니라
+   * 역할별 1문장 — "지금까지 조건으로는 아직 입장을 바꿀 만큼 채워지지 않았다"는 뜻을
+   * 각 역할의 평소 말투로 담는다. 없으면(과거 시나리오) ReactionsScreen이 기존
+   * "앞서 말씀드린 입장 그대로입니다"로 되돌아간다. */
+  holdReasons?: Record<ExecMemberId, string>;
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;

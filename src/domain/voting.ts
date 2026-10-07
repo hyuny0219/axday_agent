@@ -92,6 +92,87 @@ export function countVotesChangedByConditions(scenario: Scenario, motion: Motion
   return changed;
 }
 
+export interface RequiredConditions {
+  /** 이미 YES(찬성)로 설득됐으면 true — 더 필요한 조건이 없다. */
+  persuaded: boolean;
+  /** 아직 확정하지 않은 조건 중, 추가로 확정하면 YES로 바뀌는 가장 작은 조합(조건 id,
+   * scenario.conditions 순서). 이미 확정한 조건이 이 임원을 영구히 NO로 묶어(예: 조건
+   * 하나가 즉시 NO를 확정하는 규칙) 더는 어떤 조건으로도 YES에 이를 수 없으면 null —
+   * 조건을 되돌릴 수 없으므로(T96) "설득할 조건 없음"과 같은 뜻이다. persuaded가
+   * true면 항상 빈 배열이다. */
+  conditionIds: string[] | null;
+}
+
+/**
+ * 설득 현황판(T96, 2026-10-08 사용자 지시 "어떤 조건을 붙여야 AI 임원을 설득할 수
+ * 있는지 표현")이 쓰는 순수 함수. 한 임원의 scripted voteRules에서, 지금까지 확정한
+ * 조건(confirmedIds)에 조건을 몇 개 더 추가하면 YES(찬성)로 바뀌는지 가장 작은 조합을
+ * 찾는다. 조합 크기를 0개부터 늘려가며 처음 YES가 되는 조합을 scenario.conditions
+ * 순서대로 찾으므로 결과가 결정적이다. participantStance는 ctx.participantStance로
+ * 그대로 넘긴다(지금 두 활성 시나리오의 voteRules는 이 값을 쓰지 않지만, 앞으로 쓸
+ * 시나리오를 위해 그대로 받는다). executionMode는 motion.ts의 기본값과 같은 'DEFAULT'로
+ * 고정한다(T96 범위의 두 시나리오 모두 이 값만 쓴다, stance.ts의 scriptedStances와 같은
+ * 전제).
+ */
+export function requiredConditionsFor(
+  scenario: Scenario,
+  memberId: ExecMemberId,
+  confirmedIds: readonly string[],
+  participantStance: 'FOR' | 'AGAINST' | null = null,
+): RequiredConditions {
+  const rules = scenario.voteRules[memberId];
+  function voteWith(extra: readonly string[]): Vote {
+    const ctx: VoteContext = {
+      conditionIds: [...confirmedIds, ...extra],
+      executionMode: 'DEFAULT',
+      participantStance,
+    };
+    return decideMember(rules, ctx);
+  }
+  if (voteWith([]) === 'YES') {
+    return { persuaded: true, conditionIds: [] };
+  }
+  const candidates = scenario.conditions
+    .map((condition) => condition.id)
+    .filter((id) => !confirmedIds.includes(id));
+  // 조합 크기를 늘려가며(1개부터) 처음 YES가 되는 조합을 찾는다. 후보 수가 두 활성
+  // 시나리오 모두 5개 이하라 2^n 전수 탐색도 가볍다. 같은 크기에서는 candidates 순서
+  // (= scenario.conditions 순서)대로 가장 먼저 찾은 조합을 쓴다(결정적).
+  for (let size = 1; size <= candidates.length; size += 1) {
+    const combo = findComboOfSize(candidates, size, (extra) => voteWith(extra) === 'YES');
+    if (combo) {
+      return { persuaded: false, conditionIds: combo };
+    }
+  }
+  return { persuaded: false, conditionIds: null };
+}
+
+/** candidates에서 크기가 size인 조합을 앞에서부터 순서대로 찾아 predicate를 만족하는
+ * 첫 조합을 돌려준다(없으면 null). requiredConditionsFor 전용 헬퍼. */
+function findComboOfSize(
+  candidates: readonly string[],
+  size: number,
+  predicate: (combo: string[]) => boolean,
+): string[] | null {
+  function search(start: number, chosen: string[]): string[] | null {
+    if (chosen.length === size) {
+      return predicate(chosen) ? [...chosen] : null;
+    }
+    for (let i = start; i < candidates.length; i += 1) {
+      const candidate = candidates[i];
+      if (candidate === undefined) {
+        continue;
+      }
+      const found = search(i + 1, [...chosen, candidate]);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+  return search(0, []);
+}
+
 export interface MemberExplanation {
   vote: Vote;
   reason?: string;

@@ -12,6 +12,7 @@ import {
   evalPredicate,
   explainBoard,
   participantDecisive,
+  requiredConditionsFor,
   tally,
   type TallyResult,
   type VoteContext,
@@ -432,5 +433,71 @@ describe('반대 입장 경로의 표 분포(T92, 안건①②)', () => {
 
   it('안건② 조건부 반대(RECORD 1개만)도 YES 과반에 못 미친다', () => {
     expect(voteCounts(experienceFirstScenario, ['RECORD'])).toBeLessThan(3);
+  });
+});
+
+// T96 설득 현황판: 임원별 "움직일 조건"(requiredConditionsFor)이 scripted voteRules와
+// 일치하는지 두 안건·여러 입장에서 확인한다.
+describe('requiredConditionsFor(T96, 안건①②)', () => {
+  it('안건① CEO는 조건 없이도 이미 찬성이라 persuaded:true·조건 없음', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CEO', [])).toEqual({
+      persuaded: true,
+      conditionIds: [],
+    });
+  });
+
+  it('안건① CFO는 조건 없음에서 LIMIT+REVIEW 둘 다 있어야 찬성(voteRules의 all 조합)', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', [])).toEqual({
+      persuaded: false,
+      conditionIds: ['LIMIT', 'REVIEW'],
+    });
+  });
+
+  it('안건① CFO는 LIMIT만 이미 확정했으면 REVIEW 하나만 더 필요하다', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', ['LIMIT'])).toEqual({
+      persuaded: false,
+      conditionIds: ['REVIEW'],
+    });
+  });
+
+  it('안건① CAIO는 LOG 하나만 있으면 찬성(단일 조건 경로)', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CAIO', [])).toEqual({
+      persuaded: false,
+      conditionIds: ['LOG'],
+    });
+  });
+
+  it('안건① CISO는 OWNER·LOG가 모두 확정되면 persuaded:true', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CISO', ['OWNER', 'LOG'])).toEqual({
+      persuaded: true,
+      conditionIds: [],
+    });
+  });
+
+  it('안건① FULL_AUTO를 이미 확정한 CEO는 다른 조건으로도 YES에 이를 수 없다(영구 NO)', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CEO', ['FULL_AUTO'])).toEqual({
+      persuaded: false,
+      conditionIds: null,
+    });
+  });
+
+  it('안건② CISO는 RECORD·REVIEW 둘 다 있어야 찬성', () => {
+    expect(requiredConditionsFor(experienceFirstScenario, 'CISO', [])).toEqual({
+      persuaded: false,
+      conditionIds: ['RECORD', 'REVIEW'],
+    });
+  });
+
+  it('안건② CAIO는 SCOPE 하나만 있으면 찬성', () => {
+    expect(requiredConditionsFor(experienceFirstScenario, 'CAIO', [])).toEqual({
+      persuaded: false,
+      conditionIds: ['SCOPE'],
+    });
+  });
+
+  it('참가자 입장(participantStance)을 바꿔도 현재 두 안건의 voteRules는 그 값을 쓰지 않으므로 결과가 같다', () => {
+    const forResult = requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'FOR');
+    const againstResult = requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'AGAINST');
+    expect(forResult).toEqual(againstResult);
   });
 });

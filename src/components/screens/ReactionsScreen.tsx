@@ -81,7 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
-import { reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
+import { changeCauseLabel, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -147,6 +147,14 @@ const STANCE_MODIFIER: Record<Stance, 'for' | 'against' | 'undecided'> = {
   FOR: 'for',
   AGAINST: 'against',
   UNDECIDED: 'undecided',
+};
+
+/** 반응 카드 "바뀜" 배지 전용 짧은 입장 라벨(T96) — STANCE_LABEL("찬성 쪽")보다 짧게
+ * "찬성/반대/미정"만 써서 "반대 → 찬성"처럼 한 줄에 들어가게 한다. */
+const SHORT_STANCE_LABEL: Record<Stance, string> = {
+  FOR: '찬성',
+  AGAINST: '반대',
+  UNDECIDED: '미정',
 };
 
 function uniqueInOrder(ids: string[]): string[] {
@@ -572,7 +580,7 @@ export function ReactionsScreen({
         opposition ??
         (reactions.length > 0
           ? reactions.map((reaction) => reaction.text).join(' ')
-          : '앞서 말씀드린 입장 그대로입니다.');
+          : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
       const reactionEntry: EvidenceDialogStatementView = {
         memberId,
         stance,
@@ -648,8 +656,18 @@ export function ReactionsScreen({
                     lastOpinion?.stance ?? null,
                     previousConfirmedIds,
                   );
+                  const baseline = scriptedBaselineStances[memberId];
                   const stance = stances[memberId];
-                  const changed = scriptedBaselineStances[memberId] !== stance;
+                  const changed = baseline !== stance;
+                  // T96: "바뀜"만 보여주던 배지를 "반대 → 찬성"처럼 전후 입장으로 바꾼다
+                  // (사용자 지시 "내 발언에 따라 임원 입장이 변하는 것이 잘 보이게"). 조건
+                  // 없이 입장이 바뀐 경우(opposition 응답)는 조건을 원인으로 쓰면 안 되므로
+                  // 원인 한 줄을 보여주지 않는다.
+                  const badgeText = changed
+                    ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
+                    : '유지';
+                  const causeText =
+                    changed && !opposition ? changeCauseLabel(scenario, reactions) : null;
                   return (
                     <article
                       key={memberId}
@@ -661,16 +679,24 @@ export function ReactionsScreen({
                         <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
                           {STANCE_LABEL[stance]}
                         </span>
-                        <span className="reaction-card__badge" aria-hidden="true">
-                          {changed ? '바뀜' : '유지'}
+                        <span className="reaction-card__badge" aria-hidden="true" data-testid={`reaction-card-badge-${memberId}`}>
+                          {badgeText}
                         </span>
                       </div>
                       <p className="reaction-card__text reaction-card__text--full">
                         {opposition ??
                           (reactions.length > 0
                             ? reactions.map((reaction) => reaction.text).join(' ')
-                            : '앞서 말씀드린 입장 그대로입니다.')}
+                            : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.')}
                       </p>
+                      {causeText && (
+                        <p
+                          className="reaction-card__cause"
+                          data-testid={`reaction-card-cause-${memberId}`}
+                        >
+                          {causeText}
+                        </p>
+                      )}
                     </article>
                   );
                 })}

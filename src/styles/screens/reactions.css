@@ -272,10 +272,12 @@
   color: var(--ink-muted);
 }
 
-/* 우측 "유지"/"바뀜" 칩(시안 — STEP 칩과 같은 라벨색, stance색이 아니다). */
+/* 우측 "유지"/"반대 → 찬성" 칩(시안 — STEP 칩과 같은 라벨색, stance색이 아니다. T96:
+   "바뀜"을 전후 입장으로 바꿔 한 줄이 조금 길어졌으므로 nowrap을 명시한다). */
 .reaction-card__badge {
   margin-left: auto;
   flex-shrink: 0;
+  white-space: nowrap;
   padding: 1.25px 8.75px;
   border: 1px solid var(--label);
   font-family: var(--font-label);
@@ -315,6 +317,20 @@
 .reaction-card__text--full {
   -webkit-line-clamp: unset;
   overflow: visible;
+}
+
+/* "바뀜" 원인 한 줄(T96, "이사님의 '결재 금액 한도' 조건으로"). 본문보다 작고 옅은
+   톤으로 — 본문을 읽은 다음에 보는 보조 설명이다. */
+.reaction-card__cause {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .reaction-card__cause {
+    font-size: 10.5px;
+  }
 }
 
 /* 점선 상자 "FOLLOW-UP · <역할>가 묻습니다" + 질문(시안). */

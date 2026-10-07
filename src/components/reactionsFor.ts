@@ -37,6 +37,24 @@ export function oppositionReactionText(
   return scenario.oppositionReactions?.[memberId];
 }
 
+/** 반응 카드 "바뀜"의 원인 한 줄(T96, 2026-10-08 사용자 지시 "내 발언에 따라 임원
+ * 입장이 변하는 것이 잘 보이게"). reactionsFor가 고른 반응 문구들의 conditionId를
+ * 라벨로 바꿔 "이사님의 '라벨' 조건으로"를 만든다. 일치하는 조건이 없으면(예: 조건
+ * 없이 입장이 바뀐 경우) "이사님 의견을 듣고"로 되돌아간다. */
+export function changeCauseLabel(scenario: Scenario, reactions: Reaction[]): string {
+  const labels: string[] = [];
+  for (const reaction of reactions) {
+    if (reaction.conditionId === 'none') continue;
+    const label = scenario.conditions.find((condition) => condition.id === reaction.conditionId)?.label;
+    const text = label ?? reaction.conditionId;
+    if (!labels.includes(text)) labels.push(text);
+  }
+  if (labels.length === 0) {
+    return '이사님 의견을 듣고';
+  }
+  return `이사님의 '${labels.join('·')}' 조건으로`;
+}
+
 /** 참가자 입장별 후속 질문(T93). `byStance`가 있는 시나리오는 참가자가 AGAINST일 때만
  * AGAINST 질문을, 그 외(FOR·UNDECIDED·null, 직접 입력만 등)는 FOR 질문을 쓴다. `byStance`가
  * 없는 과거 시나리오(anonBoard·aiAssistant)는 기존 question·askedBy로 그대로 되돌아간다. */
