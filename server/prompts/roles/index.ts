@@ -6,6 +6,7 @@ import { buildRolePrompt as buildCeoPrompt } from './ceo';
 import { buildRolePrompt as buildCfoPrompt } from './cfo';
 import { buildRolePrompt as buildCaioPrompt } from './caio';
 import { buildRolePrompt as buildCisoPrompt } from './ciso';
+import { PLAIN_LANGUAGE_RULE } from '../plainLanguage';
 
 /** round.ts(OPINIONS/REACTIONS/FOLLOWUP)·vote.ts(VOTE)가 공통으로 넘기는 단계 구분.
  * assistant.ts(refine·summarize)는 ROLE_PROMPT_BUILDERS를 쓰지 않으므로 이 타입과 무관하다. */
@@ -21,6 +22,16 @@ export const EXEC_STYLE_RULE =
   '이 자리의 참가자(특별 이사)는 당신이 보고하는 대상입니다. 모든 문장은 존댓말(-습니다/-합니다' +
   ' 등)로 끝내십시오. "하자", "한다", "해라" 같은 반말체 어미나 "필요", "아님" 같은 명사형' +
   ' 종결도 쓰지 마십시오.';
+
+/**
+ * T93(2026-10-07 사용자 지시 "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수 있는
+ * 수준으로"): 문장 길이·용어 난이도 규칙은 EXEC_STYLE_RULE(존댓말)과 겹치지 않는 별도
+ * 규칙이라 server/prompts/plainLanguage.ts에 상수(PLAIN_LANGUAGE_RULE)로 두고, 그 파일의
+ * 금지 어휘 목록을 eval-set-run.ts --check·콘텐츠 테스트와 공유한다. 공통 가드레일이 아니라
+ * 임원 전용으로 두는 이유는 EXEC_STYLE_RULE·EXEC_DECISION_RULE과 같다 — 비서실장
+ * refine·summarize는 참가자 원문을 다시 쓰면 안 되므로 이 규칙을 받지 않는다(prompts/
+ * assistant.ts 참고).
+ */
 
 /**
  * 임원 프롬프트에만 붙는 판단 규칙(T62 표결 두 갈래, T63 stance). 공통 가드레일에 두면
@@ -98,7 +109,7 @@ function withExecStyle(
   roleId: ExecRoleId,
 ): (materials: ScenarioMaterials, stage: ExecPromptStage) => string {
   return (materials: ScenarioMaterials, stage: ExecPromptStage) => {
-    const parts = [buildRolePrompt(), EXEC_STYLE_RULE, EXEC_DECISION_RULE];
+    const parts = [buildRolePrompt(), EXEC_STYLE_RULE, PLAIN_LANGUAGE_RULE, EXEC_DECISION_RULE];
     const lens = materials.roleLenses?.[roleId];
     if (lens) {
       parts.push(buildRoleLensBlock(materials, lens));

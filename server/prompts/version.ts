@@ -46,4 +46,18 @@
 // participantStance(round·vote 모두 선택 필드, 생략 시 null과 같음)를 추가했다 — 기존
 // 요청은 필드가 없으므로 동작이 그대로다. 응답 스키마는 바뀌지 않았다. 전후 비교는
 // docs/eval/tuning-v10.md.
-export const PROMPT_VERSION = 'v10';
+// v11(2026-10-07, T93): 사용자 지적 "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수
+// 있는 수준으로 말하게 하자. 지금은 한참 들여다보고 생각해야 하는 게 있다." v10 실측
+// (docs/eval/tuning-v10-after.jsonl)에서 "리스크", "재구성", "비용 리스크가 통제되지
+// 않습니다" 같은 한자어·업무 용어가 발언·판단 이유에 그대로 쓰이는 사례를 확인했다.
+// server/prompts/plainLanguage.ts에 쉬운 말 규칙(PLAIN_LANGUAGE_RULE: 문장 25자 안팎·발언당
+// 2~3문장·금지 어휘 대체)과 금지 어휘 목록(FORBIDDEN_WORDS, 20개 안팎)·가독성 측정
+// 함수(문장당 글자 수·발언당 문장 수)를 새로 두고, roles/index.ts의 withExecStyle에서
+// EXEC_STYLE_RULE 다음에 붙였다(임원 전용, 비서실장 refine·summarize에는 붙이지 않음 —
+// EXEC_STYLE_RULE과 같은 이유). 응답 스키마는 바뀌지 않았지만 시스템 프롬프트 본문이
+// 바뀌므로 버전을 올린다. eval-set-run.ts --check에 가독성 지표를 추가해(서버 검증에서
+// 거절하지는 않음) 전후를 비교한다. scripted 임원 발언(initialOpinions·reactions·
+// oppositionReactions·voteRules reason·followUp.question)도 같은 기준으로 다시 썼다 —
+// 자료 카드·조건 라벨·추천 문구(P1~P6·N1~N4)·후속 추천 답변은 범위 밖(참가자 몫이거나
+// 키워드 규칙과 묶여 있음). 전후 비교는 docs/eval/tuning-v11.md.
+export const PROMPT_VERSION = 'v11';

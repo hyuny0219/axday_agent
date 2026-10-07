@@ -81,7 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
-import { reactionsFor, oppositionReactionText } from '../reactionsFor';
+import { reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -194,6 +194,14 @@ export function ReactionsScreen({
   const previousConfirmedIds = useMemo(
     () => lastOpinion?.confirmedConditionIds ?? [],
     [lastOpinion],
+  );
+  // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): 결재권을 준다는
+  // 전제의 질문이 반대 참가자에게 어색했다 — 참가자의 최근 입장(lastOpinion.stance)에 따라
+  // FOR/AGAINST 질문을 고른다. "다시 답하기" 추천 답변의 입장 선택(side, 아래)과는 다른
+  // 축이다 — 질문 자체는 참가자의 실제 입장을 따르고, 답변 추천만 side로 고른다.
+  const followUpPrompt = useMemo(
+    () => resolveFollowUpPrompt(scenario, lastOpinion?.stance ?? null),
+    [scenario, lastOpinion],
   );
   // 라운드당 1회(T65) — server/sessionLimit.ts의 호출 상한이 최종 방어선이다.
   const [retryUsed, setRetryUsed] = useState(false);
@@ -664,9 +672,9 @@ export function ReactionsScreen({
             )}
             <div className="reactions-screen__followup" data-testid="followup-question">
               <span className="reactions-screen__followup-label">
-                추가 질문 · {scenario.followUp.askedBy}가 묻습니다
+                추가 질문 · {followUpPrompt.askedBy}가 묻습니다
               </span>
-              <p className="reactions-screen__followup-text">{scenario.followUp.question}</p>
+              <p className="reactions-screen__followup-text">{followUpPrompt.question}</p>
             </div>
           </div>
         </div>
@@ -767,7 +775,7 @@ export function ReactionsScreen({
             <span className="discuss-screen__phrase-hint">추천 답변 · 여러 개 선택 가능</span>
           </div>
           <p className="discuss-screen__guide" data-testid="followup-question">
-            {scenario.followUp.askedBy}가 묻습니다 · {scenario.followUp.question}
+            {followUpPrompt.askedBy}가 묻습니다 · {followUpPrompt.question}
           </p>
           {/* 입장 선택(T89) — DISCUSS와 같은 두 버튼을 공용 .side-select*(shell.css)로
               쓴다. 기본값은 App.tsx가 DISCUSS에서 고른 쪽을 그대로 내려준 side다. */}
