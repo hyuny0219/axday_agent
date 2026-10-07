@@ -178,13 +178,20 @@ function instrumentProvider(base: ModelProvider, clock: Clock, sink: CallRecord[
   };
 }
 
-/** sink[fromIndex..] 가운데 역할별 마지막 호출 기록. */
+/** sink[fromIndex..] 가운데 역할별 호출 기록 — 마지막 호출의 내용(modelId 등)을 쓰되,
+ * latencyMs는 **그 역할의 모든 시도 시간을 합산**한다. T91 자동 재시도로 한 역할이 두 번
+ * 호출될 수 있는데 마지막 시도만 쓰면 실제 소요(첫 시도 4초 실패 + 재시도 3초 = 7초)가
+ * 3초로 집계된다(PR #20 Codex 24차 검토 P2). */
 export function callRecordsByRole(sink: CallRecord[], fromIndex: number): Map<string, CallRecord> {
   const byRole = new Map<string, CallRecord>();
   for (let i = fromIndex; i < sink.length; i += 1) {
     const record = sink[i];
     if (record?.roleId) {
-      byRole.set(record.roleId, record);
+      const previous = byRole.get(record.roleId);
+      byRole.set(record.roleId, {
+        ...record,
+        latencyMs: (previous?.latencyMs ?? 0) + record.latencyMs,
+      });
     }
   }
   return byRole;
