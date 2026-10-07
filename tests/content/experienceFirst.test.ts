@@ -247,9 +247,12 @@ describe('쉬운 말(T93)', () => {
   const execStatements: string[] = [
     ...scenario.initialOpinions.map((o) => o.text),
     ...scenario.reactions.map((r) => r.text),
-    ...Object.values(scenario.oppositionReactions),
-    ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason)),
+    ...Object.values(scenario.oppositionReactions ?? {}),
+    ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason ?? '')),
     scenario.followUp.question,
+    ...(scenario.followUp.byStance
+      ? [scenario.followUp.byStance.FOR.question, scenario.followUp.byStance.AGAINST.question]
+      : []),
   ];
 
   it('금지 어휘를 쓰지 않는다', () => {

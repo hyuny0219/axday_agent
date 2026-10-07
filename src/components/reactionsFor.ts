@@ -4,7 +4,7 @@
 // 공유한다(DESIGN_SPEC.md v1.0 7절 "reactionsFor 규칙은 공용 함수로 뽑아 같이 쓴다").
 // 동작은 T40 시절 ReactionsScreen의 지역 함수와 완전히 같다.
 
-import type { ExecMemberId, Reaction, Scenario } from '../content/types';
+import type { ExecMemberId, FollowUpPrompt, Reaction, Scenario } from '../content/types';
 
 export function reactionsFor(
   scenario: Scenario,
@@ -35,4 +35,18 @@ export function oppositionReactionText(
     return undefined;
   }
   return scenario.oppositionReactions?.[memberId];
+}
+
+/** 참가자 입장별 후속 질문(T93). `byStance`가 있는 시나리오는 참가자가 AGAINST일 때만
+ * AGAINST 질문을, 그 외(FOR·UNDECIDED·null, 직접 입력만 등)는 FOR 질문을 쓴다. `byStance`가
+ * 없는 과거 시나리오(anonBoard·aiAssistant)는 기존 question·askedBy로 그대로 되돌아간다. */
+export function resolveFollowUpPrompt(
+  scenario: Scenario,
+  participantStance: 'FOR' | 'AGAINST' | null,
+): FollowUpPrompt {
+  const byStance = scenario.followUp.byStance;
+  if (!byStance) {
+    return { question: scenario.followUp.question, askedBy: scenario.followUp.askedBy };
+  }
+  return participantStance === 'AGAINST' ? byStance.AGAINST : byStance.FOR;
 }

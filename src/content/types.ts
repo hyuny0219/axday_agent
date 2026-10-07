@@ -125,10 +125,20 @@ export interface FollowUpOption {
   side?: FollowUpSide;
 }
 
+/** 입장별 후속 질문 한 쌍(T93, 2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서
+ * 질문한다" — 결재권을 준다는 전제의 질문이 반대 참가자에게 어색했다). */
+export interface FollowUpPrompt {
+  question: string;
+  askedBy: ExecMemberId;
+}
+
 export interface FollowUp {
   question: string;
   /** 후속 질문을 던지는 임원(v0.9: CAIO, docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"). */
   askedBy: ExecMemberId;
+  /** 참가자 입장별 질문(T93). 값이 없는 과거 시나리오(anonBoard·aiAssistant)는 위
+   * question·askedBy를 그대로 쓴다(resolveFollowUpPrompt가 기본값으로 처리). */
+  byStance?: { FOR: FollowUpPrompt; AGAINST: FollowUpPrompt };
   options: FollowUpOption[];
 }
 

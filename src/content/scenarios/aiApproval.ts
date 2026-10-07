@@ -267,9 +267,26 @@ export const aiApprovalScenario: Scenario = {
   // 앞쪽에 둬 부정 판정 창에 걸리지 않는다, tests/content/aiApproval.test.ts). 옛
   // keepPrevious 선택지("앞서 전달한 의견을 유지하겠습니다")는 T84 #1부터 보조 버튼
   // "답하지 않고 넘어가기"가 그 역할을 하므로 뺐다.
+  // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): 기존 질문("AI가
+  // 잘못 승인하면 누구에게 책임을 맡기시겠습니까")은 결재권을 준다는 전제라 반대
+  // 참가자에게 어색했다. byStance로 입장별 질문을 나누고(FOR는 기존 질문 그대로,
+  // AGAINST는 CEO가 "AI에게 맡기지 않는다면 지금 쌓인 결재는 어떻게 풀 것인가"를
+  // 묻는다), AGAINST 추천 답변 3개를 새 질문에 답하는 문장으로 다시 썼다. 조건을 묻는
+  // 두 답변(LIMIT·REVIEW)은 proposeFromText 키워드("금액 한도를 정"·"표본 재검토를
+  // 하")를 그대로 유지한다.
   followUp: {
     question: 'AI가 잘못 승인하면, 이사님은 누구에게 책임을 맡기시겠습니까?',
     askedBy: 'CISO',
+    byStance: {
+      FOR: {
+        question: 'AI가 잘못 승인하면, 이사님은 누구에게 책임을 맡기시겠습니까?',
+        askedBy: 'CISO',
+      },
+      AGAINST: {
+        question: 'AI에게 맡기지 않는다면, 하루 수십 건씩 밀리는 결재는 어떻게 풀어야 할까요?',
+        askedBy: 'CEO',
+      },
+    },
     options: [
       {
         text: '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.',
@@ -288,17 +305,17 @@ export const aiApprovalScenario: Scenario = {
         side: 'FOR',
       },
       {
-        text: '책임은 결국 사람이 져야 한다고 생각해, AI에게 맡기는 데 반대합니다.',
+        text: '사람을 더 투입하거나 순서를 바꿔 풀어야지, AI에게 맡기면 안 된다고 생각합니다.',
         proposeConditionId: null,
         side: 'AGAINST',
       },
       {
-        text: '이대로는 반대하지만, 결재 금액 한도를 정한다면 다시 생각해 보겠습니다.',
+        text: '그래도 급하다면, 결재 금액 한도를 정해 일부만 맡기는 것은 다시 생각해 보겠습니다.',
         proposeConditionId: 'LIMIT',
         side: 'AGAINST',
       },
       {
-        text: '이대로는 반대하지만, 사람이 표본 재검토를 하도록 한다면 다시 생각해 보겠습니다.',
+        text: '그래도 급하다면, 사람이 표본 재검토를 하도록 하는 선에서는 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
         side: 'AGAINST',
       },

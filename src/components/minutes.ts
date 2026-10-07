@@ -7,7 +7,7 @@
 import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
-import { reactionsFor, oppositionReactionText } from './reactionsFor';
+import { reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from './reactionsFor';
 import { chairMotionLine } from './chairMotionLine';
 import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
@@ -228,11 +228,13 @@ export function buildMinutes(
       }
     }
 
-    // 5. CAIO 질문(각본 문구, 도착 시각 없음)
+    // 5. 후속 질문(각본 문구, 도착 시각 없음). T93: 참가자 입장별로 묻는 임원·질문이
+    // 다를 수 있다(resolveFollowUpPrompt).
+    const followUpPrompt = resolveFollowUpPrompt(scenario, firstOpinion.stance ?? null);
     entries.push({
       id: 'caio-question',
-      speaker: scenario.followUp.askedBy,
-      text: scenario.followUp.question,
+      speaker: followUpPrompt.askedBy,
+      text: followUpPrompt.question,
       kind: 'speech',
       timeLabel: TIME_UNKNOWN,
     });

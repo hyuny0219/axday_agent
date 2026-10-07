@@ -269,9 +269,23 @@ export const experienceFirstScenario: Scenario = {
   // 질문이라 둘 다 그 질문에 직접 답하는 모양이다) ConditionChips 충돌 안내가 그대로
   // 작동하는지 보는 e2e(reactions.spec.ts)도 그대로 통과한다. AGAINST는 "이대로는
   // 반대하지만 ~라면 다시 생각해 보겠습니다" 꼴로 조건 키워드를 부정 없이 담는다.
+  // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): aiApproval.ts
+  // followUp 주석과 같은 근거. AGAINST는 CAIO가 "경험을 앞세우지 않는다면 데이터가 없는
+  // 새로운 상황에서는 어떻게 결정할 것인가"를 묻는다. 조건 키워드(RECORD "판단 근거를
+  // 기록"·REVIEW "결정 결과를 복기")는 그대로 유지한다.
   followUp: {
     question: '데이터가 분명히 위험하다고 알려도, 경험을 따르시겠습니까? 아니면 잠시 멈추시겠습니까?',
     askedBy: 'CFO',
+    byStance: {
+      FOR: {
+        question: '데이터가 분명히 위험하다고 알려도, 경험을 따르시겠습니까? 아니면 잠시 멈추시겠습니까?',
+        askedBy: 'CFO',
+      },
+      AGAINST: {
+        question: '경험을 앞세우지 않는다면, 데이터가 없는 새로운 상황에서는 어떻게 결정해야 할까요?',
+        askedBy: 'CAIO',
+      },
+    },
     options: [
       {
         text: '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
@@ -289,17 +303,17 @@ export const experienceFirstScenario: Scenario = {
         side: 'FOR',
       },
       {
-        text: '숫자가 분명한 경고를 보내면 경험보다 데이터를 믿어야 한다고 생각합니다.',
+        text: '새로운 상황도 데이터를 더 모아서 풀어야지, 경험만 앞세우면 안 된다고 생각합니다.',
         proposeConditionId: null,
         side: 'AGAINST',
       },
       {
-        text: '이대로는 반대하지만, 판단 근거를 기록한다면 다시 생각해 보겠습니다.',
+        text: '그래도 어렵다면, 판단 근거를 기록한다면 다시 생각해 보겠습니다.',
         proposeConditionId: 'RECORD',
         side: 'AGAINST',
       },
       {
-        text: '이대로는 반대하지만, 결정 결과를 복기해 되짚는다면 다시 생각해 보겠습니다.',
+        text: '그래도 어렵다면, 결정 결과를 복기해 되짚는다면 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
         side: 'AGAINST',
       },
