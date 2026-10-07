@@ -35,6 +35,7 @@ function selectScenario(clock: FakeClock, mode: SessionMode): Session {
   let session = createInitialSession(clock.now());
   session = reduce(session, { type: 'START' }, clock.now());
   session = reduce(session, { type: 'SET_MODE', mode }, clock.now());
+  session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // INTRO -> SELECT
   session = reduce(
     session,
     { type: 'SELECT_SCENARIO', scenarioId: anonBoardScenario.id },

@@ -14,6 +14,7 @@ const MARKER_DRAFT_TEXT = 'MARKER_초안_절대_전송_금지_XYZ';
 function sessionAtDiscuss(now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
@@ -120,7 +121,9 @@ describe('selectPublic', () => {
   });
 
   it('BRIEFING 이전에는 임원 의견 ID를 공개하지 않고, 그 이후에는 공개한다', () => {
-    const atSelect = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    const atIntro = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    expect(atIntro.stage).toBe('INTRO');
+    const atSelect = reduce(atIntro, { type: 'NEXT_STAGE' }, T0);
     expect(atSelect.stage).toBe('SELECT');
     expect(selectPublic(atSelect, scenario, 1).memberOpinionIds).toEqual([]);
 

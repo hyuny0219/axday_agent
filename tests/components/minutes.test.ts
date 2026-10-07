@@ -24,6 +24,7 @@ function selectScenario(mode: SessionMode, now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
   session = reduce(session, { type: 'SET_MODE', mode }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   return session;
 }
