@@ -418,9 +418,9 @@ export const aiApprovalScenario: Scenario = {
     },
   },
   remainingTasks: [
-    { text: '결재 범위·한도 확정', resolvedBy: 'LIMIT' },
-    { text: '승인 사유 기록 방식', resolvedBy: 'LOG' },
-    { text: '책임자 지정', resolvedBy: 'OWNER' },
+    { text: '결재 범위와 돈 한도 정하기', resolvedBy: 'LIMIT' },
+    { text: '승인 이유를 어떻게 남길지', resolvedBy: 'LOG' },
+    { text: '책임질 사람 정하기', resolvedBy: 'OWNER' },
   ],
   baseConditionIds: [],
   status: 'active',

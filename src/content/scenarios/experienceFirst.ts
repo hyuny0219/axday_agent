@@ -412,8 +412,8 @@ export const experienceFirstScenario: Scenario = {
   },
   remainingTasks: [
     { text: '"중요한 의사결정"의 기준', resolvedBy: 'SCOPE' },
-    { text: '판단 근거 기록 양식', resolvedBy: 'RECORD' },
-    { text: '복기 주기', resolvedBy: 'REVIEW' },
+    { text: '판단 이유를 어떻게 적어 둘지', resolvedBy: 'RECORD' },
+    { text: '결정을 언제 되짚어 볼지', resolvedBy: 'REVIEW' },
   ],
   baseConditionIds: [],
   status: 'active',
