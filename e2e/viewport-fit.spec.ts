@@ -50,6 +50,9 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await expectInViewport(page, 'operator-menu-button', 'ATTRACT');
   await startCta.click();
 
+  await expectNoPageScroll(page, 'INTRO');
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+
   await expectNoPageScroll(page, 'SELECT');
   // T84 #10: 카드 자체가 입장 버튼이다 — 별도 "이사회 입장" CTA가 없다.
   const scenarioCard = page.getByTestId('scenario-card-ai-approval');
@@ -60,6 +63,9 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await expectNoPageScroll(page, 'BRIEFING');
   const hearOpinions = page.getByRole('button', { name: '의견 듣기' });
   await expect(hearOpinions).toBeInViewport();
+  // T95: 근거 자료를 한 번 열어 닫기 전에는 잠겨 있다.
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await hearOpinions.click();
 
   await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
@@ -144,7 +150,10 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.setViewportSize({ width: 1568, height: 777 });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();

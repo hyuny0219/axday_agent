@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
+import { GuideHint } from '../parts/GuideHint';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -25,6 +26,15 @@ export interface BriefingScreenProps {
 
 export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // 진행 가이드 게이팅(T95, 2026-10-08 사용자 — "필수로 보고 넘어가도록 버튼 활성/
+  // 비활성"): 근거 자료 팝업을 한 번 열어 닫기 전까지 "의견 듣기 ▶"를 잠근다. 다시
+  // 열어도(두 번째부터) 이미 본 것으로 유지한다.
+  const [evidenceSeen, setEvidenceSeen] = useState(false);
+
+  function handleCloseEvidence() {
+    setEvidenceOpen(false);
+    setEvidenceSeen(true);
+  }
   // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
   // "사건 02" 형식이라 그대로 쓴다(ResultScreen·DiscussScreen·ReactionsScreen도 같다).
   const caseTag = scenario.incident.caseLabel;
@@ -39,9 +49,20 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   return (
     <>
       <div className="app-body__actions screen briefing-screen">
-        <button type="button" className="cta briefing-screen__cta" onClick={onNext}>
+        <button
+          type="button"
+          className="cta briefing-screen__cta"
+          onClick={onNext}
+          disabled={!evidenceSeen}
+          data-guide={evidenceSeen ? 'next' : undefined}
+        >
           의견 듣기 ▶
         </button>
+        {!evidenceSeen && (
+          <p className="cta-disabled-hint" data-testid="briefing-cta-hint">
+            근거 자료를 먼저 확인해 주세요
+          </p>
+        )}
       </div>
       <div className="app-body__content screen briefing-screen__info">
         <div className="briefing-screen__paper">
@@ -81,12 +102,14 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               <span className="briefing-screen__final-no">반대</span>
             </p>
           </div>
+          {!evidenceSeen && <GuideHint text="먼저 근거 자료 4장을 열어 보세요" testId="briefing-guide-hint" />}
           <div className="briefing-screen__exhibit">
             <button
               type="button"
               className="cta cta--secondary"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
+              data-guide={!evidenceSeen ? 'next' : undefined}
             >
               근거 자료 보기 · 자료 4장
             </button>
@@ -98,7 +121,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           evidence={scenario.evidence}
           caseTag={caseTag}
           statements={[]}
-          onClose={() => setEvidenceOpen(false)}
+          onClose={handleCloseEvidence}
         />
       )}
     </>

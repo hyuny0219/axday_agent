@@ -12,11 +12,14 @@ const MY_OPINION_TEXT = '소액부터 자동 승인하고 결과를 확인한 �
 async function enterBriefing(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 }
 
 async function enterReactions(page: Page) {
   await enterBriefing(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -52,6 +55,8 @@ function expectNoPageScroll(page: Page) {
  * CAM/CLASSIFIED 라벨·명패 겹침이 실제로 드러난 상태). */
 async function enterReactionsWithAllConditions(page: Page) {
   await enterBriefing(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -128,6 +133,7 @@ test.describe('1920×1080에서 무대 열', () => {
   test('BRIEFING부터 무대가 왼쪽 열에 원본 16:9로 렌더된다', async ({ page }) => {
     await page.goto('/?mode=scripted');
     await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '안건 고르러 가기' }).click();
 
     // SELECT는 무대 렌더 대상이 아니다(진입 전, DESIGN_SPEC.md v1.0 1절).
     await expect(page.getByTestId('stage-band')).toHaveCount(0);
@@ -177,6 +183,8 @@ test.describe('1920×1080에서 무대 열', () => {
     await enterBriefing(page);
     await expectNoPageScroll(page);
 
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '의견 듣기' }).click();
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     await page.getByTestId('discuss-side-for').click();
