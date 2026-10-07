@@ -33,6 +33,9 @@ export function formatElapsed(startedAt: number | null, occurredAt: number | und
 export interface MinutesEntry {
   id: string;
   speaker: MemberId;
+  /** 화자 칸에 덧붙일 짧은 표기(T92 참가자 입장 "찬성"/"반대" — 본문 꼬리표 "(이사님 입장: …)"는
+   * 회의록을 기계적으로 읽히게 해 Opus 2차 검토에서 화자 칸으로 옮겼다). */
+  speakerNote?: string;
   text: string;
   kind: 'speech' | 'pending' | 'failed' | 'mine';
   timeLabel: string;
@@ -129,9 +132,9 @@ function scriptedReactionText(
 
 /** 참가자 발언 행에 입장을 덧붙인다(T92, "참가자 행에 이사님 입장이 보이게"). 입장을
  * 고르지 않았으면 원문 그대로. */
-function withStanceLabel(text: string, stance: 'FOR' | 'AGAINST' | null | undefined): string {
-  if (!stance) return text;
-  return `${text} (이사님 입장: ${stance === 'FOR' ? '찬성' : '반대'})`;
+function stanceNote(stance: 'FOR' | 'AGAINST' | null | undefined): string | undefined {
+  if (!stance) return undefined;
+  return stance === 'FOR' ? '찬성' : '반대';
 }
 
 /**
@@ -193,7 +196,8 @@ export function buildMinutes(
     entries.push({
       id: 'my-opinion',
       speaker: 'PARTICIPANT',
-      text: withStanceLabel(firstOpinion.originalText, firstOpinion.stance),
+      text: firstOpinion.originalText,
+      speakerNote: stanceNote(firstOpinion.stance),
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, firstOpinion.createdAt),
     });
@@ -246,9 +250,8 @@ export function buildMinutes(
     entries.push({
       id: 'my-followup',
       speaker: 'PARTICIPANT',
-      text: secondOpinion
-        ? withStanceLabel(secondOpinion.originalText, secondOpinion.stance)
-        : '(답하지 않고 넘어갔습니다)',
+      text: secondOpinion ? secondOpinion.originalText : '(답하지 않고 넘어갔습니다)',
+      speakerNote: secondOpinion ? stanceNote(secondOpinion.stance) : undefined,
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, secondOpinion?.createdAt),
     });

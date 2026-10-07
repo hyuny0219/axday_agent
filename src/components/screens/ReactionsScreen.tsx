@@ -770,7 +770,7 @@ export function ReactionsScreen({
             "내 의견과 동일한 구성") — discuss.css 클래스를 그대로 재사용한다. */}
         <div className="discuss-screen__paper">
           <div className="discuss-screen__head">
-            <span className="discuss-screen__step">4단계 · 2/2</span>
+            <span className="discuss-screen__step">4단계 · 2/2 다시 답하기</span>
             <h2 className="discuss-screen__title">다시 답하기</h2>
             <span className="discuss-screen__phrase-hint">추천 답변 · 여러 개 선택 가능</span>
           </div>
@@ -844,7 +844,7 @@ export function ReactionsScreen({
             >
               근거 자료 · 임원 발언 보기
             </button>
-            <span className="evidence-open-hint">자료 ①~④ + 임원 발언</span>
+            <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
           </div>
         </div>
       </div>

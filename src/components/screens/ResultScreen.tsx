@@ -444,11 +444,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   </p>
                 )}
                 <p className="result-verdicts__line" data-testid="result-ai-help">
-                  AI가 도운 일 ·{' '}
+                  AI 비서실장 ·{' '}
                   {additionalHelp.length > 0 ? (
                     additionalHelp.join(' · ')
                   ) : (
-                    <span data-testid="result-ai-help-none">AI 비서실장 도움은 사용하지 않았습니다.</span>
+                    <span data-testid="result-ai-help-none">사용하지 않음</span>
                   )}
                 </p>
               </div>

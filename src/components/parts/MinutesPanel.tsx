@@ -152,7 +152,10 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
           >
             {/* 발화자 전체 직함은 스크린리더용으로만 남긴다(시안에 아바타·배지가 없어
                 화면에는 역할 코드만 보인다, T77). */}
-            <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
+            <span className="minutes__speaker">
+              {speakerLabel(entry.speaker)}
+              {entry.speakerNote ? ` · ${entry.speakerNote}` : ''}
+            </span>
             {/* 시안 TRANSCRIPT 행 머리(타자기 앰버 "[mm:ss] 역할", T77). 위
                 minutes__speaker(sr-only)가 전체 직함을 이미 전하므로 장식으로 숨긴다.
                 시각을 모르는 행(scripted 각본 문구 등)은 "[--:--]"를 지어내 보이지
@@ -162,6 +165,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
                 ? `[${entry.timeLabel}] `
                 : ''}
               {speakerTag(entry.speaker)}
+              {entry.speakerNote ? ` · ${entry.speakerNote}` : ''}
             </span>
             {/* 전문을 그대로 넣고 줄바꿈한다(2026-09-28 사용자: 잘리는 문장 없이 모두 보이게).
                 판단 중인 행은 시안 그대로 "▌ 대기 중"을 보여준다(T77, Main.html 예시). */}

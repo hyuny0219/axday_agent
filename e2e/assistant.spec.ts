@@ -78,9 +78,7 @@ test('패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 
 
   const aiHelp = page.getByTestId('result-ai-help');
   await expect(aiHelp).not.toContainText('자동 정리');
-  await expect(page.getByTestId('result-ai-help-none')).toContainText(
-    'AI 비서실장 도움은 사용하지 않았습니다.',
-  );
+  await expect(page.getByTestId('result-ai-help-none')).toContainText('사용하지 않음');
 });
 
 // live(mock) 경로(T31). playwright.config.ts가 띄우는 mock board 서버를 그대로 쓴다

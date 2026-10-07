@@ -114,7 +114,7 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       memberId: 'CISO',
-      text: '감사 메모를 보면 승인한 이유를 다시 확인할 수 없었습니다. 이 상태로 결재권을 먼저 줄 수는 없습니다. 기록과 책임질 사람부터 정해야 합니다.',
+      text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 이유도 안 남는다면 더 믿기 어렵습니다. 기록과 책임질 사람부터 정해야 합니다.',
       evidenceIds: ['E3', 'E4'],
       openingStance: 'AGAINST',
     },

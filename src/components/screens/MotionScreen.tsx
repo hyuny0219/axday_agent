@@ -156,10 +156,10 @@ export function MotionScreen({
               )}
             </div>
             <div className="motion-screen__cols-box">
-              <span className="motion-screen__box-label">빠진 것</span>
+              <span className="motion-screen__box-label">이번에 넣지 않은 조건</span>
               <p className="motion-screen__not-included-text">
                 {notIncludedLabels.length > 0 ? (
-                  <>{notIncludedLabels.join(', ')}. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.</>
+                  <>{notIncludedLabels.join(', ')}</>
                 ) : (
                   '제안하신 조건이 모두 들어갔습니다.'
                 )}
@@ -185,7 +185,7 @@ export function MotionScreen({
             >
               이 안건으로 표결 ▶
             </button>
-            <span className="motion-screen__cta-hint">조건 확정</span>
+            <span className="motion-screen__cta-hint">누르면 조건을 더 바꿀 수 없습니다</span>
           </div>
           {freezeDisabled && (
             <p className="motion-screen__waiting" data-testid="motion-waiting-followup">
