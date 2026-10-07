@@ -14,6 +14,7 @@ import type { ParticipantStance, SessionMode, Stance } from '../../domain/types'
 import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
+import { openingStanceOf } from '../openingStance';
 import '../../styles/screens/persuasionBoard.css';
 
 export interface PersuasionBoardProps {
@@ -34,10 +35,6 @@ export interface PersuasionBoardProps {
 
 function conditionLabel(scenario: Scenario, id: string): string {
   return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
-}
-
-function openingStanceOf(scenario: Scenario, memberId: ExecMemberId): Stance {
-  return scenario.initialOpinions.find((opinion) => opinion.memberId === memberId)?.openingStance ?? 'UNDECIDED';
 }
 
 function uniqueInOrder(ids: readonly string[]): string[] {
