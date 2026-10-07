@@ -60,7 +60,9 @@ export function findStrayLatinRun(text: string): string | undefined {
   // 라틴 2자 이상 연속, 또는 라틴 문자와 숫자·밑줄이 붙은 토큰(자료 ID `E1`, `FULL_AUTO`
   // 같은 내부 식별자 — 영문자만 2자 이상 세면 `E1`이 빠져 "E1 자료에 따르면"이 그대로
   // 노출됐다, PR #20 Codex 3차 검토 P2).
-  const matches = text.match(/[A-Za-z][A-Za-z0-9_]+|[0-9_]+[A-Za-z][A-Za-z0-9_]*/g);
+  // 한 글자짜리("A안을 택하겠습니다"·"X 조건")도 금지 대상이다(PR #20 Codex 8차 검토 P2) —
+  // 라틴 문자를 하나라도 포함한 영숫자·밑줄 토큰 전부를 보고 예외 목록만 뺀다.
+  const matches = text.match(/[A-Za-z0-9_]*[A-Za-z][A-Za-z0-9_]*/g);
   return matches?.find((word) => !STRAY_LATIN_EXCEPTIONS.has(word));
 }
 

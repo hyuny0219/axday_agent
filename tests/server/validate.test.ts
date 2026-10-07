@@ -278,6 +278,13 @@ describe('findStrayLatinRun', () => {
     expect(findStrayLatinRun('사람 검토 전면 생략(FULL_AUTO)이 포함되어')).toBe('FULL_AUTO');
     expect(findStrayLatinRun('CFO가 E2를 인용했습니다.')).toBe('E2');
   });
+
+  // PR #20 Codex 8차 검토 P2: 한 글자짜리 영문도 걸러야 한다.
+  it('catches single Latin letters like A안·X 조건', () => {
+    expect(findStrayLatinRun('A안을 택하겠습니다.')).toBe('A');
+    expect(findStrayLatinRun('X 조건은 제외합니다.')).toBe('X');
+    expect(findStrayLatinRun('AI가 처리하고 CFO가 확인합니다. 62%·2.8일.')).toBeUndefined();
+  });
 });
 
 describe('RequestIdRegistry', () => {
