@@ -213,37 +213,39 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             </p>
           )}
         </section>
-        {endSessionConfirmOpen ? (
+        {/* 버튼 두 개는 확인 UI가 열려 있어도 마운트를 유지한다(비활성만) — 확인 UI로
+            교체하면 "처음 화면으로" 버튼이 사라져 취소 뒤 포커스를 되돌릴 곳이 없다
+            (PR #20 Codex 16차 검토 P2). */}
+        {/* "회의록 전문 보기"가 이제 주 CTA다(T84 #5) — 결과 화면에 머무는 동안
+            가장 자주 쓰는 동작이고, 세션 상태는 바꾸지 않고 오른쪽 열 기록
+            영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
+        <button
+          type="button"
+          className="cta"
+          onClick={() => setShowTranscript((previous) => !previous)}
+          aria-pressed={showTranscript}
+          disabled={endSessionConfirmOpen}
+          data-testid="result-transcript-toggle"
+        >
+          {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
+        </button>
+        {/* "처음 화면으로"(옛 "체험 종료")는 세션을 초기화하는 되돌릴 수 없는
+            동작이라 보조 CTA로 낮추고, 누르면 바로 초기화하지 않고 확인 단계를
+            먼저 연다(아래 EndSessionConfirm). */}
+        <button
+          type="button"
+          className="cta cta--secondary"
+          onClick={() => setEndSessionConfirmOpen(true)}
+          disabled={endSessionConfirmOpen}
+          data-testid="end-session"
+        >
+          처음 화면으로
+        </button>
+        {endSessionConfirmOpen && (
           <EndSessionConfirm
             onConfirm={onReset}
             onCancel={() => setEndSessionConfirmOpen(false)}
           />
-        ) : (
-          <>
-            {/* "회의록 전문 보기"가 이제 주 CTA다(T84 #5) — 결과 화면에 머무는 동안
-                가장 자주 쓰는 동작이고, 세션 상태는 바꾸지 않고 오른쪽 열 기록
-                영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
-            <button
-              type="button"
-              className="cta"
-              onClick={() => setShowTranscript((previous) => !previous)}
-              aria-pressed={showTranscript}
-              data-testid="result-transcript-toggle"
-            >
-              {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
-            </button>
-            {/* "처음 화면으로"(옛 "체험 종료")는 세션을 초기화하는 되돌릴 수 없는
-                동작이라 보조 CTA로 낮추고, 누르면 바로 초기화하지 않고 확인 단계를
-                먼저 연다(위 EndSessionConfirm). */}
-            <button
-              type="button"
-              className="cta cta--secondary"
-              onClick={() => setEndSessionConfirmOpen(true)}
-              data-testid="end-session"
-            >
-              처음 화면으로
-            </button>
-          </>
         )}
       </div>
       <div className="app-body__content screen result-screen" data-skip={skip}>

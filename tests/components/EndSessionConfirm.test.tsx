@@ -1,5 +1,6 @@
-// PR #20 Codex 15차 검토 P2: 확인 UI를 취소하면 포커스가 문서 본문으로 떨어지지 않고 열었던
-// 버튼("처음 화면으로")으로 돌아가야 한다.
+// PR #20 Codex 15·16차 검토 P2: 확인 UI를 취소하면 포커스가 문서 본문으로 떨어지지 않고 열었던
+// 버튼("처음 화면으로")으로 돌아가야 한다. ResultScreen처럼 트리거 버튼은 확인 UI가 열린 동안
+// 마운트를 유지하고 비활성만 된다(교체하면 되돌릴 곳이 사라진다).
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -12,7 +13,7 @@ function Harness() {
   const [open, setOpen] = useState(false);
   return (
     <div>
-      <button type="button" data-testid="opener" onClick={() => setOpen(true)}>
+      <button type="button" data-testid="opener" disabled={open} onClick={() => setOpen(true)}>
         처음 화면으로
       </button>
       {open && <EndSessionConfirm onConfirm={() => setOpen(false)} onCancel={() => setOpen(false)} />}
