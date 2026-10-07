@@ -237,6 +237,16 @@ export const experienceFirstScenario: Scenario = {
       text: '말씀은 기록했습니다. 다른 확인 조건이 없다면 현재 안건으로 판단하겠습니다.',
     },
   ],
+  // 순수 반대(조건 없이 안건 자체에 반대, T92 N4 "중요한 결정은 숫자로 확인해야 한다고
+  // 생각해 경험을 우선하는 것 자체에 반대합니다")에 대한 임원 4명의 응답. aiApproval.ts
+  // oppositionReactions와 같은 근거 — "입장 그대로입니다"만 반복하지 않고 N4의 핵심
+  // 주장("숫자로 확인")에 한 문장씩 직접 답한다.
+  oppositionReactions: {
+    CEO: '숫자로 확인해야 한다는 말씀은 이해합니다. 다만 지난 2년 복기를 보면 숫자도 늘 맞지는 않았으니, 사람이 방향을 잡는 몫도 필요하다고 봅니다.',
+    CFO: '숫자로 확인해야 한다는 말씀에 저도 동의합니다. 데이터가 분명히 경고할 때 멈추는 절차 없이는 저도 경험을 우선할 수 없습니다.',
+    CAIO: '말씀하신 우려에 공감합니다. 다만 모델이 약해지는 전례 없는 상황에 한정한다면 경험을 앞세워볼 여지는 있다고 봅니다.',
+    CISO: '숫자로 확인해야 한다는 말씀, 베테랑 인터뷰 메모에서도 같은 우려가 나왔습니다. 판단 근거를 남기지 않으면 저도 반대입니다.',
+  },
   // 추천 답변(T89, aiApproval.ts followUp 주석과 같은 근거). FOR 세 문구는 P3(DATA_VETO)·
   // P5(EXP_ONLY)·P1(SCOPE)과 같은 문장을 재사용한다 — DATA_VETO·EXP_ONLY는 상충쌍이라
   // 같은 입장 안에 함께 두면(DISCUSS와 달리 여기는 "경험을 따르겠다/멈추겠다" 자체가
@@ -286,6 +296,10 @@ export const experienceFirstScenario: Scenario = {
   },
   // T85 #14: 번역투 문장을 사람이 회의에서 말하듯 다시 썼다(의미·판단 순서는 그대로,
   // 숫자·퍼센트는 쓰지 않는다 — NUMERIC_COPY_PATTERN).
+  // T92: aiApproval.ts voteRules 주석과 같은 근거 — CFO·CAIO·CISO는 자기 조건이 모두
+  // 채워질 때만 YES라, 반대 입장에서 일부 조건만 제안해도 NO가 유지된다(반대 성향
+  // CFO·CISO가 조건 유무만으로 찬성으로 넘어가지 않는다). 별도 participantStance 분기는
+  // 두지 않았다(tests/domain/voting.test.ts 회귀 테스트로 분포를 고정).
   voteRules: {
     CEO: [
       {

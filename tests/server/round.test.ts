@@ -228,6 +228,23 @@ describe('roundRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
   });
 });
 
+// T92: 참가자 입장(사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는 경향"). 생략하면
+// 기존 요청과 동일하게 통과한다 — 새 필드가 선택값임을 고정한다.
+describe('roundRequestSchema participantStance(T92)', () => {
+  const base = baseRoundInput({ requestId: 'req-stance' });
+
+  it('생략하면(기존 요청) 그대로 통과한다', () => {
+    expect(roundRequestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('FOR·AGAINST는 통과하고, 그 밖의 값은 거부한다', () => {
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'FOR' }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'AGAINST' }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'UNDECIDED' }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: null }).success).toBe(false);
+  });
+});
+
 // PR #13 Codex 1차 검토 P2: CONDITION_IDS는 안건①·②의 합집합이라, 스키마만으로는 다른
 // 안건의 조건(예: 안건①에 SCOPE)도 모양상 통과한다. suggestedConditionIds는 호출한
 // 안건 자신의 조건이어야만 유효하다 — 모델 응답 방향 검증, 모르는 ID와 같이 거절한다.

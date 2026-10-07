@@ -18,7 +18,7 @@ import type { Ballot, MemberId, Session } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
-import { collectConfirmedConditionIds } from '../opinionConditions';
+import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildRemainingTaskLabels } from '../motionDisplay';
 import { buildResultSummary } from '../resultSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
@@ -168,12 +168,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 방향이었는지로 가른다. 가결/부결이 아니라 **실제 득표수**로 본다 — live에서 임원
   // 3명이 미표결이고 찬성 1·반대 1이면 부결이지만 다수 의견은 없으므로 "다수 의견과
   // 같은 판단"이라고 하면 모순이다(PR #20 Codex 2차 검토 P2). 동률이면 별도 문구.
+  // T92: 참가자가 반대 입장으로 반대표를 던졌고 그 표가 다수였으며 안건이 부결됐으면
+  // (가결·반대 조합은 어색하므로 REJECT로 한정) "다수 의견과 같은 판단"보다 반대 입장을
+  // 직접 가리키는 문구로.
+  const participantStance = collectParticipantStance(session.opinions);
   const participantRowNote = (() => {
     const vote = resultSummary?.participant.vote;
     if (!vote) return '';
     const mine = tallyResult.counts[vote];
     const other = tallyResult.counts[vote === 'YES' ? 'NO' : 'YES'];
-    if (mine > other) return '다수 의견과 같은 판단을 내렸습니다';
+    if (mine > other) {
+      if (participantStance === 'AGAINST' && vote === 'NO' && session.outcome === 'REJECT') {
+        return '이사님의 반대가 이사회 결론이 되었습니다';
+      }
+      return '다수 의견과 같은 판단을 내렸습니다';
+    }
     if (mine < other) return '소수 의견으로 회의록에 남았습니다';
     return '표가 갈려 어느 쪽도 다수가 아니었습니다';
   })();

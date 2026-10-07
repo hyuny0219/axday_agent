@@ -31,13 +31,19 @@ function filterUnresolved(
     .map((item) => item.text);
 }
 
+/** participantStance(T92)가 'AGAINST'이고 조건이 있으면 "단, 아래 조건을 붙입니다."
+ * 대신 참가자가 반대하며 조건을 요구했음을 밝힌다(사용자 지적 "AI 임원들이 찬성 쪽으로
+ * 몰고 가는 경향" — 화면 문구도 찬성 전제였다). 생략하면(기존 호출부) null과 같다. */
 export function buildMotionDisplay(
   scenario: Scenario,
   confirmedConditionIds: readonly string[],
+  participantStance: 'FOR' | 'AGAINST' | null = null,
 ): MotionDisplay {
   const hasConditions = confirmedConditionIds.length > 0;
   const sentence = hasConditions
-    ? `${scenario.motionBreakdown.proposal} 단, 아래 조건을 붙입니다.`
+    ? participantStance === 'AGAINST'
+      ? `${scenario.motionBreakdown.proposal} 이사님은 원안에 반대하며, 아래 조건을 요구합니다.`
+      : `${scenario.motionBreakdown.proposal} 단, 아래 조건을 붙입니다.`
     : scenario.motionBreakdown.proposal;
   return {
     sentence,

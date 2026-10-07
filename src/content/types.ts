@@ -10,6 +10,9 @@ export type Predicate =
   | { any: Predicate[] }
   | { not: Predicate }
   | { mode: string }
+  /** 참가자가 이번 표결까지 가장 최근에 밝힌 입장(T92, 사용자 지적 "AI 임원들이 찬성
+   * 쪽으로 몰고 가는 경향"). null은 "입장을 고르지 않음". */
+  | { participantStance: 'FOR' | 'AGAINST' | null }
   | { always: true };
 
 export interface EvidenceCard {
@@ -183,6 +186,11 @@ export interface Scenario {
   conditions: Condition[];
   conflicts: ConflictPair[];
   reactions: Reaction[];
+  /** 순수 반대(조건 없이 안건 자체에 반대, T92)에 대한 임원 4명의 반응 한 문장씩. 기존
+   * reactions의 conditionId: 'none'은 "말씀은 기록했습니다" 같은 입장 무관 문구라, 참가자가
+   * 반대 입장이면 대신 이 문구를 쓴다(ReactionsScreen·minutes.ts). 없으면(과거 시나리오)
+   * 기존 'none' 반응으로 되돌아간다. */
+  oppositionReactions?: Record<ExecMemberId, string>;
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;

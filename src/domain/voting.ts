@@ -9,6 +9,8 @@ export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO', 'CAIO',
 export interface VoteContext {
   conditionIds: string[];
   executionMode: string;
+  /** 참가자가 가장 최근에 밝힌 입장(T92). 생략하면 null(입장 미선택)과 같다. */
+  participantStance?: 'FOR' | 'AGAINST' | null;
 }
 
 /** 안건의 유효 조건·실행 방식 아래 술어(predicate) 하나를 평가한다. */
@@ -28,6 +30,9 @@ export function evalPredicate(predicate: Predicate, ctx: VoteContext): boolean {
   if ('mode' in predicate) {
     return ctx.executionMode === predicate.mode;
   }
+  if ('participantStance' in predicate) {
+    return (ctx.participantStance ?? null) === predicate.participantStance;
+  }
   return true; // { always: true }
 }
 
@@ -41,11 +46,18 @@ export function decideMember(rules: VoteRule[], ctx: VoteContext): Vote {
   throw new Error('일치하는 표결 규칙이 없습니다. 규칙 목록의 총괄성을 확인하십시오.');
 }
 
-/** 임원 4명의 표를 고정된 순서(CEO/CFO/CAIO/CISO)로 확정한다. scripted 규칙 결과다. */
-export function decideBoard(scenario: Scenario, motion: Motion): Ballot[] {
+/** 임원 4명의 표를 고정된 순서(CEO/CFO/CAIO/CISO)로 확정한다. scripted 규칙 결과다.
+ * participantStance(T92)를 생략하면 null(입장 미선택)과 같다 — 기존 호출부·테스트는
+ * 입장을 쓰지 않는 규칙만 평가하므로 동작이 그대로다. */
+export function decideBoard(
+  scenario: Scenario,
+  motion: Motion,
+  participantStance: 'FOR' | 'AGAINST' | null = null,
+): Ballot[] {
   const ctx: VoteContext = {
     conditionIds: motion.effectiveConditionIds,
     executionMode: motion.executionMode,
+    participantStance,
   };
   return EXEC_MEMBER_ORDER.map((memberId) => ({
     memberId,

@@ -100,7 +100,9 @@ function buildFinalVotes(ctx: BoardAgentsContext): BallotOutcome[] {
   if (!motion) {
     return EXEC_MEMBER_ORDER.map((roleId) => ({ roleId, status: 'failed', failReason: NO_FINAL_MOTION }));
   }
-  return decideBoard(ctx.scenario, motion).map((ballot) => ({
+  const opinions = ctx.session.opinions;
+  const participantStance = opinions[opinions.length - 1]?.stance ?? null;
+  return decideBoard(ctx.scenario, motion, participantStance).map((ballot) => ({
     roleId: ballot.memberId as ExecMemberId,
     status: 'answered',
     ballot,

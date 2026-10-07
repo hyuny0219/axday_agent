@@ -39,6 +39,10 @@ export const VOTE_VALUES = ['YES', 'NO'] as const;
 /** 발언 끝에 임원이 지금 기울어 있는 쪽(T63, src/domain/stance.ts의 Stance와 값이 같다). */
 export const STANCE_VALUES = ['FOR', 'AGAINST', 'UNDECIDED'] as const;
 
+/** 참가자가 지금 기울어 있는 입장(T92, src/domain/types.ts의 ParticipantStance 중 null이
+ * 아닌 값과 같다). null은 입장을 고르지 않음이며 요청 스키마에서는 필드 생략으로 표현한다. */
+export const PARTICIPANT_STANCE_VALUES = ['FOR', 'AGAINST'] as const;
+
 const evidenceIdSchema = z.enum(EVIDENCE_IDS);
 const conditionIdSchema = z.enum(CONDITION_IDS);
 

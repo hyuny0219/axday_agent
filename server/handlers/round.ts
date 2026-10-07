@@ -6,6 +6,7 @@ import {
   CONDITION_IDS,
   EVIDENCE_IDS,
   EXEC_ROLE_IDS,
+  PARTICIPANT_STANCE_VALUES,
   STANCE_VALUES,
   STATEMENT_STAGES,
   statementResponseSchema,
@@ -41,6 +42,8 @@ export const roundRequestSchema = z.object({
     statements: z.array(transcriptStatementSchema),
   }),
   participantOpinion: z.string().min(1).optional(),
+  /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). 없으면 입장을 고르지 않은 것이다. */
+  participantStance: z.enum(PARTICIPANT_STANCE_VALUES).optional(),
   scenarioId: z.string().min(1),
   budgetMs: z.number().int().positive(),
   /** 실패한 역할만 다시 호출할 때 쓰는 선택 필드(T65, "다시 요청"). 없으면 임원 4명 전체를
@@ -113,7 +116,9 @@ function stageInstruction(stage: RoundRequest['stage']): string {
     case 'REACTIONS':
       return (
         '지금은 반응 단계입니다. 참가자 발언과 동료 임원의 기존 발언(ID)을 참고해 동의·반론·입장' +
-        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.'
+        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.' +
+        ' 참가자 발언의 핵심 주장 한 가지를 짚어 그 주장에 직접 답하십시오 — "말씀은 잘' +
+        ' 들었습니다" 같은 수신 확인만 하고 넘어가지 마십시오.'
       );
     case 'FOLLOWUP':
       return (
@@ -141,6 +146,7 @@ function buildRoundSystemPrompt(
     transcriptRevision: input.transcript.revision,
     statements: input.transcript.statements,
     participantOpinion: input.participantOpinion,
+    participantStance: input.participantStance ?? null,
   });
   return [
     buildCommonGuardrails(),
