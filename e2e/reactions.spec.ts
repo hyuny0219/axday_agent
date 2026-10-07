@@ -12,6 +12,7 @@ async function enterExperienceFirstReactions(page: Page) {
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 }
 
 /** P3 = DATA_VETO(데이터 경고 시 멈춤)를 확정한 채 첫 의견을 전달한다. */
@@ -362,6 +363,7 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });

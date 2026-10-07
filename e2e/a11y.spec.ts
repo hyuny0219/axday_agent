@@ -24,7 +24,11 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.getByRole('button', { name: '내 의견 말하기' }).focus();
   await page.keyboard.press('Enter');
 
-  // DISCUSS: 추천 문구 체크박스는 Space로 토글한다(네이티브 checkbox 키보드 조작).
+  // DISCUSS: 입장을 먼저 고른다(T87, 네이티브 button이라 Enter로 누른다).
+  await page.getByTestId('discuss-side-for').focus();
+  await page.keyboard.press('Enter');
+
+  // 추천 문구 체크박스는 Space로 토글한다(네이티브 checkbox 키보드 조작).
   const phraseCheckbox = page.locator('[data-testid="phrase-card-P1"] input[type="checkbox"]');
   await phraseCheckbox.focus();
   await page.keyboard.press('Space');
@@ -87,6 +91,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // 사용자가 실제로 쓰는 경로(마우스 휠)로만 스크롤한다 — scrollIntoView는
   // overflow:hidden 컨테이너도 프로그램적으로 움직여 잘림을 숨긴다(PR #6 Codex 4차 검토).

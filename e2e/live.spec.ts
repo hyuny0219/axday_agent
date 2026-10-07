@@ -81,6 +81,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS: "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS 라운드의 실제
   // 발언이어야 한다(scenario.initialOpinions 각본 문장이 아니다 — PR #11 Codex 18차 검토
@@ -133,6 +134,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
@@ -164,6 +166,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -207,6 +210,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await expect(page.getByTestId('statement-failed-CAIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -268,6 +272,7 @@ test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 �
   await expect(page.locator('[data-testid^="statement-failed-"]')).toHaveCount(0);
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();

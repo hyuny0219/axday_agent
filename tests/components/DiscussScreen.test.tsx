@@ -8,7 +8,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DiscussScreen } from '../../src/components/screens/DiscussScreen';
-import { anonBoardScenario } from '../../src/content/scenarios';
+import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
 
@@ -197,5 +197,86 @@ describe('DiscussScreen', () => {
     expect(info.hasAttribute('inert')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
     expect(info.hasAttribute('inert')).toBe(false);
+  });
+
+  // T87(사용자 — "찬성/반대를 고르면 추천 문구가 뜨도록"): 입장을 고르기 전에는
+  // 추천 문구 대신 안내가 보이고, 입장을 고르면 그 side(+BOTH)만 보인다.
+  describe('입장 선택(T87)', () => {
+    const idleRoleStatus: Record<ExecMemberId, RoleStatus> = {
+      CEO: 'idle',
+      CFO: 'idle',
+      CAIO: 'idle',
+      CISO: 'idle',
+    };
+    const emptyTranscript: Transcript = { revision: 0, statements: [] };
+
+    it('입장을 고르기 전에는 추천 문구 그리드 대신 안내가 보인다', () => {
+      render(
+        <DiscussScreen
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      expect(screen.getByTestId('discuss-side-guide')).toHaveTextContent('먼저 입장을 골라 주세요');
+      expect(screen.queryByTestId('phrase-card-P1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('phrase-card-N1')).not.toBeInTheDocument();
+    });
+
+    it('찬성을 고르면 FOR·BOTH 문구만 보이고, 반대를 고르면 AGAINST·BOTH 문구만 보인다', () => {
+      render(
+        <DiscussScreen
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      expect(screen.getByTestId('phrase-card-P1')).toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-P6')).toBeInTheDocument(); // BOTH(요청형)
+      expect(screen.queryByTestId('phrase-card-N1')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.queryByTestId('phrase-card-P1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-N1')).toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-P6')).toBeInTheDocument();
+    });
+
+    it('입장을 바꾸면 체크된 문구가 해제된다', () => {
+      const phraseP1Text = aiApprovalScenario.phrases.find((phrase) => phrase.id === 'P1')!.text;
+      render(
+        <DiscussScreen
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      fireEvent.click(screen.getByTestId('phrase-card-P1'));
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue(phraseP1Text);
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('');
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      expect(screen.queryByText(phraseP1Text)).toBeInTheDocument();
+      // 다시 찬성으로 돌아와도 체크는 풀린 채로 시작한다(토글 input이 아직 checked가 아니다).
+      const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
+      expect(checkbox).not.toBeChecked();
+    });
   });
 });

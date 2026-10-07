@@ -39,6 +39,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByTestId('discuss-side-for').click();
     // LIMIT·LOG·REVIEW·OWNER 네 조건을 모두 제안하는 문구 4개를 고른다.
     await page.getByTestId('phrase-card-P1').click();
     await page.getByTestId('phrase-card-P2').click();
@@ -90,6 +91,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByTestId('discuss-side-for').click();
     // 조건 키워드가 전혀 없는 문장(어떤 조건도 제안하지 않는다).
     await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
     const submitOpinion = page.getByTestId('submit-opinion');
@@ -134,6 +136,7 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('keep-previous-answer').click();
@@ -172,6 +175,7 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
 
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('phrase-card-P1').click();
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeEnabled();

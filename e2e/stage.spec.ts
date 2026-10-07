@@ -19,6 +19,7 @@ async function enterReactions(page: Page) {
   await enterBriefing(page);
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
@@ -49,6 +50,7 @@ async function enterReactionsWithAllConditions(page: Page) {
   await enterBriefing(page);
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
@@ -173,6 +175,7 @@ test.describe('1920×1080에서 무대 열', () => {
 
     await page.getByRole('button', { name: '의견 듣기' }).click();
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeInViewport();

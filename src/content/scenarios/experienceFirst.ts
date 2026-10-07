@@ -101,24 +101,64 @@ export const experienceFirstScenario: Scenario = {
     },
   ],
   phrases: [
-    { id: 'P1', text: '전례 없는 상황에 한정해 경험을 우선합시다.', conditionId: 'SCOPE' },
-    { id: 'P2', text: '경험으로 결정할 때는 판단 근거를 기록합시다.', conditionId: 'RECORD' },
+    { id: 'P1', text: '전례 없는 상황에 한정해 경험을 우선합시다.', conditionId: 'SCOPE', side: 'FOR' },
+    {
+      id: 'P2',
+      text: '경험으로 결정할 때는 판단 근거를 기록합시다.',
+      conditionId: 'RECORD',
+      side: 'FOR',
+    },
     {
       id: 'P3',
       text: '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
       conditionId: 'DATA_VETO',
+      side: 'FOR',
     },
-    { id: 'P4', text: '결정 결과를 복기해 다음 판단 기준으로 삼읍시다.', conditionId: 'REVIEW' },
+    {
+      id: 'P4',
+      text: '결정 결과를 복기해 다음 판단 기준으로 삼읍시다.',
+      conditionId: 'REVIEW',
+      side: 'FOR',
+    },
     {
       id: 'P5',
       text: '최종 결정은 언제나 경험 판단을 따르도록 합시다.',
       conditionId: 'EXP_ONLY',
+      side: 'FOR',
     },
     {
       id: 'P6',
       text: '경험을 먼저 믿어야 할 이유를 더 설명해 주십시오.',
       conditionId: null,
       tag: 'request',
+      side: 'BOTH',
+    },
+    // 반대 쪽 추천 문구(T87, aiApproval.ts N1~N4와 같은 근거). N1~N3은 "이 조건이
+    // 보장되지 않는 한 반대한다"는 뜻이라 그 조건과 연결했고, N4는 경험 우선 원칙
+    // 자체에 대한 순수 반대라 조건과 연결하지 않는다.
+    {
+      id: 'N1',
+      text: '데이터가 분명히 경고하는데도 멈추지 않는다면 경험 우선에 반대합니다.',
+      conditionId: 'DATA_VETO',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N2',
+      text: '판단 근거를 기록하지 않는 경험 우선에는 반대합니다.',
+      conditionId: 'RECORD',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N3',
+      text: '결정을 복기해 되짚는 절차 없이는 경험 우선에 반대합니다.',
+      conditionId: 'REVIEW',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N4',
+      text: '중요한 결정은 숫자로 확인해야 한다고 생각해 경험을 우선하는 것 자체에 반대합니다.',
+      conditionId: null,
+      side: 'AGAINST',
     },
   ],
   // PR #13 Codex 4차 검토: REVIEW의 '복기' 단독 키워드가 정보성 질문에도 걸리던

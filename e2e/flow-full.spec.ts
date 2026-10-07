@@ -8,10 +8,12 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
-  // DISCUSS 화면에는 찬성/반대 버튼이 없어야 한다.
-  await expect(page.getByRole('button', { name: '찬성' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '반대' })).toHaveCount(0);
+  // DISCUSS 화면에는 (실제 표결용) 찬성/반대 버튼이 없어야 한다 — T87의 "찬성/반대
+  // 쪽에서 말하기" 입장 선택 버튼은 이름이 그 단어를 포함하므로 exact로 가른다.
+  await expect(page.getByRole('button', { name: '찬성', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '반대', exact: true })).toHaveCount(0);
 
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
@@ -56,6 +58,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS: 추천 문구 카드를 클릭하지 않고 직접 입력만 채운다.
   const draftTextarea = page.getByTestId('draft-editor-textarea');
@@ -103,6 +106,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // LIMIT(결재 금액 한도) + REVIEW(사람 표본 재검토)만 확정한다.
   await page.getByTestId('phrase-card-P1').click();
@@ -158,6 +162,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   await page.getByTestId('phrase-card-P1').click();
   const submitOpinion = page.getByTestId('submit-opinion');
@@ -188,4 +193,51 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await page.getByTestId('end-session').click();
   await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BOARDROOM 2026' })).toBeVisible();
+});
+
+// T87(사용자 — "찬성/반대를 고르면 추천 문구가 뜨도록"): 반대 쪽 문구(N4, 조건과
+// 연결되지 않은 순수 반대)만 골라도 ATTRACT부터 RESULT까지 완주하고, 확정한 조건이
+// 없으니 MOTION이 원안 그대로 표결로 이어지는지 본다.
+test('반대 쪽 추천 문구만 골라도 완주하고, 조건이 없어 원안 그대로 표결로 이어진다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+
+  await page.getByTestId('discuss-side-against').click();
+  // 반대 쪽을 고르면 찬성 쪽 문구(P1~P5)는 보이지 않고, 반대 문구(N1~N4) + 요청형
+  // (P6, BOTH)만 보인다.
+  await expect(page.getByTestId('phrase-card-P1')).toHaveCount(0);
+  await expect(page.getByTestId('phrase-card-N4')).toBeVisible();
+  await expect(page.getByTestId('phrase-card-P6')).toBeVisible();
+
+  await page.getByTestId('phrase-card-N4').click();
+  const submitOpinion2 = page.getByTestId('submit-opinion');
+  await expect(submitOpinion2).toBeEnabled();
+  await submitOpinion2.click();
+
+  // REACTIONS: 조건을 더 붙이지 않고 그대로 넘어간다.
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+  await page.getByTestId('keep-previous-answer').click();
+
+  // MOTION: N4는 조건과 연결되지 않아 반영된 조건이 없다 — 원안 그대로 표결한다.
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+  await expect(page.getByTestId('motion-conditions')).toHaveCount(0);
+  await expect(page.getByText('확정한 수정 조건이 없어 원안 그대로 표결합니다.')).toBeVisible();
+  await page.getByTestId('freeze-motion').click();
+
+  // VOTE: 내 표는 입장 선택과 무관하게 따로 고른다(표결은 마지막에 따로 한다).
+  await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+  await page.getByTestId('vote-radio-NO').check();
+  const confirmVote2 = page.getByTestId('confirm-vote');
+  await expect(confirmVote2).toBeEnabled();
+  await confirmVote2.click();
+
+  await expect(page.getByTestId('result-conclusion')).toBeVisible();
+  await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
 });

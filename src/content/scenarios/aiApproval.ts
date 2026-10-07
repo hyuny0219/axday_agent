@@ -103,20 +103,57 @@ export const aiApprovalScenario: Scenario = {
     },
   ],
   phrases: [
-    { id: 'P1', text: '결재 금액 한도를 정해 소액부터 자동 승인합시다.', conditionId: 'LIMIT' },
-    { id: 'P2', text: '자동 승인마다 승인 사유를 기록합시다.', conditionId: 'LOG' },
-    { id: 'P3', text: '승인 뒤 사람이 표본 재검토를 하도록 합시다.', conditionId: 'REVIEW' },
-    { id: 'P4', text: '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.', conditionId: 'OWNER' },
+    { id: 'P1', text: '결재 금액 한도를 정해 소액부터 자동 승인합시다.', conditionId: 'LIMIT', side: 'FOR' },
+    { id: 'P2', text: '자동 승인마다 승인 사유를 기록합시다.', conditionId: 'LOG', side: 'FOR' },
+    { id: 'P3', text: '승인 뒤 사람이 표본 재검토를 하도록 합시다.', conditionId: 'REVIEW', side: 'FOR' },
+    {
+      id: 'P4',
+      text: '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.',
+      conditionId: 'OWNER',
+      side: 'FOR',
+    },
     {
       id: 'P5',
       text: '사람 검토를 전면 생략하고 전부 자동 승인합시다.',
       conditionId: 'FULL_AUTO',
+      side: 'FOR',
     },
     {
       id: 'P6',
       text: '맡겨도 될지 판단할 근거를 더 제시해 주십시오.',
       conditionId: null,
       tag: 'request',
+      side: 'BOTH',
+    },
+    // 반대 쪽 추천 문구(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중"). N1~N3은
+    // "이 조건이 보장되지 않는 한 반대한다"는 뜻이라 그 조건과 연결했다(선택 시
+    // proposeFromPhrases가 conditionId로 바로 제안 — proposeFromText는 문장 속
+    // '하지 않는'을 부정으로 봐 같은 조건을 제안하지 않지만, 그건 이 문구가 조건을
+    // "원한다"는 뜻과 다른 경로일 뿐 상충하지 않는다). N4는 결재권 자체에 대한
+    // 순수 반대라 조건과 연결하지 않는다.
+    {
+      id: 'N1',
+      text: '사람이 표본 재검토를 하지 않는 한 자동 승인에 반대합니다.',
+      conditionId: 'REVIEW',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N2',
+      text: '승인 사유를 기록하지 않는 자동 승인에는 반대합니다.',
+      conditionId: 'LOG',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N3',
+      text: '책임자를 지정하지 않고는 결재권을 넘길 수 없어 반대합니다.',
+      conditionId: 'OWNER',
+      side: 'AGAINST',
+    },
+    {
+      id: 'N4',
+      text: '결재는 사람의 판단이 필요한 일이라 AI 에이전트에게 맡기는 것 자체에 반대합니다.',
+      conditionId: null,
+      side: 'AGAINST',
     },
   ],
   // PR #13 Codex 4차 검토: OWNER의 '책임자' 단독 키워드가 정보성 질문에도 걸리던

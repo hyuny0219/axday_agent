@@ -87,7 +87,9 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
                 }`}
                 aria-hidden="true"
               >
-                {preparing ? '준비 중' : '대외비'}
+                {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): "준비 중" 카드는 그대로
+                    두고 활성 카드 도장만 T83 이전 영문으로 되돌렸다. */}
+                {preparing ? '준비 중' : 'CONFIDENTIAL'}
               </span>
               <span className="scenario-card__case">{caseTagFor(index)}</span>
               <h3 className="scenario-card__title">{scenario.chairBriefing.question}</h3>

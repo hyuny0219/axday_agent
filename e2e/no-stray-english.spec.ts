@@ -18,16 +18,32 @@ import { test, expect } from './fixtures';
 const ALLOWED_TOKENS = ['BOARDROOM 2026', 'CEO', 'CFO', 'CAIO', 'CISO', 'AI', 'Esc'];
 const STRAY_LATIN = /[A-Za-z]{2,}/g;
 
-/** 운영자 전용 메뉴·헤더 세션 코드를 DOM에서 지운 뒤 보이는 텍스트만 남긴다(innerText는
- * aria-hidden 장식 라벨도 포함한다 — 시각적으로 보이면 그대로 검사 대상이다). */
+/** 붉은 사각 도장류(T87, 사용자 — "붉은 상자 안의 글씨는 영어로, 더 비밀요원스럽다")만
+ * 예외로 영문을 쓴다. ALLOWED_TOKENS처럼 문서 전체에서 그 단어를 무조건 허용하면
+ * 다른 자리에 같은 영문이 새로 생겨도 이 검사가 잡아내지 못하므로, 도장 요소 자체를
+ * 지워 "그 요소 안에서만" 예외가 적용되게 좁힌다. */
+const STAMP_SELECTORS = [
+  '.attract-screen__stamp',
+  '.opinions-screen__stamp',
+  '.briefing-screen__stamp',
+  '.vote-screen__stamp',
+  '.motion-screen__stamp',
+  '.scenario-card__stamp',
+  '.stage-band__classified',
+  '.evidence-dialog__stamp',
+];
+
+/** 운영자 전용 메뉴·헤더 세션 코드·붉은 도장을 DOM에서 지운 뒤 보이는 텍스트만
+ * 남긴다(innerText는 aria-hidden 장식 라벨도 포함한다 — 시각적으로 보이면 그대로
+ * 검사 대상이다). */
 async function visibleBodyTextWithoutOperatorAndSessionCode(page: import('./fixtures').Page): Promise<string> {
-  return page.evaluate(() => {
+  return page.evaluate((stampSelectors) => {
     const clone = document.body.cloneNode(true) as HTMLElement;
-    for (const selector of ['.operator-menu', '.app-header__case-file']) {
+    for (const selector of ['.operator-menu', '.app-header__case-file', ...stampSelectors]) {
       clone.querySelectorAll(selector).forEach((el) => el.remove());
     }
     return clone.innerText;
-  });
+  }, STAMP_SELECTORS);
 }
 
 function findStrayLatin(text: string): string[] {
@@ -72,6 +88,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await checkScreen('OPINIONS');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await checkScreen('DISCUSS');
 
   await page.getByTestId('phrase-card-P1').click();
@@ -125,6 +142,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·BOARDROOM 2026·AI 외의 �
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // 승인 사유 기록(LOG) 조건을 DISCUSS에서 확정한다.
   await page.getByTestId('phrase-card-P2').click();

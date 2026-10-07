@@ -101,8 +101,10 @@ export function OpinionsScreen({
   // 타자기 집계. live·scripted 모두 같은 머리를 쓰고 카드 그리드만 달라진다.
   const paperHead = (
     <>
+      {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+          도장만 영문으로 되돌렸다. */}
       <span className="opinions-screen__stamp" aria-hidden="true">
-        대외비
+        CONFIDENTIAL
       </span>
       <div className="opinions-screen__head">
         <span className="opinions-screen__step">2단계</span>

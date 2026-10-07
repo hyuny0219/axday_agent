@@ -20,6 +20,7 @@ import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, SessionMode, Stance, Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
+  buildDraftText,
   editText,
   isSubmittable,
   resolveConfirm,
@@ -118,6 +119,10 @@ export function DiscussScreen({
   }, [assistantOpen]);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // 입장 선택(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중") — 추천 문구를 찬성/반대
+  // 어느 쪽에서 볼지 고르는 것으로, 마지막 표결(VoteScreen)과는 별개다. 세션 상태에는
+  // 기록하지 않는다(도메인 변경 최소화 — 무대·회의록에 영향 없음).
+  const [sidePick, setSidePick] = useState<'FOR' | 'AGAINST' | null>(null);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -206,6 +211,25 @@ export function DiscussScreen({
   // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
   // "사건 02" 형식이라 그대로 쓴다(ResultScreen·BriefingScreen도 같다).
   const caseTag = scenario.incident.caseLabel;
+
+  // 입장을 바꾸면 체크된 추천 문구는 해제한다(다른 입장의 문구가 섞여 보이면 안
+  // 되므로). 직접 쓴 글(dirty)은 가장 단순한 규칙대로 텍스트는 그대로 두고 체크만
+  // 뗀다 — RebuildConfirm의 '직접 쓴 내용 유지'와 같은 생각이다.
+  function handleChooseSide(next: 'FOR' | 'AGAINST') {
+    if (sidePick === next) {
+      return;
+    }
+    setSidePick(next);
+    setDraft((previous) => {
+      if (previous.selectedPhraseIds.length === 0) {
+        return previous;
+      }
+      if (previous.dirty) {
+        return { ...previous, selectedPhraseIds: [] };
+      }
+      return { selectedPhraseIds: [], draftText: buildDraftText(scenario, []), dirty: false };
+    });
+  }
 
   function handleTogglePhrase(phraseId: string) {
     const result = togglePhrase(draft, scenario, phraseId);
@@ -316,16 +340,48 @@ export function DiscussScreen({
           <p className="discuss-screen__guide">
             문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
           </p>
-          <div className="discuss-screen__phrase-list">
-            {scenario.phrases.map((phrase) => (
-              <PhraseCard
-                key={phrase.id}
-                phrase={phrase}
-                selected={draft.selectedPhraseIds.includes(phrase.id)}
-                onToggle={() => handleTogglePhrase(phrase.id)}
-              />
-            ))}
+          <div className="discuss-screen__side-select" data-testid="discuss-side-select">
+            <button
+              type="button"
+              className="cta cta--secondary discuss-screen__side-btn"
+              aria-pressed={sidePick === 'FOR'}
+              onClick={() => handleChooseSide('FOR')}
+              data-testid="discuss-side-for"
+            >
+              찬성 쪽에서 말하기
+            </button>
+            <button
+              type="button"
+              className="cta cta--secondary discuss-screen__side-btn"
+              aria-pressed={sidePick === 'AGAINST'}
+              onClick={() => handleChooseSide('AGAINST')}
+              data-testid="discuss-side-against"
+            >
+              반대 쪽에서 말하기
+            </button>
+            <span className="discuss-screen__side-hint">표결은 마지막에 따로 합니다</span>
           </div>
+          {sidePick === null ? (
+            <p className="discuss-screen__side-guide" data-testid="discuss-side-guide">
+              먼저 입장을 골라 주세요. 직접 써도 됩니다.
+            </p>
+          ) : (
+            <div className="discuss-screen__phrase-list">
+              {scenario.phrases
+                .filter((phrase) => {
+                  const side = phrase.side ?? 'FOR';
+                  return side === 'BOTH' || side === sidePick;
+                })
+                .map((phrase) => (
+                  <PhraseCard
+                    key={phrase.id}
+                    phrase={phrase}
+                    selected={draft.selectedPhraseIds.includes(phrase.id)}
+                    onToggle={() => handleTogglePhrase(phrase.id)}
+                  />
+                ))}
+            </div>
+          )}
           <div className="discuss-screen__evidence-row">
             <button
               type="button"

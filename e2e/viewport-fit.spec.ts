@@ -69,6 +69,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await speakOpinion.click();
 
   await expectNoPageScroll(page, 'DISCUSS');
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
 
   // 축소 상태에서도 AI 비서실장 드로어가 화면 안(뷰포트 밖으로 잘리지 않음)에 뜬다
@@ -144,6 +145,7 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('followup-option-0').click();

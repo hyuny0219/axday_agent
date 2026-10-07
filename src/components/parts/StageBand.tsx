@@ -262,7 +262,9 @@ export function StageBand({
           <span>회의실 A</span>
           <span>녹화중</span>
         </div>
-        <div className="stage-band__classified">기밀</div>
+        {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+            라벨만 영문으로 되돌렸다. */}
+        <div className="stage-band__classified">CLASSIFIED</div>
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,

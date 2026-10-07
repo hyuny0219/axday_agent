@@ -89,6 +89,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
 
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS에서는 ③이 현재 단계다.
   await expect(page.getByTestId('progress-step-3')).toHaveAttribute('aria-current', 'step');

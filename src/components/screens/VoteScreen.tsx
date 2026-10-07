@@ -149,8 +149,10 @@ export function VoteScreen({
       </div>
       <div className="app-body__content screen vote-screen__info">
         <div className="vote-screen__paper">
+          {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+              도장만 영문으로 되돌렸다. */}
           <span className="vote-screen__stamp" aria-hidden="true">
-            대외비
+            CONFIDENTIAL
           </span>
           <div className="vote-screen__head">
             <span className="vote-screen__step">5단계 · 2/2</span>

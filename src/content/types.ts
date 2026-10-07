@@ -78,11 +78,19 @@ export interface InitialOpinion {
   openingStance: OpeningStance;
 }
 
+/** 추천 문구가 어느 입장에서 하는 말인지(T87, 사용자 지적 "추천 문구가 찬성 쪽에
+ * 편중"). 'BOTH'는 입장과 무관한 요청형 문구(P6류)에 쓴다. 과거 시나리오(anonBoard·
+ * aiAssistant, 레지스트리에서 뺀 파일)는 이 필드가 아직 없어도 되게 선택값으로
+ * 둔다 — DiscussScreen은 없는 값을 'FOR'로 본다(그 문구들이 전부 제안형 톤이라
+ * 기존 동작과 같다). */
+export type PhraseSide = 'FOR' | 'AGAINST' | 'BOTH';
+
 export interface Phrase {
   id: string;
   text: string;
   conditionId: string | null;
   tag?: string;
+  side?: PhraseSide;
 }
 
 export interface Condition {

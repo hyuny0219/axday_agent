@@ -80,6 +80,7 @@ test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반�
   await enterScenario(page);
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('submit-opinion').click();

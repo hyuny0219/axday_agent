@@ -98,6 +98,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   // 추천 문구 4개(조건 4개, 시나리오 최대치)를 선택해 가장 내용이 많은 상태를 만든다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
@@ -277,6 +278,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
   await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
   // "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS의 실제 120자 발언으로

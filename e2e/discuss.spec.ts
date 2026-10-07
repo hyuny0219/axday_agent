@@ -8,6 +8,7 @@ async function reachDiscuss(page: Page) {
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 }
 
 test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다음 단계로 넘어간다', async ({

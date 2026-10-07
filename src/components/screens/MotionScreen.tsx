@@ -115,8 +115,10 @@ export function MotionScreen({
       </div>
       <div className="app-body__content screen motion-screen__info">
         <div className="motion-screen__paper">
+          {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+              도장만 영문으로 되돌렸다. */}
           <span className="motion-screen__stamp" aria-hidden="true">
-            초안
+            DRAFT
           </span>
           <div className="motion-screen__head">
             <span className="motion-screen__step">5단계 · 1/2</span>

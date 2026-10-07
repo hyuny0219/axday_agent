@@ -21,10 +21,19 @@ describe('experienceFirstScenario 기본 구조', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
-  it('자료 카드가 4개, 추천 문구가 6개, 조건이 5개다', () => {
+  it('자료 카드가 4개, 추천 문구가 10개(찬성 5·반대 4·요청 1), 조건이 5개다', () => {
     expect(scenario.evidence).toHaveLength(4);
-    expect(scenario.phrases).toHaveLength(6);
+    expect(scenario.phrases).toHaveLength(10);
     expect(scenario.conditions).toHaveLength(5);
+  });
+
+  it('추천 문구의 side가 FOR/AGAINST/BOTH 중 하나이고, AGAINST가 정확히 4개다(T87)', () => {
+    for (const phrase of scenario.phrases) {
+      expect(['FOR', 'AGAINST', 'BOTH']).toContain(phrase.side);
+    }
+    expect(scenario.phrases.filter((p) => p.side === 'AGAINST')).toHaveLength(4);
+    expect(scenario.phrases.filter((p) => p.side === 'FOR')).toHaveLength(5);
+    expect(scenario.phrases.filter((p) => p.side === 'BOTH')).toHaveLength(1);
   });
 
   it('phrases·reactions·followUp의 조건 참조가 모두 존재한다', () => {

@@ -93,6 +93,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await capture(page, testInfo.project.name, 'opinions');
 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
   // 4개(LIMIT·LOG·REVIEW·OWNER)를 확정하고, 300자에 가까운 직접 입력으로
@@ -181,6 +182,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
   // (aiApproval.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·
   // 반대 3으로 부결이면서 "내 표와 같은 표 2석(CEO)"인 C_Result_Reject.html 조합이

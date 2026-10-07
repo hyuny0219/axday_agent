@@ -169,8 +169,11 @@ export function EvidenceDialog({
         ref={dialogRef}
         data-testid="evidence-dialog"
       >
+        {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): BRIEFING·OPINIONS·VOTE와 같은
+            도장이라(DESIGN_SPEC.md T83 대응표) 함께 영문으로 되돌렸다(카드 목록에는
+            없었지만 같은 붉은 도장이라 빠뜨리면 화면마다 달라 보인다). */}
         <span className="evidence-dialog__stamp" aria-hidden="true">
-          대외비
+          CONFIDENTIAL
         </span>
         <div className="evidence-dialog__header">
           <span className="evidence-dialog__case">{caseTag}</span>

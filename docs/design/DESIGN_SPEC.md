@@ -534,6 +534,8 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 | EvidenceDialog | `STATEMENTS · {라벨}` | `{라벨}`(접두 제거) |
 | ResultScreen(TALLY 패널) | `YES {n} / NO {n}` | `찬성 {n} / 반대 {n}` |
 
+**T87(2026-10-07 사용자 결정)에서 붉은 사각 도장류만 영문으로 되돌렸다** — "붉은 색 상자 안의 글씨들은 영어로 나오는 게 좀 더 비밀요원스럽다." 위 표의 ATTRACT `TOP SECRET`/`극비`, SELECT `CONFIDENTIAL`/`대외비`(카드 도장), BRIEFING·OPINIONS·VOTE·EvidenceDialog `CONFIDENTIAL`/`대외비`, MOTION `DRAFT`/`초안`(도장), StageBand `CLASSIFIED`/`기밀` 여섯 행은 화살표 방향이 실제로는 반대다(한국어 → 영문). 다른 모든 행(SITREP·PROPOSAL·YOUR ORDERS·EXHIBIT·TRANSCRIPT 등 도장이 아닌 장식 라벨)은 그대로 한국어다. CSS(`--font-label`·letter-spacing 등)는 T83에서 전혀 바뀌지 않았으므로 되돌릴 것도 없었다 — 문구만 되돌렸다. `e2e/no-stray-english.spec.ts`는 이 여섯 도장 요소를 DOM에서 지운 뒤 나머지 텍스트만 검사하도록 좁혔다(도장 요소에 한정, 다른 자리의 새 영문은 그대로 잡아낸다).
+
 ### 유지한 영문(예외)
 
 - 역할 약자 `CEO`·`CFO`·`CAIO`·`CISO`(명패·아바타 이니셜·`MEMBER_LABELS`의 괄호 표기) — 실제 직함 약칭이라 번역 대상이 아니다.

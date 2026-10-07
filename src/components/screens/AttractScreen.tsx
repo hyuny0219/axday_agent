@@ -33,8 +33,10 @@ export function AttractScreen({ onStart, startDisabled = false }: AttractScreenP
           <span>회의실 A</span>
           <span className="attract-screen__readout-dim">대기 중</span>
         </div>
+        {/* T87(2026-10-07 사용자 — "붉은 상자 안의 글씨는 영어로, 더 비밀요원스럽다"):
+            T83에서 한국어로 바꿨던 이 도장만 영문으로 되돌렸다. */}
         <span className="attract-screen__stamp" aria-hidden="true">
-          극비
+          TOP SECRET
         </span>
 
         <div className="attract-screen__center">
