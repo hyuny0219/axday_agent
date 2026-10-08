@@ -206,6 +206,9 @@ export interface Scenario {
    * 각 역할의 평소 말투로 담는다. 없으면(과거 시나리오) ReactionsScreen이 기존
    * "앞서 말씀드린 입장 그대로입니다"로 되돌아간다. */
   holdReasons?: Record<ExecMemberId, string>;
+  /** BRIEFING 상황·제안·미정 줄에서 굵게 표시할 핵심 말(T99, 안건당 4~6개). 문장 속 글자와
+   * 그대로 일치할 때만 표시되고, 일치하지 않으면 조용히 건너뛴다. 겹치면 긴 말이 우선. */
+  highlightTerms?: string[];
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;

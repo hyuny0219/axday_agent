@@ -128,8 +128,8 @@
   border-left: 4px solid var(--label);
   background-color: var(--paper-2);
   color: var(--ink);
-  font-size: 20px;
-  line-height: 1.55;
+  font-size: 24px;
+  line-height: 1.4;
 }
 
 @media (max-width: 1280px) {
@@ -137,7 +137,8 @@
     gap: 8px;
     padding: 15px 17px;
     border-left-width: 3px;
-    font-size: 16px;
+    font-size: 19px;
+    line-height: 1.4;
   }
 }
 
@@ -154,14 +155,14 @@
   margin-right: 10px;
   font-family: var(--font-label);
   letter-spacing: 0.16em;
-  font-size: 15px;
+  font-size: 18px;
   color: var(--label);
 }
 
 @media (max-width: 1280px) {
   .briefing-screen__label {
     margin-right: 8px;
-    font-size: 12px;
+    font-size: 14px;
   }
 }
 
@@ -199,4 +200,16 @@
     width: 240px;
     min-height: 56px;
   }
+}
+
+/* 핵심 말 강조(T99, 2026-10-08 사용자 — "중요 단어들이 눈에 확 들어오도록"). 붉은 박스는
+   쓰지 않는다: 진한 잉크 굵게 + 연한 종이색 바탕 + 아래 밑줄. 브라우저 기본 <mark> 노랑은
+   배경·글자색을 직접 덮어써 없앤다. */
+.key-term {
+  padding: 0 0.15em;
+  background-color: var(--paper-mark);
+  color: var(--ink);
+  font-weight: 800;
+  border-bottom: 2px solid var(--label);
+  border-radius: 2px;
 }

@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { BriefingScreen } from '../../src/components/screens/BriefingScreen';
 import { anonBoardScenario } from '../../src/content/scenarios';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
+import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
 
 afterEach(() => {
   cleanup();
@@ -80,5 +82,22 @@ describe('BriefingScreen', () => {
     expect(line).toBeInTheDocument();
     expect(document.querySelector('.briefing-screen__undecided-redacted')).toBeNull();
     expect(document.querySelector('[aria-label*="먹칠"]')).toBeNull();
+  });
+
+  it('핵심 말이 mark로 강조되고, 제목(h2)에는 쓰이지 않는다(T99)', () => {
+    const { container } = render(<BriefingScreen scenario={aiApprovalScenario} onNext={vi.fn()} />);
+    const status = screen.getByTestId('briefing-status');
+    const marked = Array.from(status.querySelectorAll('mark.key-term')).map((m) => m.textContent);
+    expect(marked).toEqual(expect.arrayContaining(['하루 수십 건', 'AI 에이전트가 직접 승인', '금액 한도']));
+    expect(container.querySelector('h2 mark')).toBeNull();
+    // 문장은 그대로 읽힌다(강조 때문에 글자가 바뀌지 않는다).
+    expect(status).toHaveTextContent(aiApprovalScenario.chairBriefing.situation);
+  });
+
+  it('상황·제안·미정 줄 클래스가 유지된다(글자 크기는 briefing.css가 정한다)', () => {
+    const { container } = render(<BriefingScreen scenario={experienceFirstScenario} onNext={vi.fn()} />);
+    for (const cls of ['situation', 'proposal', 'undecided']) {
+      expect(container.querySelector(`.briefing-screen__${cls}`)).not.toBeNull();
+    }
   });
 });

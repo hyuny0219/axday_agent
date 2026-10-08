@@ -75,6 +75,7 @@
 
   --paper: #ece7dc;
   --paper-2: #fbf8f1;
+  --paper-mark: #eadfbd; /* 핵심 말 강조 바탕(T99) — 붉은 박스 대신 진한 종이색 */
   --paper-border: #c9c2b4;
   --ink: #1b1a17;
   --ink-muted: #5c5850;

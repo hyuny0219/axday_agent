@@ -17,6 +17,7 @@ import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
+import { HighlightText } from '../parts/HighlightText';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -44,6 +45,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 렌더링 오류로 오해할 수 있고, 가린 값이 DOM에 그대로 남아 접근성 보완(aria-label)이
   // 필요했던 연출이라 걷어내고 전부 평문으로 둔다(T81).
   // T84: undecidedItems는 { text, resolvedBy? } 객체 — BRIEFING은 조건 확정 전이라 text 전체.
+  const terms = scenario.highlightTerms ?? [];
   const undecidedItems = scenario.motionBreakdown.undecidedItems.map((item) => item.text);
 
   return (
@@ -81,16 +83,17 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           <div className="briefing-screen__status" data-testid="briefing-status">
             <p className="briefing-screen__situation">
               <span className="briefing-screen__label">상황</span>
-              {scenario.chairBriefing.situation}
+              <HighlightText text={scenario.chairBriefing.situation} terms={terms} />
             </p>
             <p className="briefing-screen__proposal">
               <span className="briefing-screen__label">제안</span>
-              {scenario.motionBreakdown.proposal}
+              <HighlightText text={scenario.motionBreakdown.proposal} terms={terms} />
             </p>
             {undecidedItems.length > 0 && (
               <p className="briefing-screen__undecided">
                 <span className="briefing-screen__label briefing-screen__label--unknown">미정</span>
-                <span className="briefing-screen__undecided-muted">{undecidedItems.join(' · ')}</span>
+                <span className="briefing-screen__undecided-muted"><HighlightText text={undecidedItems.join(' · ')} terms={terms} />
+                </span>
               </p>
             )}
           </div>
