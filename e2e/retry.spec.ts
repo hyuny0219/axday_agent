@@ -5,6 +5,7 @@
 // 서버·클라이언트 코드는 건드리지 않는다).
 
 import { test, expect, type Page, type Route } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
@@ -150,6 +151,7 @@ test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   // 4명 모두 실패 카드다.
@@ -190,6 +192,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   // REACTIONS: CFO만 실패, 나머지 3명은 정상 응답.
@@ -222,6 +225,7 @@ test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
@@ -257,6 +261,7 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   // REACTIONS: 정상 4명. 조건 제안(옵션 0)을 골라 후속 답을 보내 opinions가 2건이 되게

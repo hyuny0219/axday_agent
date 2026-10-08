@@ -3,6 +3,7 @@
 // 실제로 다르게 흘러가는지 scripted로 확인한다. 순수 반대(조건 없음)는 부결까지,
 // 조건부 반대(조건 1개)는 화면 문구가 "이사님이 요구한 조건"으로 바뀌는지까지 본다.
 import { test, expect, type Page } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 import { aiApprovalScenario } from '../src/content/scenarios/aiApproval';
 
 async function reachDiscuss(page: Page) {
@@ -23,6 +24,7 @@ test('순수 반대(조건 없음, N4)는 반응 문구가 임원별로 다르�
   await reachDiscuss(page);
 
   await page.getByTestId('phrase-card-N4').click();
+  await useAssistantAllFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();
@@ -65,6 +67,7 @@ test('조건부 반대(N1, REVIEW)는 화면 문구가 "이사님이 요구한 �
   await reachDiscuss(page);
 
   await page.getByTestId('phrase-card-N1').click();
+  await useAssistantAllFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();

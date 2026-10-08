@@ -6,6 +6,7 @@
 // `scripted` 같은 기술 용어)와 헤더의 세션 코드(`randomUUID` 앞 4자, 장식용 임의 코드라
 // 영문·숫자가 섞일 수 있다)는 "주요 화면" 밖이라 이 검사에서 뺀다.
 import { test, expect } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 /** 역할 약자·타이틀·'AI'·'Esc'를 뺀 나머지에서 라틴 알파벳 2자 이상 연속을 찾는다.
  * innerText는 flex 자식 사이에 줄바꿈을 넣지 않는 경우가 있어(예: 무대 명패 옆
@@ -99,6 +100,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await checkScreen('DISCUSS');
 
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -160,6 +162,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
 
   // 승인 사유 기록(LOG) 조건을 DISCUSS에서 확정한다.
   await page.getByTestId('phrase-card-P2').click();
+  await useAssistantAllFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();

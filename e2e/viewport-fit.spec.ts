@@ -4,6 +4,7 @@
 // 기존 무스크롤 잠금 임계값(699px)에서 2px 모자라 세로 1열로 풀렸었다.
 
 import { test, expect, type Page } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 async function expectNoPageScroll(page: Page, label: string) {
   const overflow = await page.evaluate(() => {
@@ -88,6 +89,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   // 닫기 버튼으로 닫는다.
   await page.getByTestId('assistant-close').click();
 
+  await useAssistantAllFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await expect(submitOpinion).toBeInViewport();
@@ -158,6 +160,7 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
   // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
   await page.getByTestId('reactions-advance').click();

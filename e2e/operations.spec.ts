@@ -6,6 +6,7 @@
 // Clock.now()만 앞당긴다(orchestrator·서버가 지연 측정에 쓰는 것과 같은 주입형 Clock).
 
 import { test, expect, type Page } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 async function advanceClock(page: Page, ms: number): Promise<void> {
   await page.evaluate((advanceMs) => {
@@ -86,6 +87,7 @@ test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반�
   await page.getByTestId('discuss-side-for').click();
 
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   await page.getByTestId('keep-previous-answer').click();

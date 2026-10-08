@@ -640,6 +640,27 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 영향받은 파일: `src/app/App.tsx`(SessionContextValue·SessionProvider·AppShell·StageRouter), `src/components/screens/ReactionsScreen.tsx`(두 서브스텝 분기), `src/components/parts/DialogShell.tsx`(신규)·`src/components/parts/EvidenceDialog.tsx`·`src/components/parts/AssistantPanel.tsx`, `src/styles/screens/dialogShell.css`(신규)·`evidenceDialog.css`(본문만 남김)·`assistant.css`(드로어 규칙 삭제)·`reactions.css`(`.reaction-card__text--full`). 영향받은 테스트: `tests/components/DiscussScreen.test.tsx`(비서실장 팝업 닫기를 `assistant-close`로), `tests/components/ReactionsScreen.test.tsx`(`step`·`onAdvanceStep` prop 추가, 반응 카드 배지 테스트는 `step="listen"`). e2e는 REACTIONS를 지나는 거의 모든 spec에 `reactions-advance` 클릭 한 줄을 추가했다(`reactions.spec.ts`의 두 헬퍼, `stage.spec.ts`의 `enterReactions`, `minutes.spec.ts`·`retry.spec.ts`·`viewport-fit.spec.ts`·`no-stray-english.spec.ts`·`flow-full.spec.ts`의 개별 테스트) — "답하지 않고 넘어가기"만 쓰는 spec(대부분의 완주 경로)은 그 버튼이 "반응 듣기"에도 그대로 있어 무수정 통과했다. 비서실장 드로어 관련 e2e(`reactions.spec.ts`·`viewport-fit.spec.ts`·`noscroll.spec.ts`)는 "AI 비서실장 숨기기" 역할 이름 클릭을 `assistant-close` testid 클릭으로 바꿨다. `screenshots.spec.ts`는 `reactions.png`(반응 듣기)에 더해 `reactions-answer.png`(다시 답하기)를 새로 캡처한다.
 
+## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)
+
+**사용자 지시**: "추천문구들을 고르고나서 AI비서실장을 필수적으로 사용하게끔. 첫 AI비서실장에서 제공되는 기능들을 간략하게 소개하고 한번씩 사용하게하여 의견 전달을 할 수 있도록 가이드라인이나 버튼활성화/비활성화. 순서는 추천문구 선택 -> AI비서실장 기능활용 -> 의견전달 순."
+
+**순서와 게이팅**: DISCUSS의 "의견 전달 ▶"은 (1) 문구가 있고(추천 문구 선택 또는 직접 입력) (2) 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 이번 세션에서 각각 한 번 이상 썼을 때만 열린다(`DiscussScreen`의 `canSubmit = draftReady && assistantDone`). 사용 여부는 순수 함수 `assistantFeaturesUsed(session.assistantActions, 'DISCUSS')`(`src/domain/assistantLog.ts`)가 세션 기록에서 가른다. 다시 답하기(REACTIONS)는 게이팅 없이 선택 사항 그대로다.
+
+| 상태 | 비활성 사유 문구(`discuss-cta-hint`) | `data-guide="next"` 하이라이트 |
+| --- | --- | --- |
+| 입장 미선택 | (입장 안내 `discuss-side-guide`) | 찬성/반대 선택 영역 |
+| 문구 없음 | 추천 문구를 고르거나 직접 써 주세요 | 추천 문구 목록 |
+| 문구 있음, 비서실장 N/3 | AI 비서실장을 먼저 써 보세요 (N/3) | 비서실장 열기 버튼(`assistant-toggle`) |
+| 문구 있음, 비서실장 3/3 | (힌트 없음) | 의견 전달 버튼 |
+
+입장을 고른 뒤 오른쪽 종이의 안내 한 줄(`discuss-assistant-tip`)은 "비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다"다.
+
+**팝업 첫 화면(`AssistantPanel`의 `requiredFeatures`, DISCUSS만 넘긴다)**: 결과 영역 위에 소개 블록(`assistant-intro`) — 제목 "AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요"와 기능 세 줄(체크 `assistant-check-*` ☐/☑ + 이름 + 쉬운 말 한 문장). 사용한 기능 버튼에는 "· 완료"가 붙고, 아직 안 쓴 첫 기능 버튼에 하이라이트가 걸린다. 결과(또는 오류)가 생기면 블록이 한 줄(`assistant-intro--compact`, "☑ 의견 한눈에 보기 ☐ 조건 추천 ☐ 내 발언 정리")로 줄어든다. 세 개가 다 되면 "이제 팝업을 닫고 의견을 전달하세요"(`assistant-intro-done`)가 뜨고 팝업 닫기 버튼에 하이라이트가 걸린다(`DialogShell`의 `closeGuide`). 1280×720에서는 소개·기능 버튼이 줄지 않고 결과 영역(`assistant-panel__results`)만 안쪽 스크롤한다. 색은 종이 톤 토큰만 쓰고 붉은 박스는 쓰지 않는다.
+
+**실패·연결 지연도 사용으로 센다**: 막히는 참가자가 없게, 결과를 렌더했을 때뿐 아니라 오류·시간 초과 안내(`assistant-error`)를 본 경우도 같은 유형을 `failed:true`로 기록한다. 정리한 초안을 화면에 보인 것도 `DRAFT_REFINE`(`applied:false`)로 기록한다. 결과 화면 "AI가 도운 일"은 바뀌지 않는다 — `failed` 기록과 `applied:false`인 정리는 줄을 만들지 않고, "조건 추천 N회" 집계도 `failed`는 세지 않는다.
+
+영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`useAssistantAllFeatures`), `e2e/assistant-gate.spec.ts`.
+
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
 
 **사용자 지시**: "내가 의견을 내고 어떤 조건을 붙여야 AI 임원을 설득할 수 있는지 표현되고, 내 발언에 따라 임원 입장이 변하는 것이 잘 보이게. 이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 따라 하고 느끼게. AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을 고르는 데 큰 도움이 된다고 느끼게."

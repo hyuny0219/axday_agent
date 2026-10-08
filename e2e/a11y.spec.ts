@@ -3,6 +3,7 @@
 // CTA 도달. 세 검사 모두 mode=scripted로 강제해 live 서버 호출 여부와 무관하다.
 
 import { test, expect } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도달한다', async ({ page }) => {
   await page.goto('/?mode=scripted');
@@ -46,6 +47,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await phraseCheckbox.focus();
   await page.keyboard.press('Space');
   await expect(phraseCheckbox).toBeChecked();
+  await useAssistantAllFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.focus();
@@ -166,6 +168,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   expect(layout.contentRight).toBeLessThanOrEqual(960);
 
   await page.getByTestId('phrase-card-P1').click();
+  await useAssistantAllFeatures(page);
   const submitOpinion = await wheelUntilVisible('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();

@@ -6,6 +6,7 @@
 // 열의 스크롤 자체는 T45에서 없앴다 — 1280×720에서도 페이지 전체가 한 화면에 담긴다.
 
 import { test, expect, type Page } from './fixtures';
+import { useAssistantAllFeatures } from './helpers/assistant';
 
 const MY_OPINION_TEXT = '소액부터 자동 승인하고 결과를 확인한 뒤 넓힙시다.';
 
@@ -24,6 +25,7 @@ async function enterReactions(page: Page) {
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
+  await useAssistantAllFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -64,6 +66,7 @@ async function enterReactionsWithAllConditions(page: Page) {
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('phrase-card-P4').click();
+  await useAssistantAllFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
@@ -189,6 +192,7 @@ test.describe('1920×1080에서 무대 열', () => {
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
+    await useAssistantAllFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeInViewport();
     await submitOpinion.click();
