@@ -133,7 +133,9 @@
   position: relative;
   flex-shrink: 0;
   width: 200px;
-  height: 176px;
+  /* T101: 미획득 상자(아래 .result-bonus-missed)가 도장 원(132px)과 겹치지 않게 원 아래에
+     상자 높이(약 44px)만큼 따로 둔다. */
+  height: 186px;
 }
 
 /* 결론 도장: 잉크(붉은 원, multiply). 4장 규칙(도장 종류를 늘리지 않는다)에 따라
@@ -254,7 +256,7 @@
      실측). 큰 글자는 여전히 "가결"/"부결" 두 글자뿐이라 이 크기에서도 깨지지 않는다. */
   .result-stamp-box {
     width: 140px;
-    height: 128px;
+    height: 150px;
   }
 
   .result-stamp {
@@ -500,16 +502,16 @@
   color: var(--ink-muted);
 }
 
-/* 판단 이유는 1줄 클램프(v1.0 9절 "판단 이유 한 줄"). live의 UNCAST 행은 사유
-   자리에 unavailableReason을 그대로 보여준다(ResultScreen.tsx가 별도 testid로
-   감싼다). */
+/* 판단 이유는 2줄 클램프(T101: 720에서 1줄 클램프가 문장 끝을 "…"로 잘랐다). live의
+   UNCAST 행은 사유 자리에 unavailableReason을 그대로 보여준다(ResultScreen.tsx가 별도
+   testid로 감싼다). */
 .result-seat__reason {
   flex: 1;
   min-width: 0;
   color: var(--ink-muted);
   font-size: var(--fs-meta);
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

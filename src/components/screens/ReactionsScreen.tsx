@@ -712,8 +712,9 @@ export function ReactionsScreen({
             className="cta cta--secondary"
             onClick={handleKeepPrevious}
             data-testid="keep-previous-answer"
+            aria-label="답하지 않고 넘어가기"
           >
-            답하지 않고 넘어가기
+            넘어가기
           </button>
         </div>
         <div className="app-body__content screen reactions-screen__info" data-testid="reactions-info">
@@ -887,8 +888,9 @@ export function ReactionsScreen({
             disabled={pendingOptionIndex !== null}
             onClick={handleKeepPrevious}
             data-testid="keep-previous-answer"
+            aria-label="답하지 않고 넘어가기"
           >
-            답하지 않고 넘어가기
+            넘어가기
           </button>
           <button
             type="button"

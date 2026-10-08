@@ -34,6 +34,13 @@ function entryCountLabel(count: number): string {
   return `${count}건 · 스크롤`;
 }
 
+// T101: 바닥에 붙인 목록은 맨 위 항목이 반쯤 잘려 "제목에 가려진" 것처럼 보였다. 위로 더 읽을
+// 내용이 있을 때만 위쪽 가장자리를 옅게 흐려(minutes.css .minutes__list[data-faded]) 잘림을
+// 의도된 스크롤 표시로 읽히게 한다.
+function syncFade(list: HTMLElement): void {
+  list.dataset.faded = list.scrollTop > 1 ? 'true' : 'false';
+}
+
 export function MinutesPanel({ entries }: MinutesPanelProps) {
   const listRef = useRef<HTMLOListElement>(null);
   // "최신을 따라가는 중"인지. 참가자가 위로 올려 앞선 발언을 읽는 동안에는 false가 되어
@@ -48,6 +55,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
     const list = listRef.current;
     if (list) {
       list.scrollTop = list.scrollHeight;
+      syncFade(list);
     }
   }, [scrollKey]);
 
@@ -62,6 +70,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
     const pin = () => {
       if (followRef.current) {
         list.scrollTop = list.scrollHeight;
+        syncFade(list);
       }
     };
     const observer = new ResizeObserver(pin);
@@ -113,6 +122,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
       return;
     }
     followRef.current = list.scrollTop + list.clientHeight >= list.scrollHeight - 2;
+    syncFade(list);
   };
 
   return (
