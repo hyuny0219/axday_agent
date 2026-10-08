@@ -12,9 +12,39 @@
 // 성립하지 않아(LLM이 실제로 판단한 결과이지 규칙표가 아니다, resultSummary.ts의
 // execRows.changed와 같은 전제) 0으로 둔다.
 
-import type { ExecMemberId, Scenario } from '../content/types';
-import type { Session } from '../domain/types';
+import type { ExecMemberId, Scenario, Vote } from '../content/types';
+import type { Session, Stance, Statement } from '../domain/types';
 import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, requiredConditionsFor } from '../domain/voting';
+import { buildConditionRecommendation } from './conditionRecommendation';
+import { openingStanceOf } from './openingStance';
+import { findPhraseForCondition } from './recommendMatch';
+
+function voteToFinalStance(vote: Vote): Stance | null {
+  if (vote === 'YES') return 'FOR';
+  if (vote === 'NO') return 'AGAINST';
+  return null;
+}
+
+/** live 결과 요약(PR #20 Codex 33차 P2-1) — live는 조건 없는 대조 표결이 없어 "조건이 표를
+ * 바꿨다"는 인과를 계산할 수 없다. 관측 가능한 것만 말한다: 임원의 첫 OPINIONS 입장과 최종
+ * 표가 다른 사람 수. 표를 못 낸 임원(UNCAST)은 세지 않는다. */
+export function liveStanceChangeLine(
+  scenario: Scenario,
+  statements: readonly Statement[],
+  execVotes: readonly { memberId: ExecMemberId; vote: Vote }[],
+): string {
+  let changed = 0;
+  for (const { memberId, vote } of execVotes) {
+    const finalStance = voteToFinalStance(vote);
+    if (finalStance === null) continue;
+    if (openingStanceOf(scenario, memberId, 'live', statements) !== finalStance) {
+      changed += 1;
+    }
+  }
+  return changed > 0
+    ? `임원 ${changed}명의 입장이 이사님의 발언 뒤 바뀌었습니다`
+    : '임원 입장은 처음과 같았습니다';
+}
 
 /** 임원 4명 중 지금 최종안(조건 포함)과 조건 없는 baseline의 표가 다른 사람 수(T96).
  * scripted만 계산하고(live는 규칙표로 "조건 없었다면"을 가정할 수 없어 0) */
@@ -36,6 +66,10 @@ export function oneStepAwayNote(
   finalConditionIds: string[],
   participantStance: 'FOR' | 'AGAINST' | null,
 ): string | null {
+  // 반대 참가자에게 "찬성이었을 텐데"는 목표와 반대 방향이라 보여주지 않는다.
+  if (participantStance === 'AGAINST') {
+    return null;
+  }
   const required = requiredConditionsFor(scenario, memberId, finalConditionIds, participantStance);
   if (required.persuaded || required.conditionIds === null) {
     return null;
@@ -58,7 +92,25 @@ export function nextTrySuggestionLabel(
   scenario: Scenario,
   finalConditionIds: string[],
   participantStance: 'FOR' | 'AGAINST' | null,
+  /** 최종 표로 본 임원 입장(반대 참가자 추천 계산에 쓴다). 없으면 모두 찬성으로 본다. */
+  finalStances?: Record<ExecMemberId, Stance>,
 ): string | null {
+  if (participantStance === 'AGAINST') {
+    // 반대 목표: 임원을 NO로 돌리는 조건 중 이 입장에서 실제로 적용할 문구가 있는 것만.
+    const stances =
+      finalStances ?? { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' };
+    const recommendation = buildConditionRecommendation(
+      scenario,
+      finalConditionIds,
+      'AGAINST',
+      'scripted',
+      stances as Record<ExecMemberId, Stance>,
+    );
+    const row = recommendation.rows.find(
+      (candidate) => findPhraseForCondition(scenario, candidate.conditionId, 'AGAINST') !== undefined,
+    );
+    return row?.label ?? null;
+  }
   for (const memberId of EXEC_MEMBER_ORDER) {
     const required = requiredConditionsFor(scenario, memberId, finalConditionIds, participantStance);
     const firstId = required.conditionIds?.[0];

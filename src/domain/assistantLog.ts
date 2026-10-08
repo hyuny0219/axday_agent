@@ -143,7 +143,7 @@ function describeEntry(entry: AssistantAction): string | null {
 /** T96 "조건 추천" 전용 집계 — 기존 세 유형("마지막 1건만 보여준다")과 달리 "몇 번
  * 열어 봤는지"·"조건을 몇 개 반영했는지"를 센다. appliedConditionIds는 evidenceIds[0]에
  * 담긴 조건 id를 중복 없이 모은다(같은 조건을 두 번 눌러도 1개로 센다). */
-function countConditionRecommendation(actionLabels: readonly string[]): {
+function countConditionRecommendation(actionLabels: readonly string[], finalConditionIds?: readonly string[]): {
   viewCount: number;
   appliedConditionIds: string[];
 } {
@@ -161,6 +161,10 @@ function countConditionRecommendation(actionLabels: readonly string[]): {
       viewCount += 1;
     } else if (entry.type === 'CONDITION_RECOMMEND_APPLY') {
       const conditionId = entry.evidenceIds[0];
+      // 기록은 취소되지 않으므로, 최종안 조건이 주어지면 거기 남은 조건만 센다(PR #20 Codex 33차 P2-3).
+      if (finalConditionIds && conditionId && !finalConditionIds.includes(conditionId)) {
+        continue;
+      }
       if (conditionId && !appliedConditionIds.includes(conditionId)) {
         appliedConditionIds.push(conditionId);
       }
@@ -169,7 +173,10 @@ function countConditionRecommendation(actionLabels: readonly string[]): {
   return { viewCount, appliedConditionIds };
 }
 
-export function describeAdditionalHelp(actionLabels: readonly string[]): string[] {
+export function describeAdditionalHelp(
+  actionLabels: readonly string[],
+  finalConditionIds?: readonly string[],
+): string[] {
   const order: AssistantActionType[] = [];
   const latestByType = new Map<AssistantActionType, AssistantAction>();
   for (const label of actionLabels) {
@@ -199,7 +206,7 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
       lines.push(line);
     }
   }
-  const recommendation = countConditionRecommendation(actionLabels);
+  const recommendation = countConditionRecommendation(actionLabels, finalConditionIds);
   if (recommendation.viewCount > 0) {
     lines.push(`조건 추천 ${recommendation.viewCount}회`);
   }

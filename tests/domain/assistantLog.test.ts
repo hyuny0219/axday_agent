@@ -236,3 +236,14 @@ describe('실패 뒤 재시도 성공 병합 (T97 검토)', () => {
     ]);
   });
 });
+
+describe('describeAdditionalHelp 최종안 교집합(Codex 33차 P2-3)', () => {
+  it('추천 조건 기록이 2건이어도 최종안에 남은 조건만 "반영"으로 센다', () => {
+    const labels = ['LIMIT', 'REVIEW'].map((id) =>
+      encodeAssistantLogEntry({ type: 'CONDITION_RECOMMEND_APPLY', mode: 'scripted', evidenceIds: [id] }, 0),
+    );
+    expect(describeAdditionalHelp(labels)).toContain('추천 조건 2개 반영');
+    expect(describeAdditionalHelp(labels, ['REVIEW', 'LOG'])).toEqual(['추천 조건 1개 반영']);
+    expect(describeAdditionalHelp(labels, ['LOG'])).toEqual([]);
+  });
+});

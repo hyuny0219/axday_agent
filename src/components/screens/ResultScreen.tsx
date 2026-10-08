@@ -13,15 +13,20 @@
 // 구분한다(T31).
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Scenario } from '../../content/types';
-import type { Ballot, MemberId, Session } from '../../domain/types';
+import type { ExecMemberId, Scenario } from '../../content/types';
+import type { Ballot, MemberId, Session, Stance } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildRemainingTaskLabels } from '../motionDisplay';
 import { buildResultSummary } from '../resultSummary';
-import { countVotesChangedByFinalConditions, nextTrySuggestionLabel, oneStepAwayNote } from '../persuasionSummary';
+import {
+  countVotesChangedByFinalConditions,
+  liveStanceChangeLine,
+  nextTrySuggestionLabel,
+  oneStepAwayNote,
+} from '../persuasionSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
 import { MinutesPanel } from '../parts/MinutesPanel';
 import {
@@ -70,8 +75,8 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   const finalMotion = session.finalMotion;
 
   const additionalHelp = useMemo(
-    () => describeAdditionalHelp(session.assistantActions),
-    [session.assistantActions],
+    () => describeAdditionalHelp(session.assistantActions, finalMotion?.effectiveConditionIds),
+    [session.assistantActions, finalMotion],
   );
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
@@ -107,8 +112,24 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     () => countVotesChangedByFinalConditions(scenario, session),
     [scenario, session],
   );
+  const finalStances = useMemo(() => {
+    const result: Record<ExecMemberId, Stance> = { CEO: 'UNDECIDED', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
+    for (const row of resultSummary?.execRows ?? []) {
+      result[row.memberId] = row.vote === 'YES' ? 'FOR' : row.vote === 'NO' ? 'AGAINST' : 'UNDECIDED';
+    }
+    return result;
+  }, [resultSummary]);
   const persuasionSummaryLine = useMemo(() => {
     if (!finalMotion) return null;
+    // live는 조건 없는 대조 표결이 없어 인과 문구·규칙표 추천을 쓰지 않고 관측 가능한 것만
+    // 말한다(PR #20 Codex 33차 P2-1).
+    if (session.mode === 'live') {
+      return liveStanceChangeLine(
+        scenario,
+        session.transcript.statements,
+        resultSummary?.execRows ?? [],
+      );
+    }
     const conditionCount = resultSummary?.conditionLabels.length ?? 0;
     if (changedByConditionsCount > 0) {
       return `이사님의 조건 ${conditionCount}개가 임원 ${changedByConditionsCount}명의 표를 바꿨습니다`;
@@ -117,11 +138,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
       scenario,
       finalMotion.effectiveConditionIds,
       collectParticipantStance(session.opinions),
+      finalStances,
     );
     return suggestion
       ? `이번엔 임원 표를 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
       : '이번엔 임원 표를 바꾸지 못했습니다';
-  }, [scenario, session, finalMotion, resultSummary, changedByConditionsCount]);
+  }, [scenario, session, finalMotion, resultSummary, changedByConditionsCount, finalStances]);
 
   // 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기"): 화면 로컬 상태로 오른쪽
   // 열의 기록 영역(VERDICTS 패널)만 "이사회 한 장 요약" ↔ 전문으로 바꾼다. 세션
