@@ -604,8 +604,8 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
 /** 발언 흐름 패널을 렌더하는 단계(v1.0 7절, T102 조정). 임원 발언 전문은 오른쪽 종이
  * 카드(OPINIONS·REACTIONS)에서만 읽으므로 그 단계와 DISCUSS에서는 같은 말을 두 번
  * 보여주지 않는다. 오른쪽에 발언 카드가 없는 MOTION·VOTE에서만 복습용으로 둔다(BRIEFING은
- * 아직 발언이 없는 안내 한 줄). RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
-const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['BRIEFING', 'MOTION', 'VOTE']);
+ * 오른쪽 "상황" 문장과 같은 한 줄뿐이라 뺐다). RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
+const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']);
 
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보

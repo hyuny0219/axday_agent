@@ -14,9 +14,20 @@ describe('bubbleLineOf', () => {
     expect(bubbleLineOf('그래도, 방향은 사람이 잡습니다.')).toBe('그래도, 방향은 사람이 잡습니다');
   });
 
-  it('18자를 넘으면 18자에서 자르고 말줄임표를 붙인다', () => {
+  it('18자를 넘으면 17자에서 자르고 말줄임표를 붙여 최대 18자를 지킨다', () => {
     const result = bubbleLineOf('가'.repeat(30));
-    expect(result).toBe(`${'가'.repeat(BUBBLE_MAX_LENGTH)}…`);
+    expect(result).toBe(`${'가'.repeat(BUBBLE_MAX_LENGTH - 1)}…`);
+    expect(result.length).toBe(BUBBLE_MAX_LENGTH);
+  });
+
+  it('숫자 속 쉼표·소수점에서는 끊지 않는다', () => {
+    expect(bubbleLineOf('한도는 12,345원입니다. 다음.')).toBe('한도는 12,345원입니다');
+    expect(bubbleLineOf('비용이 3.5배 늘었습니다. 다음.')).toBe('비용이 3.5배 늘었습니다');
+  });
+
+  it('문장 끝 닫는 따옴표 때문에 짝 없는 여는 따옴표가 남지 않는다', () => {
+    expect(bubbleLineOf('“이유부터 남깁시다.” 라고 했습니다.')).toBe('이유부터 남깁시다');
+    expect(bubbleLineOf('“이유부터 남깁시다”라고 했습니다.')).toBe('“이유부터 남깁시다”라고 했습니다');
   });
 
   it('빈 문자열은 빈 문자열이다', () => {
