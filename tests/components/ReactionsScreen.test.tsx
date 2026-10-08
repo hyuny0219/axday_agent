@@ -305,7 +305,7 @@ describe('ReactionsScreen', () => {
     );
 
     const card = screen.getByTestId('reaction-card-CAIO');
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('미정 → 찬성');
+    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('고민 중 → 찬성');
     expect(card.querySelector('.reaction-card__cause')).toHaveTextContent(
       "이사님의 '승인 사유 기록' 조건으로",
     );

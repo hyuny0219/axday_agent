@@ -54,7 +54,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByRole('button', { name: '체험 시작' }).click();
 
   // INTRO(T95): 목적·진행 5단계·성공 기준·팁 한 장.
-  await expect(page.getByRole('heading', { name: '오늘 당신은 특별 이사입니다' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '오늘 이사님은 특별 이사입니다' })).toBeVisible();
   await capture(page, testInfo.project.name, 'intro');
   await page.getByRole('button', { name: '안건 고르러 가기' }).click();
 
@@ -99,7 +99,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await capture(page, testInfo.project.name, 'opinions');
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
@@ -211,7 +211,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   // 조건을 하나도 확정하지 않으면 임원 표는 baseline대로 찬성 1(CEO)·반대 3이다
   // (aiApproval.ts voteRules "always true" 분기). 참가자가 찬성을 더하면 찬성 2·

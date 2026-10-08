@@ -148,7 +148,7 @@ test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -189,7 +189,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -207,7 +207,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
   await expect(page.getByTestId('statement-card-CFO')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('statement-failed-CFO')).toHaveCount(0);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4);
-  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('미정');
+  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('고민 중');
 
   // 재요청 성공 후에는 실패한 역할이 없어 버튼 자체가 사라진다.
   await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
@@ -222,7 +222,7 @@ test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -258,7 +258,7 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -289,7 +289,7 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
     '이번에는 답을 받지 못했습니다',
     { timeout: 10_000 },
   );
-  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('미정');
+  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('고민 중');
   await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
 

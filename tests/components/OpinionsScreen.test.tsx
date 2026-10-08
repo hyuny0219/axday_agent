@@ -1,5 +1,5 @@
 // OpinionsScreen(T95, 2026-10-08 사용자 — "필수로 보고 넘어가도록"): scripted 카드
-// 4장은 0.8초 간격으로 차례로 나타나고, 다 나올 때까지 "내 의견 말하기 ▶"를 잠근다.
+// 4장은 0.8초 간격으로 차례로 나타나고, 다 나올 때까지 "내 의견 쓰러 가기 ▶"를 잠근다.
 // prefers-reduced-motion이면 즉시 다 보여준다. live는 기존 roleStatus 기반 잠금을
 // 그대로 쓴다(이 카드가 손대지 않은 동작, 다른 테스트에서 이미 확인).
 import '@testing-library/jest-dom/vitest';

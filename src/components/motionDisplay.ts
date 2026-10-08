@@ -42,7 +42,7 @@ export function buildMotionDisplay(
   const hasConditions = confirmedConditionIds.length > 0;
   const sentence = hasConditions
     ? participantStance === 'AGAINST'
-      ? `${scenario.motionBreakdown.proposal} 이사님은 원안에 반대하며, 아래 조건을 요구합니다.`
+      ? `${scenario.motionBreakdown.proposal} 이사님은 처음 안에 반대하며, 아래 조건을 요구합니다.`
       : `${scenario.motionBreakdown.proposal} 단, 아래 조건을 붙입니다.`
     : scenario.motionBreakdown.proposal;
   return {

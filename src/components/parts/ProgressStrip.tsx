@@ -14,8 +14,8 @@ interface ProgressStep {
 // 모양과 어울리는 타자기 표기다. 단계 이름 자체(상황 파악·임원 의견 등)는 그대로 둔다.
 const STEPS: ProgressStep[] = [
   { step: 1, label: '01 상황 파악' },
-  { step: 2, label: '02 임원 의견' },
-  { step: 3, label: '03 내 의견' },
+  { step: 2, label: '02 임원 의견 듣기' },
+  { step: 3, label: '03 내 의견 쓰기' },
   { step: 4, label: '04 반응에 답하기' },
   { step: 5, label: '05 표결' },
 ];

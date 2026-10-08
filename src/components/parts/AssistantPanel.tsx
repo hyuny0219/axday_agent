@@ -678,7 +678,7 @@ export function AssistantPanel({
                       })}
                     </ul>
                   )}
-                  <h4>원안과의 차이</h4>
+                  <h4>처음 안과의 차이</h4>
                   {compareResult.addedConditionIds.length > 0 ? (
                     <ul>
                       {compareResult.addedConditionIds.map((id) => (

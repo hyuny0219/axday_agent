@@ -14,7 +14,7 @@ describe('IntroScreen', () => {
   it('목적·진행 5단계·성공 기준·팁을 모두 보여준다', () => {
     render(<IntroScreen onNext={vi.fn()} />);
 
-    expect(screen.getByRole('heading', { name: '오늘 당신은 특별 이사입니다' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '오늘 이사님은 특별 이사입니다' })).toBeInTheDocument();
     expect(screen.getByText('가상 임원 네 명과 안건을 두고 토론하고,')).toBeInTheDocument();
     expect(screen.getByText('마지막에 한 표를 던집니다.')).toBeInTheDocument();
     expect(screen.getByTestId('intro-steps')).toHaveTextContent('상황 파악');

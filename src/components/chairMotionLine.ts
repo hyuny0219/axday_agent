@@ -13,7 +13,7 @@ export function chairMotionLine(
   participantStance: 'FOR' | 'AGAINST' | null = null,
 ): string {
   if (confirmedConditionIds.length === 0) {
-    return '원안 그대로 표결에 부칩니다';
+    return '처음 안 그대로 표결에 부칩니다';
   }
   const firstLabel =
     scenario?.conditions.find((condition) => condition.id === confirmedConditionIds[0])?.label ??

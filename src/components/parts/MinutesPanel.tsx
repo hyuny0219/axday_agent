@@ -31,7 +31,7 @@ function entryCountLabel(count: number): string {
   if (count <= 1) {
     return `${count}건`;
   }
-  return `${count}건 · 스크롤`;
+  return `${count}건`;
 }
 
 export function MinutesPanel({ entries }: MinutesPanelProps) {

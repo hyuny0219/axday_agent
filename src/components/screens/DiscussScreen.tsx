@@ -518,7 +518,7 @@ export function DiscussScreen({
           ) : (
             <>
               {draft.draftText.trim() === '' && (
-                <GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
+                <GuideHint text="추천 문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
               )}
               {/* T97: 입장을 고른 뒤 비서실장 세 기능을 한 번씩 써야 의견 전달이
                   열린다는 안내(강조는 비서실장 버튼의 data-guide가 맡는다). */}
@@ -552,7 +552,7 @@ export function DiscussScreen({
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
             >
-              근거 자료 · 임원 발언 보기
+              근거 자료 보기
             </button>
             <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
           </div>

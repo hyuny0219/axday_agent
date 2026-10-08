@@ -96,8 +96,8 @@ describe('MinutesPanel 전체 표시·스크롤', () => {
     expect(panel.querySelectorAll('.minutes__entry--hidden')).toHaveLength(0);
     expect(panel).not.toHaveClass('minutes--collapsed');
     expect(screen.getByTestId('minutes-entry-entry-11')).toHaveTextContent(many[11]!.text);
-    // 시안 TRANSCRIPT 머리글 건수 배지 형식(T77, T83에서 한국어화): "N건 · 스크롤".
-    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12건 · 스크롤');
+    // 시안 TRANSCRIPT 머리글 건수 배지 형식(T77, T83에서 한국어화): "N건".
+    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12건');
   });
 
   it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "발언 흐름"이다', () => {

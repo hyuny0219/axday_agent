@@ -84,7 +84,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // OPINIONS: 임원 4명의 실제 발언 카드가 모두 나온다.
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
   // DISCUSS: "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS 라운드의 실제
@@ -138,7 +138,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   // 세션이 VOTE에 영구히 머문다(PR #11 Codex 12차 P1).
   await enterAiAssistant(page);
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -171,7 +171,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
 
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -219,7 +219,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   // OPINIONS: CAIO만 failed, 나머지 3명은 정상 응답으로 남는다.
   await expect(page.getByTestId('statement-failed-CAIO')).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -285,7 +285,7 @@ test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 �
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await expect(page.locator('[data-testid^="statement-failed-"]')).toHaveCount(0);
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);

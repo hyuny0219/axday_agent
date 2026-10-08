@@ -15,7 +15,7 @@ async function enterExperienceFirstReactions(page: Page) {
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 }
 
@@ -379,7 +379,7 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);

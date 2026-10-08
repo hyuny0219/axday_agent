@@ -65,7 +65,7 @@ describe('VoteScreen', () => {
   });
 
   // T85 #2: 아직 표를 고르지 않아 확정 버튼이 비활성일 때만 안내 한 줄을 보여준다.
-  it('아직 투표를 고르지 않으면 확정 버튼 옆에 비활성 안내가 보이고, 고르면 사라진다', () => {
+  it('아직 표를 고르지 않으면 안내가 보이고, 고르면 사라진다', () => {
     const motion = freezeMotion(scenario, [], 0);
     const { rerender } = render(
       <VoteScreen
@@ -79,7 +79,7 @@ describe('VoteScreen', () => {
         onConfirmVote={noop}
       />,
     );
-    expect(screen.getByTestId('vote-cta-hint')).toHaveTextContent('찬성 또는 반대 도장을 먼저 눌러 주세요');
+    expect(screen.getByTestId('vote-guide-hint')).toHaveTextContent('찬성 또는 반대 도장을 고르세요');
 
     rerender(
       <VoteScreen
@@ -93,7 +93,7 @@ describe('VoteScreen', () => {
         onConfirmVote={noop}
       />,
     );
-    expect(screen.queryByTestId('vote-cta-hint')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vote-guide-hint')).not.toBeInTheDocument();
   });
 
   // T85 #7: 확정을 누르면 버튼 라벨이 "임원 표를 모으는 중…"으로 바뀐다(점 애니메이션은
@@ -113,7 +113,7 @@ describe('VoteScreen', () => {
       />,
     );
     const confirmButton = screen.getByTestId('confirm-vote');
-    expect(confirmButton).toHaveTextContent('최종 투표 확정');
+    expect(confirmButton).toHaveTextContent('표결 확정');
     fireEvent.click(confirmButton);
     expect(confirmButton).toHaveTextContent('임원 표를 모으는 중');
   });

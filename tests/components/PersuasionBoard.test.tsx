@@ -58,7 +58,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/4');
   });
 
-  it('LOG 조건을 확정하면 CAIO 행이 "미정 → 찬성"으로 바뀌고 설득한 임원 수가 늘어난다', () => {
+  it('LOG 조건을 확정하면 CAIO 행이 "고민 중 → 찬성"으로 바뀌고 설득한 임원 수가 늘어난다', () => {
     const stances = scriptedStances(aiApprovalScenario, { stage: 'REACTIONS', opinions: [
       { id: 'op1', originalText: '', selectedPhraseIds: [], confirmedConditionIds: ['LOG'], createdAt: 0 },
     ] });
@@ -72,7 +72,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
       />,
     );
     expand();
-    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('미정 → 찬성');
+    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('고민 중 → 찬성');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('설득 완료');
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 2/4');
   });

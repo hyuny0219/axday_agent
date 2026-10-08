@@ -98,7 +98,7 @@ export function MotionScreen({
   // 있으면 수정안이다 — domain/motion.ts freezeMotion의 kind 판정(baseConditionIds는
   // 모든 시나리오에서 항상 [])과 같은 결과를 내는 표시용 계산일 뿐, 문안 생성 규칙 자체는
   // 건드리지 않는다(문구는 항상 scenario.originalMotion.text 그대로).
-  const motionKindLabel = confirmedConditionIds.length === 0 ? '원안' : '수정안';
+  const motionKindLabel = confirmedConditionIds.length === 0 ? '처음 안' : '조건을 붙인 안';
 
   // 표결 안건 문장(T84, Opus UX 검토 #3+my#2): scenario.originalMotion.text를 그대로
   // 보여주면 조건을 붙여도 "…절차는 미정이다."로 끝나 모순돼 보인다. 표시만 동적으로
@@ -156,7 +156,7 @@ export function MotionScreen({
             data-testid="motion-card"
             data-guide={motionGuidePhase === 'motion' ? 'next' : undefined}
           >
-            <span className="motion-screen__box-label">표결 안건 · {motionKindLabel}</span>
+            <span className="motion-screen__box-label">표결할 안건 · {motionKindLabel}</span>
             <p className="motion-screen__motion-text">{motionDisplay.sentence}</p>
             {motionDisplay.undecidedLabels.length > 0 && (
               <p className="motion-screen__not-included-text" data-testid="motion-undecided">
@@ -179,7 +179,7 @@ export function MotionScreen({
                 </ul>
               ) : (
                 <p className="motion-screen__no-conditions">
-                  확정한 수정 조건이 없어 원안 그대로 표결합니다.
+                  확정한 조건이 없어 처음 안 그대로 표결합니다.
                 </p>
               )}
             </div>
@@ -199,8 +199,7 @@ export function MotionScreen({
             {/* T94(2026-10-08 사용자 지시): "문안"을 이미 화면 전체가 쓰는 "안건"으로
                 바꿔 쉬운 말 톤을 맞춘다(의미는 그대로). */}
             <p className="motion-screen__chair-text">
-              이 안건을 고정하고 표결로 넘어갑니다. 고정한 뒤에는 조건을 바꿀 수 없습니다. 임원 네
-              명은 같은 안건을 보고 각자 표를 정합니다.
+              이 안건을 고정하고 표결로 넘어갑니다. 임원 네 명은 같은 안건을 보고 각자 표를 정합니다.
             </p>
           </div>
           <div className="motion-screen__cta-row">

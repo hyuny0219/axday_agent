@@ -50,7 +50,6 @@ describe('BriefingScreen', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={onNext} />);
     const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
     expect(nextButton).toBeDisabled();
-    expect(screen.getByTestId('briefing-guide-hint')).toBeInTheDocument();
     expect(screen.getByTestId('briefing-cta-hint')).toBeInTheDocument();
     expect(screen.getByTestId('open-evidence')).toHaveAttribute('data-guide', 'next');
 
@@ -67,7 +66,6 @@ describe('BriefingScreen', () => {
     const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
     expect(nextButton).toBeEnabled();
     expect(nextButton).toHaveAttribute('data-guide', 'next');
-    expect(screen.queryByTestId('briefing-guide-hint')).not.toBeInTheDocument();
 
     fireEvent.click(nextButton);
     expect(onNext).toHaveBeenCalledTimes(1);

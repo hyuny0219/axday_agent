@@ -16,7 +16,6 @@
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
-import { GuideHint } from '../parts/GuideHint';
 import { HighlightText } from '../parts/HighlightText';
 import '../../styles/screens/briefing.css';
 
@@ -102,7 +101,6 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               상황 파악에 집중"): "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자는
               같은 내용(목적·성공 기준)을 이미 INTRO에서 보여주므로 뺐다. 빈 공간은
               위 상황·제안·미정 글자 크기를 한 단계 키워 채운다(briefing.css). */}
-          {!evidenceSeen && <GuideHint text="먼저 근거 자료 4장을 열어 보세요" testId="briefing-guide-hint" />}
           <div className="briefing-screen__exhibit">
             <button
               type="button"

@@ -69,9 +69,9 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await page.keyboard.press('Escape');
   await hearOpinions.click();
 
-  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 의견 듣기' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
-  const speakOpinion = page.getByRole('button', { name: '내 의견 말하기' });
+  const speakOpinion = page.getByRole('button', { name: '내 의견 쓰러 가기' });
   await expect(speakOpinion).toBeInViewport();
   await speakOpinion.click();
 
@@ -157,7 +157,7 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);

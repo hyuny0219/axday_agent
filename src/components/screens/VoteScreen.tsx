@@ -128,7 +128,7 @@ export function VoteScreen({
         <div className="vote-screen__ballots" data-testid="vote-ballots">
           <div className="vote-screen__ballots-head">
             <span>임원 표</span>
-            <span className="vote-screen__ballots-privacy">참가자 확정 전 비공개</span>
+            <span className="vote-screen__ballots-privacy">확정 전까지 가려 둡니다</span>
           </div>
           <div className="vote-screen__ballots-grid">
             {EXEC_MEMBER_ORDER.map((memberId) => (
@@ -142,7 +142,7 @@ export function VoteScreen({
                 <span className="vote-screen__ballot-seal" aria-hidden="true">
                   ?
                 </span>
-                <span className="vote-screen__ballot-seal-label">봉인</span>
+                <span className="vote-screen__ballot-seal-label">가림</span>
               </div>
             ))}
           </div>
@@ -175,10 +175,10 @@ export function VoteScreen({
             <span className="vote-screen__step">5단계 · 2/2</span>
             {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T72와
                 같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
-            <h2 className="vote-screen__title">최종 투표 · 특별 이사 1표</h2>
+            <h2 className="vote-screen__title">최종 표결 · 이사님 1표</h2>
           </div>
           <div className="vote-screen__motion-card" data-testid="vote-motion-card">
-            <span className="vote-screen__motion-label">표결 안건</span>
+            <span className="vote-screen__motion-label">표결할 안건</span>
             {/* T84: motion.text(domain/motion.ts freezeMotion이 고정한 실제 안건 문구,
                 해시·서버 검증용)는 그대로 두고, 화면에는 buildMotionDisplay가 지은
                 문장을 보여준다 — 조건을 붙여도 고정 "…절차는 미정이다."로 끝나던
@@ -268,18 +268,13 @@ export function VoteScreen({
                   </span>
                 </>
               ) : (
-                '최종 투표 확정 ▶'
+                '표결 확정 ▶'
               )}
             </button>
-            {pendingVote === null && !submitted && (
-              <p className="cta-disabled-hint" data-testid="vote-cta-hint">
-                찬성 또는 반대 도장을 먼저 눌러 주세요
-              </p>
-            )}
             <p className="vote-screen__cta-note">
-              확정 버튼으로만 표가 성립합니다. 확정 후 임원 표가 공개되고 결과로 넘어갑니다.
+              확정을 눌러야 표가 들어갑니다. 확정하면 임원 표가 공개되고 결과로 넘어갑니다.
               <br />
-              5석 중 찬성 3표 이상이면 가결, 그 외는 부결.
+              5석 중 찬성이 3표 이상이면 통과합니다.
             </p>
           </div>
         </div>

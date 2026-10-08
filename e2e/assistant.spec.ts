@@ -9,7 +9,7 @@ async function reachDiscuss(page: Page) {
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 }
 
@@ -109,7 +109,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
 
   // OPINIONS: 임원 4명의 실제 발언 카드가 모두 나온 뒤에야 DISCUSS로 넘어간다.
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
   const textarea = page.getByTestId('draft-editor-textarea');

@@ -14,8 +14,8 @@ export interface IntroScreenProps {
 
 const STEPS: readonly string[] = [
   '① 상황 파악',
-  '② 임원 의견',
-  '③ 내 의견',
+  '② 임원 의견 듣기',
+  '③ 내 의견 쓰기',
   '④ 반응에 답하기',
   '⑤ 표결',
 ];
@@ -46,7 +46,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
           BRIEFING
         </span>
         <span className="intro-screen__eyebrow">체험 전 안내</span>
-        <h2 className="intro-screen__title">오늘 당신은 특별 이사입니다</h2>
+        <h2 className="intro-screen__title">오늘 이사님은 특별 이사입니다</h2>
 
         <div className="intro-screen__columns">
           <div className="intro-screen__col">
@@ -58,7 +58,7 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
             <div className="intro-screen__block">
               <span className="intro-screen__label">성공 기준</span>
               <p className="intro-screen__success" data-testid="intro-success">
-                임원을 설득해 이사님과 같은 표가 3석 이상이면 &lsquo;설득 성공&rsquo; 도장을
+                임원을 설득해 이사님과 같은 표가 3석 이상이면 &lsquo;설득 도장&rsquo;을
                 받습니다.
               </p>
             </div>

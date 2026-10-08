@@ -40,7 +40,7 @@ export function AttractScreen({ onStart, startDisabled = false }: AttractScreenP
 
         <div className="attract-screen__center">
           <h1 className="attract-screen__title">BECOME A BOARD</h1>
-          <p className="attract-screen__subtitle">오늘 당신이 이사회의 한 자리를 맡습니다</p>
+          <p className="attract-screen__subtitle">오늘 이사님이 이사회의 한 자리를 맡습니다</p>
         </div>
 
         <button
@@ -59,7 +59,7 @@ export function AttractScreen({ onStart, startDisabled = false }: AttractScreenP
           <span>CFO</span>
           <span>CAIO</span>
           <span>CISO</span>
-          <span className="attract-screen__roster-you">+ 당신</span>
+          <span className="attract-screen__roster-you">+ 이사님</span>
         </div>
       </div>
     </section>

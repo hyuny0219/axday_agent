@@ -22,7 +22,7 @@ async function enterReactions(page: Page) {
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
   await tryAllAssistantFeatures(page);
@@ -60,7 +60,7 @@ async function enterReactionsWithAllConditions(page: Page) {
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
@@ -189,7 +189,7 @@ test.describe('1920×1080에서 무대 열', () => {
     await page.getByTestId('open-evidence').click();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '의견 듣기' }).click();
-    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
     await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
     await tryAllAssistantFeatures(page);

@@ -95,7 +95,7 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
               <h3 className="scenario-card__title">{scenario.chairBriefing.question}</h3>
               <p className="scenario-card__headline">{scenario.incident.headline}</p>
               <span className="scenario-card__footer">
-                {preparing ? '봉인됨 · 다음 안건을 준비하고 있습니다' : '열람 가능 · 눌러서 입장'}
+                {preparing ? '준비 중 · 다음 안건을 준비하고 있습니다' : '골라서 들어가기'}
               </span>
             </button>
           );

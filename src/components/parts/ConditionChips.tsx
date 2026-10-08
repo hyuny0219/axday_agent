@@ -56,7 +56,7 @@ export function ConditionChips({
     }
     return (
       <p className="condition-chips__hint" data-testid="condition-chips-hint">
-        조건으로 잡힌 내용은 없습니다. 추천 문구를 고르면 조건이 붙습니다.
+        조건으로 잡힌 내용은 없습니다. 추천을 고르거나 직접 쓰면 조건이 붙습니다.
       </p>
     );
   }
