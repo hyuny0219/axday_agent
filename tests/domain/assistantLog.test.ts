@@ -247,3 +247,36 @@ describe('describeAdditionalHelp 최종안 교집합(Codex 33차 P2-3)', () => {
     expect(describeAdditionalHelp(labels, ['LOG'])).toEqual([]);
   });
 });
+
+describe('describeAdditionalHelp 조건 추천 한 줄(T101)', () => {
+  const nameOf = (id: string) => ({ LIMIT: '결재 금액 한도', LOG: '승인 사유 기록', REVIEW: '사람 표본 재검토' })[id];
+  const view = (ids: string[]) =>
+    encodeAssistantLogEntry({ type: 'CONDITION_RECOMMEND_VIEW', mode: 'scripted', evidenceIds: ids }, 0);
+  const apply = (id: string) =>
+    encodeAssistantLogEntry({ type: 'CONDITION_RECOMMEND_APPLY', mode: 'scripted', evidenceIds: [id] }, 0);
+
+  it('추천한 조건 이름과 최종안에 들어간 개수를 한 줄로 보여준다', () => {
+    const labels = [view(['LIMIT', 'LOG']), apply('LIMIT'), apply('LOG')];
+    expect(describeAdditionalHelp(labels, ['LIMIT', 'LOG'], nameOf)).toEqual([
+      '조건 추천 1회 · 결재 금액 한도, 승인 사유 기록 → 2개 반영',
+    ]);
+  });
+
+  it('최종안에서 빠진 조건은 반영으로 세지 않고, 반영이 없으면 화살표 없이 이름만 보인다', () => {
+    const labels = [view(['LIMIT', 'LOG']), apply('LIMIT')];
+    expect(describeAdditionalHelp(labels, ['LOG'], nameOf)).toEqual([
+      '조건 추천 1회 · 결재 금액 한도, 승인 사유 기록',
+    ]);
+  });
+
+  it('이름을 찾는 함수가 없으면 옛 형식("조건 추천 N회")을 지킨다', () => {
+    expect(describeAdditionalHelp([view(['LIMIT'])])).toEqual(['조건 추천 1회']);
+  });
+
+  it('이름은 세 개까지만 보이고 나머지는 "외 N개"로 줄인다', () => {
+    const many = (id: string) => id;
+    expect(describeAdditionalHelp([view(['A', 'B', 'C', 'D', 'E'])], undefined, many)).toEqual([
+      '조건 추천 1회 · A, B, C 외 2개',
+    ]);
+  });
+});

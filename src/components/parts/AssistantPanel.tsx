@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { ParticipantStance, SessionMode, Stance, Transcript } from '../../domain/types';
-import { buildConditionRecommendation } from '../conditionRecommendation';
+import { buildConditionRecommendation, recommendedConditionIds } from '../conditionRecommendation';
 import { latestSuggestedConditionIds } from '../liveTranscript';
 import type {
   AssistantAdapter,
@@ -286,7 +286,8 @@ export function AssistantPanel({
         onAssistantAction({
           type: 'CONDITION_RECOMMEND_VIEW',
           mode: result.mode,
-          evidenceIds: [],
+          // T101: 추천한 조건 id를 함께 남겨 결과 화면이 이름을 보여준다.
+          evidenceIds: recommendedConditionIds(recommendation),
         });
       } else {
         const result = await withTimeout(

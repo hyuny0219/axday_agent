@@ -207,3 +207,18 @@ export function buildConditionRecommendation(
 
   return { openingLine, rows, bundles, usedRuleFallback: mode === 'live' && usedRuleFallback };
 }
+
+/** 조건 추천이 보여준 조건 id(행·묶음, 중복 없이 처음 나온 순서). 사용 기록(T101)에 담아
+ * 결과 화면 "AI가 도운 일"이 추천한 조건 이름을 보여주게 한다. */
+export function recommendedConditionIds(recommendation: ConditionRecommendation): string[] {
+  const ids: string[] = [];
+  for (const row of recommendation.rows) {
+    if (!ids.includes(row.conditionId)) ids.push(row.conditionId);
+  }
+  for (const bundle of recommendation.bundles) {
+    for (const id of bundle.conditionIds) {
+      if (!ids.includes(id)) ids.push(id);
+    }
+  }
+  return ids;
+}

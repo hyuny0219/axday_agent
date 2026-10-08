@@ -197,10 +197,15 @@ describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 �
             finalStances[memberId] = ballot.vote === 'YES' ? 'FOR' : ballot.vote === 'NO' ? 'AGAINST' : 'UNDECIDED';
           }
           const tally = computePersuasionTally(sc, 'scripted', [], side, finalStances);
-          const seats = persuasionStamp(
-            [...ballots, { ...ballots[0], memberId: 'PARTICIPANT', vote: participantVote }],
-            participantVote,
-          ).sameVoteSeats;
+          const participantBallot: Ballot = {
+            memberId: 'PARTICIPANT',
+            motionId: id,
+            motionHash: 'h',
+            source: 'scripted',
+            vote: participantVote,
+            confirmedAt: 1,
+          };
+          const seats = persuasionStamp([...ballots, participantBallot], participantVote).sameVoteSeats;
           expect(1 + tally.alreadySame.length + tally.persuaded.length).toBe(seats);
           expect(tally.total).toBe(4 - tally.alreadySame.length);
           expect(tally.persuaded.length).toBeLessThanOrEqual(tally.total);

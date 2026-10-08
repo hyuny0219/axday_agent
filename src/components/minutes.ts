@@ -123,11 +123,13 @@ const NO_REACTION_TEXT = '앞서 말씀드린 입장 그대로입니다.';
 function scriptedReactionText(
   reactions: Reaction[],
   opposition: string | undefined,
+  holdReason: string | undefined,
 ): string {
   if (opposition !== undefined) {
     return opposition;
   }
-  return reactions.length > 0 ? reactions[0]?.text ?? NO_REACTION_TEXT : NO_REACTION_TEXT;
+  // T101: 입장을 유지하는 임원은 반응 카드와 같은 holdReasons(역할별 유지 이유)를 쓴다.
+  return reactions.length > 0 ? reactions[0]?.text ?? NO_REACTION_TEXT : holdReason ?? NO_REACTION_TEXT;
 }
 
 /** 참가자 발언 행에 입장을 덧붙인다(T92, "참가자 행에 이사님 입장이 보이게"). 입장을
@@ -225,7 +227,7 @@ export function buildMinutes(
         entries.push({
           id: `reaction-${roleId}`,
           speaker: roleId,
-          text: scriptedReactionText(reactions, opposition),
+          text: scriptedReactionText(reactions, opposition, scenario.holdReasons?.[roleId]),
           kind: 'speech',
           timeLabel: TIME_UNKNOWN,
         });

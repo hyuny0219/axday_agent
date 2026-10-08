@@ -146,9 +146,12 @@ function describeEntry(entry: AssistantAction): string | null {
 function countConditionRecommendation(actionLabels: readonly string[], finalConditionIds?: readonly string[]): {
   viewCount: number;
   appliedConditionIds: string[];
+  /** T101: 열어 본 "조건 추천"이 보여준 조건 id(중복 없이, 처음 나온 순서). */
+  recommendedConditionIds: string[];
 } {
   let viewCount = 0;
   const appliedConditionIds: string[] = [];
+  const recommendedConditionIds: string[] = [];
   for (const label of actionLabels) {
     const entry = decodeAssistantLogEntry(label);
     if (!entry) {
@@ -159,6 +162,11 @@ function countConditionRecommendation(actionLabels: readonly string[], finalCond
     }
     if (entry.type === 'CONDITION_RECOMMEND_VIEW') {
       viewCount += 1;
+      for (const id of entry.evidenceIds) {
+        if (!recommendedConditionIds.includes(id)) {
+          recommendedConditionIds.push(id);
+        }
+      }
     } else if (entry.type === 'CONDITION_RECOMMEND_APPLY') {
       const conditionId = entry.evidenceIds[0];
       // 기록은 취소되지 않으므로, 최종안 조건이 주어지면 거기 남은 조건만 센다(PR #20 Codex 33차 P2-3).
@@ -170,12 +178,36 @@ function countConditionRecommendation(actionLabels: readonly string[], finalCond
       }
     }
   }
-  return { viewCount, appliedConditionIds };
+  return { viewCount, appliedConditionIds, recommendedConditionIds };
+}
+
+/** "조건 추천 N회 · 이름, 이름 → N개 반영" 한 줄(T101). 추천한 조건 이름은 세 개까지만
+ * 보여주고 나머지는 "외 N개"로 줄인다. 이름을 찾을 수 없는 id(옛 기록)는 건너뛴다. */
+function describeConditionRecommendation(
+  recommendation: ReturnType<typeof countConditionRecommendation>,
+  conditionLabelOf?: (conditionId: string) => string | undefined,
+): string | null {
+  const { viewCount, appliedConditionIds, recommendedConditionIds } = recommendation;
+  const applied = appliedConditionIds.length;
+  if (viewCount === 0) {
+    return applied > 0 ? `추천 조건 ${applied}개 반영` : null;
+  }
+  const names = recommendedConditionIds
+    .map((id) => conditionLabelOf?.(id))
+    .filter((name): name is string => Boolean(name));
+  const shown = names.slice(0, 3).join(', ');
+  const rest = names.length > 3 ? ` 외 ${names.length - 3}개` : '';
+  return (
+    `조건 추천 ${viewCount}회` +
+    (names.length > 0 ? ` · ${shown}${rest}` : '') +
+    (applied > 0 ? ` → ${applied}개 반영` : '')
+  );
 }
 
 export function describeAdditionalHelp(
   actionLabels: readonly string[],
   finalConditionIds?: readonly string[],
+  conditionLabelOf?: (conditionId: string) => string | undefined,
 ): string[] {
   const order: AssistantActionType[] = [];
   const latestByType = new Map<AssistantActionType, AssistantAction>();
@@ -207,11 +239,9 @@ export function describeAdditionalHelp(
     }
   }
   const recommendation = countConditionRecommendation(actionLabels, finalConditionIds);
-  if (recommendation.viewCount > 0) {
-    lines.push(`조건 추천 ${recommendation.viewCount}회`);
-  }
-  if (recommendation.appliedConditionIds.length > 0) {
-    lines.push(`추천 조건 ${recommendation.appliedConditionIds.length}개 반영`);
+  const recommendationLine = describeConditionRecommendation(recommendation, conditionLabelOf);
+  if (recommendationLine) {
+    lines.push(recommendationLine);
   }
   return lines;
 }

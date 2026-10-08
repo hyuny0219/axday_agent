@@ -98,11 +98,19 @@ describe('buildMinutes(scripted)', () => {
     ]);
 
     // PILOT 조건을 확정했으므로 CFO는 실제 반응 문구, 조건과 무관한 CISO는
-    // "앞서 말씀드린 입장 그대로입니다."다(scenario.reactions에 PILOT용 CISO 반응이 없다).
+    // 유지 이유(holdReasons)가 없는 시나리오는 고정 문구다(scenario.reactions에 PILOT용
+    // CISO 반응이 없다). holdReasons가 있으면 아래 T101 테스트처럼 그 문구를 쓴다.
     const cfoReaction = entries.find((entry) => entry.id === 'reaction-CFO');
     const cisoReaction = entries.find((entry) => entry.id === 'reaction-CISO');
     expect(cfoReaction?.text).toContain('처리 공수');
     expect(cisoReaction?.text).toBe('앞서 말씀드린 입장 그대로입니다.');
+    // T101: holdReasons가 있으면 반응 카드와 같은 역할별 유지 이유를 쓴다.
+    const withHold = buildMinutes(
+      session,
+      { ...scenario, holdReasons: { CEO: '가', CFO: '나', CAIO: '다', CISO: '라 유지 이유' } },
+      [],
+    );
+    expect(withHold.find((entry) => entry.id === 'reaction-CISO')?.text).toBe('라 유지 이유');
 
     const myOpinion = entries.find((entry) => entry.id === 'my-opinion');
     expect(myOpinion).toMatchObject({ speaker: 'PARTICIPANT', kind: 'mine' });
