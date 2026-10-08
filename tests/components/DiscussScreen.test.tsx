@@ -12,6 +12,7 @@ import { DiscussScreen, type DiscussScreenProps } from '../../src/components/scr
 import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
+import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
 afterEach(() => {
   cleanup();
@@ -95,14 +96,22 @@ describe('DiscussScreen', () => {
     fireEvent.click(screen.getByTestId('open-evidence'));
 
     // 실제 발언이 있고 answered인 임원은 그 발언 텍스트가 그대로 보인다(각본 문장 아님).
-    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('[live] CEO의 실제 발언입니다.');
-    expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent('[live] CFO의 실제 발언입니다.');
+    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent(
+      '[live] CEO의 실제 발언입니다.',
+    );
+    expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent(
+      '[live] CFO의 실제 발언입니다.',
+    );
 
     // 아직 응답 없는(pending) 임원은 각본 문장 대신 OPINIONS 화면과 같은 "판단 중…" 문구다.
-    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent('생각을 정리하고 있습니다');
+    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent(
+      '생각을 정리하고 있습니다',
+    );
 
     // 실패한 임원은 OPINIONS 화면과 같은 "응답 지연·확인 필요" 문구다.
-    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent('이번에는 답을 받지 못했습니다');
+    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent(
+      '이번에는 답을 받지 못했습니다',
+    );
 
     // scenario.initialOpinions의 각본 문구는 live 모드에서 화면에 나오면 안 된다.
     for (const opinion of scenario.initialOpinions) {
@@ -325,5 +334,95 @@ describe('DiscussScreen', () => {
       const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
       expect(checkbox).not.toBeChecked();
     });
+  });
+});
+
+// T97: 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달.
+describe('비서실장 필수 사용 게이팅(T97)', () => {
+  const idle: Record<ExecMemberId, RoleStatus> = {
+    CEO: 'idle',
+    CFO: 'idle',
+    CAIO: 'idle',
+    CISO: 'idle',
+  };
+  const emptyTranscript: Transcript = { revision: 0, statements: [] };
+  const entry = (type: AssistantActionType, failed = false) =>
+    encodeAssistantLogEntry({ type, mode: 'scripted', evidenceIds: [], failed }, 0);
+
+  function renderDiscuss(assistantActions: string[]) {
+    return render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        roleStatus={idle}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={assistantActions}
+        initialSide="FOR"
+      />,
+    );
+  }
+
+  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며, 하이라이트는 문구 목록에 있다', () => {
+    renderDiscuss([]);
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      '추천 문구를 고르거나 직접 써 주세요',
+    );
+    expect(screen.getByTestId('assistant-toggle')).not.toHaveAttribute('data-guide');
+    expect(screen.getByTestId('submit-opinion')).not.toHaveAttribute('data-guide');
+  });
+
+  it('문구만 고르면 힌트가 (0/3)으로 바뀌고 하이라이트가 비서실장 버튼으로 옮겨 간다', () => {
+    renderDiscuss([]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      'AI 비서실장을 먼저 써 보세요 (0/3)',
+    );
+    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-guide', 'next');
+    expect(screen.getByTestId('submit-opinion')).not.toHaveAttribute('data-guide');
+  });
+
+  it('두 개만 써도 (2/3)이고 전달은 계속 막혀 있다', () => {
+    renderDiscuss([entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW')]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent('(2/3)');
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+  });
+
+  it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 하이라이트가 전달 버튼으로 옮겨 가며 힌트가 사라진다', () => {
+    renderDiscuss([
+      entry('OPINION_SUMMARY'),
+      entry('CONDITION_RECOMMEND_VIEW', true),
+      entry('DRAFT_REFINE'),
+    ]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
+    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-guide', 'next');
+    expect(screen.getByTestId('assistant-toggle')).not.toHaveAttribute('data-guide');
+    expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
+  });
+
+  it('비서실장을 다 써도 문구가 없으면 전달은 여전히 막힌다', () => {
+    renderDiscuss([
+      entry('OPINION_SUMMARY'),
+      entry('CONDITION_RECOMMEND_VIEW'),
+      entry('DRAFT_REFINE'),
+    ]);
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      '추천 문구를 고르거나 직접 써 주세요',
+    );
+  });
+
+  it('안내 한 줄이 비서실장 세 가지를 한 번씩 쓰면 전달이 열린다고 알려 준다', () => {
+    renderDiscuss([]);
+    expect(screen.getByTestId('discuss-assistant-tip')).toHaveTextContent(
+      '비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다',
+    );
   });
 });

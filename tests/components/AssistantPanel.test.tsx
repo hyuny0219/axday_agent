@@ -9,6 +9,8 @@ import { AssistantPanel } from '../../src/components/parts/AssistantPanel';
 import { aiApprovalScenario } from '../../src/content/scenarios';
 import { scriptedStances } from '../../src/domain/stance';
 import type { AssistantActionEvent } from '../../src/domain/assistantLog';
+import { scriptedAssistantAdapter } from '../../src/services/assistant/scripted';
+import type { AssistantAdapter } from '../../src/services/assistant/types';
 
 afterEach(() => {
   cleanup();
@@ -16,7 +18,10 @@ afterEach(() => {
 
 const scenario = aiApprovalScenario;
 
-function baseProps(onAssistantAction: (event: AssistantActionEvent) => void, onRecommendCondition: (id: string) => boolean) {
+function baseProps(
+  onAssistantAction: (event: AssistantActionEvent) => void,
+  onRecommendCondition: (id: string) => boolean,
+) {
   const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
   return {
     scenario,
@@ -97,5 +102,112 @@ describe('AssistantPanel "조건 추천" 적용 기록(T96)', () => {
     // Codex 27차 검토 요구사항.
     expect(applyCalls).toHaveLength(1);
     expect(applyCalls[0]?.[0].evidenceIds).toEqual(['REVIEW']);
+  });
+});
+
+// T97: DISCUSS 전용 첫 화면 소개·체크리스트와 실패 기록.
+describe('AssistantPanel 필수 사용 소개(T97)', () => {
+  const noopAction = () => {};
+  const base = () => baseProps(noopAction, () => true);
+
+  it('requiredFeatures를 넘기지 않으면 소개 블록도 완료 표시도 없다', () => {
+    render(<AssistantPanel {...base()} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-check-summary')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-action-summary')).not.toHaveAttribute('data-guide');
+  });
+
+  it('첫 화면에 제목·기능 세 줄·체크가 보이고, 안 쓴 첫 기능 버튼에 하이라이트가 걸린다', () => {
+    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['summary']) }} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    const intro = screen.getByTestId('assistant-intro');
+    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요');
+    expect(intro).toHaveTextContent('임원 네 명 말을 한 줄씩 정리합니다');
+    expect(intro).toHaveTextContent('지금 쓴 발언을 더 또렷하게 다듬어 줍니다');
+    expect(screen.getByTestId('assistant-check-summary')).toHaveTextContent('☑');
+    expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☐');
+    expect(screen.getByTestId('assistant-done-summary')).toHaveTextContent('완료');
+    expect(screen.getByTestId('assistant-action-summary')).not.toHaveAttribute('data-guide');
+    expect(screen.getByTestId('assistant-action-compare')).toHaveAttribute('data-guide', 'next');
+    expect(screen.queryByTestId('assistant-intro-done')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-close')).not.toHaveAttribute('data-guide');
+  });
+
+  it('세 기능을 다 쓰면 완료 문구가 뜨고 닫기 버튼이 하이라이트되며 기능 버튼 하이라이트는 사라진다', () => {
+    render(
+      <AssistantPanel
+        {...base()}
+        requiredFeatures={{ used: new Set(['summary', 'compare', 'refine']) }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(screen.getByTestId('assistant-intro-done')).toHaveTextContent(
+      '이제 팝업을 닫고 의견을 전달하세요',
+    );
+    expect(screen.getByTestId('assistant-close')).toHaveAttribute('data-guide', 'next');
+    expect(screen.getByTestId('assistant-action-refine')).not.toHaveAttribute('data-guide');
+  });
+
+  it('결과가 생기면 소개가 한 줄로 줄어든다', async () => {
+    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('한눈에 보기');
+    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('조건 추천');
+  });
+
+  it('세 기능이 채워지는 순간 onAllUsed가 한 번 불린다', () => {
+    const onAllUsed = vi.fn();
+    const props = base();
+    const { rerender } = render(
+      <AssistantPanel {...props} requiredFeatures={{ used: new Set(['summary']), onAllUsed }} />,
+    );
+    expect(onAllUsed).not.toHaveBeenCalled();
+    rerender(
+      <AssistantPanel
+        {...props}
+        requiredFeatures={{ used: new Set(['summary', 'compare', 'refine']), onAllUsed }}
+      />,
+    );
+    expect(onAllUsed).toHaveBeenCalledTimes(1);
+  });
+
+  it('정리한 초안을 화면에 보이면 applied:false로 DRAFT_REFINE을 남긴다', async () => {
+    const onAssistantAction = vi.fn();
+    render(
+      <AssistantPanel {...baseProps(onAssistantAction, () => true)} draftText="초안 문장입니다." />,
+    );
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-refine'));
+    await screen.findByTestId('assistant-result-refine', {}, { timeout: 2000 });
+    expect(onAssistantAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DRAFT_REFINE', applied: false }),
+    );
+  });
+
+  it('기능이 실패해도 같은 유형을 failed:true로 남겨 사용으로 센다', async () => {
+    const failing: AssistantAdapter = {
+      ...scriptedAssistantAdapter,
+      summarizeOpinions: () => Promise.reject(new Error('연결 실패')),
+      compareConditions: () => Promise.reject(new Error('연결 실패')),
+      refineDraft: () => Promise.reject(new Error('연결 실패')),
+    };
+    const onAssistantAction = vi.fn();
+    render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={failing} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    for (const [feature, type] of [
+      ['summary', 'OPINION_SUMMARY'],
+      ['compare', 'CONDITION_RECOMMEND_VIEW'],
+      ['refine', 'DRAFT_REFINE'],
+    ] as const) {
+      fireEvent.click(screen.getByTestId(`assistant-action-${feature}`));
+      await screen.findByTestId('assistant-error');
+      expect(onAssistantAction).toHaveBeenCalledWith(
+        expect.objectContaining({ type, failed: true }),
+      );
+    }
   });
 });

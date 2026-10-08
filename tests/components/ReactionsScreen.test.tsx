@@ -10,7 +10,10 @@ import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { ReactionsScreen, type ReactionsScreenProps } from '../../src/components/screens/ReactionsScreen';
+import {
+  ReactionsScreen,
+  type ReactionsScreenProps,
+} from '../../src/components/screens/ReactionsScreen';
 import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../src/domain/types';
@@ -134,8 +137,12 @@ describe('ReactionsScreen', () => {
 
     fireEvent.click(screen.getByTestId('open-evidence'));
 
-    const opinionArticle = screen.getByTestId('statement-card-CEO-opinions').closest('.evidence-dialog__statement');
-    const reactionArticle = screen.getByTestId('statement-card-CEO-reactions').closest('.evidence-dialog__statement');
+    const opinionArticle = screen
+      .getByTestId('statement-card-CEO-opinions')
+      .closest('.evidence-dialog__statement');
+    const reactionArticle = screen
+      .getByTestId('statement-card-CEO-reactions')
+      .closest('.evidence-dialog__statement');
     expect(opinionArticle).toHaveTextContent('반대 쪽');
     expect(reactionArticle).toHaveTextContent('찬성 쪽');
   });
@@ -154,7 +161,9 @@ describe('ReactionsScreen', () => {
 
     fireEvent.click(screen.getByTestId('open-evidence'));
 
-    expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent('생각을 정리하고 있습니다');
+    expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent(
+      '생각을 정리하고 있습니다',
+    );
     expect(screen.queryByTestId('statement-failed-CAIO-opinions')).not.toBeInTheDocument();
   });
 
@@ -380,7 +389,9 @@ describe('ReactionsScreen', () => {
 
     fireEvent.click(screen.getByTestId('open-evidence'));
 
-    expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent('이번에는 답을 받지 못했습니다');
+    expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent(
+      '이번에는 답을 받지 못했습니다',
+    );
     expect(screen.queryByTestId('statement-pending-CAIO-opinions')).not.toBeInTheDocument();
   });
 
@@ -421,7 +432,9 @@ describe('ReactionsScreen', () => {
           initialSide={null}
         />,
       );
-      expect(screen.getByTestId('reactions-side-guide')).toHaveTextContent('먼저 입장을 골라 주세요');
+      expect(screen.getByTestId('reactions-side-guide')).toHaveTextContent(
+        '먼저 입장을 골라 주세요',
+      );
       expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
     });
 
@@ -563,5 +576,27 @@ describe('반응 듣기 잠금(T89, live)', () => {
       />,
     );
     expect(screen.getByTestId('reactions-advance')).toBeEnabled();
+  });
+});
+
+// T97: DISCUSS는 비서실장 세 기능을 써야 전달이 열리지만, 다시 답하기(REACTIONS)는 선택
+// 사항 그대로다 — 비서실장 사용 기록이 하나도 없어도 전달할 수 있다.
+describe('ReactionsScreen 비서실장 게이팅 없음(T97)', () => {
+  it('비서실장을 한 번도 쓰지 않아도 추천 답변을 고르면 전달 버튼이 열린다', () => {
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={stances}
+      />,
+    );
+    expect(screen.getByTestId('submit-followup')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('followup-option-0'));
+    expect(screen.getByTestId('submit-followup')).toBeEnabled();
+    expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
   });
 });
