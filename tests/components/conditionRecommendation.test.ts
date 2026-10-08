@@ -137,7 +137,7 @@ describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2)', () => 
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
 
     expect(result.openingLine).toContain('CEO');
-    expect(result.openingLine).toContain('CAIO'); // 아직 미정이라 반대가 아니다
+    expect(result.openingLine).not.toContain('CAIO'); // 미정이지만 규칙표 표가 이미 NO라 돌릴 필요가 없다
     expect(result.openingLine).not.toContain('CFO');
     expect(result.openingLine).not.toContain('CISO');
     expect(result.openingLine).toContain('반대로 돌리려면');
@@ -159,5 +159,29 @@ describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2)', () => 
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', allAgainst);
     expect(result.openingLine).toBe('지금 임원 4명 모두 반대 쪽입니다.');
     expect(result.rows).toEqual([]);
+  });
+});
+
+describe('buildConditionRecommendation(반대 입장 보강)', () => {
+  it('표정은 미정이어도 규칙표 표가 이미 NO인 CAIO는 대상에서 빠진다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    expect(result.openingLine).toContain('CEO');
+    expect(result.openingLine).not.toContain('CAIO');
+  });
+
+  it('미정·반대뿐이고 규칙표도 NO면 돌릴 임원이 없다고 말한다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'AGAINST', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    expect(result.openingLine).toBe('지금 찬성 쪽인 임원이 없습니다.');
+  });
+
+  it('AGAINST의 live는 방향 없는 발언 제안을 쓰지 않고 규칙표 참고값으로 대신한다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'live', stances, { CEO: ['LOG'] });
+    const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
+    expect(byId.has('LOG')).toBe(false);
+    expect(byId.get('FULL_AUTO')?.movedMemberIds).toEqual(['CEO']);
+    expect(result.usedRuleFallback).toBe(true);
   });
 });

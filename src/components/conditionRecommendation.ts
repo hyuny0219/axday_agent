@@ -79,7 +79,19 @@ export function buildConditionRecommendation(
   // (PR #20 Codex 28차 P2-2).
   const targetStance: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
   const targetVote = targetStance === 'AGAINST' ? 'NO' : 'YES';
-  const notYetForMembers = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] !== targetStance);
+  // 반대 목표에서는 표정이 미정이어도 규칙표 표가 이미 NO인 임원은 돌릴 필요가 없어
+  // 대상에서 뺀다(표정이 찬성인 임원은 규칙표와 무관하게 대상이다).
+  const alreadyNoByRules = (memberId: ExecMemberId) =>
+    targetStance === 'AGAINST' &&
+    stances[memberId] !== 'FOR' &&
+    decideMember(scenario.voteRules[memberId], {
+      conditionIds: [...confirmedConditionIds],
+      executionMode: 'DEFAULT',
+      participantStance,
+    }) === 'NO';
+  const notYetForMembers = EXEC_MEMBER_ORDER.filter(
+    (memberId) => stances[memberId] !== targetStance && !alreadyNoByRules(memberId),
+  );
   const candidates = scenario.conditions.filter((condition) => !confirmedConditionIds.includes(condition.id));
 
   let usedRuleFallback = false;
@@ -87,7 +99,11 @@ export function buildConditionRecommendation(
   // 임원별로 "이 조건 하나만 추가하면 움직인다"에 해당하는 조건 id 목록을 모은다.
   const singleMovesByMember = new Map<ExecMemberId, string[]>();
   for (const memberId of notYetForMembers) {
-    if (mode === 'live') {
+    // 발언의 suggestedConditionIds는 방향 정보가 없는 "찬성으로 움직이는 제안"이라 반대
+    // 목표에서는 쓰지 않고 규칙표 참고값으로 대신한다(PR #20 Codex 28차 검토 보강).
+    if (mode === 'live' && targetStance === 'AGAINST') {
+      usedRuleFallback = true;
+    } else if (mode === 'live') {
       const hints = liveSuggestedConditionIds?.[memberId]?.filter((id) => !confirmedConditionIds.includes(id));
       if (hints && hints.length > 0) {
         singleMovesByMember.set(memberId, [...hints]);
@@ -165,7 +181,9 @@ export function buildConditionRecommendation(
       : '아직 반대가 아닌';
     openingLine =
       notYetForMembers.length === 0
-        ? '지금 임원 4명 모두 반대 쪽입니다.'
+        ? EXEC_MEMBER_ORDER.every((memberId) => stances[memberId] === 'AGAINST')
+          ? '지금 임원 4명 모두 반대 쪽입니다.'
+          : '지금 찬성 쪽인 임원이 없습니다.'
         : neededLabels.length > 0
           ? `${currentWord} ${notYetText}를 반대로 돌리려면 '${neededLabels.join("'·'")}'이 필요합니다`
           : `${currentWord} ${notYetText}는 조건만으로는 돌리기 어렵습니다`;
