@@ -97,9 +97,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.getByRole('heading', { name: '임원 의견 듣기' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
-  await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
+  // T102: 임원 의견 전문은 오른쪽 종이에서만 읽는다 — 발언 흐름 패널은 없고 안내 한 줄이 있다.
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+  await expectFullyVisible(page, 'opinions-read-hint', 'OPINIONS');
 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
@@ -305,8 +305,8 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await expectNoPageScroll(page, 'OPINIONS(live)');
   await expectNoClip(page, '.app-body__content', 'OPINIONS(live)');
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+  await expectFullyVisible(page, 'opinions-read-hint', 'OPINIONS(live)');
 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();

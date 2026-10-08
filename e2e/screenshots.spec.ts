@@ -96,7 +96,8 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // OPINIONS: 임원 4명의 첫 의견 카드(오른쪽)와 무대 말풍선·회의록 패널(왼쪽). 말풍선
   // 등장 애니메이션이 끝난 뒤 캡처한다.
   await expect(page.locator('.opinion-card')).toHaveCount(4);
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+  await expect(page.getByTestId('stage-bubble-CFO')).toBeVisible();
   await capture(page, testInfo.project.name, 'opinions');
 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();

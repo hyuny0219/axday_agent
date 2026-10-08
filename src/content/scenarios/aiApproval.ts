@@ -118,7 +118,7 @@ export const aiApprovalScenario: Scenario = {
     {
       memberId: 'CISO',
       text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 이유도 안 남는다면 더 믿기 어렵습니다. 기록과 책임질 사람부터 정해야 합니다.',
-      bubble: '기록과 책임자부터 정해야',
+      bubble: '책임자부터 정해야',
       evidenceIds: ['E3', 'E4'],
       openingStance: 'AGAINST',
     },

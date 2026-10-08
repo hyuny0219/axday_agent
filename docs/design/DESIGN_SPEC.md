@@ -716,6 +716,23 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 
 영향받은 파일: `src/styles/screens/{discuss,reactions,result,minutes}.css`, `src/components/parts/{PersuasionBoard,AssistantPanel,DraftEditor,MinutesPanel}.tsx`, `src/components/{persuasionSummary,conditionRecommendation,minutes}.ts`, `src/domain/assistantLog.ts`, `src/components/screens/{Result,Intro,Reactions}Screen.tsx`.
 
+## T102 — 발언 표시 역할 분담 (2026-10-08)
+
+사용자 지시("발언 흐름과 옆의 임원 의견, 이미지 위 대화가 너무 중복")로 같은 임원 발언이 세 곳에 보이던 것을 역할로 나눴다. 발언 전문 데이터는 바꾸지 않았다.
+
+| 곳 | 역할 | 보이는 단계 |
+| --- | --- | --- |
+| 오른쪽 종이 카드 | 임원 발언 **전문**을 읽는 유일한 곳 | OPINIONS, REACTIONS |
+| 무대 말풍선 | "지금 누가 어떤 기류인지" **핵심 한 구절**(최대 18자)과 입장 배지 | OPINIONS, REACTIONS |
+| 지금까지 발언(옛 발언 흐름) | 복습용. 오른쪽에 발언 카드가 없는 화면에서만 | BRIEFING, MOTION, VOTE |
+
+- **말풍선 한 구절**: scripted는 `InitialOpinion.bubble`·`Reaction.bubble`(두 활성 안건 모든 발언, 18자 이하). live는 서버 변경 없이 `bubbleLineOf`(`src/components/bubbleText.ts`)가 첫 문장을 쉼표·마침표 앞에서 끊고 18자를 넘으면 "…"을 붙인다. BRIEFING·MOTION 의장 말풍선과 REACTIONS의 참가자 본인 말풍선은 그대로다.
+- **패널 위치**: `App.tsx`의 `MINUTES_STAGES`는 BRIEFING·MOTION·VOTE만 둔다. OPINIONS·REACTIONS·DISCUSS에서는 렌더하지 않는다. RESULT는 기존 "회의 기록 전체 보기"를 쓴다. 패널 제목은 "지금까지 발언"이다.
+- **빈자리**: OPINIONS 왼쪽 열은 무대와 CTA만 두고 CTA 아래에 "임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요" 한 줄을 둔다(18px, 720 15px). REACTIONS 1/2는 무대, 설득 현황판, CTA만 둔다.
+- **INTRO 강조**: 목적·성공 기준·팁을 `HighlightText`와 `INTRO_HIGHLIGHT_TERMS`로 강조한다(기존 `.key-term`, 붉은 박스 없음). 목적·성공 기준 글자는 1080 20px·720 16px, 성공 기준 줄은 굵게.
+
+영향받은 파일: `src/components/{bubbleText.ts,parts/{StageBand,MinutesPanel}.tsx,screens/{Intro,Opinions}Screen.tsx}`, `src/app/App.tsx`, `src/content/{types.ts,scenarios/{aiApproval,experienceFirst}.ts}`, `src/styles/screens/{intro,opinions}.css`.
+
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
 
 **사용자 지시**: "내가 의견을 내고 어떤 조건을 붙여야 AI 임원을 설득할 수 있는지 표현되고, 내 발언에 따라 임원 입장이 변하는 것이 잘 보이게. 이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 따라 하고 느끼게. AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을 고르는 데 큰 도움이 된다고 느끼게."
