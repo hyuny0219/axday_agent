@@ -130,9 +130,14 @@
 .intro-screen__purpose,
 .intro-screen__success {
   margin: 0;
-  font-size: 15px;
+  /* T102: 꼭 읽어야 할 목적·성공 기준은 1080 기준 20px로 키우고, 성공 기준 줄은 굵게. */
+  font-size: 20px;
   line-height: 1.4;
   color: var(--ink);
+}
+
+.intro-screen__success {
+  font-weight: 700;
 }
 
 .intro-screen__steps,
@@ -143,7 +148,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.35;
   color: var(--ink);
 }
@@ -151,12 +156,12 @@
 @media (max-width: 1280px) {
   .intro-screen__purpose,
   .intro-screen__success {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .intro-screen__steps,
   .intro-screen__tips {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .intro-screen__label {

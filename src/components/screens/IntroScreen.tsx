@@ -5,12 +5,28 @@
 // 스캔라인·브래킷)을 그대로 재사용하고, 그 위에 가운데 종이 한 장을 올린다. 문구는
 // 전부 쉬운 말(T93 규칙, server/prompts/plainLanguage.ts FORBIDDEN_WORDS 0건)로 쓴다.
 import stageRender from '../../assets/stage-render-01.jpg';
+import { HighlightText } from '../parts/HighlightText';
 import '../../styles/screens/select.css';
 import '../../styles/screens/intro.css';
 
 export interface IntroScreenProps {
   onNext: () => void;
 }
+
+/** 체험 전 안내에서 꼭 읽어야 할 말(T102, 2026-10-08 사용자 — "중요한 단어를 브리핑과
+ * 마찬가지로 강조"). 문장 속 글자와 그대로 일치할 때만 표시된다. */
+export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
+  '가상 임원 네 명',
+  '한 표',
+  '같은 표가 3석 이상',
+  '설득 도장',
+  '처음부터 같은 편인 임원도 한 석',
+  '조건을 붙여',
+  '직접 써도',
+];
+
+const SUCCESS_TEXT =
+  '임원을 설득해, 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.';
 
 const STEPS: readonly string[] = [
   '① 상황 파악',
@@ -52,14 +68,17 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
           <div className="intro-screen__col">
             <div className="intro-screen__block">
               <span className="intro-screen__label">목적</span>
-              <p className="intro-screen__purpose">가상 임원 네 명과 안건을 두고 토론하고,</p>
-              <p className="intro-screen__purpose">마지막에 한 표를 던집니다.</p>
+              <p className="intro-screen__purpose">
+                <HighlightText text="가상 임원 네 명과 안건을 두고 토론하고," terms={INTRO_HIGHLIGHT_TERMS} />
+              </p>
+              <p className="intro-screen__purpose">
+                <HighlightText text="마지막에 한 표를 던집니다." terms={INTRO_HIGHLIGHT_TERMS} />
+              </p>
             </div>
             <div className="intro-screen__block">
               <span className="intro-screen__label">성공 기준</span>
               <p className="intro-screen__success" data-testid="intro-success">
-                임원을 설득해, 이사님을 포함해 같은 표가 3석 이상이면 &lsquo;설득 도장&rsquo;을
-                받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.
+                <HighlightText text={SUCCESS_TEXT} terms={INTRO_HIGHLIGHT_TERMS} />
               </p>
             </div>
           </div>
@@ -76,7 +95,9 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
               <span className="intro-screen__label">팁</span>
               <ul className="intro-screen__tips">
                 {TIPS.map((tip) => (
-                  <li key={tip}>{tip}</li>
+                  <li key={tip}>
+                    <HighlightText text={tip} terms={INTRO_HIGHLIGHT_TERMS} />
+                  </li>
                 ))}
               </ul>
             </div>
