@@ -227,14 +227,14 @@
   }
 }
 
-.discuss-screen__submit-row .cta {
+.discuss-screen__submit-row > .cta {
   min-height: 70px;
   width: 250px;
   font-size: 25px;
 }
 
 @media (max-width: 1280px) {
-  .discuss-screen__submit-row .cta {
+  .discuss-screen__submit-row > .cta {
     min-height: 56px;
     width: 200px;
     font-size: 20px;

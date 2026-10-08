@@ -98,14 +98,14 @@
   }
 }
 
-.reactions-screen__submit-row .cta {
+.reactions-screen__submit-row > .cta {
   min-height: 70px;
   width: 250px;
   font-size: 25px;
 }
 
 @media (max-width: 1280px) {
-  .reactions-screen__submit-row .cta {
+  .reactions-screen__submit-row > .cta {
     min-height: 56px;
     width: 170px;
     font-size: 17px;
@@ -114,14 +114,14 @@
 
 /* "답하지 않고 넘어가기"(T84 #1) — 보조 버튼이라 "답변 전달 ▶"보다 작고, 글자 수가
    많아 고정 너비를 쓰지 않는다(위 공용 .cta 치수 중 width·font-size만 덮어쓴다). */
-.reactions-screen__submit-row .reactions-screen__keep-previous {
+.reactions-screen__submit-row > .reactions-screen__keep-previous {
   width: auto;
   padding: 0 20px;
   font-size: 16px;
 }
 
 @media (max-width: 1280px) {
-  .reactions-screen__submit-row .reactions-screen__keep-previous {
+  .reactions-screen__submit-row > .reactions-screen__keep-previous {
     padding: 0 6px;
     font-size: 10px;
   }
