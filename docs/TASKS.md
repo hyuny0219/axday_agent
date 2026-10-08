@@ -10,8 +10,9 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T102 | 진행 중 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS에서 숨기고 MOTION·VOTE·RESULT에서만)(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
 | T100 | 완료 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
-| T101 | 완료(검토 수정 반영 중) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
+| T101 | 완료(Codex 35차 수정 반영 중) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
 | T98 | 진행 중 | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
 | T99 | 완료 | BRIEFING 가독성 — 상황·제안·미정 글자 키우고 핵심 단어 강조, 근거 자료 4장을 쉬운 문장 톤으로 통일·축약(2026-10-08 사용자 지시 "근거자료 글씨가 너무 많아서 쉬운 문장톤으로"). 상세는 아래 T99 카드 |
 | T97 | 완료 | DISCUSS에서 AI 비서실장 필수 사용(2026-10-08 사용자 지시 "추천문구 선택 → AI 비서실장 기능 활용 → 의견 전달"). 추천 문구를 고른 뒤 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 한 번씩 써야 "의견 전달"이 열린다. 팝업 첫 화면에 기능 소개+체크리스트. 다시 답하기(REACTIONS)는 선택 사항 유지. 상세는 아래 T97 카드 |
@@ -82,6 +83,24 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T102 INTRO 핵심 말 강조 + 발언 3중 중복 해소
+
+- 목표(2026-10-08 사용자 지시): "체험 전 안내에 꼭 읽어야 하고 중요한 단어를 브리핑과 마찬가지로 강조해 줘. 발언 흐름과 옆의 임원 의견, 이미지 위 대화(말풍선)가 너무 중복되는 느낌이라 최대한 중복되지 않게."
+- 읽을 것: `src/components/screens/IntroScreen.tsx`·`src/styles/screens/intro.css`, `src/components/parts/HighlightText.tsx`(T99, `splitByTerms`)·`.key-term` 스타일, `src/components/parts/StageBand.tsx`(말풍선)·`src/styles/screens/stage*.css`, `src/components/parts/MinutesPanel.tsx`·`src/components/minutes.ts`, `src/app/App.tsx`(화면별 왼쪽 열 구성·`app-body__minutes`), `src/components/screens/{Opinions,Reactions,Motion,Vote,Result}Screen.tsx`, `src/content/types.ts`(Statement/Opinion/Reaction 타입), `src/content/scenarios/*.ts`(initialOpinions·reactions 문장), `server/handlers/round.ts`·`server/validate.ts`(live 응답 필드 — 서버 변경 없이 클라이언트에서 줄임), `e2e/{noscroll,stage,reactions,opinions,viewport-fit,screenshots}.spec.ts`(발언 흐름·말풍선 단언), `docs/design/DESIGN_SPEC.md` T96·T99 단락.
+- 역할 분담 원칙(팀 리드 결정): **읽는 곳은 하나** — 임원 발언 전문은 오른쪽 종이 카드(OPINIONS·REACTIONS)에서만 읽는다. 무대 말풍선은 "지금 누가 어떤 기류인지" 한 구절, 발언 흐름 패널은 오른쪽에 발언 카드가 없는 화면(MOTION·VOTE)에서 복습용으로만.
+- 만들 것:
+  1. **INTRO 강조**: `IntroScreen.tsx`의 목적·성공 기준·팁 문장을 `HighlightText`로 감싸고 로컬 상수 `INTRO_HIGHLIGHT_TERMS`(예: "가상 임원 네 명", "한 표", "같은 표가 3석 이상", "설득 도장", "조건을 붙여") 적용. 목적·성공 기준 글자 1080 기준 18→20px(720 비례), 성공 기준 줄은 굵게. 붉은 박스 금지(기존 `.key-term` 재사용). 단위 테스트(mark 렌더).
+  2. **무대 말풍선 축약**: 말풍선에는 발언 전문 대신 **핵심 한 구절(최대 18자)**만. scripted: `src/content/types.ts`의 임원 발언(initialOpinions·reactions·holdReasons 등 말풍선에 쓰이는 문장)에 선택 필드 `bubble?: string`을 추가하고 두 활성 안건의 모든 발언에 채운다(예 CFO 첫 의견 "규칙 밖 승인 4건이 걱정입니다", CAIO "이유 남기는 장치부터"). live: 서버 변경 없이 클라이언트 `src/components/bubbleText.ts`(신규) `bubbleLineOf(text)` — 첫 문장을 쉼표·마침표 앞에서 끊고 18자 넘으면 "…"(단위 테스트). 말풍선 밑에 입장 배지는 유지. BRIEFING 의장 말풍선("자료부터 같이 보시죠")은 그대로.
+  3. **발언 흐름 패널 위치 조정**: OPINIONS·REACTIONS(1/2·2/2)·DISCUSS에서는 `MinutesPanel`을 렌더하지 않는다(오른쪽 카드가 전문). MOTION·VOTE에서는 유지(복습용)하되 제목을 "지금까지 발언"으로, RESULT는 기존 "회의 기록 전체 보기"대로. 빈자리: OPINIONS 왼쪽 열은 무대+CTA만(세로 여백은 CTA 아래 안내 한 줄 "임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요"로), REACTIONS 1/2는 무대+현황판+CTA. `App.tsx`의 `app-body__minutes` 분기와 noscroll·viewport-fit e2e의 `minutes-panel` 단언을 화면별로 갱신(MOTION·VOTE·RESULT만 기대).
+  4. **문서**: DESIGN_SPEC "## T102 — 발언 표시 역할 분담" 단락(말풍선=한 구절·카드=전문·발언 흐름=복습), FACILITATOR_GUIDE 발언 흐름 설명 갱신, TASKS 행.
+  5. 테스트·e2e: `tests/components/{IntroScreen,StageBand,bubbleText}.test.tsx`, `tests/content/*.test.ts`에 bubble 길이 ≤18자·금지어 0·영문 0 검사, e2e stage·opinions·reactions·noscroll·viewport-fit·screenshots 갱신.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 서버·프롬프트 변경, 발언 전문 데이터 변경(bubble 필드 추가만), 표결 규칙 변경, 붉은 박스·영문 UI.
+- 완료 확인: `npm run check`, e2e 1080·720 각각(`--project=` 순차) PASS, 720 `intro.png`·`opinions.png`·`reactions.png`·`motion.png` 확인(말풍선 한 구절, 발언 흐름 없음/있음).
+- 크기: M.
 
 ---
 
