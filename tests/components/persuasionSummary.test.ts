@@ -79,9 +79,9 @@ describe('countVotesChangedByFinalConditions(T96, Codex 27차 검토 P2-2)', () 
 });
 
 describe('oneStepAwayNote(T96, "한 끗 차이")', () => {
-  it('CFO는 LIMIT만 있고 REVIEW가 없으면 "사람 표본 재검토 하나만 더 있었으면 찬성"', () => {
+  it('CFO는 LIMIT만 있고 REVIEW가 없으면 "사람이 일부 다시 보기 하나만 더 있었으면 찬성"', () => {
     expect(oneStepAwayNote(scenario, 'CFO', ['LIMIT'], null)).toBe(
-      "'사람 표본 재검토' 하나만 더 있었으면 찬성",
+      "'사람이 일부 다시 보기' 하나만 더 있었으면 찬성",
     );
   });
 
@@ -91,7 +91,7 @@ describe('oneStepAwayNote(T96, "한 끗 차이")', () => {
 
   it('CFO가 조건 없이는 둘 다 필요해 2개 — 2개까지는 보여준다', () => {
     expect(oneStepAwayNote(scenario, 'CFO', [], null)).toBe(
-      "'결재 금액 한도·사람 표본 재검토'만 더 있었으면 찬성",
+      "'결재 금액 한도·사람이 일부 다시 보기'만 더 있었으면 찬성",
     );
   });
 });

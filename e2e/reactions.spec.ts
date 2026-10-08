@@ -19,7 +19,7 @@ async function enterExperienceFirstReactions(page: Page) {
   await page.getByTestId('discuss-side-for').click();
 }
 
-/** P3 = DATA_VETO(데이터 경고 시 멈춤)를 확정한 채 첫 의견을 전달한다. */
+/** P3 = DATA_VETO(데이터가 경고하면 멈춤)를 확정한 채 첫 의견을 전달한다. */
 async function reachReactionsWithDataVetoConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
   await page.getByTestId('phrase-card-P3').click();
@@ -59,7 +59,7 @@ test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확�
   const conflicts = page.getByTestId('condition-chips-conflicts');
   await expect(conflicts).toBeVisible();
   await expect(conflicts).toContainText(
-    "'데이터 경고 시 멈춤'와 '경험 판단 절대 우선' 중 하나만 선택해 주세요.",
+    "'데이터가 경고하면 멈춤'와 '언제나 경험 먼저' 중 하나만 선택해 주세요.",
   );
 
   await expect(page.getByTestId('submit-followup')).toBeDisabled();
@@ -85,7 +85,7 @@ test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건�
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
   await expect(conditions).toContainText('판단 근거 기록');
-  await expect(conditions).toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('데이터가 경고하면 멈춤');
 });
 
 test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 안건에서 빠진다', async ({ page }) => {
@@ -106,7 +106,7 @@ test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
   await expect(conditions).not.toContainText('판단 근거 기록');
-  await expect(conditions).toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('데이터가 경고하면 멈춤');
 });
 
 // 후속 직접 답변에서 조건 키워드가 있어도 "-지 않-"으로 거부하면 제안되지 않고, 참가자가
@@ -124,7 +124,7 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
 
   await page
     .getByTestId('followup-textarea')
-    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+    .fill('데이터가 경고해도 잠시 멈추지 않겠습니다.');
   await expect(page.getByTestId('condition-chip-SCOPE')).toBeVisible();
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
 
@@ -134,8 +134,8 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).toContainText('전례 없는 상황 한정');
-  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('처음 겪는 상황에서만');
+  await expect(conditions).not.toContainText('데이터가 경고하면 멈춤');
 });
 
 test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 도달한다', async ({ page }) => {
@@ -208,7 +208,7 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
   // 않아야 한다.
   await page
     .getByTestId('followup-textarea')
-    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+    .fill('데이터가 경고해도 잠시 멈추지 않겠습니다.');
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
   // DISCUSS에서 이미 확정한 RECORD는 체크 카드와 무관하므로 그대로 남는다.
   await expect(page.getByTestId('condition-chip-RECORD')).toBeVisible();
@@ -219,7 +219,7 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).not.toContainText('데이터가 경고하면 멈춤');
   await expect(conditions).toContainText('판단 근거 기록');
 });
 
@@ -266,7 +266,7 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구
   await page.getByTestId('rebuild-confirm-rebuild').click();
   await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
   await expect(page.getByTestId('followup-textarea')).toHaveValue(
-    '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
+    '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
   );
   // 다시 구성한 뒤에는(dirty가 풀렸으므로) 체크한 옵션의 조건이 다시 제안된다.
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toBeVisible();

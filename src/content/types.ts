@@ -50,7 +50,7 @@ export interface ChairBriefing {
 export interface UndecidedItem {
   text: string;
   /** 하나 또는 여럿 — 상반된 방향의 조건이 같은 미정 항목을 해소할 수 있다(예: "사람이 다시
-   * 보는 절차"는 REVIEW(표본 재검토)로도, FULL_AUTO(검토 전면 생략 = 절차 없음)로도
+   * 보는 절차"는 REVIEW(일부 다시 보기)로도, FULL_AUTO(사람 확인 없이 전부 맡기기 = 절차 없음)로도
    * 결정된다, PR #20 Codex 5차 검토 P2). */
   resolvedBy?: string | readonly string[];
 }

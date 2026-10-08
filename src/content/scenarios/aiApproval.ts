@@ -15,13 +15,13 @@ export const aiApprovalScenario: Scenario = {
   // 중학생이 한 번에 읽을 문장으로 다시 썼다(의미·판단 방향은 그대로, hook은 숫자를
   // 하나만 남겼다). briefingSummary.text는 T94 범위 밖이라 그대로 둔다.
   incident: {
-    caseLabel: '사건 01',
+    caseLabel: '안건 01',
     headline: '결재는 쌓이는데 담당자는 자리에 없다',
     hook: '결재자가 자리를 비우면 결재가 사흘 가까이 멈춘다.',
   },
   originalMotion: {
     id: 'ai-approval-original',
-    text: '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다. 범위·한도·책임·재검토 절차는 미정이다.',
+    text: '정해진 범위의 반복 결재를 AI 에이전트가 직접 승인한다. 범위·한도·책임·사람이 다시 보는 절차는 미정이다.',
   },
   // T93(2026-10-07 사용자 지시 "자료 카드도 동일하게 쉬운 말로"): title은 그대로 두고
   // insight·content만 중학생이 한 번에 읽을 문장으로 다시 썼다. 의미·수치 방향은 바꾸지
@@ -40,7 +40,7 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'E2',
-      title: '시범 자동승인 집계',
+      title: '시범 자동 승인 결과',
       content:
         '한 부서에서 30만 원 이하 비용 결재를 AI가 자동 승인해 봤습니다. 310건 중 4건이' +
         ' 규칙을 벗어났습니다.',
@@ -68,7 +68,7 @@ export const aiApprovalScenario: Scenario = {
   ],
   briefingSummary: {
     text:
-      '반복 결재는 월 1,240건이고 결재자가 자리를 비우면 평균 2.8일 멈춥니다(결재 처리 기록). 소액 자동 승인 310건 중 4건이 규칙을 벗어났습니다(시범 자동승인 집계). 자동 승인 건은 승인 사유가 남지 않아 사후 감사에서 판단 근거를 재구성할 수 없습니다(감사 메모). 대기 불만은 크지만 AI 승인을 신뢰한다는 응답은 아직 적습니다(사용자 설문).',
+      '반복 결재는 월 1,240건이고 결재자가 자리를 비우면 평균 2.8일 멈춥니다(결재 처리 기록). 소액 자동 승인 310건 중 4건이 규칙을 벗어났습니다(시범 자동 승인 결과). 자동 승인 건은 승인 사유가 남지 않아 나중에 감사해도 판단 근거를 알 수 없습니다(감사 메모). 대기 불만은 크지만 AI 승인을 신뢰한다는 응답은 아직 적습니다(사용자 설문).',
     evidenceIds: ['E1', 'E2', 'E3', 'E4'],
   },
   // T94: situation을 두 문장으로 나눠 다시 썼다(의미는 그대로, question·role은 그대로).
@@ -87,7 +87,7 @@ export const aiApprovalScenario: Scenario = {
     undecidedItems: [
       { text: '결재 범위와 금액 한도', resolvedBy: 'LIMIT' },
       { text: '잘못 승인했을 때 책임', resolvedBy: 'OWNER' },
-      // 표본 재검토(REVIEW)로도, 검토 전면 생략(FULL_AUTO — 절차 '없음'으로 결정)으로도 해소.
+      // 일부 다시 보기(REVIEW)로도, 확인 없이 전부 맡기기(FULL_AUTO — 절차 '없음'으로 결정)로도 해소.
       { text: '사람이 다시 보는 절차', resolvedBy: ['REVIEW', 'FULL_AUTO'] },
     ],
   },
@@ -122,7 +122,7 @@ export const aiApprovalScenario: Scenario = {
   phrases: [
     { id: 'P1', text: '결재 금액 한도를 정해 소액부터 자동 승인합시다.', conditionId: 'LIMIT', side: 'FOR' },
     { id: 'P2', text: '자동 승인마다 승인 사유를 기록합시다.', conditionId: 'LOG', side: 'FOR' },
-    { id: 'P3', text: '승인 뒤 사람이 표본 재검토를 하도록 합시다.', conditionId: 'REVIEW', side: 'FOR' },
+    { id: 'P3', text: '승인 뒤 사람이 일부를 다시 보도록 합시다.', conditionId: 'REVIEW', side: 'FOR' },
     {
       id: 'P4',
       text: '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.',
@@ -131,7 +131,7 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'P5',
-      text: '사람 검토를 전면 생략하고 전부 자동 승인합시다.',
+      text: '사람 확인을 빼고 전부 자동 승인합시다.',
       conditionId: 'FULL_AUTO',
       side: 'FOR',
     },
@@ -150,7 +150,7 @@ export const aiApprovalScenario: Scenario = {
     // 순수 반대라 조건과 연결하지 않는다.
     {
       id: 'N1',
-      text: '사람이 표본 재검토를 하지 않는 한 자동 승인에 반대합니다.',
+      text: '사람이 일부를 다시 보지 않는 한 자동 승인에 반대합니다.',
       conditionId: 'REVIEW',
       side: 'AGAINST',
     },
@@ -195,9 +195,9 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'REVIEW',
-      label: '사람 표본 재검토',
-      // "표본 재검토는 누가 합니까?"는 제외하고 "표본 재검토를 하도록/하겠습니다"만 잡는다.
-      keywords: ['표본 재검토를 하', '사람이 다시 보도록'],
+      label: '사람이 일부 다시 보기',
+      // "일부를 다시 보는 건 누가 합니까?"는 제외하고 "일부를 다시 보도록 하겠습니다"만 잡는다.
+      keywords: ['일부를 다시 보도록', '사람이 다시 보도록'],
     },
     {
       id: 'OWNER',
@@ -209,11 +209,11 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'FULL_AUTO',
-      label: '사람 검토 전면 생략',
-      // "전면 생략이 무슨 뜻입니까?"는 제외한다. '검토를 전면 생략'은 "검토를"까지
-      // 묶어야 "전면 생략이란" 같은 질문에 걸리지 않는다. '전부 자동'도 '승인'까지
+      label: '사람 확인 없이 전부 맡기기',
+      // "전부 맡기기가 무슨 뜻입니까?"는 제외한다. '확인을 빼고 전부 자동'은 "확인을 빼고"까지
+      // 묶어야 질문에 걸리지 않는다. '전부 자동'도 '승인'까지
       // 묶어 "전부 자동이 뭔가요?" 같은 질문을 피한다.
-      keywords: ['검토를 전면 생략', '전부 자동 승인'],
+      keywords: ['확인을 빼고 전부 자동', '전부 자동 승인'],
     },
   ],
   conflicts: [['REVIEW', 'FULL_AUTO']],
@@ -295,8 +295,8 @@ export const aiApprovalScenario: Scenario = {
   // 참가자에게 어색했다. byStance로 입장별 질문을 나누고(FOR는 기존 질문 그대로,
   // AGAINST는 CEO가 "AI에게 맡기지 않는다면 지금 쌓인 결재는 어떻게 풀 것인가"를
   // 묻는다), AGAINST 추천 답변 3개를 새 질문에 답하는 문장으로 다시 썼다. 조건을 묻는
-  // 두 답변(LIMIT·REVIEW)은 proposeFromText 키워드("금액 한도를 정"·"표본 재검토를
-  // 하")를 그대로 유지한다.
+  // 두 답변(LIMIT·REVIEW)은 proposeFromText 키워드("금액 한도를 정"·"일부를 다시
+  // 보도록")를 그대로 유지한다.
   followUp: {
     question: 'AI가 잘못 승인하면, 이사님은 누구에게 책임을 맡기시겠습니까?',
     askedBy: 'CISO',
@@ -338,7 +338,7 @@ export const aiApprovalScenario: Scenario = {
         side: 'AGAINST',
       },
       {
-        text: '그래도 급하다면, 사람이 표본 재검토를 하도록 하는 선에서는 다시 생각해 보겠습니다.',
+        text: '그래도 급하다면, 사람이 일부를 다시 보도록 하는 선에서는 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
         side: 'AGAINST',
       },
@@ -428,10 +428,10 @@ export const aiApprovalScenario: Scenario = {
     ],
   },
   resultCopy: {
-    pass: '수정안이 승인되었습니다. 운영 전에 확인할 조건도 함께 기록했습니다.',
+    pass: '수정안이 승인되었습니다. 결재를 맡기기 전에 지킬 조건도 함께 기록했습니다.',
     reject: '이번 안건은 부결되었습니다. 주요 우려와 이사님의 의견을 기록했습니다.',
     sixMonthsLater: {
-      pass: '소액 반복 결재는 AI 에이전트가 처리합니다. 이사회가 붙인 조건이 한도·기록·재검토의 기준이 되었습니다.',
+      pass: '소액 반복 결재는 AI 에이전트가 처리합니다. 이사회가 붙인 조건이 한도·기록·다시 확인하는 일의 기준이 되었습니다.',
       passOriginal: 'AI 에이전트가 반복 결재를 승인합니다. 한도와 책임은 운영하면서 정해야 합니다.',
       reject: '결재는 사람이 그대로 봅니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },

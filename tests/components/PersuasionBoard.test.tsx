@@ -37,7 +37,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/4');
   });
 
-  it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람 표본 재검토"가 보인다', () => {
+  it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람이 일부 다시 보기"가 보인다', () => {
     const opinions: Opinion[] = [];
     const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
     render(
@@ -51,7 +51,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     );
     expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
-      '움직일 조건 · 결재 금액 한도·사람 표본 재검토',
+      '움직일 조건 · 결재 금액 한도·사람이 일부 다시 보기',
     );
     // CEO는 FULL_AUTO 없이는 이미 찬성이라 "설득 완료"다.
     expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('설득 완료');
@@ -91,7 +91,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     );
     expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
-      "'결재 금액 한도·사람 표본 재검토' 조건이 빠지면 반대로 남습니다",
+      "'결재 금액 한도·사람이 일부 다시 보기' 조건이 빠지면 반대로 남습니다",
     );
     // 참가자가 반대 쪽일 때 "설득한 임원"은 지금 NO(반대)인 임원 수다 — 아직 아무
     // 의견도 전달하지 않은 시점이라 CAIO는 첫 반응이 UNDECIDED(미정)라 포함되지 않고

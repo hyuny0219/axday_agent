@@ -31,7 +31,7 @@ export interface SelectScreenProps {
  * 그대로 쓰므로 바꾸지 않고, 이 칩은 카드 배열 순서(1부터)로만 번호를 매긴다 —
  * anon-board 콘텐츠를 건드리지 않는다. */
 function caseTagFor(index: number): string {
-  return `사건 ${String(index + 1).padStart(2, '0')}`;
+  return `안건 ${String(index + 1).padStart(2, '0')}`;
 }
 
 export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {

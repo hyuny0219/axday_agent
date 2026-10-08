@@ -122,7 +122,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
-  // LIMIT(결재 금액 한도) + REVIEW(사람 표본 재검토)만 확정한다.
+  // LIMIT(결재 금액 한도) + REVIEW(사람이 일부 다시 보기)만 확정한다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P3').click();
   await tryAllAssistantFeatures(page);

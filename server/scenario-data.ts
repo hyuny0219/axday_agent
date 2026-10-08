@@ -64,7 +64,7 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     },
     {
       id: 'E2',
-      title: '시범 자동승인 집계',
+      title: '시범 자동 승인 결과',
       content:
         '한 부서에서 30만 원 이하 비용 결재를 AI가 자동 승인해 봤습니다. 310건 중 4건이' +
         ' 규칙을 벗어났습니다.',
@@ -87,9 +87,9 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
   conditions: [
     { id: 'LIMIT', label: '결재 금액 한도' },
     { id: 'LOG', label: '승인 사유 기록' },
-    { id: 'REVIEW', label: '사람 표본 재검토' },
+    { id: 'REVIEW', label: '사람이 일부 다시 보기' },
     { id: 'OWNER', label: '결재 규칙 책임자' },
-    { id: 'FULL_AUTO', label: '사람 검토 전면 생략' },
+    { id: 'FULL_AUTO', label: '사람 확인 없이 전부 맡기기' },
   ],
   // T79(2026-10-02 사용자 결정): CEO 찬성 쪽·CFO 반대 쪽·CAIO 미정·CISO 반대 쪽으로 네 명이
   // 갈리게 한다. 문구는 docs/TASKS.md T79 카드에 적힌 그대로 옮긴다.
@@ -100,7 +100,7 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
       opening: 'FOR',
     },
     CFO: {
-      lens: '시범 자동승인 집계의 규칙 밖 승인을 전사 규모의 비용 리스크로 봅니다.',
+      lens: '시범 자동 승인 결과의 규칙 밖 승인을 회사 전체 규모의 비용 위험로 봅니다.',
       evidenceIds: ['E2'],
       opening: 'AGAINST',
     },
@@ -128,7 +128,7 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
   evidence: [
     {
       id: 'E1',
-      title: '지난 2년 주요 결정 복기',
+      title: '지난 2년 주요 결정 돌아보기',
       content:
         '지난 2년간 큰 결정 18번 중 7번은 데이터와 베테랑의 생각이 달랐습니다. 그 7번 중' +
         ' 경험이 4번, 데이터가 3번 맞았습니다.',
@@ -156,26 +156,26 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     },
   ],
   conditions: [
-    { id: 'SCOPE', label: '전례 없는 상황 한정' },
+    { id: 'SCOPE', label: '처음 겪는 상황에서만' },
     { id: 'RECORD', label: '판단 근거 기록' },
-    { id: 'DATA_VETO', label: '데이터 경고 시 멈춤' },
-    { id: 'REVIEW', label: '결정 결과 복기' },
-    { id: 'EXP_ONLY', label: '경험 판단 절대 우선' },
+    { id: 'DATA_VETO', label: '데이터가 경고하면 멈춤' },
+    { id: 'REVIEW', label: '결정 결과 돌아보기' },
+    { id: 'EXP_ONLY', label: '언제나 경험 먼저' },
   ],
   // T79(2026-10-02 사용자 결정): 안건①과 같은 배치(CEO 찬성·CFO 반대·CAIO 미정·CISO 반대).
   roleLenses: {
     CEO: {
-      lens: '결정 복기(4:3)를 어느 쪽도 늘 맞지 않으니 책임지는 사람이 방향을 잡아야 하는 문제로 봅니다.',
+      lens: '결정 돌아보기(4:3)를 어느 쪽도 늘 맞지 않으니 책임지는 사람이 방향을 잡아야 하는 문제로 봅니다.',
       evidenceIds: ['E1'],
       opening: 'FOR',
     },
     CFO: {
-      lens: '실패 사례의 데이터 경고 무시 손실을 통제 실패로 봅니다.',
+      lens: '실패 사례의 데이터 경고를 무시해 난 손실을 막지 못한 실패로 봅니다.',
       evidenceIds: ['E4'],
       opening: 'AGAINST',
     },
     CAIO: {
-      lens: '예측 보고의 전례 없는 상황 오차를 모델이 약한 범위로 봅니다.',
+      lens: '예측 보고의 처음 겪는 상황 오차를 모델이 약한 범위로 봅니다.',
       evidenceIds: ['E2'],
       opening: 'UNDECIDED',
     },
