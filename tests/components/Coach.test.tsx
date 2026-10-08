@@ -71,6 +71,9 @@ describe('coachCopy의 live 분기(PR #20 Codex 36차 검토 P2)', () => {
     const live = coachCopy(9, 'live');
     expect(live.title).toContain('어떻게 바뀌었는지');
     expect(live.body).not.toContain('조건으로 바뀜');
+    // 제목의 실제 뜻(이사님 편이 된 임원 수)과 맞춘다(38차) — '첫 의견과 다른 표'라고 말하지 않는다.
+    expect(live.body).toContain('이사님 편이 된 임원 수');
+    expect(live.body).not.toContain('첫 의견과 다른');
     expect(live.keys.every((k) => live.title.includes(k))).toBe(true);
     expect(coachCopy(9, 'scripted').body).toContain('조건으로 바뀜');
   });

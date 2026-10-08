@@ -87,7 +87,9 @@ export const COACH_STEPS: readonly CoachStepCopy[] = [
     // 첫 의견과 최종 표의 변화만 말한다(PR #20 Codex 37차 검토 P2).
     titleLive: '임원 입장이 어떻게 바뀌었는지 보세요',
     keysLive: ['어떻게 바뀌었는지'],
-    bodyLive: '제목 한 줄이 첫 의견과 다른 표를 낸 임원 수입니다. 임원별 판단에서 지금 표를 확인하세요.',
+    // 제목은 '이사님 편이 된 임원 수'(buildPersuasionResult, 첫 의견과 다른 모든 표가 아님) — 안내도 그 뜻으로
+    // 말한다(PR #20 Codex 38차 검토 P2).
+    bodyLive: '제목 한 줄이 이사님 편이 된 임원 수입니다. 임원별 판단에서 임원마다 지금 표를 확인하세요.',
     placement: 'below',
   },
 ];
