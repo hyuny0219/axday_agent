@@ -57,7 +57,11 @@ export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps
             {card.title}
           </h3>
           <p className="evidence-card__insight">{card.insight}</p>
-          <p className="evidence-card__meta">{card.content}</p>
+          {/* T99(2026-10-08 사용자 — "글씨가 너무 많다"): 원문(content)은 카드에서 뺐다. 해석
+              한 문장(insight)과 관련 임원만 보인다. content는 데이터·서버 프롬프트용으로 남는다. */}
+          {card.relatedMemberIds.length > 0 && (
+            <p className="evidence-card__meta">관련 임원 · {card.relatedMemberIds.join(' · ')}</p>
+          )}
         </article>
       ))}
     </div>

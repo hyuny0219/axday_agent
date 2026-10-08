@@ -646,7 +646,7 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 - **핵심 말 강조**: `Scenario.highlightTerms`(안건당 6개)와 같은 글자를 `HighlightText`(`src/components/parts/HighlightText.tsx`, 순수 함수 `splitByTerms`)가 `<mark class="key-term">`로 감싼다. 상황·제안·미정 줄에만 쓰고 제목(h2)은 제외. 겹치면 긴 말이 우선, 일치하지 않는 말은 건너뛴다. 스타일은 붉은 박스 없이 진한 잉크 굵게(800) + 연한 종이색 바탕(`--paper-mark`) + 갈색 밑줄이고 `mark` 기본 노랑은 덮어쓴다.
 - **글자 크기**: 상황·제안·미정 본문 1080 20→24px, 720 16→19px(줄 간격 1.4), 라벨 15→18px·12→14px.
-- **근거 자료**: 두 안건 E1~E4 `content`를 문장 2개 이하·문장당 45자 이하로 다시 썼다(숫자·사실 그대로). 카드에서 `insight`를 먼저 크게(1080 16→19px 굵게, 720 13→15px), `content`는 작게 아래(14→16px, 11→13px). `server/scenario-data.ts`의 같은 자료 문장도 함께 맞췄다(동기화 테스트는 없고 프롬프트 버전은 올리지 않았다).
+- **근거 자료**: 두 안건 E1~E4 `content`를 문장 2개 이하·문장당 45자 이하로 다시 썼다(숫자·사실 그대로). 카드에는 제목 + `insight` 한 문장 + 관련 임원 한 줄만 보이고(`content`는 카드에서 뺐다, 데이터·프롬프트용으로 유지) `insight`를 크게(1080 16→19px 굵게, 720 13→15px), `content`는 작게 아래(14→16px, 11→13px). `server/scenario-data.ts`의 같은 자료 문장도 함께 맞췄다(동기화 테스트는 없고 프롬프트 버전은 올리지 않았다).
 - 검사: `tests/content/{aiApproval,experienceFirst}.test.ts`에 자료 문장 수·길이·금지어와 highlightTerms 일치 검사, `tests/components/{HighlightText,BriefingScreen}.test.tsx`.
 
 ## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)

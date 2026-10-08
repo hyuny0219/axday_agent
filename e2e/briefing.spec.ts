@@ -44,7 +44,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
   await expect(dialog).toHaveAttribute('role', 'dialog');
   await expect(dialog).toHaveAttribute('aria-modal', 'true');
 
-  // 팝업 안에서 자료 4장은 클릭 없이 자료명·해석·원문이 모두 보인다.
+  // 팝업 안에서 자료 4장은 클릭 없이 자료명·해석·관련 임원이 보인다.
   for (const id of EVIDENCE_IDS) {
     const card = dialog.getByTestId(`evidence-card-${id}`);
     await expect(card).toBeVisible();
@@ -53,9 +53,8 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
     // 카드 안 어디에도 자료 ID가 없다 — 접두("E1 · ")뿐 아니라 원문 속 언급("E1과 다르다")도
     // 참가자에게 ID를 노출한다(PR #10 Codex 29차 검토 P2).
     await expect(card).not.toContainText(/E[1-4]/);
-    // 원문은 줄 클램프 없이 마지막 글자까지 카드 안·뷰포트 안에 보인다. visibility·overflow
-    // 검사는 CSS line-clamp가 지운 뒷부분을 잡지 못하므로 마지막 글자의 사각형을 직접 본다.
-    const tail = await card.locator('.evidence-card__meta').evaluate((el) => {
+    // 해석 한 문장은 줄 클램프 없이 마지막 글자까지 카드 안에 보인다(T99: 원문은 카드에서 뺐다).
+    const tail = await card.locator('.evidence-card__insight').evaluate((el) => {
       const text = el.firstChild as Text;
       const range = document.createRange();
       range.setStart(text, text.length - 1);
@@ -67,15 +66,11 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
         glyphBottom: glyph.bottom,
         glyphHeight: glyph.height,
         boxBottom: box.bottom,
-        viewportHeight: window.innerHeight,
       };
     });
-    expect(tail.clamp, `${id} 원문에 줄 클램프가 걸려 있다`).toBe('none');
-    expect(tail.glyphHeight, `${id} 원문 마지막 글자가 그려지지 않았다`).toBeGreaterThan(0);
-    expect(
-      tail.glyphBottom <= tail.boxBottom + 1,
-      `${id} 원문 마지막 글자가 팝업 카드 밖으로 잘린다(glyphBottom=${tail.glyphBottom}, boxBottom=${tail.boxBottom})`,
-    ).toBe(true);
+    expect(tail.clamp, `${id} 해석에 줄 클램프가 걸려 있다`).toBe('none');
+    expect(tail.glyphHeight, `${id} 해석 마지막 글자가 그려지지 않았다`).toBeGreaterThan(0);
+    expect(tail.glyphBottom <= tail.boxBottom + 1, `${id} 해석 마지막 글자가 잘린다`).toBe(true);
   }
   // 팝업 어디에도 자료 ID(E1~E4)가 화면 문구로 나오지 않는다.
   await expect(dialog).not.toContainText(/E[1-4]/);
