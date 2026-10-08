@@ -305,7 +305,7 @@ describe('ReactionsScreen', () => {
     );
 
     const card = screen.getByTestId('reaction-card-CAIO');
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('미정 → 찬성');
+    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('고민 중 → 찬성');
     expect(card.querySelector('.reaction-card__cause')).toHaveTextContent(
       "이사님의 '승인 사유 기록' 조건으로",
     );
@@ -600,7 +600,7 @@ describe('ReactionsScreen 전달 버튼 가시성·안내판(T98)', () => {
     expect(button).toBeDisabled();
     expect(button).toHaveClass('cta--outline');
     expect(screen.getByTestId('reactions-cta-hint')).toHaveTextContent(
-      '문구를 고르거나 직접 쓰면 전달할 수 있습니다',
+      '추천 답변을 고르거나 직접 쓰면 전달할 수 있습니다',
     );
     fireEvent.click(screen.getByTestId('followup-option-0'));
     expect(screen.getByTestId('submit-followup')).not.toHaveClass('cta--outline');

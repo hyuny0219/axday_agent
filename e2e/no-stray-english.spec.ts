@@ -95,7 +95,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await checkScreen('OPINIONS');
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await checkScreen('DISCUSS');
 
@@ -157,7 +157,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
   // 승인 사유 기록(LOG) 조건을 DISCUSS에서 확정한다.

@@ -98,7 +98,7 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('live-role-CEO')).not.toHaveClass('live-statement--maintained');
     expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
-    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('미정');
+    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
   });
 
   it("variant='reaction'에서 stance가 같으면 문장이 다시 쓰여도 '유지'로 본다(PR #12 Codex 3차 검토 1)", () => {

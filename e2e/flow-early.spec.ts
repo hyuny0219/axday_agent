@@ -28,6 +28,6 @@ test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장�
   await expect(briefingNext).toBeEnabled();
   await briefingNext.click();
 
-  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '내 의견 말하기' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 의견 듣기' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '내 의견 쓰러 가기' })).toBeVisible();
 });

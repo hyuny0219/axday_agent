@@ -45,21 +45,21 @@ describe('Header', () => {
   // T78(2026-10-02, 안건 교체): 케이스 번호가 세션의 안건 caseLabel을 따르고, 안건이
   // 아직 없으면(ATTRACT·SELECT) 사건 번호를 숨기고 세션 코드만 보인다("사건 --"가
   // 엉뚱해 보여 Opus 최종 검토에서 제거, T83에서 한국어화).
-  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 사건 번호를 숨긴다', () => {
+  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 안건 번호를 숨긴다', () => {
     const session = createInitialSession(0, 'session-case');
 
     const { rerender } = render(
       <Header session={session} scenario={null} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).not.toHaveTextContent('사건');
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('세션');
+    expect(document.querySelector('.app-header__case-file')).not.toHaveTextContent('안건');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('회의');
 
     rerender(<Header session={session} scenario={aiApprovalScenario} onOperatorReset={vi.fn()} />);
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('사건 01');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('안건 01');
 
     rerender(
       <Header session={session} scenario={experienceFirstScenario} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('사건 02');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('안건 02');
   });
 });

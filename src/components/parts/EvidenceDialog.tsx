@@ -90,7 +90,7 @@ export function EvidenceDialog({
   evidence,
   caseTag,
   statements,
-  statementsColumnLabel = '임원이 한 말(02 임원 의견)',
+  statementsColumnLabel = '임원이 한 말(임원 의견)',
   onClose,
 }: EvidenceDialogProps) {
   return (
@@ -112,7 +112,7 @@ export function EvidenceDialog({
           <span className="evidence-dialog__column-label">{statementsColumnLabel}</span>
           {statements.length === 0 ? (
             <p className="evidence-dialog__statements-empty" data-testid="evidence-dialog-statements-empty">
-              02 단계에서 임원이 말하면 여기에 쌓입니다
+              임원 의견을 들으면 여기에 쌓입니다
             </p>
           ) : (
             <div className="evidence-dialog__statements">

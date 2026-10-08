@@ -705,7 +705,7 @@ export function ReactionsScreen({
             data-testid="reactions-advance"
             data-guide={!listenLocked ? 'next' : undefined}
           >
-            {listenLocked ? '임원 반응을 듣는 중…' : '답하기 ▶'}
+            {listenLocked ? '임원 반응을 듣는 중…' : '답하러 가기 ▶'}
           </button>
           <button
             type="button"
@@ -904,7 +904,7 @@ export function ReactionsScreen({
           </button>
           {!canSubmit && (
             <p className="cta-disabled-hint cta-disabled-hint--strong" data-testid="reactions-cta-hint">
-              문구를 고르거나 직접 쓰면 전달할 수 있습니다
+              추천 답변을 고르거나 직접 쓰면 전달할 수 있습니다
             </p>
           )}
         </div>
@@ -996,7 +996,7 @@ export function ReactionsScreen({
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
             >
-              근거 자료 · 임원 발언 보기
+              근거 자료 보기
             </button>
             <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
           </div>
@@ -1007,7 +1007,7 @@ export function ReactionsScreen({
           evidence={scenario.evidence}
           caseTag={caseTag}
           statements={dialogStatements}
-          statementsColumnLabel="임원이 한 말(02 의견 + 04 반응)"
+          statementsColumnLabel="임원이 한 말(의견 + 반응)"
           onClose={() => setEvidenceOpen(false)}
         />
       )}

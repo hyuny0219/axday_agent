@@ -31,7 +31,7 @@ export interface SelectScreenProps {
  * 그대로 쓰므로 바꾸지 않고, 이 칩은 카드 배열 순서(1부터)로만 번호를 매긴다 —
  * anon-board 콘텐츠를 건드리지 않는다. */
 function caseTagFor(index: number): string {
-  return `사건 ${String(index + 1).padStart(2, '0')}`;
+  return `안건 ${String(index + 1).padStart(2, '0')}`;
 }
 
 export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
@@ -95,7 +95,7 @@ export function SelectScreen({ scenarios, onEnter }: SelectScreenProps) {
               <h3 className="scenario-card__title">{scenario.chairBriefing.question}</h3>
               <p className="scenario-card__headline">{scenario.incident.headline}</p>
               <span className="scenario-card__footer">
-                {preparing ? '봉인됨 · 다음 안건을 준비하고 있습니다' : '열람 가능 · 눌러서 입장'}
+                {preparing ? '준비 중 · 다음 안건을 준비하고 있습니다' : '골라서 들어가기'}
               </span>
             </button>
           );

@@ -35,7 +35,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.keyboard.press('Enter');
 
   // OPINIONS
-  await page.getByRole('button', { name: '내 의견 말하기' }).focus();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).focus();
   await page.keyboard.press('Enter');
 
   // DISCUSS: 입장을 먼저 고른다(T87, 네이티브 button이라 Enter로 누른다).
@@ -109,7 +109,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
   // 사용자가 실제로 쓰는 경로(마우스 휠)로만 스크롤한다 — scrollIntoView는

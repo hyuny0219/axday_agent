@@ -17,7 +17,7 @@ export const experienceFirstScenario: Scenario = {
   // 번에 읽을 문장으로 다시 썼다(의미는 그대로, 숫자는 하나만 남겼다). headline은 이미
   // 짧고 쉬워 그대로 둔다.
   incident: {
-    caseLabel: '사건 02',
+    caseLabel: '안건 02',
     headline: '데이터는 반대, 베테랑은 찬성',
     hook: '지난 2년 동안 데이터와 베테랑의 생각이 자주 갈렸다.',
   },
@@ -31,7 +31,7 @@ export const experienceFirstScenario: Scenario = {
   evidence: [
     {
       id: 'E1',
-      title: '지난 2년 주요 결정 복기',
+      title: '지난 2년 주요 결정 돌아보기',
       content:
         '지난 2년간 큰 결정 18번 중 7번은 데이터와 베테랑의 생각이 달랐습니다. 그 7번 중' +
         ' 경험이 4번, 데이터가 3번 맞았습니다.',
@@ -71,7 +71,7 @@ export const experienceFirstScenario: Scenario = {
   ],
   briefingSummary: {
     text:
-      '지난 2년 주요 결정 중 갈린 7건은 경험 4건·데이터 3건으로 어느 쪽도 늘 맞지 않았습니다(지난 2년 주요 결정 복기). 데이터는 전례 없는 상황에서 오차가 2배로 커집니다(신규 사업 예측 보고). 경험자는 판단 근거를 설명하기 어렵다고 답해 기록이 남지 않습니다(베테랑 인터뷰 메모). 데이터 경고를 무시해 손실이 난 사례와 데이터만 믿어 경고를 놓친 사례가 모두 있습니다(실패 사례 메모).',
+      '지난 2년 주요 결정 중 갈린 7건은 경험 4건·데이터 3건으로 어느 쪽도 늘 맞지 않았습니다(지난 2년 주요 결정 돌아보기). 데이터는 처음 겪는 상황에서 오차가 2배로 커집니다(신규 사업 예측 보고). 경험자는 판단 근거를 설명하기 어렵다고 답해 기록이 남지 않습니다(베테랑 인터뷰 메모). 데이터 경고를 무시해 손실이 난 사례와 데이터만 믿어 경고를 놓친 사례가 모두 있습니다(실패 사례 메모).',
     evidenceIds: ['E1', 'E2', 'E3', 'E4'],
   },
   // T94: situation을 두 문장으로 나눠 다시 썼다(의미는 그대로, question·role은 그대로).
@@ -119,7 +119,7 @@ export const experienceFirstScenario: Scenario = {
     },
   ],
   phrases: [
-    { id: 'P1', text: '전례 없는 상황에 한정해 경험을 우선합시다.', conditionId: 'SCOPE', side: 'FOR' },
+    { id: 'P1', text: '처음 겪는 상황에서만 경험을 우선합시다.', conditionId: 'SCOPE', side: 'FOR' },
     {
       id: 'P2',
       text: '경험으로 결정할 때는 판단 근거를 기록합시다.',
@@ -128,13 +128,13 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       id: 'P3',
-      text: '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
+      text: '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
       conditionId: 'DATA_VETO',
       side: 'FOR',
     },
     {
       id: 'P4',
-      text: '결정 결과를 복기해 다음 판단 기준으로 삼읍시다.',
+      text: '결정 결과를 돌아보고 다음 판단 기준으로 삼읍시다.',
       conditionId: 'REVIEW',
       side: 'FOR',
     },
@@ -168,7 +168,7 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       id: 'N3',
-      text: '결정을 복기해 되짚는 절차 없이는 경험 우선에 반대합니다.',
+      text: '결정을 돌아보는 절차 없이는 경험 우선에 반대합니다.',
       conditionId: 'REVIEW',
       side: 'AGAINST',
     },
@@ -189,9 +189,9 @@ export const experienceFirstScenario: Scenario = {
   conditions: [
     {
       id: 'SCOPE',
-      label: '전례 없는 상황 한정',
+      label: '처음 겪는 상황에서만',
       // "전례 없는 상황이란 무엇입니까?"는 제외하고 "~상황에 한정해/한정합시다"만 잡는다.
-      keywords: ['상황에 한정'],
+      keywords: ['상황에서만 경험을 우선'],
     },
     {
       id: 'RECORD',
@@ -201,25 +201,25 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       id: 'DATA_VETO',
-      label: '데이터 경고 시 멈춤',
+      label: '데이터가 경고하면 멈춤',
       // "데이터 경고는 어떻게 받습니까?"는 제외하고 "경고 시 … 잠시 멈추고"처럼 경고와
       // 멈춤을 한 어구로 묶어야 "경고 시 조치는 무엇입니까?" 같은 질문도 함께 피한다.
-      keywords: ['경고 시 결정을 잠시 멈추'],
+      keywords: ['경고하면 결정을 잠시 멈추'],
     },
     {
       id: 'REVIEW',
-      label: '결정 결과 복기',
+      label: '결정 결과 돌아보기',
       // '복기' 한 단어만 두면 "복기는 누가 합니까?" 같은 정보성 질문에도 걸려 묻지도 않은
       // 조건이 확정으로 제안된다(PR #13 Codex 1차 검토 P1, ai-approval의 OWNER '책임자'와
       // 같은 문제). P4 문구의 약속형 어구로 좁힌다.
-      keywords: ['결정 결과를 복기'],
+      keywords: ['결정 결과를 돌아보'],
     },
     {
       id: 'EXP_ONLY',
-      label: '경험 판단 절대 우선',
+      label: '언제나 경험 먼저',
       // "경험 판단이란 무엇입니까?"는 제외한다. '절대 우선'도 "절대 우선으로"까지 묶어
       // "절대 우선이 무엇을 뜻합니까?" 같은 질문을 피한다.
-      keywords: ['언제나 경험 판단', '절대 우선으로'],
+      keywords: ['언제나 경험 판단'],
     },
   ],
   conflicts: [['DATA_VETO', 'EXP_ONLY']],
@@ -233,7 +233,7 @@ export const experienceFirstScenario: Scenario = {
     {
       conditionId: 'RECORD',
       memberId: 'CISO',
-      text: '판단 이유를 기록해 두면 나중에 그 결정을 다시 확인할 수 있습니다. 어떤 양식으로 적을지부터 정하겠습니다.',
+      text: '판단 이유를 기록해 두면 나중에 그 결정을 다시 확인할 수 있습니다. 어떻게 적을지부터 정하겠습니다.',
     },
     {
       conditionId: 'DATA_VETO',
@@ -307,7 +307,7 @@ export const experienceFirstScenario: Scenario = {
     },
     options: [
       {
-        text: '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
+        text: '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
         proposeConditionId: 'DATA_VETO',
         side: 'FOR',
       },
@@ -317,7 +317,7 @@ export const experienceFirstScenario: Scenario = {
         side: 'FOR',
       },
       {
-        text: '전례 없는 상황에 한정해 경험을 우선합시다.',
+        text: '처음 겪는 상황에서만 경험을 우선합시다.',
         proposeConditionId: 'SCOPE',
         side: 'FOR',
       },
@@ -332,7 +332,7 @@ export const experienceFirstScenario: Scenario = {
         side: 'AGAINST',
       },
       {
-        text: '그래도 어렵다면, 결정 결과를 복기해 되짚는다면 다시 생각해 보겠습니다.',
+        text: '그래도 어렵다면, 결정 결과를 돌아보고 다음에 반영한다면 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
         side: 'AGAINST',
       },
@@ -417,10 +417,10 @@ export const experienceFirstScenario: Scenario = {
     ],
   },
   resultCopy: {
-    pass: '수정안이 승인되었습니다. 운영 전에 확인할 조건도 함께 기록했습니다.',
+    pass: '수정안이 승인되었습니다. 경험을 앞세울 때 지킬 조건도 함께 기록했습니다.',
     reject: '이번 안건은 부결되었습니다. 주요 우려와 이사님의 의견을 기록했습니다.',
     sixMonthsLater: {
-      pass: '중요한 의사결정에서 경험이 먼저 발언합니다. 이사회가 붙인 조건이 기록·멈춤·복기의 기준이 되었습니다.',
+      pass: '중요한 의사결정에서 경험이 먼저 발언합니다. 이사회가 붙인 조건이 기록·멈춤·돌아보기의 기준이 되었습니다.',
       passOriginal: '중요한 의사결정은 경험이 이끕니다. 데이터를 어디까지 볼지는 결정하면서 정해야 합니다.',
       reject: '결정 규칙은 그대로입니다. 이사님이 남긴 우려가 다음 안건의 출발점이 되었습니다.',
     },

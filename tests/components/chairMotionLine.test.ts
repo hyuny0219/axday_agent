@@ -5,9 +5,9 @@ import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 const scenario = aiApprovalScenario;
 
 describe('chairMotionLine', () => {
-  it('조건이 없으면 "원안 그대로 표결에 부칩니다"(입장과 무관)', () => {
-    expect(chairMotionLine(scenario, [])).toBe('원안 그대로 표결에 부칩니다');
-    expect(chairMotionLine(scenario, [], 'AGAINST')).toBe('원안 그대로 표결에 부칩니다');
+  it('조건이 없으면 "처음 안 그대로 표결에 부칩니다"(입장과 무관)', () => {
+    expect(chairMotionLine(scenario, [])).toBe('처음 안 그대로 표결에 부칩니다');
+    expect(chairMotionLine(scenario, [], 'AGAINST')).toBe('처음 안 그대로 표결에 부칩니다');
   });
 
   it('입장을 생략하거나 찬성이면 기존 "조건을 달아 표결에 부칩니다" 문장', () => {

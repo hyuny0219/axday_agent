@@ -39,7 +39,7 @@ export function DialogShell({
   onClose,
   closeTestId,
   closeGuide = false,
-  footerHint = ['Esc나 바깥을 누르면 닫힙니다', '열린 동안 뒤 화면은 멈춤'],
+  footerHint = ['바깥을 누르거나 닫기를 누르면 닫힙니다', '열린 동안 뒤 화면은 멈춤'],
   children,
 }: DialogShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);

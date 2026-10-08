@@ -109,13 +109,13 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       'LIMIT',
     ]);
     expect(proposeFromText(scenario, '자동 승인마다 승인 사유를 기록합시다.')).toEqual(['LOG']);
-    expect(proposeFromText(scenario, '승인 뒤 사람이 표본 재검토를 하도록 합시다.')).toEqual([
+    expect(proposeFromText(scenario, '승인 뒤 사람이 일부를 다시 보도록 합시다.')).toEqual([
       'REVIEW',
     ]);
     expect(
       proposeFromText(scenario, '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.'),
     ).toEqual(['OWNER']);
-    expect(proposeFromText(scenario, '사람 검토를 전면 생략하고 전부 자동 승인합시다.')).toEqual([
+    expect(proposeFromText(scenario, '사람 확인을 빼고 전부 자동 승인합시다.')).toEqual([
       'FULL_AUTO',
     ]);
   });
@@ -134,7 +134,7 @@ describe('조건 키워드 격리(proposeFromText)', () => {
   });
 
   it('"검토 없이 공유"류 부정문은 REVIEW를 제안하지 않는다(기존 부정 규칙이 그대로 적용된다)', () => {
-    expect(proposeFromText(scenario, '표본 재검토 없이 바로 넘깁시다.')).not.toContain('REVIEW');
+    expect(proposeFromText(scenario, '일부를 다시 보지 않고 바로 넘깁시다.')).not.toContain('REVIEW');
   });
 
   // PR #13 Codex 1차 검토 P1: OWNER 키워드가 '책임자' 한 단어였을 때 정보성 질문에도
@@ -153,8 +153,8 @@ describe('조건 키워드 격리(proposeFromText)', () => {
     const informationalQuestions = [
       '금액 한도가 얼마입니까?',
       '승인 사유가 무엇인지 알려 주세요.',
-      '표본 재검토는 누가 합니까?',
-      '전면 생략이 무슨 뜻입니까?',
+      '일부를 다시 보는 건 누가 합니까?',
+      '전부 맡기기가 무슨 뜻입니까?',
     ];
     for (const text of informationalQuestions) {
       expect(proposeFromText(scenario, text), text).toEqual([]);
@@ -177,9 +177,9 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       '승인 사유를 기록하는 이유가 무엇인지 설명해 주십시오.',
       '승인 사유를 기록할지 고민입니다.',
       '승인 사유를 기록하는 기준이 궁금합니다.',
-      // REVIEW: 키워드 2개 — '표본 재검토를 하'·'사람이 다시 보도록'
-      '표본 재검토를 하는 기준이 무엇입니까?',
-      '표본 재검토를 할지 고민입니다.',
+      // REVIEW: 키워드 2개 — '일부를 다시 보도록'·'사람이 다시 보도록'
+      '일부를 다시 보도록 하는 기준이 무엇입니까?',
+      '일부를 다시 보도록 할지 고민입니다.',
       '사람이 다시 보도록 하는 절차가 무엇입니까?',
       '사람이 다시 보도록 하는 방법을 알려 주세요.',
       // OWNER: 키워드 2개 — '책임자를 지정'·'결재 규칙 책임자'
@@ -187,9 +187,9 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       '책임자를 지정할지 고민입니다.',
       '결재 규칙 책임자가 누구인지 알려 주세요.',
       '결재 규칙 책임자를 정하는 방법이 무엇입니까?',
-      // FULL_AUTO: 키워드 2개 — '검토를 전면 생략'·'전부 자동 승인'
-      '검토를 전면 생략하는 기준이 무엇입니까?',
-      '검토를 전면 생략할지 고민입니다.',
+      // FULL_AUTO: 키워드 2개 — '확인을 빼고 전부 자동'·'전부 자동 승인'
+      '확인을 빼고 전부 자동으로 하는 기준이 무엇입니까?',
+      '확인을 빼고 전부 자동으로 할지 고민입니다.',
       '전부 자동 승인하는 기준이 무엇입니까?',
       '전부 자동 승인하는 방법을 설명해 주십시오.',
     ];
@@ -278,7 +278,7 @@ describe('조건 키워드 격리(proposeFromText)', () => {
     for (const text of [
       '승인 사유를 기록하는 방식은 어떻게 정해요',
       '금액 한도는 누가 정해요',
-      '표본 재검토를 하는 주기는 얼마나 돼요',
+      '일부를 다시 보도록 하는 주기는 얼마나 돼요',
       '결재 규칙 책임자를 왜 따로 둬요',
     ]) {
       expect(proposeFromText(scenario, text), text).toEqual([]);
@@ -437,5 +437,40 @@ describe('근거 자료 content는 쉬운 짧은 문장이다(T99)', () => {
     for (const term of terms) {
       expect(haystack, term).toContain(term);
     }
+  });
+});
+
+// T100(2026-10-08 규칙 점검): 참가자 눈에 보이는 조건 라벨·추천 문구·키워드·자료 제목·
+// 후속 답변·결과 문구까지 금지 어휘 0을 고정한다. 금지 목록에 없지만 같은 어려운 말인
+// 단어도 함께 막는다.
+describe('쉬운 말(T100) — 라벨·추천 문구·키워드·제목', () => {
+  const EXTRA_HARD_WORDS = ['복기', '재검토', '전례 없는', '절대 우선', '양식', '전면'];
+  const visibleTexts: string[] = [
+    scenario.originalMotion.text,
+    scenario.subtitle,
+    scenario.briefingSummary.text,
+    ...scenario.evidence.flatMap((e) => [e.title, e.content, e.insight]),
+    ...scenario.conditions.flatMap((c) => [c.label, ...c.keywords]),
+    ...scenario.phrases.map((p) => p.text),
+    ...scenario.followUp.options.map((o) => o.text),
+    ...Object.values(scenario.holdReasons ?? {}),
+    scenario.resultCopy.pass,
+    scenario.resultCopy.reject,
+    scenario.resultCopy.sixMonthsLater.pass,
+    scenario.resultCopy.sixMonthsLater.passOriginal,
+    scenario.resultCopy.sixMonthsLater.reject,
+  ];
+
+  it('금지 어휘와 같은 수준의 어려운 말이 하나도 없다', () => {
+    for (const text of visibleTexts) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+      for (const word of EXTRA_HARD_WORDS) {
+        expect(text.includes(word), `${word} :: ${text}`).toBe(false);
+      }
+    }
+  });
+
+  it('안건 번호 라벨이 "안건 0N" 꼴이다', () => {
+    expect(scenario.incident.caseLabel).toMatch(/^안건 0\d$/);
   });
 });

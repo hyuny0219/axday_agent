@@ -15,7 +15,7 @@ describe('GuideHint', () => {
   });
 
   it('testId를 넘기면 그 값을 쓴다', () => {
-    render(<GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />);
+    render(<GuideHint text="추천 문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />);
     expect(screen.getByTestId('discuss-guide-hint')).toBeInTheDocument();
   });
 });

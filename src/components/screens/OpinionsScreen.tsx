@@ -46,7 +46,7 @@ function stanceSummaryLine(stances: Record<ExecMemberId, Stance>): string {
   for (const roleId of EXEC_MEMBER_ORDER) {
     tally[stances[roleId]] += 1;
   }
-  return `찬성 ${tally.FOR} · 반대 ${tally.AGAINST} · 미정 ${tally.UNDECIDED}`;
+  return `찬성 ${tally.FOR} · 반대 ${tally.AGAINST} · 고민 중 ${tally.UNDECIDED}`;
 }
 
 /** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52). 시안은 "근거 · <자료명>" pill 하나만
@@ -121,7 +121,7 @@ export function OpinionsScreen({
         data-testid="opinions-next"
         data-guide={!locked ? 'next' : undefined}
       >
-        {locked ? '임원 의견을 듣는 중…' : '내 의견 말하기 ▶'}
+        {locked ? '임원 의견을 듣는 중…' : '내 의견 쓰러 가기 ▶'}
       </button>
     </div>
   );
@@ -140,7 +140,7 @@ export function OpinionsScreen({
         {/* 시안 원본은 <h1>이지만, 이 화면은 ATTRACT의 페이지 <h1>("BOARDROOM 2026")
             아래 중첩되는 화면 제목이라 다른 조종석 화면(BRIEFING·MOTION·VOTE 등)과
             같은 <h2> 위계를 쓴다 — 글자 크기·굵기는 시안 값 그대로다. */}
-        <h2 className="opinions-screen__title">임원 네 명의 첫 의견</h2>
+        <h2 className="opinions-screen__title">임원 의견 듣기</h2>
       </div>
       <div className="opinions-screen__meta">
         <span>같은 자료를 읽고 각자의 관점에서 말합니다.</span>

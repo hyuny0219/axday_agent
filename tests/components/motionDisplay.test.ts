@@ -42,10 +42,10 @@ describe('buildMotionDisplay', () => {
 
   // T92: 참가자가 반대 입장이면서 조건을 붙였으면 "단, 아래 조건을 붙입니다" 대신
   // 참가자가 요구했다는 문장으로.
-  it('반대 입장 + 조건 있음이면 "이사님은 원안에 반대하며, 아래 조건을 요구합니다"', () => {
+  it('반대 입장 + 조건 있음이면 "이사님은 처음 안에 반대하며, 아래 조건을 요구합니다"', () => {
     const display = buildMotionDisplay(scenario, ['LIMIT'], 'AGAINST');
     expect(display.sentence).toBe(
-      `${scenario.motionBreakdown.proposal} 이사님은 원안에 반대하며, 아래 조건을 요구합니다.`,
+      `${scenario.motionBreakdown.proposal} 이사님은 처음 안에 반대하며, 아래 조건을 요구합니다.`,
     );
   });
 

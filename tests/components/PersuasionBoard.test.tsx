@@ -38,7 +38,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 
-  it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람 표본 재검토"가 보인다', () => {
+  it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람이 일부 다시 보기"가 보인다', () => {
     const opinions: Opinion[] = [];
     const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
     render(
@@ -52,14 +52,14 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     );
     expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
-      '움직일 조건 · 결재 금액 한도·사람 표본 재검토',
+      '움직일 조건 · 결재 금액 한도·사람이 일부 다시 보기',
     );
     // CEO는 처음부터 찬성이라 "처음부터 같은 편"이고 설득 분모에서 빠진다(T101).
     expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('처음부터 같은 편');
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 
-  it('LOG 조건을 확정하면 CAIO 행이 "미정 → 찬성"으로 바뀌고 설득한 임원 수가 늘어난다', () => {
+  it('LOG 조건을 확정하면 CAIO 행이 "고민 중 → 찬성"으로 바뀌고 설득한 임원 수가 늘어난다', () => {
     const stances = scriptedStances(aiApprovalScenario, { stage: 'REACTIONS', opinions: [
       { id: 'op1', originalText: '', selectedPhraseIds: [], confirmedConditionIds: ['LOG'], createdAt: 0 },
     ] });
@@ -73,7 +73,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
       />,
     );
     expand();
-    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('미정 → 찬성');
+    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('고민 중 → 찬성');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('설득 완료');
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/3');
   });

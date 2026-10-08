@@ -565,7 +565,8 @@ function chairLineFor(
   participantStance: 'FOR' | 'AGAINST' | null,
 ): string | undefined {
   if (stage === 'BRIEFING') {
-    return scenario?.chairBriefing.situation;
+    // 상황 문장은 오른쪽 종이에 이미 있으므로 말풍선은 짧은 안내만 한다(T100).
+    return scenario ? '자료부터 같이 보시죠.' : undefined;
   }
   if (stage === 'MOTION') {
     return chairMotionLine(scenario, confirmedConditionIds, participantStance);

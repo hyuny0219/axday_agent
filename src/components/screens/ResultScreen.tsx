@@ -257,7 +257,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
       }
       return '다수 의견과 같은 판단을 내렸습니다';
     }
-    if (mine < other) return '소수 의견으로 회의록에 남았습니다';
+    if (mine < other) return '소수 의견으로 회의 기록에 남았습니다';
     return '표가 갈려 어느 쪽도 다수가 아니었습니다';
   })();
 
@@ -265,12 +265,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     <>
       <div className="app-body__actions screen result-screen__actions">
         {/* TALLY 패널(T64 item 7, Main.html C_Result.html 왼쪽 열 "TALLY · 5석 과반").
-            5칸 막대 + 집계·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
+            5칸 막대 + 표 세기·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
             계산값을 다시 그린 것이라 aria-hidden으로 중복 낭독을 막는다(무대 띠와
             같은 규칙, 같은 정보가 오른쪽 열 본문에 접근 가능하게 그대로 있다). */}
         <section className="result-tally" data-testid="result-tally" aria-hidden="true">
           <div className="result-tally__head">
-            <span>집계 · 5석 과반</span>
+            <span>표 세기 · 5석 중 3석</span>
             <span>찬성 {tallyResult.counts.YES} / 반대 {tallyResult.counts.NO}</span>
           </div>
           <div className="result-tally__bars">
@@ -307,7 +307,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             가장 자주 쓰는 동작이고, 세션 상태는 바꾸지 않고 오른쪽 열 기록
             영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
         {!transcriptGuideDismissed && (
-          <GuideHint text="회의록 전문도 볼 수 있습니다" testId="result-guide-hint" />
+          <GuideHint text="회의 기록 전체도 볼 수 있습니다" testId="result-guide-hint" />
         )}
         <button
           type="button"
@@ -321,7 +321,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
           data-testid="result-transcript-toggle"
           data-guide={!transcriptGuideDismissed ? 'next' : undefined}
         >
-          {showTranscript ? '이사회 한 장 요약 보기' : '회의록 전문 보기'}
+          {showTranscript ? '이사회 한 장 요약 보기' : '회의 기록 전체 보기'}
         </button>
         {/* "처음 화면으로"(옛 "체험 종료")는 세션을 초기화하는 되돌릴 수 없는
             동작이라 보조 CTA로 낮추고, 누르면 바로 초기화하지 않고 확인 단계를
@@ -364,7 +364,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             )}
             {session.expiredWithoutMotion && (
               <p className="result-screen__expired-notice" data-testid="expired-without-motion-notice">
-                시간 종료로 원안을 집계합니다. 미확정 수정 조건은 반영되지 않았습니다.
+                시간이 끝나 처음 안 그대로 표를 셉니다. 확정하지 않은 조건은 반영되지 않았습니다.
               </p>
             )}
             {/* T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성
@@ -382,7 +382,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   <p className="result-your-card__value" data-testid="result-summary-conditions">
                     {resultSummary.conditionLabels.length > 0
                       ? resultSummary.conditionLabels.join(', ')
-                      : '조건 없이 원안 그대로 상정'}
+                      : '조건 없이 처음 안 그대로 표결'}
                   </p>
                 </div>
                 <div className="result-your-card">
@@ -428,16 +428,16 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                     }}
                   >
                     <span className="result-stamp__case" aria-hidden="true">
-                      보너스
+                      임원 설득
                     </span>
-                    <span className="result-stamp__text">설득 성공</span>
+                    <span className="result-stamp__text">설득 도장</span>
                     <span className="result-stamp__meta" aria-hidden="true">
                       같은 표 {persuasion.sameVoteSeats}석
                     </span>
                   </div>
                 ) : (
                   <p className="result-bonus-missed" data-testid="persuasion-stamp-missed">
-                    보너스 미획득
+                    설득 도장은 다음 기회에
                     <br />
                     같은 표 {persuasion.sameVoteSeats}석 · 3석부터
                   </p>
@@ -587,7 +587,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   ))}
                 </ul>
               ) : (
-                <span className="result-epilogue-card__no-conditions">조건 없이 원안 그대로 상정</span>
+                <span className="result-epilogue-card__no-conditions">조건 없이 처음 안 그대로 표결</span>
               )}
             </div>
           </section>

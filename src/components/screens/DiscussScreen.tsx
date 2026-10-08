@@ -554,7 +554,7 @@ export function DiscussScreen({
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
             >
-              근거 자료 · 임원 발언 보기
+              근거 자료 보기
             </button>
             <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
           </div>

@@ -11,7 +11,7 @@ export const anonBoardScenario: Scenario = {
   subtitle:
     '사내 게시판을 익명제로 전환한다. 작성자 추적 범위, 게시 전 검수, 임원 열람 범위는 미정이다.',
   incident: {
-    caseLabel: '사건 02',
+    caseLabel: '안건 02',
     headline: '익명 게시판을 열어 달라는 요구가 쌓였지만, 운영 기준이 없다',
     hook: '실명 게시판은 월 320건, 익명 시범은 월 140건. 집계 기간이 달라 어느 쪽이 더 활발한지 이 자료만으로는 알 수 없다.',
   },

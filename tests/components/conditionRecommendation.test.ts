@@ -45,7 +45,7 @@ describe('buildConditionRecommendation(T96, 안건①, scripted)', () => {
     expect(result.openingLine).toContain('CAIO');
     expect(result.openingLine).toContain('CISO');
     expect(result.openingLine).toContain('승인 사유 기록'); // LOG 라벨(단일)
-    expect(result.openingLine).toContain('결재 금액 한도 + 사람 표본 재검토'); // LIMIT+REVIEW 묶음
+    expect(result.openingLine).toContain('결재 금액 한도 + 사람이 일부 다시 보기'); // LIMIT+REVIEW 묶음
   });
 
   it('LOG·OWNER를 모두 확정하면 CAIO·CISO는 이미 찬성이라 빠지고, CFO는 LIMIT+REVIEW 묶음만 남는다', () => {

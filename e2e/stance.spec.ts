@@ -40,9 +40,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // 본문 카드(임원 카드의 상태 칩 옆)에도 같은 문구가 접근 가능한 텍스트로 있다.
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
     await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대 쪽');
-    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
+    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 
-    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
     await page.getByTestId('discuss-side-for').click();
     // LIMIT·LOG·REVIEW·OWNER 네 조건을 모두 제안하는 문구 4개를 고른다.
     await page.getByTestId('phrase-card-P1').click();
@@ -95,7 +95,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // REACTIONS에서는 voteRules의 always 분기(AGAINST)로 넘어간다(아래).
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
 
-    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
     await page.getByTestId('discuss-side-for').click();
     // 조건 키워드가 전혀 없는 문장(어떤 조건도 제안하지 않는다).
     await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
@@ -146,7 +146,7 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await tryAllAssistantFeatures(page);
@@ -155,12 +155,12 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await expect(page.getByTestId('motion-card')).toBeVisible();
   // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차).
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|미정/);
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|고민 중/);
   }
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|미정/);
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|고민 중/);
   }
 });
 
@@ -187,9 +187,9 @@ test.describe('live mock: 무대 표정', () => {
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
-    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('미정');
+    await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 
-    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
     await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('phrase-card-P1').click();
     await tryAllAssistantFeatures(page);
