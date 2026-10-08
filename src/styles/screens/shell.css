@@ -488,6 +488,17 @@
   gap: var(--space-2);
 }
 
+/* T96: 설득 현황판(PersuasionBoard)이 왼쪽 열 자식이 하나 더 늘며, 1280×720처럼
+   빠듯한 화면(REACTIONS "다시 답하기" 등)에서 자식 사이 간격(16px)이 하나 더 늘어난
+   것만으로도 하단 CTA가 뷰포트 밖으로 밀렸다(2026-10-08 팀리드 지시). 왼쪽 열은
+   세로 예산이 가장 빠듯한 열이라 1280px 이하에서만 간격을 좁힌다 — 오른쪽 열
+   (app-body__content)은 그대로 둔다. */
+@media (max-width: 1280px) {
+  .app-body__actions.screen {
+    gap: 10px;
+  }
+}
+
 /* 왼쪽 열(app-body__actions)에서는 .screen의 기본 애니메이션(opacity+transform)을
    완전히 끈다. transform이나 opacity를 애니메이션으로 참조하는 요소는 실행이 끝나
    fill-mode로 값만 유지 중이어도 그 자체로 새 stacking context/containing block이
@@ -696,6 +707,15 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* T96: REACTIONS(다시 답하기)는 비서실장·답하지 않고 넘어가기·답변 전달 세 버튼이
+   1280×720에서 두 줄로 줄바꿈된다(기존부터) — 줄 사이 간격을 줄여 세로 예산을
+   아낀다(2026-10-08 팀리드 지시, 버튼 자체의 최소 터치 높이는 그대로 둔다). */
+@media (max-width: 1280px) {
+  .screen__submit-row {
+    gap: 6px;
+  }
 }
 
 .placeholder-screen {

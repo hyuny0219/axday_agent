@@ -9,6 +9,7 @@
 // 자유롭게 답한다) 임원의 가장 최근 발언에 실린 suggestedConditionIds를 함께 모아
 // "참고"로 표시한다.
 
+import { useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { ParticipantStance, SessionMode, Stance } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../../domain/voting';
@@ -117,6 +118,13 @@ function buildRow(
   return { memberId, stanceText, stanceChanged, conditionNote: '아직 의견을 내지 않았습니다' };
 }
 
+/** 1280px보다 넓은 화면인지 — 현황판 기본 펼침/접힘 판단(persuasionBoard.css의 1280 분기점과 같다). */
+function isWideViewport(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(min-width: 1281px)').matches
+    : false;
+}
+
 export function PersuasionBoard({
   scenario,
   confirmedConditionIds,
@@ -125,42 +133,68 @@ export function PersuasionBoard({
   mode,
   liveSuggestedConditionIds,
 }: PersuasionBoardProps) {
+  // 설득 현황판 접기/펼치기(2026-10-08 팀리드 지시 — 1280×720 DISCUSS 왼쪽 열이 4행
+  // 전부를 펼친 채로는 세로로 넘쳐 하단 CTA가 잘렸다). 좁은 화면(≤1280px)에서만 기본
+  // 접힘 — 요약 한 줄("설득 N/4 · CFO·CISO 남음")만 보이고, "자세히 보기"를 눌러야
+  // 임원별 4행을 펼친다. 1920×1080처럼 공간이 넉넉한 부스 화면은 T96 취지(임원 입장
+  // 변화가 한눈에 보이게)대로 기본 펼침. 첫 렌더에서 한 번만 판단한다(테스트 jsdom은
+  // matchMedia가 없어 접힘으로 시작한다).
+  const [expanded, setExpanded] = useState(() => isWideViewport());
   const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
-  const persuadedCount = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] === targetVote).length;
+  const notYetTargetMembers = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] !== targetVote);
+  const persuadedCount = EXEC_MEMBER_ORDER.length - notYetTargetMembers.length;
   const rows = EXEC_MEMBER_ORDER.map((memberId) =>
     buildRow(scenario, memberId, confirmedConditionIds, participantStance, stances, mode, liveSuggestedConditionIds),
   );
 
   return (
-    <div className="persuasion-board" data-testid="persuasion-board">
+    // 2026-10-08 팀리드 지시(2차): 접힌 상태에서도 "설득 현황판" 제목 줄 + 요약 줄
+    // 2줄을 쓰면 REACTIONS(다시 답하기)처럼 왼쪽 열이 이미 빠듯한 화면에서 다시
+    // 넘친다 — 제목·집계·요약·펼치기를 한 줄로 합친다(제목은 aria-label로만 남긴다).
+    <div className="persuasion-board" data-testid="persuasion-board" aria-label="설득 현황판">
       <div className="persuasion-board__head">
-        <span className="persuasion-board__title">설득 현황판</span>
         <span className="persuasion-board__count" data-testid="persuasion-board-count">
           설득한 임원 {persuadedCount}/4
         </span>
+        {!expanded && (
+          <span className="persuasion-board__summary" data-testid="persuasion-board-summary">
+            {notYetTargetMembers.length === 0 ? '모두 설득 완료' : `${notYetTargetMembers.join('·')} 남음`}
+          </span>
+        )}
+        <button
+          type="button"
+          className="persuasion-board__toggle"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          data-testid="persuasion-board-toggle"
+        >
+          {expanded ? '접기 ▲' : '자세히 보기 ▾'}
+        </button>
       </div>
-      <ul className="persuasion-board__list">
-        {rows.map((row) => (
-          <li
-            key={row.memberId}
-            className="persuasion-board__row"
-            data-testid={`persuasion-board-row-${row.memberId}`}
-          >
-            <span className="persuasion-board__member" title={MEMBER_LABELS[row.memberId]}>
-              {row.memberId}
-            </span>
-            <span
-              className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}`}
-              data-testid={`persuasion-board-stance-${row.memberId}`}
+      {expanded && (
+        <ul className="persuasion-board__list">
+          {rows.map((row) => (
+            <li
+              key={row.memberId}
+              className="persuasion-board__row"
+              data-testid={`persuasion-board-row-${row.memberId}`}
             >
-              {row.stanceText}
-            </span>
-            <span className="persuasion-board__note" data-testid={`persuasion-board-note-${row.memberId}`}>
-              {row.conditionNote}
-            </span>
-          </li>
-        ))}
-      </ul>
+              <span className="persuasion-board__member" title={MEMBER_LABELS[row.memberId]}>
+                {row.memberId}
+              </span>
+              <span
+                className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}`}
+                data-testid={`persuasion-board-stance-${row.memberId}`}
+              >
+                {row.stanceText}
+              </span>
+              <span className="persuasion-board__note" data-testid={`persuasion-board-note-${row.memberId}`}>
+                {row.conditionNote}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

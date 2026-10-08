@@ -88,8 +88,12 @@
 
 @media (max-width: 1280px) {
   .draft-editor__textarea {
-    min-height: 64px;
-    padding: 8px 10px;
+    /* T96: 설득 현황판이 더해진 왼쪽 열의 세로 예산을 조금 더 벌어 둔다(2026-10-08
+       팀리드 지시 — 3줄 높이를 2.5줄 정도로 살짝 줄여도 textarea는 그대로 늘어난다,
+       resize는 여전히 막아 둔다). REACTIONS(다시 답하기)가 DISCUSS보다 조건 칩
+       2줄(ConditionChips)까지 더 겹쳐 세로 예산이 더 빠듯해 한 번 더 줄인다. */
+    min-height: 36px;
+    padding: 6px 10px;
     font-size: 13px;
   }
 }
