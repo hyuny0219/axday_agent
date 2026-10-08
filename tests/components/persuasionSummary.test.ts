@@ -11,7 +11,7 @@ import {
   computePersuasionTally,
   persuadedCountLabel,
   countVotesChangedByFinalConditions,
-  liveStanceChangeLine,
+  buildPersuasionResult,
   nextTrySuggestionLabel,
   oneStepAwayNote,
 } from '../../src/components/persuasionSummary';
@@ -124,45 +124,6 @@ describe('반대 참가자 결과 안내(Codex 33차 P2-2)', () => {
   });
 });
 
-describe('liveStanceChangeLine(Codex 33차 P2-1)', () => {
-  const stmt = (roleId: Statement['roleId'], stance: Statement['stance']): Statement => ({
-    id: roleId,
-    roleId,
-    stage: 'OPINIONS',
-    text: '발언',
-    evidenceIds: [],
-    referencedStatementIds: [],
-    concerns: [],
-    suggestedConditionIds: [],
-    stance,
-    source: 'live',
-    createdAt: 0,
-  });
-
-  it('첫 입장과 최종 표가 다른 임원 수를 센다(표를 못 낸 임원은 세지 않는다)', () => {
-    const statements = [stmt('CEO', 'FOR'), stmt('CFO', 'AGAINST'), stmt('CAIO', 'UNDECIDED'), stmt('CISO', 'AGAINST')];
-    const line = liveStanceChangeLine(scenario, statements, [
-      { memberId: 'CEO', vote: 'YES' },
-      { memberId: 'CFO', vote: 'YES' },
-      { memberId: 'CAIO', vote: 'NO' },
-      { memberId: 'CISO', vote: 'UNCAST' },
-    ]);
-    expect(line).toBe('임원 2명의 입장이 이사님의 발언 뒤 바뀌었습니다');
-  });
-
-  it('모두 같으면 처음과 같았다고 말하고 인과 문구를 쓰지 않는다', () => {
-    const statements = [stmt('CEO', 'FOR'), stmt('CFO', 'AGAINST'), stmt('CAIO', 'FOR'), stmt('CISO', 'AGAINST')];
-    const line = liveStanceChangeLine(scenario, statements, [
-      { memberId: 'CEO', vote: 'YES' },
-      { memberId: 'CFO', vote: 'NO' },
-      { memberId: 'CAIO', vote: 'YES' },
-      { memberId: 'CISO', vote: 'NO' },
-    ]);
-    expect(line).toBe('임원 입장은 처음과 같았습니다');
-    expect(line).not.toContain('조건');
-  });
-});
-
 describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 같은 세션에서 모순되지 않는다', () => {
   function subsets(ids: string[]): string[][] {
     const result: string[][] = [[]];
@@ -233,5 +194,77 @@ describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 �
   it('모두 처음부터 같은 편이면 숫자 대신 말로 표시한다', () => {
     const tally = { target: 'FOR' as const, alreadySame: ['CEO', 'CFO', 'CAIO', 'CISO'] as never[], persuaded: [], remaining: [], total: 0 };
     expect(persuadedCountLabel(tally)).toBe('모두 처음부터 같은 편');
+  });
+});
+
+describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도장의 tally와 같다', () => {
+  function subsets(ids: string[]): string[][] {
+    const result: string[][] = [[]];
+    for (const id of ids) for (const e of [...result]) result.push([...e, id]);
+    return result;
+  }
+  const stmt = (roleId: Statement['roleId'], stance: Statement['stance']): Statement => ({
+    id: roleId, roleId, stage: 'OPINIONS', text: '발언', evidenceIds: [], referencedStatementIds: [],
+    concerns: [], suggestedConditionIds: [], stance, source: 'live', createdAt: 0,
+  });
+
+  it('두 안건 × 두 입장 × 모든 조건 조합: 제목 문구의 M은 tally.persuaded 수와 같고, M=0이면 "바꾸지 못했습니다"다', () => {
+    for (const sc of [aiApprovalScenario, experienceFirstScenario]) {
+      for (const side of ['FOR', 'AGAINST'] as const) {
+        for (const conditionIds of subsets(sc.conditions.map((c) => c.id))) {
+          const motion: Motion = {
+            id: 'm', scenarioId: sc.id, kind: conditionIds.length === 0 ? 'original' : 'amended',
+            conditionIds, baseConditionIds: [], effectiveConditionIds: conditionIds,
+            executionMode: 'DEFAULT', frozenAt: 0, text: sc.originalMotion.text, hash: 'h',
+          };
+          const finalStances = {} as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+          for (const ballot of decideBoard(sc, motion, side)) {
+            const id = ballot.memberId as 'CEO' | 'CFO' | 'CAIO' | 'CISO';
+            finalStances[id] = ballot.vote === 'YES' ? 'FOR' : ballot.vote === 'NO' ? 'AGAINST' : 'UNDECIDED';
+          }
+          const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+          const result = buildPersuasionResult(sc, session, finalStances, {
+            participantVote: side === 'FOR' ? 'YES' : 'NO',
+            participantStance: side,
+            conditionCount: conditionIds.length,
+            finalConditionIds: conditionIds,
+          });
+          const m = result.tally.persuaded.length;
+          const match = /임원 (\d)명이 이사님 편이 됐습니다/.exec(result.headline);
+          if (m > 0) {
+            expect(Number(match?.[1])).toBe(m);
+            expect(result.headline).toContain(conditionIds.length > 0 ? `조건 ${conditionIds.length}개로` : '발언으로');
+          } else {
+            expect(match).toBeNull();
+            expect(result.headline).toContain('이번엔 임원의 입장을 바꾸지 못했습니다');
+          }
+        }
+      }
+    }
+  });
+
+  it('참가자 반대·조건 없음(안건①): 현황판처럼 CAIO(미정→반대) 한 명을 설득한 것으로 제목에도 나온다', () => {
+    const stances = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
+      participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 0, finalConditionIds: [],
+    });
+    expect(result.tally.persuaded).toEqual(['CAIO']);
+    expect(result.headline).toBe('이사님의 발언으로 임원 1명이 이사님 편이 됐습니다');
+  });
+
+  it('live: 첫 입장과 달리 이사님 편이 된 임원 수를 인과(조건) 없이 말한다', () => {
+    const session = {
+      ...createInitialSession(0, 's'),
+      mode: 'live' as const,
+      transcript: { ...createInitialSession(0, 's').transcript, statements: [stmt('CEO', 'FOR'), stmt('CFO', 'AGAINST'), stmt('CAIO', 'UNDECIDED'), stmt('CISO', 'AGAINST')] },
+    };
+    const stances = { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+    const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
+      participantVote: 'YES', participantStance: 'FOR', conditionCount: 2, finalConditionIds: ['LIMIT', 'LOG'],
+    });
+    expect(result.tally.persuaded).toEqual(['CFO', 'CAIO']);
+    expect(result.headline).toBe('이사님의 발언으로 임원 2명이 이사님 편이 됐습니다');
+    expect(result.headline).not.toContain('조건');
   });
 });
