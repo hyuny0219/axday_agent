@@ -47,6 +47,7 @@ import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { GuideHint } from '../parts/GuideHint';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
+import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -128,6 +129,7 @@ export function DiscussScreen({
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
+  const [pendingBatch, setPendingBatch] = useState<{ phraseId: string; conditionId: string | null }[] | null>(null);
   // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·STANCE 칩)은
   // 시각적으로 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에
   // 닿을 수 있었다(PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어
@@ -250,6 +252,7 @@ export function DiscussScreen({
     }
     onChooseSide(next);
     setPendingPhraseId(null);
+    setPendingBatch(null);
     if (draft.selectedPhraseIds.length === 0) {
       return;
     }
@@ -274,22 +277,35 @@ export function DiscussScreen({
     return false;
   }
 
-  function handleKeep() {
+  // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 직접 쓴 내용이 있을 때 묶음
+  // "모두 적용"은 확인 UI를 먼저 띄우므로, 묶음 전체를 보존했다가 승인 시 한 번에 반영한다.
+  // 추천이 아닌 일반 문구 선택(handleTogglePhrase)은 단일 pendingPhraseId만 쓴다.
+  function resolvePending(choice: 'keep' | 'rebuild') {
     if (pendingPhraseId === null) {
       return;
     }
-    setDraft(resolveConfirm(draft, scenario, pendingPhraseId, 'keep'));
+    const batch = pendingBatch ?? [{ phraseId: pendingPhraseId, conditionId: null }];
+    let state = draft;
+    for (const item of batch) {
+      state = resolveConfirm(state, scenario, item.phraseId, choice);
+    }
+    setDraft(state);
     setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
+    setPendingBatch(null);
+    for (const item of batch) {
+      if (item.conditionId !== null) {
+        onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
+      }
+    }
+  }
+
+  function handleKeep() {
+    resolvePending('keep');
   }
 
   function handleRebuild() {
-    if (pendingPhraseId === null) {
-      return;
-    }
-    setDraft(resolveConfirm(draft, scenario, pendingPhraseId, 'rebuild'));
-    setDraftRevision((value) => value + 1);
-    setPendingPhraseId(null);
+    resolvePending('rebuild');
   }
 
   function handleDraftTextChange(text: string) {
@@ -317,15 +333,35 @@ export function DiscussScreen({
   // 렌더의 draft에서 새 상태를 만들어 뒤 호출이 앞 호출을 덮어쓴다. 갱신된 상태를 다음
   // 조건 처리에 넘기며 로컬에서 접어 한 번만 반영하고, 실제로 반영된 조건 id를 돌려준다.
   function handleRecommendConditions(conditionIds: string[]): string[] {
+    if (pendingPhraseId !== null) {
+      return [];
+    }
+    if (draft.dirty) {
+      // 직접 쓴 내용이 있으면 확인 UI를 먼저 띄운다. 묶음 전체를 보존해 승인 시 한 번에
+      // 반영하고, 그때 기록한다(지금은 아직 반영되지 않았으므로 빈 목록).
+      const batch: { phraseId: string; conditionId: string }[] = [];
+      for (const conditionId of conditionIds) {
+        const phrase = findPhraseForCondition(
+          scenario,
+          conditionId,
+          side,
+          [...draft.selectedPhraseIds, ...batch.map((item) => item.phraseId)],
+        );
+        if (phrase) {
+          batch.push({ phraseId: phrase.id, conditionId });
+        }
+      }
+      const first = batch[0];
+      if (first) {
+        setPendingBatch(batch);
+        setPendingPhraseId(first.phraseId);
+      }
+      return [];
+    }
     let state = draft;
     const appliedIds: string[] = [];
     for (const conditionId of conditionIds) {
-      const phrase = scenario.phrases.find(
-        (candidate) =>
-          candidate.conditionId === conditionId &&
-          (candidate.side ?? 'FOR') === (side ?? 'FOR') &&
-          !state.selectedPhraseIds.includes(candidate.id),
-      );
+      const phrase = findPhraseForCondition(scenario, conditionId, side, state.selectedPhraseIds);
       if (!phrase) {
         continue;
       }
@@ -333,11 +369,7 @@ export function DiscussScreen({
       if (result.kind === 'applied') {
         state = result.state;
         appliedIds.push(conditionId);
-        continue;
       }
-      // 직접 쓴 내용이 있어 확인 대기만 열린다 — 반영되지 않았으니 기록하지 않고 멈춘다.
-      setPendingPhraseId(result.pendingPhraseId);
-      break;
     }
     if (appliedIds.length > 0) {
       setDraft(state);
@@ -392,6 +424,7 @@ export function DiscussScreen({
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
+            canApplyCondition={(conditionId) => findPhraseForCondition(scenario, conditionId, side) !== undefined}
             draftText={draft.draftText}
             draftRevision={draftRevision}
             transcript={transcript}

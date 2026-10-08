@@ -93,6 +93,10 @@ export interface AssistantPanelProps {
    * 상태로 조건마다 따로 갱신하면 뒤 호출이 앞 호출을 덮어쓰기 때문이다. 없으면 조건을
    * 하나씩 onRecommendCondition으로 적용한다. */
   onRecommendConditions?: (conditionIds: string[]) => string[] | Promise<string[]>;
+  /** 이 화면의 현재 입장에서 그 조건을 실제로 체크할 문구가 있는지(PR #20 Codex 30차
+   * P2-1). false면 "적용" 대신 "직접 써 주세요" 안내를 보인다. 없으면 모두 적용 가능으로
+   * 본다. 묶음은 구성 조건이 전부 가능할 때만 "모두 적용"을 보인다. */
+  canApplyCondition?: (conditionId: string) => boolean;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -135,6 +139,7 @@ export function AssistantPanel({
   liveSuggestedConditionIds,
   onRecommendCondition,
   onRecommendConditions,
+  canApplyCondition,
   draftText,
   draftRevision,
   transcript,
@@ -586,14 +591,23 @@ export function AssistantPanel({
                               푸는 걱정 · {row.worry}
                             </span>
                           )}
-                          <button
-                            type="button"
-                            className="cta cta--secondary"
-                            onClick={() => handleApplyRecommendation(row.conditionId)}
-                            data-testid={`assistant-recommend-apply-${row.conditionId}`}
-                          >
-                            적용
-                          </button>
+                          {canApplyCondition && !canApplyCondition(row.conditionId) ? (
+                            <span
+                              className="assistant-panel__recommend-manual"
+                              data-testid={`assistant-recommend-manual-${row.conditionId}`}
+                            >
+                              직접 써 주세요
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="cta cta--secondary"
+                              onClick={() => handleApplyRecommendation(row.conditionId)}
+                              data-testid={`assistant-recommend-apply-${row.conditionId}`}
+                            >
+                              적용
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -616,14 +630,23 @@ export function AssistantPanel({
                             <span className="assistant-panel__recommend-moves">
                               움직이는 임원 · {bundle.movedMemberIds.join('·')}
                             </span>
-                            <button
-                              type="button"
-                              className="cta cta--secondary"
-                              onClick={() => handleApplyBundle(bundle.conditionIds)}
-                              data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
-                            >
-                              모두 적용
-                            </button>
+                            {canApplyCondition && !bundle.conditionIds.every(canApplyCondition) ? (
+                              <span
+                                className="assistant-panel__recommend-manual"
+                                data-testid={`assistant-recommend-manual-bundle-${bundleKey}`}
+                              >
+                                직접 써 주세요
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="cta cta--secondary"
+                                onClick={() => handleApplyBundle(bundle.conditionIds)}
+                                data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
+                              >
+                                모두 적용
+                              </button>
+                            )}
                           </li>
                         );
                       })}
