@@ -243,7 +243,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     <>
       <div className="app-body__actions screen result-screen__actions">
         {/* TALLY 패널(T64 item 7, Main.html C_Result.html 왼쪽 열 "TALLY · 5석 과반").
-            5칸 막대 + 집계·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
+            5칸 막대 + 표 세기·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
             계산값을 다시 그린 것이라 aria-hidden으로 중복 낭독을 막는다(무대 띠와
             같은 규칙, 같은 정보가 오른쪽 열 본문에 접근 가능하게 그대로 있다). */}
         <section className="result-tally" data-testid="result-tally" aria-hidden="true">
@@ -269,7 +269,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             // 그대로 있다).
             <p className="result-tally__caption" data-testid="result-tally-caption">
               이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
-              {persuasion.earned ? ' — 설득 도장을 받았습니다' : ' · 같은 표 3석부터 설득 도장을 받습니다'}
+              {persuasion.earned ? ' — 설득 도장을 받았습니다' : ' · 3석부터 설득 도장을 받습니다'}
               {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
             </p>
           )}

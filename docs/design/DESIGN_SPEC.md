@@ -537,6 +537,12 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 **T87(2026-10-07 사용자 결정)에서 붉은 사각 도장류만 영문으로 되돌렸다** — "붉은 색 상자 안의 글씨들은 영어로 나오는 게 좀 더 비밀요원스럽다." 위 표의 ATTRACT `TOP SECRET`/`극비`, SELECT `CONFIDENTIAL`/`대외비`(카드 도장), BRIEFING·OPINIONS·VOTE·EvidenceDialog `CONFIDENTIAL`/`대외비`, MOTION `DRAFT`/`초안`(도장), StageBand `CLASSIFIED`/`기밀` 여섯 행은 화살표 방향이 실제로는 반대다(한국어 → 영문). 다른 모든 행(SITREP·PROPOSAL·YOUR ORDERS·EXHIBIT·TRANSCRIPT 등 도장이 아닌 장식 라벨)은 그대로 한국어다. CSS(`--font-label`·letter-spacing 등)는 T83에서 전혀 바뀌지 않았으므로 되돌릴 것도 없었다 — 문구만 되돌렸다. `e2e/no-stray-english.spec.ts`는 이 여섯 도장 요소를 DOM에서 지운 뒤 나머지 텍스트만 검사하도록 좁혔다(도장 요소에 한정, 다른 자리의 새 영문은 그대로 잡아낸다).
 
+**T86·T95·T100에서 대체된 행(2026-10-08 규칙 점검)** — 위 대응표는 T83 시점의 기록이라 아래 행은 지금 화면과 다르다. 현재 문구는 각 화면 코드가 기준이다.
+
+- **T86에서 대체**: 모드 배지 행(ATTRACT·RESULT·Header의 `실시간`)은 모드 표시 제거로 화면에 없다. BRIEFING·EvidenceGrid의 `자료 ①~④` 카드 태그는 요약 카드 상시 노출을 걷어내면서 팝업 안에서만 쓴다.
+- **T95에서 대체**: BRIEFING `특별 이사의 임무`·`최종 선택: 찬성 / 반대` 점선 상자는 INTRO와 중복이라 뺐다.
+- **T100에서 대체**: `사건 {N}` → `안건 {N}`(ATTRACT·SELECT 칩·Header·결과 보고), Header `세션 {code}` → `회의 {code}`, SELECT `열람 가능 · 선택하면 …` → `골라서 들어가기`, `봉인됨 · …` → `준비 중 · …`, MOTION `표결 안건 · {원안/수정안}` → `표결할 안건 · {처음 안/조건을 붙인 안}`, VOTE `표결 안건` → `표결할 안건`, RESULT `집계 · 5석 과반` → `표 세기 · 5석 중 3석`, `보너스`·`보너스 미획득` → `설득 도장`·`설득 도장은 다음 기회에`, MinutesPanel `N건 · 스크롤` → `N건`, BRIEFING `미정` 라벨은 유지하되 임원 입장 값 UNDECIDED의 라벨만 `고민 중`으로 구분한다.
+
 ### 유지한 영문(예외)
 
 - 역할 약자 `CEO`·`CFO`·`CAIO`·`CISO`(명패·아바타 이니셜·`MEMBER_LABELS`의 괄호 표기) — 실제 직함 약칭이라 번역 대상이 아니다.

@@ -77,7 +77,7 @@ test('조건부 반대(N1, REVIEW)는 화면 문구가 "이사님이 요구한 �
 
   await expect(page.getByText('이사님이 요구한 조건 1')).toBeVisible();
   await expect(page.getByTestId('motion-card')).toContainText(
-    '이사님은 원안에 반대하며, 아래 조건을 요구합니다',
+    '이사님은 처음 안에 반대하며, 아래 조건을 요구합니다',
   );
   await page.getByTestId('freeze-motion').click();
 
