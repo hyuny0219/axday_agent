@@ -9,10 +9,12 @@ import { createInitialSession } from '../../src/domain/session';
 import { decideBoard } from '../../src/domain/voting';
 import {
   countVotesChangedByFinalConditions,
+  liveStanceChangeLine,
   nextTrySuggestionLabel,
   oneStepAwayNote,
 } from '../../src/components/persuasionSummary';
-import type { Ballot, Motion, Session } from '../../src/domain/types';
+import { experienceFirstScenario } from '../../src/content/scenarios';
+import type { Ballot, Motion, Session, Statement } from '../../src/domain/types';
 
 const scenario = aiApprovalScenario;
 
@@ -97,5 +99,63 @@ describe('oneStepAwayNote(T96, "한 끗 차이")', () => {
 describe('nextTrySuggestionLabel(T96)', () => {
   it('조건이 하나도 없으면 CFO가 필요로 하는 첫 조건(결재 금액 한도)을 추천한다', () => {
     expect(nextTrySuggestionLabel(scenario, [], null)).toBe('결재 금액 한도');
+  });
+});
+
+describe('반대 참가자 결과 안내(Codex 33차 P2-2)', () => {
+  const allFor = { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' } as const;
+
+  it('AGAINST면 찬성으로 돌리는 조건(LIMIT 등)을 "다음엔" 추천하지 않는다 — 두 안건 모두', () => {
+    for (const sc of [aiApprovalScenario, experienceFirstScenario]) {
+      const label = nextTrySuggestionLabel(sc, [], 'AGAINST', { ...allFor });
+      // 적용 가능한 반대 방향 조건이 없으면 생략(null), 있으면 NO로 돌리는 조건뿐이다.
+      expect(label).toBeNull();
+    }
+    // 같은 입력의 FOR 경로는 기존대로 찬성으로 돌리는 조건을 추천한다.
+    expect(nextTrySuggestionLabel(aiApprovalScenario, [], 'FOR')).toBe('결재 금액 한도');
+  });
+
+  it('AGAINST면 "한 끗 차이"(찬성이었을 텐데) 안내를 보이지 않는다', () => {
+    expect(oneStepAwayNote(aiApprovalScenario, 'CFO', ['LIMIT'], 'AGAINST')).toBeNull();
+    expect(oneStepAwayNote(aiApprovalScenario, 'CFO', ['LIMIT'], 'FOR')).not.toBeNull();
+  });
+});
+
+describe('liveStanceChangeLine(Codex 33차 P2-1)', () => {
+  const stmt = (roleId: Statement['roleId'], stance: Statement['stance']): Statement => ({
+    id: roleId,
+    roleId,
+    stage: 'OPINIONS',
+    text: '발언',
+    evidenceIds: [],
+    referencedStatementIds: [],
+    concerns: [],
+    suggestedConditionIds: [],
+    stance,
+    source: 'live',
+    createdAt: 0,
+  });
+
+  it('첫 입장과 최종 표가 다른 임원 수를 센다(표를 못 낸 임원은 세지 않는다)', () => {
+    const statements = [stmt('CEO', 'FOR'), stmt('CFO', 'AGAINST'), stmt('CAIO', 'UNDECIDED'), stmt('CISO', 'AGAINST')];
+    const line = liveStanceChangeLine(scenario, statements, [
+      { memberId: 'CEO', vote: 'YES' },
+      { memberId: 'CFO', vote: 'YES' },
+      { memberId: 'CAIO', vote: 'NO' },
+      { memberId: 'CISO', vote: 'UNCAST' },
+    ]);
+    expect(line).toBe('임원 2명의 입장이 이사님의 발언 뒤 바뀌었습니다');
+  });
+
+  it('모두 같으면 처음과 같았다고 말하고 인과 문구를 쓰지 않는다', () => {
+    const statements = [stmt('CEO', 'FOR'), stmt('CFO', 'AGAINST'), stmt('CAIO', 'FOR'), stmt('CISO', 'AGAINST')];
+    const line = liveStanceChangeLine(scenario, statements, [
+      { memberId: 'CEO', vote: 'YES' },
+      { memberId: 'CFO', vote: 'NO' },
+      { memberId: 'CAIO', vote: 'YES' },
+      { memberId: 'CISO', vote: 'NO' },
+    ]);
+    expect(line).toBe('임원 입장은 처음과 같았습니다');
+    expect(line).not.toContain('조건');
   });
 });
