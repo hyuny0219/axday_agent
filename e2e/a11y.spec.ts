@@ -13,7 +13,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   await page.keyboard.press('Enter');
 
   // INTRO(T95): 소개 한 장 — CTA에 포커스를 옮겨 Enter로 넘어간다.
-  await page.getByRole('button', { name: '안건 고르러 가기' }).focus();
+  await page.getByRole('button', { name: '안내 없이 시작' }).focus();
   await page.keyboard.press('Enter');
 
   // SELECT: 카드 자체가 버튼이라(T84 #10) 포커스+Enter만으로 바로 입장한다 —
@@ -84,7 +84,7 @@ test('prefers-reduced-motion에서는 화면 전환에 애니메이션이 남지
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
 
   const selectScreen = page.locator('.screen.select-screen');
   await expect(selectScreen).toBeVisible();
@@ -104,7 +104,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   await page.setViewportSize({ width: 960, height: 540 });
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

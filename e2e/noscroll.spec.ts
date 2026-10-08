@@ -47,7 +47,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'ATTRACT');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
   await expect(
@@ -142,7 +142,6 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // CTA가 뷰포트 밖으로 밀렸는데도 문서 스크롤 자체는 없어(.app-body__actions가
   // overflow:visible이라 안쪽 scrollHeight 검사로는 못 잡는다) expectNoPageScroll이
   // 못 잡았다 — CTA 자체가 뷰포트 안에 보이는지 직접 단언한다.
-  await expectFullyVisible(page, 'step-guide', 'DISCUSS(진행 단계 안내판)');
   await expectFullyVisible(page, 'submit-opinion', 'DISCUSS(CTA)');
   await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
@@ -169,7 +168,6 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   // T96: DISCUSS와 같은 이유로 REACTIONS(다시 답하기)도 CTA가 뷰포트 안에 보이는지
   // 직접 확인한다.
-  await expectFullyVisible(page, 'step-guide', 'REACTIONS(진행 단계 안내판)');
   await expectFullyVisible(page, 'submit-followup', 'REACTIONS(다시 답하기 CTA)');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
@@ -297,7 +295,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

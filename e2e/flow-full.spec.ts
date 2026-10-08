@@ -6,7 +6,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -60,7 +60,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -114,7 +114,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -174,7 +174,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -222,7 +222,7 @@ test('반대 쪽 추천 문구만 골라도 완주하고, 조건이 없어 처�
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

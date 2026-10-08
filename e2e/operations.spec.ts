@@ -18,7 +18,7 @@ async function advanceClock(page: Page, ms: number): Promise<void> {
 
 async function enterScenario(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 }
 

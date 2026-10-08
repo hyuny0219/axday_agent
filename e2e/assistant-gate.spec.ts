@@ -1,12 +1,12 @@
 // T97: DISCUSS는 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달 순서다.
-// 세 기능을 다 쓰기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 힌트(N/3)로 알려 준다.
+// 세 기능을 다 쓰기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 화면 읽기용 설명(N/3)으로 알려 준다(T103: 눈에 보이는 안내는 진행 도우미가 맡는다).
 // 다시 답하기(REACTIONS)는 비서실장 없이도 전달할 수 있다.
 import { test, expect, type Page } from './fixtures';
 
 async function reachDiscuss(page: Page, url = '/?mode=scripted', pickSide = true) {
   await page.goto(url);
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -39,54 +39,42 @@ test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 �
   await expect(page.getByTestId('assistant-toggle-hint')).toHaveCount(0);
 });
 
-test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 (0/3)이며 하이라이트는 비서실장 버튼에 있다', async ({ page }) => {
+test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 (0/3)이며 옛 맥동 강조는 없다', async ({ page }) => {
   await reachDiscuss(page);
 
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
   await expect(page.getByTestId('discuss-cta-hint')).toContainText('추천 문구를 고르거나 직접 써 주세요');
-  // T98: 안내판 현재 칩은 ② 추천 문구이고 문구 목록에도 같은 강조가 걸린다.
-  await expect(page.getByTestId('step-chip-phrase')).toHaveAttribute('data-status', 'current');
-  await expect(page.getByTestId('step-guide-say')).toContainText('마음에 드는 문구를 눌러 담으세요');
+  await expect(page.getByTestId('step-guide')).toHaveCount(0);
 
   await page.getByTestId('phrase-card-P1').click();
-  await expect(page.getByTestId('step-chip-assistant')).toHaveAttribute('data-status', 'current');
-  await expect(page.getByTestId('step-guide-say')).toContainText('AI 비서실장에게 맡기기');
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
   await expect(page.getByTestId('discuss-cta-hint')).toContainText('AI 비서실장을 먼저 써 보세요 (0/3)');
-  await expect(page.getByTestId('assistant-toggle')).toHaveAttribute('data-guide', 'next');
-  await expect(page.getByTestId('submit-opinion')).not.toHaveAttribute('data-guide', 'next');
+  await expect(page.locator('[data-guide]')).toHaveCount(0);
 });
 
-test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열리고 하이라이트가 옮겨 간다', async ({ page }) => {
+test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열린다', async ({ page }) => {
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await expect(page.getByTestId('assistant-action-summary')).toHaveAttribute('data-guide', 'next');
+  await expect(page.getByTestId('assistant-action-summary')).toHaveAttribute('data-coach', 'assistant-next');
   await runFeature(page, 'summary');
   await runFeature(page, 'compare');
-  await expect(page.getByTestId('assistant-action-refine')).toHaveAttribute('data-guide', 'next');
+  await expect(page.getByTestId('assistant-action-refine')).toHaveAttribute('data-coach', 'assistant-next');
   await expect(page.getByTestId('assistant-intro-done')).toHaveCount(0);
   await page.getByTestId('assistant-close').click();
 
   await expect(page.getByTestId('discuss-cta-hint')).toContainText('(2/3)');
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
-  // T98: 안내판 ③ 칩의 체크가 팝업 체크와 같은 상태를 보여 준다.
-  await expect(page.getByTestId('step-check-summary')).toHaveAttribute('data-checked', 'true');
-  await expect(page.getByTestId('step-check-compare')).toHaveAttribute('data-checked', 'true');
-  await expect(page.getByTestId('step-check-refine')).toHaveAttribute('data-checked', 'false');
 
   await page.getByTestId('assistant-toggle').click();
   await runFeature(page, 'refine');
   await expect(page.getByTestId('assistant-intro-done')).toContainText('이제 팝업을 닫고 의견을 전달하세요');
-  await expect(page.getByTestId('assistant-close')).toHaveAttribute('data-guide', 'next');
+  await expect(page.getByTestId('assistant-close')).toHaveAttribute('data-coach', 'assistant-close');
   await page.getByTestId('assistant-close').click();
 
   await expect(page.getByTestId('submit-opinion')).toBeEnabled();
-  await expect(page.getByTestId('submit-opinion')).toHaveAttribute('data-guide', 'next');
-  await expect(page.getByTestId('step-chip-submit')).toHaveAttribute('data-status', 'current');
-  await expect(page.getByTestId('step-guide-say')).toContainText('의견 전달');
   await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
   await page.getByTestId('submit-opinion').click();
   await expect(

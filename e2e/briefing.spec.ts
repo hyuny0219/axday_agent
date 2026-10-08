@@ -17,7 +17,7 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
@@ -98,7 +98,7 @@ test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법�
 }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   const openEvidence = page.getByTestId('open-evidence');
@@ -140,7 +140,7 @@ test('근거 자료 팝업이 닫기 버튼·딤 클릭·Esc 세 가지 방법�
 test('무대 명패 4개가 서로 겹치지 않고 참가자 좌석에는 명패가 없다', async ({ page }) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
   // 참가자 좌석은 명패 없이 글로우·말풍선·표 배지만 둔다(2026-09-28 사용자).

@@ -10,7 +10,7 @@ import { tryAllAssistantFeatures } from './helpers/assistant';
 async function enterExperienceFirstReactions(page: Page) {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -66,7 +66,7 @@ test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확�
   // T98: 비활성이어도 화면에 보이는 빈 버튼이고 3칩 안내판이 현재 단계를 알려 준다.
   await expect(page.getByTestId('submit-followup')).toBeVisible();
   await expect(page.getByTestId('submit-followup')).toHaveClass(/cta--outline/);
-  await expect(page.getByTestId('step-optional-tag')).toBeVisible();
+  await expect(page.getByTestId('step-optional-tag')).toHaveCount(0);
   // T101: "넘어가기"는 720에서도 15px 이상이다.
   const keepPrevious = page.getByTestId('keep-previous-answer');
   await expect(keepPrevious).toHaveText('넘어가기');
@@ -381,7 +381,7 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await page.goto('/');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

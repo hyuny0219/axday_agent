@@ -8,7 +8,7 @@ test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장�
 
   await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안건 고르러 가기' }).click();
+  await page.getByRole('button', { name: '안내 없이 시작' }).click();
 
   // T78: 시안(S1_Select) 카드는 2장이고, 둘 다 선택 가능한 안건이다.
   await expect(page.getByTestId('scenario-card-ai-approval')).toBeEnabled();
@@ -22,7 +22,7 @@ test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장�
 
   // T95: 근거 자료를 한 번 열어 닫기 전에는 "의견 듣기 ▶"가 잠겨 있다.
   await expect(briefingNext).toBeDisabled();
-  await expect(page.getByTestId('briefing-cta-hint')).toBeVisible();
+  await expect(briefingNext).toHaveAccessibleDescription('근거 자료를 먼저 확인해 주세요');
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
   await expect(briefingNext).toBeEnabled();

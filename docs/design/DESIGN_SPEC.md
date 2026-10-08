@@ -657,6 +657,9 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 ## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)
 
+> **T103에서 코치로 대체**: 버튼 잠금(게이팅)과 팝업 안 소개·체크(`assistant-intro`)는 그대로다. 화면에 눈에 보이던 힌트 문장(`cta-disabled-hint`)과 `data-guide` 맥동은 없어졌고, 잠금 이유는 화면 읽기용 문장(sr-only, `aria-describedby`)으로만 남는다. 다음에 누를 버튼은 코치 5단계가 밝힌다.
+
+
 **사용자 지시**: "추천문구들을 고르고나서 AI비서실장을 필수적으로 사용하게끔. 첫 AI비서실장에서 제공되는 기능들을 간략하게 소개하고 한번씩 사용하게하여 의견 전달을 할 수 있도록 가이드라인이나 버튼활성화/비활성화. 순서는 추천문구 선택 -> AI비서실장 기능활용 -> 의견전달 순."
 
 **순서와 게이팅**: DISCUSS의 "의견 전달 ▶"은 (1) 문구가 있고(추천 문구 선택 또는 직접 입력) (2) 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 이번 세션에서 각각 한 번 이상 썼을 때만 열린다(`DiscussScreen`의 `canSubmit = draftReady && assistantDone`). 사용 여부는 순수 함수 `assistantFeaturesUsed(session.assistantActions, 'DISCUSS')`(`src/domain/assistantLog.ts`)가 세션 기록에서 가른다. 다시 답하기(REACTIONS)는 게이팅 없이 선택 사항 그대로다.
@@ -677,6 +680,9 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
 
 ## T98 — 진행 단계 안내판 (2026-10-08)
+
+> **T103에서 코치로 대체**: 번호 칩 안내판(StepGuide)·`domain/stepGuide.ts`·`stepGuide.css`는 삭제됐다. 같은 순서를 진행 도우미가 한 단계씩 스포트라이트로 안내한다. REACTIONS 비활성 전달 버튼의 `cta--outline`은 그대로 유지한다.
+
 
 **사용자 지시**: "반응에 답하기에 의견 전달하는 버튼이 없어. 화면 안에서 추천문구 선택 -> AI비서실장 -> 비서실장 기능1,2,3 수행 -> 의견전달이 자연스럽게 이루어질 수 있도록 좀더 명확한 가이드를 줘야 할 것 같아. 문장 한 줄보다는 좀더 포커싱해서 눈에 확 들어오게 하고 어떤 순서로 하면 좋은지 권고안."
 
@@ -749,6 +755,9 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 
 ## T95 — 소개 화면(INTRO)과 화면별 진행 가이드·게이팅 (2026-10-08)
 
+> **T103에서 코치로 대체**: INTRO의 진행 5단계·팁 블록, `GuideHint` 한 줄, 화면별 `data-guide` 맥동 테두리, 비활성 CTA 안내 문장, MOTION 2초 뒤 강조 전환, RESULT 회의 기록 1회 강조는 모두 코치로 대체돼 지웠다. 버튼 잠금(게이팅)은 그대로다.
+
+
 **사용자 지시**: "참석자가 진행할 때 어떤 걸 먼저 보고 진행해야 하는지 가이드/하이라이트, 또는 필수로 보고 넘어가도록 버튼 활성/비활성을 넣어 자연스럽고 매끄럽게. 첫 페이지 다음, 안건 선택 전에 게임의 목적과 어떻게 해야 성공하는지 소개 한 장. 안건 선택 후에는 앞과 중복되는 내용을 제거하고 상황 파악에 집중."
 
 **소개 화면(INTRO)**: `SessionStage`에 `'INTRO'`를 ATTRACT와 SELECT 사이에 추가한다(`session.ts`: START는 ATTRACT→INTRO, NEXT_STAGE는 INTRO→SELECT). 서버 요청의 `stage`(`StatementStage` — OPINIONS/REACTIONS/FOLLOWUP)와는 이름만 같을 수 있는 전혀 다른 타입이라 서버 쪽에는 영향이 없다. `IntroScreen`(신규)은 아직 `scenario`가 없어 조종석 배치(StageBand)를 쓸 수 없으므로 SelectScreen의 배경 장식(`select-screen__stage` 등)을 그대로 재사용하고, 가운데 종이 한 장(`intro-screen__paper`)에 2열(목적·성공 기준 / 진행 5단계·팁)로 본문을 담아 1280×720에서도 스크롤 없이 다 보이게 했다. 문구는 모두 T93 쉬운 말 규칙을 따른다(금지 어휘 0건). 헤더 진행 스트립(`ProgressStrip`)은 `STAGE_TO_STEP`에 INTRO가 없어 ATTRACT·SELECT와 똑같이 빈 채로 남는다(수정 불필요). 운영 메뉴 "새 체험"·결과 화면 "처음 화면으로"는 `OPERATOR_RESET`으로 `createInitialSession`이 만드는 ATTRACT로 돌아가므로, 참가자가 다시 "체험 시작"을 누르면 자연히 INTRO를 다시 거친다.
@@ -775,3 +784,37 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 T93(임원 발언)에 이어 **사용자 지시** "상황·제안·미정 문장도 같은 톤으로". 두 안건(ai-approval·experience-first)의 `chairBriefing.situation`·`incident.headline`·`incident.hook`을 중학생이 한 번에 읽을 짧은 문장으로 다시 썼다(의미·판단 방향은 그대로, hook은 숫자를 하나만 남겼다). `MotionScreen.tsx` 의장 말풍선의 "문안"(화면 다른 곳은 전부 "안건")을 "안건"으로 바꿨다. `subtitle`·`motionBreakdown`(proposal·undecidedItems)·`chairBriefing.question`·`role`은 손대지 않았다 — `subtitle`은 "원안을 그대로 쪼갠" 구조적 문구이고 `chairBriefing.question`과 단어 선택이 묶여 있어, question을 그대로 두면서 subtitle만 바꾸면 한 화면 안에서 같은 개념("중요한 의사결정" 등)을 다른 말로 부르게 된다. `remainingTasks`·`resultCopy`는 이미 금지 어휘 없고 문장이 짧아 검사만 추가하고 손대지 않았다.
 
 `tests/content/aiApproval.test.ts`·`experienceFirst.test.ts`에 "쉬운 말(T94)" describe를 추가해 구조적 문구(subtitle·motionBreakdown, 금지 어휘만)와 발언형 문구(situation·role·headline·hook·remainingTasks·resultCopy, 금지 어휘+문장당 글자 수 상한 50자)를 자동 검사한다. `server/scenario-data.ts`는 이 필드들을 갖지 않아(`originalMotionText`·`evidence`·`conditions`만) 동기화 대상이 아니다. `docs/SCENARIO_AI_APPROVAL.md`·`SCENARIO_EXPERIENCE_FIRST.md`의 사건·SITREP 줄을 함께 갱신했다. `npm run check`(단위 596 전부 통과) 확인.
+
+## T103 — 튜토리얼 코치 (2026-10-09)
+
+**사용자 지시**: "참석자가 프로그램을 처음 접하는 것이기 때문에 게임 튜토리얼처럼 가이드를 해 주는 게 좋을 것 같아. 기존에 추가했던 것과 중복되는 것이 있다면 제거하고 게임 튜토리얼같이 흐름을 잡아 줘. A안으로 해 줘." 시안(A안 스포트라이트, 사용자 승인): https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4
+
+**원칙**: 화면마다 지금 해야 할 일 **하나**만 밝히고 나머지는 어둡게 눌러 둔다. 같은 단계는 한 세션에서 한 번만 나온다. 버튼 잠금(게이팅)은 코치와 무관하게 그대로다 — 코치를 꺼도 진행이 막히지 않는다.
+
+**9단계**(문구 원본은 `src/content/coach.ts`, 순서 계산은 `src/domain/coach.ts`)
+
+| # | 화면 | 밝히는 대상(`data-coach`) | 말풍선 제목 | 다음으로 |
+|---|---|---|---|---|
+| 1 | BRIEFING | `evidence-open` 근거 자료 보기 | 먼저 **근거 자료 4장**을 열어 보세요 | 자료 팝업을 열었다 닫음(팝업이 열린 동안 말풍선은 숨김) |
+| 2 | OPINIONS | `opinion-cards` 임원 카드 영역 | 임원 네 명의 말을 읽어 보세요 | "알겠어요 ▶" |
+| 3 | DISCUSS | `side-select` 입장 버튼 | **찬성**인지 **반대**인지 먼저 고르세요 | 입장 선택 |
+| 4 | DISCUSS | `phrase-list` 추천 문구 카드 | 마음에 드는 **추천 문구**를 눌러 담으세요 | 문구 준비됨 |
+| 5 | DISCUSS·팝업 | `assistant-toggle` → 팝업 안 `assistant-next`(다음에 누를 기능 하나) → `assistant-close` | **AI 비서실장**을 열어 세 가지를 한 번씩 써 보세요 / 팝업 안 "세 가지를 **한 번씩** 눌러 보세요" | 3/3 사용 후 팝업 닫기 |
+| 6 | DISCUSS | `submit-opinion` 의견 전달 | 이제 **의견 전달**을 누르세요 | 전달 |
+| 7 | REACTIONS 1/2 | `reaction-cards` 반응 카드 영역 | 이사님 말에 임원들이 답했습니다 | "알겠어요 ▶"(2/2 다시 답하기·MOTION에는 코치 없음) |
+| 8 | VOTE | `vote-stamps` 도장 영역 → `vote-confirm` 확정 | **찬성**·**반대** 도장 중 하나를 고르고 확정하세요 | 확정 |
+| 9 | RESULT | `result-title` 제목 줄+도장 | 이사님의 조건이 임원을 움직였는지 보세요 | "안내 끝" |
+
+**스타일**(`src/styles/screens/coach.css`, 컴포넌트 `src/components/parts/Coach.tsx`)
+- 말풍선: 종이색 `#fbf7ee` 카드, 검은 2px 테두리, 6px 오프셋 검은 그림자. 머리 "진행 도우미 · N/9"(12px 굵게, 갈색 `#8a5a12`)와 "건너뛰기". 제목 22px 굵게, 핵심 말은 기존 `.key-term`. 보조 13px. 읽기 단계(2·7·9)만 "알겠어요 ▶"(9단계는 "안내 끝", 주황 `#e3a53f`, 검은 테두리, 높이 44px). 꼬리는 대상 쪽을 향한다.
+- 스포트라이트: 대상에 점선 주황 3px 테두리, 둥글기 10px(대상 둘레 4px 여유). 바깥은 `rgba(8,12,22,.72)`, 팝업 안(5단계)은 `.6`이고 팝업보다 위(z-index 1200).
+- 위치: 대상의 `getBoundingClientRect()`를 매 프레임 읽어 따라간다(크기 조절·스크롤·늦게 나타나는 요소). 말풍선은 원하는 방향이 안 들어가면 반대편·나머지 방향을 차례로 시도하고, 항상 화면 12px 여백 안에 둔다. 문서 body로 portal해 화면 맞춤 축소의 영향을 받지 않는다.
+- 클릭: 어두운 덮개 한 장에 `clip-path`로 구멍을 뚫는다. 구멍(밝힌 대상)과 운영 메뉴("운영" 버튼·열린 메뉴)는 눌린다. 나머지는 막힌다.
+- 키보드: Esc는 건너뛰기(팝업의 Esc 닫기보다 먼저 받음). 말풍선으로 포커스가 이동하고 끝나면 원래 자리로 돌아간다(팝업 안에서는 포커스를 빼앗지 않음). `prefers-reduced-motion`이면 애니메이션 없음.
+
+**상태**(`Session.coachEnabled` 기본 true, `Session.coachDismissed: number[]`, 액션 `COACH_SET_ENABLED`·`COACH_DISMISS`)
+- 단계가 끝나거나 건너뛰면 `coachDismissed`에 기록해 같은 세션에서 다시 안 나온다. "건너뛰기"는 지금 화면의 남은 단계를 모두 닫는다(다음 화면 단계는 계속 나온다).
+- INTRO의 "안내 받으며 시작 ▶"는 켜고, "안내 없이 시작"은 끄고 안건 선택으로 간다. 운영 메뉴의 "안내 끄기/켜기"는 중간에 바꾼다 — 켜면 지금 화면의 아직 안 본 단계부터 나온다. 새 체험(`OPERATOR_RESET`)은 켬·기록 없음으로 초기화한다.
+- 화면은 자기 상태(자료를 봤는지·입장·문구 준비·비서실장 사용 수·팝업 열림)를 `useCoachReport`로 알리고, `CoachHost`가 `coachStep(session, ui)`로 현재 단계를 받아 그린다. 규칙은 도메인에 있고 컴포넌트에는 없다.
+
+**제거한 기존 가이드**: `GuideHint`(BRIEFING·OPINIONS·MOTION·VOTE·RESULT·REACTIONS 반응 듣기) 컴포넌트·테스트, `StepGuide`(T98 칩)·`domain/stepGuide.ts`·`stepGuide.css`·테스트, 비활성 CTA 옆 안내 문장(`cta-disabled-hint`, 화면 읽기용 sr-only 문장으로 대체), `[data-guide='next']` 맥동 규칙과 모든 `data-guide` 속성(→ 코치 대상 `data-coach`), MOTION 2초 뒤 CTA 전환, RESULT 회의 기록 1회 강조, INTRO "진행 5단계·약 4분"과 "팁". **유지**: 버튼 잠금 전부, 상단 진행 표시, 설득 현황판, 비서실장 팝업 소개·체크, REACTIONS 비활성 전달 버튼 `cta--outline`, T102의 말풍선·발언 흐름 역할 분담.
