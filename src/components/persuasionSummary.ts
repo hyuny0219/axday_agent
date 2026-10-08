@@ -19,33 +19,6 @@ import { buildConditionRecommendation } from './conditionRecommendation';
 import { openingStanceOf } from './openingStance';
 import { findPhraseForCondition } from './recommendMatch';
 
-function voteToFinalStance(vote: Vote): Stance | null {
-  if (vote === 'YES') return 'FOR';
-  if (vote === 'NO') return 'AGAINST';
-  return null;
-}
-
-/** live 결과 요약(PR #20 Codex 33차 P2-1) — live는 조건 없는 대조 표결이 없어 "조건이 표를
- * 바꿨다"는 인과를 계산할 수 없다. 관측 가능한 것만 말한다: 임원의 첫 OPINIONS 입장과 최종
- * 표가 다른 사람 수. 표를 못 낸 임원(UNCAST)은 세지 않는다. */
-export function liveStanceChangeLine(
-  scenario: Scenario,
-  statements: readonly Statement[],
-  execVotes: readonly { memberId: ExecMemberId; vote: Vote }[],
-): string {
-  let changed = 0;
-  for (const { memberId, vote } of execVotes) {
-    const finalStance = voteToFinalStance(vote);
-    if (finalStance === null) continue;
-    if (openingStanceOf(scenario, memberId, 'live', statements) !== finalStance) {
-      changed += 1;
-    }
-  }
-  return changed > 0
-    ? `임원 ${changed}명의 입장이 이사님의 발언 뒤 바뀌었습니다`
-    : '임원 입장은 처음과 같았습니다';
-}
-
 /** 임원 4명 중 지금 최종안(조건 포함)과 조건 없는 baseline의 표가 다른 사람 수(T96).
  * scripted만 계산하고(live는 규칙표로 "조건 없었다면"을 가정할 수 없어 0) */
 export function countVotesChangedByFinalConditions(
@@ -164,4 +137,50 @@ export function computePersuasionTally(
 /** 위 계산의 "N/M" 표시. M이 0(모두 처음부터 같은 편)이면 숫자 대신 말로 한다. */
 export function persuadedCountLabel(tally: PersuasionTally): string {
   return tally.total === 0 ? '모두 처음부터 같은 편' : `설득한 임원 ${tally.persuaded.length}/${tally.total}`;
+}
+
+export interface PersuasionResult {
+  tally: PersuasionTally;
+  /** 결과 화면 제목 줄. 숫자는 tally.persuaded(첫 의견 대비 지금 표)와 같다. */
+  headline: string;
+}
+
+/** 결과 화면의 "설득" 계산을 한 곳에서 한다(T101 검토). 현황판·도장과 같은
+ * computePersuasionTally로 센 M을 제목 문구에도 그대로 쓴다. 참가자 편은 최종 표(없으면
+ * 의견 입장, 그것도 없으면 찬성)로 정한다. live는 조건 때문이라는 인과를 말하지 않는다. */
+export function buildPersuasionResult(
+  scenario: Scenario,
+  session: Pick<Session, 'mode' | 'transcript'>,
+  finalStances: Record<ExecMemberId, Stance>,
+  input: {
+    participantVote: Vote | null;
+    participantStance: 'FOR' | 'AGAINST' | null;
+    conditionCount: number;
+    finalConditionIds: string[];
+  },
+): PersuasionResult {
+  const target: 'FOR' | 'AGAINST' =
+    input.participantVote === 'NO'
+      ? 'AGAINST'
+      : input.participantVote === 'YES'
+        ? 'FOR'
+        : (input.participantStance ?? 'FOR');
+  const tally = computePersuasionTally(scenario, session.mode, session.transcript.statements, target, finalStances);
+  const persuadedCount = tally.persuaded.length;
+  let headline: string;
+  if (persuadedCount > 0) {
+    headline =
+      session.mode === 'scripted' && input.conditionCount > 0
+        ? `이사님의 조건 ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
+        : `이사님의 발언으로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`;
+  } else {
+    const suggestion =
+      session.mode === 'scripted'
+        ? nextTrySuggestionLabel(scenario, input.finalConditionIds, input.participantStance, finalStances)
+        : null;
+    headline = suggestion
+      ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
+      : '이번엔 임원의 입장을 바꾸지 못했습니다';
+  }
+  return { tally, headline };
 }

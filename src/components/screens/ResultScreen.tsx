@@ -22,11 +22,8 @@ import { collectConfirmedConditionIds, collectParticipantStance } from '../opini
 import { buildRemainingTaskLabels } from '../motionDisplay';
 import { buildResultSummary } from '../resultSummary';
 import {
-  countVotesChangedByFinalConditions,
-  liveStanceChangeLine,
-  nextTrySuggestionLabel,
+  buildPersuasionResult,
   oneStepAwayNote,
-  computePersuasionTally,
   persuadedCountLabel,
 } from '../persuasionSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
@@ -110,15 +107,6 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     [scenario, session, finalMotion],
   );
 
-  // 상단 "이사님의 조건이 임원 표를 몇 명 바꿨는지" 한 줄(T96, 2026-10-08 사용자 지시
-  // "이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 느끼게").
-  // Codex 27차 검토 P2-2: "조건만 뺀 baseline과 비교"(countVotesChangedByFinalConditions)
-  // 기준이라 조건이 하나도 없으면(baseline === 실제 안건) 항상 0이다 — "조건 0개가
-  // 바꿨다"는 어색한 분기가 더는 나오지 않는다(옛 분기 삭제).
-  const changedByConditionsCount = useMemo(
-    () => countVotesChangedByFinalConditions(scenario, session),
-    [scenario, session],
-  );
   const finalStances = useMemo(() => {
     const result: Record<ExecMemberId, Stance> = { CEO: 'UNDECIDED', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
     for (const row of resultSummary?.execRows ?? []) {
@@ -126,46 +114,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     }
     return result;
   }, [resultSummary]);
-  // T101: 설득 현황판·결과 제목·도장이 같은 숫자를 쓰도록 같은 함수(computePersuasionTally)로
-  // 센다. 최종 표(finalStances)와 참가자 표 기준이다.
-  const persuasionTally = useMemo(
+  // T101: 현황판·결과 제목·도장이 같은 숫자를 쓰도록 buildPersuasionResult 한 곳에서 센다.
+  const persuasionResult = useMemo(
     () =>
-      persuasion
-        ? computePersuasionTally(
-            scenario,
-            session.mode,
-            session.transcript.statements,
-            persuasion.participantVote === 'NO' ? 'AGAINST' : 'FOR',
-            finalStances,
-          )
+      finalMotion
+        ? buildPersuasionResult(scenario, session, finalStances, {
+            participantVote: persuasion?.participantVote ?? null,
+            participantStance: collectParticipantStance(session.opinions),
+            conditionCount: resultSummary?.conditionLabels.length ?? 0,
+            finalConditionIds: finalMotion.effectiveConditionIds,
+          })
         : null,
-    [scenario, session.mode, session.transcript.statements, persuasion, finalStances],
+    [scenario, session, finalMotion, finalStances, persuasion, resultSummary],
   );
-  const persuasionSummaryLine = useMemo(() => {
-    if (!finalMotion) return null;
-    // live는 조건 없는 대조 표결이 없어 인과 문구·규칙표 추천을 쓰지 않고 관측 가능한 것만
-    // 말한다(PR #20 Codex 33차 P2-1).
-    if (session.mode === 'live') {
-      return liveStanceChangeLine(
-        scenario,
-        session.transcript.statements,
-        resultSummary?.execRows ?? [],
-      );
-    }
-    const conditionCount = resultSummary?.conditionLabels.length ?? 0;
-    if (changedByConditionsCount > 0) {
-      return `이사님의 조건 ${conditionCount}개가 임원 ${changedByConditionsCount}명의 표를 바꿨습니다`;
-    }
-    const suggestion = nextTrySuggestionLabel(
-      scenario,
-      finalMotion.effectiveConditionIds,
-      collectParticipantStance(session.opinions),
-      finalStances,
-    );
-    return suggestion
-      ? `이번엔 임원 표를 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
-      : '이번엔 임원 표를 바꾸지 못했습니다';
-  }, [scenario, session, finalMotion, resultSummary, changedByConditionsCount, finalStances]);
+  const persuasionTally = persuasion ? (persuasionResult?.tally ?? null) : null;
+  const persuasionSummaryLine = persuasionResult?.headline ?? null;
 
   // 회의록 전문 패널(T58, T64 item 7 "회의록 전문 보기"): 화면 로컬 상태로 오른쪽
   // 열의 기록 영역(VERDICTS 패널)만 "이사회 한 장 요약" ↔ 전문으로 바꾼다. 세션

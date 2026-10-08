@@ -712,6 +712,8 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 - **발언 흐름 유지 문구**: `minutes.ts`의 "앞서 말씀드린 입장 그대로입니다."는 `scenario.holdReasons`가 없을 때만 쓰고, 있으면 반응 카드와 같은 역할별 유지 이유를 쓴다.
 - **AI가 도운 일**: "조건 추천 1회 · 결재 금액 한도, 승인 사유 기록 → 2개 반영"처럼 추천한 조건 이름(세 개까지, 넘으면 "외 N개")과 그중 최종안에 남은 반영 개수를 한 줄로 보인다. 조건 추천 사용 기록(`CONDITION_RECOMMEND_VIEW`)의 `evidenceIds`에 추천한 조건 id를 담는다.
 
+- **결과 제목 통일(검토 반영)**: 결과 상단 한 줄도 `buildPersuasionResult`(`persuasionSummary.ts`)가 같은 tally의 `persuaded`로 만든다. 조건 N≥1·M≥1 "이사님의 조건 N개로 임원 M명이 이사님 편이 됐습니다", 조건 0·M≥1 "이사님의 발언으로 …", M=0 "이번엔 임원의 입장을 바꾸지 못했습니다"(scripted는 다음에 붙일 조건 추천 유지). live는 조건 인과 없이 "발언으로"만 쓴다. 옛 "조건 뺀 기준 표와 비교" 계산은 결과 화면에서 쓰지 않는다.
+
 영향받은 파일: `src/styles/screens/{discuss,reactions,result,minutes}.css`, `src/components/parts/{PersuasionBoard,AssistantPanel,DraftEditor,MinutesPanel}.tsx`, `src/components/{persuasionSummary,conditionRecommendation,minutes}.ts`, `src/domain/assistantLog.ts`, `src/components/screens/{Result,Intro,Reactions}Screen.tsx`.
 
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
