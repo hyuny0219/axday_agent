@@ -497,6 +497,7 @@ function StageRouter() {
           scenario={scenario}
           stances={stancesFor(session, scenario)}
           opinions={session.opinions}
+          statements={session.transcript.statements}
           freezeDisabled={session.mode === 'live' && followUpPending}
           mode={session.mode}
           roleStatus={session.roleStatus}
@@ -518,6 +519,7 @@ function StageRouter() {
           scenario={scenario}
           stances={stancesFor(session, scenario)}
           motion={session.finalMotion}
+          statements={session.transcript.statements}
           pendingVote={session.pendingVote}
           mode={session.mode}
           execBallotsPending={session.execBallotsPending}

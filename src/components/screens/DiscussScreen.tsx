@@ -366,6 +366,7 @@ export function DiscussScreen({
           participantStance={side}
           stances={stances}
           mode={mode}
+          statements={transcript.statements}
         />
         {pendingPhraseId !== null && (
           <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />

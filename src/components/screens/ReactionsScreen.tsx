@@ -653,6 +653,7 @@ export function ReactionsScreen({
             participantStance={boardParticipantStance}
             stances={stances}
             mode={mode}
+            statements={statements}
           />
           <button
             type="button"
@@ -780,6 +781,7 @@ export function ReactionsScreen({
           participantStance={boardParticipantStance}
           stances={stances}
           mode={mode}
+          statements={statements}
         />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />

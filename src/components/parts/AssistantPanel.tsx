@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { ParticipantStance, SessionMode, Stance, Transcript } from '../../domain/types';
 import { buildConditionRecommendation } from '../conditionRecommendation';
+import { latestSuggestedConditionIds } from '../liveTranscript';
 import type {
   AssistantAdapter,
   CompareConditionsResult,
@@ -303,6 +304,13 @@ export function AssistantPanel({
   // T96 "조건 추천" 본문(규칙 기반, scripted·live 공통·즉시 — adapter 응답과 무관하게
   // scenario.voteRules·requiredConditionsFor로 바로 계산한다). 아직 찬성이 아닌 임원들을
   // 움직이는 데 필요한 조건만 골라 "이 조건이 움직이는 임원 · 푸는 걱정"으로 보여준다.
+  // live 발언의 제안 조건은 따로 안 넘기면 transcript의 역할별 최신 발언에서 뽑는다
+  // (PR #20 Codex 28차 P2-3).
+  const transcriptStatements = transcript.statements;
+  const effectiveLiveSuggestions = useMemo(
+    () => liveSuggestedConditionIds ?? latestSuggestedConditionIds(transcriptStatements),
+    [liveSuggestedConditionIds, transcriptStatements],
+  );
   const recommendation = useMemo(
     () =>
       buildConditionRecommendation(
@@ -311,9 +319,9 @@ export function AssistantPanel({
         participantStance,
         mode,
         stances,
-        liveSuggestedConditionIds,
+        effectiveLiveSuggestions,
       ),
-    [scenario, selectedConditionIds, participantStance, mode, stances, liveSuggestedConditionIds],
+    [scenario, selectedConditionIds, participantStance, mode, stances, effectiveLiveSuggestions],
   );
 
   // Codex 27차 검토 P2-3: "적용"을 눌러도 매칭되는 추천 문구가 없거나(예: REACTIONS

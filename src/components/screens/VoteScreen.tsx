@@ -18,7 +18,7 @@
 
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
-import type { RoleStatus, Stance } from '../../domain/types';
+import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
@@ -46,6 +46,8 @@ export interface VoteScreenProps {
   onConfirmVote: () => void;
   /** 있으면 실패한 역할만 최종표를 다시 요청한다(T65 "미표결 임원 다시 요청", 1회). */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
+  /** live 회의 기록의 발언들 — 설득 현황판의 첫 의견 입장·제안 조건에 쓴다. */
+  statements?: Statement[];
 }
 
 const VOTE_ORDER: readonly PendingVote[] = ['YES', 'NO'];
@@ -65,6 +67,7 @@ const VOTE_STAMP_LABELS: Record<PendingVote, string> = {
 export function VoteScreen({
   scenario,
   stances,
+  statements,
   motion,
   pendingVote,
   mode,
@@ -119,6 +122,7 @@ export function VoteScreen({
           participantStance={participantStance}
           stances={stances}
           mode={mode}
+          statements={statements}
         />
         <ExecStanceList stances={stances} />
         <div className="vote-screen__ballots" data-testid="vote-ballots">
