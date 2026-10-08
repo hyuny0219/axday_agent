@@ -123,6 +123,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             participantStance: collectParticipantStance(session.opinions),
             conditionCount: resultSummary?.conditionLabels.length ?? 0,
             finalConditionIds: finalMotion.effectiveConditionIds,
+            finalMotion,
           })
         : null,
     [scenario, session, finalMotion, finalStances, persuasion, resultSummary],
@@ -477,7 +478,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                             scenario,
                             row.memberId,
                             finalMotion.effectiveConditionIds,
-                            participantStance,
+                            persuasionTally?.target ?? participantStance,
                           );
                           return note ? (
                             <span
