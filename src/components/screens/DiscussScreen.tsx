@@ -194,7 +194,9 @@ export function DiscussScreen({
     [assistantActions],
   );
   const assistantDone = assistantUsed.size >= ASSISTANT_FEATURE_ORDER.length;
-  const draftReady = pendingPhraseId === null && isSubmittable(draft);
+  // PR #20 Codex 35차 P2-1: 입장을 고르지 않고 직접 쓴 글로 순서를 건너뛰지 못하게 입장 선택을
+  // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
+  const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
   // T98: 오른쪽 종이 안내판의 현재 칩. 같은 칩이 가리키는 실제 조작 대상(입장 버튼·
   // 문구 카드·비서실장 버튼·전달 버튼)에도 data-guide를 함께 건다.
@@ -451,6 +453,7 @@ export function DiscussScreen({
             requiredFeatures={{ used: assistantUsed }}
             toggleGuide={guideCurrent === 'assistant'}
             toggleLocked={!draftReady}
+            toggleLockedHint={side === null ? '먼저 입장을 골라 주세요' : undefined}
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
@@ -466,7 +469,9 @@ export function DiscussScreen({
           </button>
           {!canSubmit && (
             <p className="cta-disabled-hint" data-testid="discuss-cta-hint">
-              {draftReady
+              {side === null
+                ? '먼저 입장을 골라 주세요'
+                : draftReady
                 ? `AI 비서실장을 먼저 써 보세요 (${assistantUsed.size}/${ASSISTANT_FEATURE_ORDER.length})`
                 : '추천 문구를 고르거나 직접 써 주세요'}
             </p>

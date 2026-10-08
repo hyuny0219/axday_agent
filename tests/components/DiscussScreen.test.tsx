@@ -419,6 +419,33 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
   });
 
+  it('입장을 고르지 않으면 직접 쓴 글과 세 기능이 있어도 전달·비서실장이 잠긴다(Codex 35차 P2-1)', () => {
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        roleStatus={idle}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={[
+          entry('OPINION_SUMMARY'),
+          entry('CONDITION_RECOMMEND_VIEW'),
+          entry('DRAFT_REFINE'),
+        ]}
+      />,
+    );
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), {
+      target: { value: '작은 범위로 먼저 시작합시다.' },
+    });
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('assistant-toggle')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent('먼저 입장을 골라 주세요');
+    expect(screen.getByTestId('assistant-toggle-hint')).toHaveTextContent('먼저 입장을 골라 주세요');
+  });
+
   it('비서실장을 다 써도 문구가 없으면 전달은 여전히 막힌다', () => {
     renderDiscuss([
       entry('OPINION_SUMMARY'),

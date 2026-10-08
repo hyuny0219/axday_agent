@@ -67,6 +67,8 @@ export interface AssistantPanelProps {
    * (DISCUSS에서 문구 선택 전에 세 기능을 써 순서를 우회하지 못하게). 창이 열려 있는 동안은
    * 영향이 없다. */
   toggleLocked?: boolean;
+  /** 잠겨 있을 때 보일 안내(기본 "먼저 추천 문구를 골라 주세요"). */
+  toggleLockedHint?: string;
   scenario: Scenario;
   sessionId: string;
   /** 참가자가 지금까지 확정한 조건 ID(조건 추천에 씀). */
@@ -133,6 +135,7 @@ export function AssistantPanel({
   requiredFeatures,
   toggleGuide = false,
   toggleLocked = false,
+  toggleLockedHint,
   scenario,
   sessionId,
   selectedConditionIds,
@@ -442,7 +445,7 @@ export function AssistantPanel({
       </button>
       {toggleLocked && (
         <p className="cta-disabled-hint" data-testid="assistant-toggle-hint">
-          먼저 추천 문구를 골라 주세요
+          {toggleLockedHint ?? '먼저 추천 문구를 골라 주세요'}
         </p>
       )}
       {open && (

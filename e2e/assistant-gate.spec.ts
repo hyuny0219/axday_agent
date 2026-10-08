@@ -3,7 +3,7 @@
 // 다시 답하기(REACTIONS)는 비서실장 없이도 전달할 수 있다.
 import { test, expect, type Page } from './fixtures';
 
-async function reachDiscuss(page: Page, url = '/?mode=scripted') {
+async function reachDiscuss(page: Page, url = '/?mode=scripted', pickSide = true) {
   await page.goto(url);
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByRole('button', { name: '안건 고르러 가기' }).click();
@@ -12,7 +12,9 @@ async function reachDiscuss(page: Page, url = '/?mode=scripted') {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
-  await page.getByTestId('discuss-side-for').click();
+  if (pickSide) {
+    await page.getByTestId('discuss-side-for').click();
+  }
 }
 
 async function runFeature(page: Page, feature: 'summary' | 'compare' | 'refine') {
@@ -155,4 +157,18 @@ test('다시 답하기(REACTIONS)는 비서실장을 쓰지 않아도 전달할 
   await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
+});
+
+// PR #20 Codex 35차 P2-1: 입장을 고르지 않고 직접 쓴 글로 순서를 건너뛰지 못한다.
+test('입장을 고르기 전에는 직접 글을 써도 비서실장과 의견 전달이 잠기고 입장을 먼저 고르라고 알려 준다', async ({ page }) => {
+  await reachDiscuss(page, '/?mode=scripted', false);
+
+  await page.getByTestId('draft-editor-textarea').fill('작은 범위로 먼저 시작합시다.');
+  await expect(page.getByTestId('assistant-toggle')).toBeDisabled();
+  await expect(page.getByTestId('assistant-toggle-hint')).toContainText('먼저 입장을 골라 주세요');
+  await expect(page.getByTestId('submit-opinion')).toBeDisabled();
+  await expect(page.getByTestId('discuss-cta-hint')).toContainText('먼저 입장을 골라 주세요');
+
+  await page.getByTestId('discuss-side-for').click();
+  await expect(page.getByTestId('assistant-toggle')).toBeEnabled();
 });

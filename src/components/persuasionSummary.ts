@@ -13,7 +13,7 @@
 // execRows.changed와 같은 전제) 0으로 둔다.
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
-import type { Session, Stance, Statement } from '../domain/types';
+import type { Motion, Session, Stance, Statement } from '../domain/types';
 import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, requiredConditionsFor } from '../domain/voting';
 import { buildConditionRecommendation } from './conditionRecommendation';
 import { openingStanceOf } from './openingStance';
@@ -157,6 +157,8 @@ export function buildPersuasionResult(
     participantStance: 'FOR' | 'AGAINST' | null;
     conditionCount: number;
     finalConditionIds: string[];
+    /** scripted에서 조건이 실제로 바꾼 표를 세는 데 쓴다(없으면 조건 문구를 쓰지 않는다). */
+    finalMotion?: Motion | null;
   },
 ): PersuasionResult {
   const target: 'FOR' | 'AGAINST' =
@@ -167,16 +169,22 @@ export function buildPersuasionResult(
         : (input.participantStance ?? 'FOR');
   const tally = computePersuasionTally(scenario, session.mode, session.transcript.statements, target, finalStances);
   const persuadedCount = tally.persuaded.length;
+  // PR #20 Codex 35차 P2-2·3: 조건 문구는 조건을 뺀 기준 표와 실제로 달라진 임원이 있을 때만
+  // 쓴다. 다음 조건 추천도 tally와 같은 목표 방향(최종 표)을 쓴다.
+  const changedByConditions =
+    session.mode === 'scripted' && input.finalMotion
+      ? countVotesChangedByConditions(scenario, input.finalMotion)
+      : 0;
   let headline: string;
   if (persuadedCount > 0) {
     headline =
-      session.mode === 'scripted' && input.conditionCount > 0
-        ? `이사님의 조건 ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
+      changedByConditions > 0
+        ? `이사님의 발언과 조건 ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
         : `이사님의 발언으로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`;
   } else {
     const suggestion =
       session.mode === 'scripted'
-        ? nextTrySuggestionLabel(scenario, input.finalConditionIds, input.participantStance, finalStances)
+        ? nextTrySuggestionLabel(scenario, input.finalConditionIds, target, finalStances)
         : null;
     headline = suggestion
       ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
