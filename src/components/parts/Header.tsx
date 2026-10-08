@@ -25,9 +25,11 @@ export interface HeaderProps {
   session: Session;
   scenario: Scenario | null;
   onOperatorReset: () => void;
+  coachEnabled?: boolean;
+  onToggleCoach?: () => void;
 }
 
-export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
+export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach }: HeaderProps) {
   // 안건을 고르기 전에는 사건 번호를 숨긴다("사건 --"가 엉뚱해 보임, Opus 최종 검토 should 7).
   const caseLabel = scenario?.incident.caseLabel;
   return (
@@ -45,7 +47,11 @@ export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
         <ProgressStrip stage={session.stage} />
       </div>
       <div className="app-header__right">
-        <OperatorMenu onNewSession={onOperatorReset} />
+        <OperatorMenu
+          onNewSession={onOperatorReset}
+          coachEnabled={coachEnabled}
+          onToggleCoach={onToggleCoach}
+        />
       </div>
     </header>
   );

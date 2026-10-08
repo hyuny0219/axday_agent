@@ -10,6 +10,9 @@ export interface OperatorMenuProps {
   /** scripted로 새 체험 확인 뒤 실행할 이동 함수. 기본값은 현재 경로(배포 base 유지)에
    * `?mode=scripted`를 붙여 location.assign하며, 테스트에서 가로채려면 이 prop을 주입한다. */
   onRestartScripted?: () => void;
+  /** 진행 도우미(T103)가 켜져 있는가. onToggleCoach와 함께 줄 때만 "안내 끄기/켜기" 항목이 보인다. */
+  coachEnabled?: boolean;
+  onToggleCoach?: () => void;
 }
 
 type PanelState =
@@ -48,7 +51,12 @@ const FULLSCREEN_REJECTED_MESSAGE =
   '전체화면 요청이 거부되었습니다. 브라우저 또는 키오스크 모드 설정에서 전체화면을 사용해 주세요.';
 const PROBE_FAIL_GUIDANCE = '키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요';
 
-export function OperatorMenu({ onNewSession, onRestartScripted }: OperatorMenuProps) {
+export function OperatorMenu({
+  onNewSession,
+  onRestartScripted,
+  coachEnabled = true,
+  onToggleCoach,
+}: OperatorMenuProps) {
   const [panel, setPanel] = useState<PanelState>('closed');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('pending');
@@ -132,6 +140,20 @@ export function OperatorMenu({ onNewSession, onRestartScripted }: OperatorMenuPr
           >
             새 체험
           </button>
+          {onToggleCoach && (
+            <button
+              type="button"
+              role="menuitem"
+              className="operator-menu__item"
+              onClick={() => {
+                onToggleCoach();
+                close();
+              }}
+              data-testid="operator-toggle-coach"
+            >
+              {coachEnabled ? '안내 끄기' : '안내 켜기'}
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

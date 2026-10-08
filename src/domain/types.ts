@@ -149,6 +149,11 @@ export interface Session {
   expiredWithoutMotion: boolean;
   /** CONFIRM_VOTE 전 참가자가 고른 값. 확정 전이므로 ballots에는 반영하지 않는다. */
   pendingVote: PendingVote | null;
+  /** 진행 도우미(튜토리얼 코치, T103)를 보여 줄지. INTRO의 두 시작 버튼이 정하고 운영
+   * 메뉴에서 바꾼다. 기본 true. */
+  coachEnabled: boolean;
+  /** 이미 보았거나 건너뛴 코치 단계 번호(1~9). 같은 세션에서는 다시 나오지 않는다. */
+  coachDismissed: number[];
   /** 직전 reduce 호출에서 잘못된 단계의 액션을 무시했을 때 남기는 경고. 매 호출마다 새로 채워진다. */
   warnings: string[];
 }

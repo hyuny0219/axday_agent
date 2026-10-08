@@ -108,3 +108,26 @@ describe('scriptedRestartUrl', () => {
     expect(scriptedRestartUrl('')).toBe('/?mode=scripted');
   });
 });
+
+describe('OperatorMenu 안내 끄기/켜기(T103)', () => {
+  it('onToggleCoach를 주면 "안내 끄기"가 보이고, 누르면 콜백을 부르고 메뉴를 닫는다', async () => {
+    const onToggleCoach = vi.fn();
+    render(<OperatorMenu onNewSession={vi.fn()} coachEnabled onToggleCoach={onToggleCoach} />);
+    await openMenu();
+    await userEvent.click(screen.getByTestId('operator-toggle-coach'));
+    expect(onToggleCoach).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('operator-menu-panel')).not.toBeInTheDocument();
+  });
+
+  it('꺼져 있으면 "안내 켜기"로 보인다', async () => {
+    render(<OperatorMenu onNewSession={vi.fn()} coachEnabled={false} onToggleCoach={vi.fn()} />);
+    await openMenu();
+    expect(screen.getByTestId('operator-toggle-coach')).toHaveTextContent('안내 켜기');
+  });
+
+  it('onToggleCoach가 없으면 항목을 그리지 않는다', async () => {
+    render(<OperatorMenu onNewSession={vi.fn()} />);
+    await openMenu();
+    expect(screen.queryByTestId('operator-toggle-coach')).not.toBeInTheDocument();
+  });
+});

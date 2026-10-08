@@ -31,6 +31,8 @@ import {
 
 export type SessionAction =
   | { type: 'START' }
+  | { type: 'COACH_SET_ENABLED'; enabled: boolean }
+  | { type: 'COACH_DISMISS'; step: number }
   | { type: 'SELECT_SCENARIO'; scenarioId: string }
   | { type: 'NEXT_STAGE' }
   | {
@@ -116,6 +118,8 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     outcome: null,
     expiredWithoutMotion: false,
     pendingVote: null,
+    coachEnabled: true,
+    coachDismissed: [],
     warnings: [],
   };
 }
@@ -151,6 +155,17 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       // T95: ATTRACT 다음은 곧바로 SELECT가 아니라 소개 한 장(INTRO)이다 — "안건
       // 고르러 가기"를 눌러야 NEXT_STAGE로 SELECT에 닿는다.
       return withNoWarnings({ ...session, stage: 'INTRO' });
+    }
+
+    case 'COACH_SET_ENABLED': {
+      return withNoWarnings({ ...session, coachEnabled: action.enabled });
+    }
+
+    case 'COACH_DISMISS': {
+      if (session.coachDismissed.includes(action.step)) {
+        return withNoWarnings(session);
+      }
+      return withNoWarnings({ ...session, coachDismissed: [...session.coachDismissed, action.step] });
     }
 
     case 'SELECT_SCENARIO': {
