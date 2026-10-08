@@ -83,6 +83,11 @@ export interface AssistantPanelProps {
    * 돌려준다 — 매칭되는 문구가 없거나 확인 대기(RebuildConfirm)만 열렸으면 false다
    * (Codex 27차 검토 P2-3, 실제로 반영됐을 때만 "추천 조건 N개 반영"을 기록한다). */
   onRecommendCondition?: (conditionId: string) => boolean | Promise<boolean>;
+  /** 복합 조합 묶음의 "모두 적용"(PR #20 Codex 28차 P2-1). 조건 여러 개를 화면이 한 번의
+   * 상태 업데이트로 반영하고, 실제로 반영된 조건 id만 돌려준다. 같은 렌더에서 캡처한
+   * 상태로 조건마다 따로 갱신하면 뒤 호출이 앞 호출을 덮어쓰기 때문이다. 없으면 조건을
+   * 하나씩 onRecommendCondition으로 적용한다. */
+  onRecommendConditions?: (conditionIds: string[]) => string[] | Promise<string[]>;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -123,6 +128,7 @@ export function AssistantPanel({
   stances,
   liveSuggestedConditionIds,
   onRecommendCondition,
+  onRecommendConditions,
   draftText,
   draftRevision,
   transcript,
@@ -331,8 +337,21 @@ export function AssistantPanel({
   /** 복합 조합 묶음("○○ + △△ 모두 있어야 움직임")의 "적용" — 조합 안의 조건을
    * 하나씩 같은 규칙으로 적용한다. */
   async function handleApplyBundle(conditionIds: readonly string[]) {
-    for (const conditionId of conditionIds) {
-      await handleApplyRecommendation(conditionId);
+    if (!onRecommendConditions) {
+      for (const conditionId of conditionIds) {
+        await handleApplyRecommendation(conditionId);
+      }
+      return;
+    }
+    // 묶음 전체를 화면에 한 번에 넘겨 단일 상태 업데이트로 반영하게 한다. 실제로
+    // 반영된 조건만 기록한다("추천 조건 N개 반영"이 실제 수와 같아야 한다).
+    const appliedIds = await onRecommendConditions([...conditionIds]);
+    for (const conditionId of appliedIds) {
+      onAssistantAction({
+        type: 'CONDITION_RECOMMEND_APPLY',
+        mode: compareResult?.mode ?? 'scripted',
+        evidenceIds: [conditionId],
+      });
     }
   }
 

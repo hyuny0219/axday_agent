@@ -7,11 +7,12 @@
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DiscussScreen, type DiscussScreenProps } from '../../src/components/screens/DiscussScreen';
 import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
+import { scriptedStances } from '../../src/domain/stance';
 import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
 afterEach(() => {
@@ -424,5 +425,37 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.getByTestId('discuss-assistant-tip')).toHaveTextContent(
       '비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다',
     );
+  });
+});
+
+// PR #20 Codex 28차 P2-1: 복합 추천 "모두 적용"은 조건 여러 개를 단일 상태 업데이트로 반영한다.
+describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
+  it('LIMIT+REVIEW 묶음을 적용하면 두 문구가 모두 체크되고 기록도 두 조건 모두 남는다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        roleStatus={{ CEO: 'idle', CFO: 'idle', CAIO: 'idle', CISO: 'idle' }}
+        stances={scriptedStances(aiApprovalScenario, { stage: 'DISCUSS', opinions: [] })}
+        onSubmit={noop}
+        onAssistantAction={(event) => actions.push(event)}
+        assistantActions={[]}
+        initialSide="FOR"
+      />,
+    );
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    fireEvent.click(await screen.findByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW', {}, { timeout: 2000 }));
+
+    await waitFor(() => {
+      expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY')).toHaveLength(2);
+    });
+    for (const id of ['P1', 'P3']) {
+      const checkbox = screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]');
+      expect(checkbox).toBeChecked();
+    }
   });
 });

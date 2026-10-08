@@ -310,16 +310,40 @@ export function DiscussScreen({
   // 고르지 않았으면 'FOR' 쪽 문구를 기본으로 삼는다(PersuasionBoard·AssistantPanel의
   // 기본 설득 목표와 같다).
   function handleRecommendCondition(conditionId: string): boolean {
-    const phrase = scenario.phrases.find(
-      (candidate) =>
-        candidate.conditionId === conditionId &&
-        (candidate.side ?? 'FOR') === (side ?? 'FOR') &&
-        !draft.selectedPhraseIds.includes(candidate.id),
-    );
-    if (!phrase) {
-      return false;
+    return handleRecommendConditions([conditionId]).length > 0;
+  }
+
+  // 묶음 "모두 적용"(PR #20 Codex 28차 P2-1) — 조건마다 setDraft를 따로 부르면 모두 같은
+  // 렌더의 draft에서 새 상태를 만들어 뒤 호출이 앞 호출을 덮어쓴다. 갱신된 상태를 다음
+  // 조건 처리에 넘기며 로컬에서 접어 한 번만 반영하고, 실제로 반영된 조건 id를 돌려준다.
+  function handleRecommendConditions(conditionIds: string[]): string[] {
+    let state = draft;
+    const appliedIds: string[] = [];
+    for (const conditionId of conditionIds) {
+      const phrase = scenario.phrases.find(
+        (candidate) =>
+          candidate.conditionId === conditionId &&
+          (candidate.side ?? 'FOR') === (side ?? 'FOR') &&
+          !state.selectedPhraseIds.includes(candidate.id),
+      );
+      if (!phrase) {
+        continue;
+      }
+      const result = togglePhrase(state, scenario, phrase.id);
+      if (result.kind === 'applied') {
+        state = result.state;
+        appliedIds.push(conditionId);
+        continue;
+      }
+      // 직접 쓴 내용이 있어 확인 대기만 열린다 — 반영되지 않았으니 기록하지 않고 멈춘다.
+      setPendingPhraseId(result.pendingPhraseId);
+      break;
     }
-    return handleTogglePhrase(phrase.id);
+    if (appliedIds.length > 0) {
+      setDraft(state);
+      setDraftRevision((value) => value + 1);
+    }
+    return appliedIds;
   }
 
   function handleSubmit() {
@@ -366,6 +390,7 @@ export function DiscussScreen({
             mode={mode}
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
+            onRecommendConditions={handleRecommendConditions}
             draftText={draft.draftText}
             draftRevision={draftRevision}
             transcript={transcript}
