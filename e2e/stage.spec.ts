@@ -174,12 +174,10 @@ test.describe('1920×1080에서 무대 열', () => {
     expect(bubble!.y + bubble!.height).toBeLessThanOrEqual(stage!.y + stage!.height * 0.28 + 1);
   });
 
-  test('REACTIONS에서 내 말풍선 텍스트가 내 발언 첫 문장과 일치한다', async ({ page }) => {
+  test('REACTIONS에서 내 말풍선은 내 발언 첫 문장을 임원과 같은 규칙(최대 18자)으로 줄여 보인다', async ({ page }) => {
     await enterReactions(page);
-    // T74 2차 검토(제로 이탈): 시안에 없던 본문 인용 상자(reactions-quote)를 뺐다 —
-    // MY_OPINION_TEXT 자체가 40자 이내 한 문장이라 무대의 내 말풍선(장식)이 자르지
-    // 않고 그대로 보여준다.
-    await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText(MY_OPINION_TEXT);
+    // T102: 임원 말풍선과 같은 bubbleLineOf — MY_OPINION_TEXT(26자)는 17자 + "…"가 된다.
+    await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText('소액부터 자동 승인하고 결과를…');
   });
 
   test('OPINIONS 말풍선은 18자 이하 한 구절이고 발언 흐름 패널은 없다(T102)', async ({ page }) => {

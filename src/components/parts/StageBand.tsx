@@ -159,7 +159,7 @@ function participantSeatOverlay(stage: SessionStage, opinions: Opinion[]): Parti
   }
   if (stage === 'REACTIONS') {
     const lastOpinion = opinions[opinions.length - 1] ?? null;
-    return { bubbleText: lastOpinion ? firstSentenceClipped(lastOpinion.originalText) : '', glow: false };
+    return { bubbleText: lastOpinion ? bubbleLineOf(lastOpinion.originalText) : '', glow: false };
   }
   return { bubbleText: '', glow: false };
 }
