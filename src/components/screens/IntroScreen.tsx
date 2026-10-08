@@ -10,7 +10,10 @@ import '../../styles/screens/select.css';
 import '../../styles/screens/intro.css';
 
 export interface IntroScreenProps {
-  onNext: () => void;
+  /** "안내 받으며 시작 ▶" — 진행 도우미(T103)를 켜고 안건 선택으로 간다. */
+  onStartWithCoach: () => void;
+  /** "안내 없이 시작" — 진행 도우미 없이 안건 선택으로 간다. */
+  onStartWithoutCoach: () => void;
 }
 
 /** 체험 전 안내에서 꼭 읽어야 할 말(T102, 2026-10-08 사용자 — "중요한 단어를 브리핑과
@@ -21,27 +24,12 @@ export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
   '같은 표가 3석 이상',
   '설득 도장',
   '처음부터 같은 편인 임원도 한 석',
-  '조건을 붙여',
-  '직접 써도',
 ];
 
 const SUCCESS_TEXT =
   '임원을 설득해, 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.';
 
-const STEPS: readonly string[] = [
-  '① 상황 파악',
-  '② 임원 의견 듣기',
-  '③ 내 의견 쓰기',
-  '④ 반응에 답하기',
-  '⑤ 표결',
-];
-
-const TIPS: readonly string[] = [
-  '추천 문구를 골라도 되고 직접 써도 됩니다.',
-  '조건을 붙여 임원을 움직여 보세요.',
-];
-
-export function IntroScreen({ onNext }: IntroScreenProps) {
+export function IntroScreen({ onStartWithCoach, onStartWithoutCoach }: IntroScreenProps) {
   return (
     <section className="screen intro-screen">
       {/* 배경은 SelectScreen과 같은 "기밀 작전실" 장식(select.css 클래스 재사용,
@@ -75,6 +63,8 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
                 <HighlightText text="마지막에 한 표를 던집니다." terms={INTRO_HIGHLIGHT_TERMS} />
               </p>
             </div>
+          </div>
+          <div className="intro-screen__col">
             <div className="intro-screen__block">
               <span className="intro-screen__label">성공 기준</span>
               <p className="intro-screen__success" data-testid="intro-success">
@@ -82,31 +72,26 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
               </p>
             </div>
           </div>
-          <div className="intro-screen__col">
-            <div className="intro-screen__block">
-              <span className="intro-screen__label">진행 5단계 · 약 4분</span>
-              <ol className="intro-screen__steps" data-testid="intro-steps">
-                {STEPS.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
-            </div>
-            <div className="intro-screen__block">
-              <span className="intro-screen__label">팁</span>
-              <ul className="intro-screen__tips">
-                {TIPS.map((tip) => (
-                  <li key={tip}>
-                    <HighlightText text={tip} terms={INTRO_HIGHLIGHT_TERMS} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
         </div>
 
-        <button type="button" className="cta intro-screen__cta" onClick={onNext} data-testid="intro-next">
-          안건 고르러 가기 ▶
-        </button>
+        <div className="intro-screen__actions">
+          <button
+            type="button"
+            className="cta intro-screen__cta"
+            onClick={onStartWithCoach}
+            data-testid="intro-start-coach"
+          >
+            안내 받으며 시작 ▶
+          </button>
+          <button
+            type="button"
+            className="cta cta--secondary intro-screen__cta-plain"
+            onClick={onStartWithoutCoach}
+            data-testid="intro-start-plain"
+          >
+            안내 없이 시작
+          </button>
+        </div>
       </div>
     </section>
   );

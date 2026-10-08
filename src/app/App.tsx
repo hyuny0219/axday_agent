@@ -24,6 +24,9 @@ import {
 } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
+import { EMPTY_COACH_UI, type CoachUi } from '../domain/coach';
+import { CoachUiContext } from '../components/coachUi';
+import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
 import { liveStances, scriptedStances } from '../domain/stance';
@@ -358,7 +361,7 @@ function useViewportFit(): ViewportFit {
 }
 
 /** stage별 화면 라우팅. */
-function StageRouter() {
+function StageScreen() {
   const {
     session,
     dispatch,
@@ -399,7 +402,18 @@ function StageRouter() {
       );
 
     case 'INTRO':
-      return <IntroScreen onNext={() => dispatch({ type: 'NEXT_STAGE' })} />;
+      return (
+        <IntroScreen
+          onStartWithCoach={() => {
+            dispatch({ type: 'COACH_SET_ENABLED', enabled: true });
+            dispatch({ type: 'NEXT_STAGE' });
+          }}
+          onStartWithoutCoach={() => {
+            dispatch({ type: 'COACH_SET_ENABLED', enabled: false });
+            dispatch({ type: 'NEXT_STAGE' });
+          }}
+        />
+      );
 
     case 'SELECT':
       return (
@@ -591,6 +605,22 @@ function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMem
   return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
 }
 
+/** 화면 + 진행 도우미(T103). 화면이 알려 주는 상태(CoachUiContext)를 모아 코치에게 넘긴다. */
+function StageRouter() {
+  const { session, dispatch, reactionsStep } = useSession();
+  const [reported, setReported] = useState<Partial<CoachUi>>({});
+  const report = useCallback((patch: Partial<CoachUi>) => {
+    setReported((previous) => ({ ...previous, ...patch }));
+  }, []);
+  const coachUi: CoachUi = { ...EMPTY_COACH_UI, ...reported, reactionsStep };
+  return (
+    <CoachUiContext.Provider value={report}>
+      <StageScreen />
+      <CoachHost session={session} ui={coachUi} dispatch={dispatch} />
+    </CoachUiContext.Provider>
+  );
+}
+
 const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'BRIEFING',
   'OPINIONS',
@@ -634,6 +664,8 @@ function AppShell() {
             session={session}
             scenario={scenario}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
+            coachEnabled={session.coachEnabled}
+            onToggleCoach={() => dispatch({ type: 'COACH_SET_ENABLED', enabled: !session.coachEnabled })}
           />
           {hasStageBand && scenario ? (
             // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·

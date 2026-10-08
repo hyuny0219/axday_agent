@@ -140,28 +140,10 @@
   font-weight: 700;
 }
 
-.intro-screen__steps,
-.intro-screen__tips {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 15px;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
 @media (max-width: 1280px) {
   .intro-screen__purpose,
   .intro-screen__success {
     font-size: 16px;
-  }
-
-  .intro-screen__steps,
-  .intro-screen__tips {
-    font-size: 13px;
   }
 
   .intro-screen__label {
@@ -169,7 +151,11 @@
   }
 }
 
-.intro-screen__cta {
-  align-self: center;
+/* 시작 버튼 두 개(T103): 주 "안내 받으며 시작", 보조 "안내 없이 시작". */
+.intro-screen__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   margin-top: 4px;
 }
