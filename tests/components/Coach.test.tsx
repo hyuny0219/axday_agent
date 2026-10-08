@@ -67,6 +67,13 @@ describe('coachCopy의 live 분기(PR #20 Codex 36차 검토 P2)', () => {
     expect(coachCopy(7, 'live').body).toContain('지금 입장');
     expect(coachCopy(7).body).toBe(coachCopy(7, 'scripted').body);
   });
+  it('9단계는 live에서 "이사님 조건으로 바뀜" 줄·조건 인과를 말하지 않는다(37차)', () => {
+    const live = coachCopy(9, 'live');
+    expect(live.title).toContain('어떻게 바뀌었는지');
+    expect(live.body).not.toContain('조건으로 바뀜');
+    expect(live.keys.every((k) => live.title.includes(k))).toBe(true);
+    expect(coachCopy(9, 'scripted').body).toContain('조건으로 바뀜');
+  });
   it('bodyLive가 없는 단계는 live에서도 같은 문장을 쓴다', () => {
     expect(coachCopy(1, 'live').body).toBe(coachCopy(1, 'scripted').body);
   });

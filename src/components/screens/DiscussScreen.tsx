@@ -278,6 +278,12 @@ export function DiscussScreen({
   /** true면 즉시 적용됨, false면 RebuildConfirm 확인 대기(Codex 27차 검토 P2-3 —
    * handleRecommendCondition이 이 값으로 "실제로 반영됐는지"를 가른다). */
   function handleTogglePhrase(phraseId: string): boolean {
+    // PR #20 Codex 37차 검토 P2: RebuildConfirm이 뜬 동안(pendingPhraseId !== null)은 다른 문구를
+    // 잠근다 — 묶음(pendingBatch) 확인 중에 다른 문구를 누르면 pendingPhraseId만 바뀌고 묶음이
+    // 우선 반영돼 마지막에 누른 문구가 무시됐다. REACTIONS(handleToggleOption)와 같은 가드.
+    if (pendingPhraseId !== null) {
+      return false;
+    }
     const result = togglePhrase(draft, scenario, phraseId);
     if (result.kind === 'applied') {
       setDraft(result.state);
@@ -544,6 +550,7 @@ export function DiscussScreen({
                       key={phrase.id}
                       phrase={phrase}
                       selected={draft.selectedPhraseIds.includes(phrase.id)}
+                      disabled={pendingPhraseId !== null}
                       onToggle={() => handleTogglePhrase(phrase.id)}
                     />
                   ))}

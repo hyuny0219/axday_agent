@@ -611,6 +611,28 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     ]);
   });
 
+  // PR #20 Codex 37차 검토 P2: 묶음 확인 창이 떠 있는 동안 다른 추천 문구를 누르면 pendingPhraseId만
+  // 바뀌고 묶음이 우선 반영돼 마지막에 누른 문구가 무시됐다 — 확인 중에는 문구 카드를 잠근다.
+  it('묶음 확인 중에는 다른 추천 문구가 잠기고, 확인 뒤에는 묶음만 반영된다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    await screen.findByTestId('rebuild-confirm-rebuild');
+    const other = screen.getByTestId('phrase-card-P2').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(other).toBeDisabled();
+    fireEvent.click(other);
+    fireEvent.click(screen.getByTestId('rebuild-confirm-rebuild'));
+    for (const id of ['P1', 'P3']) {
+      expect(screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]')).toBeChecked();
+    }
+    expect(screen.getByTestId('phrase-card-P2').querySelector('input[type="checkbox"]')).not.toBeChecked();
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
+  });
+
   it('직접 쓴 내용 유지를 골라도 선택 문구의 조건이 확정되므로 묶음 기록이 2건 남는다(Codex 32차 P2-1)', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderWith(aiApprovalScenario, 'FOR', actions);

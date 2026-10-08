@@ -10,7 +10,10 @@ export interface CoachStepCopy {
   /** title 안에서 강조할 말(글자가 그대로 일치할 때만). */
   keys: readonly string[];
   body: string;
-  /** live(실제 모델) 세션에서 대신 보여 줄 보조 문장 — scripted 전용 요소(전환 배지 등)를 말하지 않는다. */
+  /** live(실제 모델) 세션에서 대신 보여 줄 제목·강조·보조 문장 — scripted 전용 요소(전환 배지·'이사님 조건으로
+   * 바뀜' 줄·조건 인과)를 말하지 않는다. 없으면 scripted 문구를 그대로 쓴다. */
+  titleLive?: string;
+  keysLive?: readonly string[];
   bodyLive?: string;
   placement: CoachPlacement;
 }
@@ -80,6 +83,11 @@ export const COACH_STEPS: readonly CoachStepCopy[] = [
     title: '이사님의 조건이 임원을 움직였는지 보세요',
     keys: ['조건이 임원을 움직였는지'],
     body: '"이사님 조건으로 바뀜" 줄이 설득한 임원입니다.',
+    // live 결과에는 '이사님 조건으로 바뀜' 줄이 없고 조건이 원인이라고 판정할 수도 없다 —
+    // 첫 의견과 최종 표의 변화만 말한다(PR #20 Codex 37차 검토 P2).
+    titleLive: '임원 입장이 어떻게 바뀌었는지 보세요',
+    keysLive: ['어떻게 바뀌었는지'],
+    bodyLive: '제목 한 줄이 첫 의견과 다른 표를 낸 임원 수입니다. 임원별 판단에서 지금 표를 확인하세요.',
     placement: 'below',
   },
 ];
@@ -113,8 +121,13 @@ export function coachCopy(step: number, mode: 'scripted' | 'live' = 'scripted'):
   if (!found) {
     throw new Error(`알 수 없는 코치 단계: ${step}`);
   }
-  if (mode === 'live' && found.bodyLive) {
-    return { ...found, body: found.bodyLive };
+  if (mode === 'live' && (found.bodyLive || found.titleLive)) {
+    return {
+      ...found,
+      title: found.titleLive ?? found.title,
+      keys: found.keysLive ?? (found.titleLive ? [] : found.keys),
+      body: found.bodyLive ?? found.body,
+    };
   }
   return found;
 }
