@@ -129,6 +129,7 @@ export function DiscussScreen({
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
+  const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
   const [pendingBatch, setPendingBatch] = useState<{ phraseId: string; conditionId: string | null }[] | null>(null);
   // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·STANCE 칩)은
   // 시각적으로 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에
@@ -293,8 +294,10 @@ export function DiscussScreen({
     setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
     setPendingBatch(null);
+    // '유지'는 직접 쓴 글을 그대로 두어 조건이 제안되지 않으므로 기록하지 않는다(PR #20
+    // Codex 31차 P2-2). 다시 구성했을 때만 실제 반영분을 기록한다.
     for (const item of batch) {
-      if (item.conditionId !== null) {
+      if (choice === 'rebuild' && item.conditionId !== null) {
         onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
       }
     }
@@ -325,6 +328,15 @@ export function DiscussScreen({
   // 이미 그 조건으로 체크된 문구가 있으면(재적용) 아무것도 하지 않는다. 입장을 아직
   // 고르지 않았으면 'FOR' 쪽 문구를 기본으로 삼는다(PersuasionBoard·AssistantPanel의
   // 기본 설득 목표와 같다).
+  // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
+  // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
+  function canApplyRecommendation(conditionId: string): boolean {
+    return (
+      confirmedConditionIds.includes(conditionId) ||
+      findPhraseForCondition(scenario, conditionId, side, draft.selectedPhraseIds) !== undefined
+    );
+  }
+
   function handleRecommendCondition(conditionId: string): boolean {
     return handleRecommendConditions([conditionId]).length > 0;
   }
@@ -355,6 +367,7 @@ export function DiscussScreen({
       if (first) {
         setPendingBatch(batch);
         setPendingPhraseId(first.phraseId);
+        setAssistantCloseRequest((value) => value + 1);
       }
       return [];
     }
@@ -424,7 +437,8 @@ export function DiscussScreen({
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
-            canApplyCondition={(conditionId) => findPhraseForCondition(scenario, conditionId, side) !== undefined}
+            canApplyCondition={canApplyRecommendation}
+            closeRequest={assistantCloseRequest}
             draftText={draft.draftText}
             draftRevision={draftRevision}
             transcript={transcript}

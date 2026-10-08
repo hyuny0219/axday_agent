@@ -257,6 +257,7 @@ export function ReactionsScreen({
   const [dirty, setDirty] = useState(false);
   const [pendingOptionIndex, setPendingOptionIndex] = useState<number | null>(null);
   // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 승인 시 전체를 한 번에 반영한다.
+  const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
   const [pendingBatch, setPendingBatch] = useState<{ index: number; conditionId: string }[] | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -423,8 +424,10 @@ export function ReactionsScreen({
     }
     setPendingOptionIndex(null);
     setPendingBatch(null);
+    // '유지'는 직접 쓴 답을 그대로 두어 조건이 제안되지 않으므로 기록하지 않는다(PR #20
+    // Codex 31차 P2-2). 다시 구성했을 때만 실제 반영분을 기록한다.
     for (const item of batch) {
-      if (item.conditionId !== null) {
+      if (choice === 'rebuild' && item.conditionId !== null) {
         onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
       }
     }
@@ -466,6 +469,15 @@ export function ReactionsScreen({
 
   // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
   // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
+  // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
+  // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
+  function canApplyRecommendation(conditionId: string): boolean {
+    return (
+      confirmedConditionIds.includes(conditionId) ||
+      findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR', selectedOptionIds) >= 0
+    );
+  }
+
   function handleRecommendCondition(conditionId: string): boolean {
     return handleRecommendConditions([conditionId]).length > 0;
   }
@@ -494,6 +506,7 @@ export function ReactionsScreen({
       if (first) {
         setPendingBatch(batch);
         setPendingOptionIndex(first.index);
+        setAssistantCloseRequest((value) => value + 1);
       }
       return [];
     }
@@ -848,9 +861,8 @@ export function ReactionsScreen({
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
-            canApplyCondition={(conditionId) =>
-              findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR') >= 0
-            }
+            canApplyCondition={canApplyRecommendation}
+            closeRequest={assistantCloseRequest}
             draftText={textValue}
             draftRevision={draftRevision}
             transcript={transcript}
