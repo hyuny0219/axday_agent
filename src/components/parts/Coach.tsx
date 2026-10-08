@@ -229,12 +229,21 @@ export function Coach({
     };
   }, [measure]);
 
+  // 말풍선 크기: 보일 때 한 번 재고, 글이 바뀌어 크기가 달라지면 ResizeObserver가 다시 알려 준다.
+  const bubbleVisible = box !== null;
   useLayoutEffect(() => {
     const el = bubbleRef.current;
     if (!el) return;
-    const next = { width: el.offsetWidth, height: el.offsetHeight };
-    setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
-  });
+    const read = () => {
+      const next = { width: el.offsetWidth, height: el.offsetHeight };
+      setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
+    };
+    read();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [bubbleVisible]);
 
   // Esc는 건너뛰기. 팝업(DialogShell)의 Esc 닫기보다 먼저 받아 그쪽으로 넘기지 않는다.
   const visible = box !== null;
@@ -258,13 +267,14 @@ export function Coach({
   useEffect(() => {
     if (dim) return;
     const previous = document.activeElement as HTMLElement | null;
-    bubbleRef.current?.focus({ preventScroll: true });
+    const bubble = bubbleRef.current;
+    bubble?.focus({ preventScroll: true });
     return () => {
       const active = document.activeElement;
       if (
         previous &&
         previous.isConnected &&
-        (active === document.body || active === null || bubbleRef.current?.contains(active) || active === bubbleRef.current)
+        (active === document.body || active === null || active === bubble || bubble?.contains(active))
       ) {
         previous.focus({ preventScroll: true });
       }
