@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T103 | 대기(T102 머지 후) | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
 | T102 | 진행 중 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS에서 숨기고 MOTION·VOTE·RESULT에서만)(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
 | T100 | 완료 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
 | T101 | 완료(Codex 35차 수정 반영 중) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
@@ -83,6 +84,37 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T103 게임 튜토리얼식 코치(A안 스포트라이트) + 기존 가이드 통합·제거
+
+- 목표(2026-10-09 사용자 지시): "참석자가 프로그램을 처음 접하므로 게임 튜토리얼처럼 가이드. 기존에 추가했던 가이드 기능 중 중복되거나 쓸모없으면 제거. A안으로." 시안(사용자 승인): https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4 — 개요 보드의 9단계 표·제거 목록·원칙 3개를 그대로 따른다.
+- 읽을 것: 시안 개요 보드 내용(아래 "코치 순서"에 옮김), `src/components/parts/{GuideHint,StepGuide,DialogShell,AssistantPanel,OperatorMenu}.tsx`, `src/domain/stepGuide.ts`, `src/styles/screens/shell.css`([data-guide]·.guide-hint·.cta-disabled-hint·.cta--outline)·`stepGuide.css`, 모든 `src/components/screens/*Screen.tsx`의 `data-guide`·`GuideHint`·`cta-disabled-hint`·`StepGuide` 사용처, `src/app/App.tsx`(화면 라우팅·운영 메뉴), `src/domain/{types,session}.ts`(세션 상태에 코치 진행 저장), `src/components/screens/IntroScreen.tsx`(T102 강조 반영본), `docs/design/DESIGN_SPEC.md` T95·T97·T98 단락, `docs/FACILITATOR_GUIDE.md`, e2e 전체(가이드 testid 단언 다수).
+- 코치 순서(9단계, 화면마다 처음 한 번만; 같은 세션에서 다시 안 나옴):
+  | # | 화면 | 스포트라이트 대상 | 말풍선 제목 / 보조 문장 | 다음으로 |
+  |---|---|---|---|---|
+  | 1 | BRIEFING | 근거 자료 보기 버튼 | 먼저 **근거 자료 4장**을 열어 보세요 / 임원들은 이 자료를 보고 말합니다. 닫으면 "의견 듣기"가 열립니다 | 자료 팝업 닫힘 |
+  | 2 | OPINIONS | 임원 카드 4장 영역 | 임원 네 명의 말을 읽어 보세요 / 누가 **찬성**·**반대**인지, 왜 그런지가 다음 단계의 재료 | "알겠어요" 또는 카드 4장 노출 뒤 |
+  | 3 | DISCUSS | 입장 버튼 2개 | **찬성**인지 **반대**인지 먼저 고르세요 / 고른 쪽의 추천 문구가 나옵니다 | 입장 선택 |
+  | 4 | DISCUSS | 추천 문구 카드 영역 | 마음에 드는 **추천 문구**를 눌러 담으세요 / 여러 개 가능, 직접 고쳐 써도 됩니다 | 문구 1개 이상 |
+  | 5 | DISCUSS→팝업 | 비서실장 버튼 → 팝업 안 기능 버튼(왼쪽부터 다음에 누를 것 하나) → 닫기 | **AI 비서실장**을 열어 세 가지를 한 번씩 써 보세요 / 팝업 안: "세 가지를 **한 번씩** 눌러 보세요" + 1·2·3 체크 | 3/3 → 닫기 버튼으로 이동 |
+  | 6 | DISCUSS | 의견 전달 버튼 | 이제 **의견 전달**을 누르세요 | 클릭 |
+  | 7 | REACTIONS 1/2 | 반응 카드 영역 | 이사님 말에 임원들이 답했습니다 / **반대 → 찬성** 배지는 이사님 조건으로 움직인 임원. 답해도 되고 넘어가도 됩니다 | "알겠어요"(2/2 다시 답하기는 코치 없음) |
+  | 8 | VOTE | 도장 영역 → 확정 버튼 | **찬성**·**반대** 도장 중 하나를 고르고 확정하세요 / 같은 표 3석 이상이면 설득 도장 | 확정 |
+  | 9 | RESULT | 제목 줄+도장 | 이사님의 조건이 임원을 움직였는지 보세요 / "이사님 조건으로 바뀜" 줄이 설득한 임원 | "안내 끝" |
+- 만들 것:
+  1. `src/components/parts/Coach.tsx`(신규) + `src/styles/screens/coach.css`: props `{ step: 1..9, total: 9, targetRef | targetSelector, title(ReactNode), body, placement: 'right'|'left'|'below'|'above', onAck?, onSkip, dim?: boolean }`. 스포트라이트는 대상 요소의 `getBoundingClientRect()`를 읽어 고정 레이어에 구멍(점선 주황 테두리 3px, radius 10, 바깥 `rgba(8,12,22,.72)`)을 그린다(리사이즈·스크롤 시 재계산, `ResizeObserver`). 말풍선: 종이색 카드, 검은 2px 테두리+6px 오프셋 그림자, 머리 "진행 도우미 · N/9" + "건너뛰기", 제목 22px 굵게(핵심 말은 `.key-term` 강조), 보조 13px, 읽기 단계만 "알겠어요 ▶" 버튼(44px 이상). 말풍선 꼬리는 placement 방향. 팝업(DialogShell) 안에서는 팝업보다 위 z-index, 어둡기 0.6. 키보드: Esc=건너뛰기, 포커스는 말풍선으로 이동 후 대상으로 복귀. `prefers-reduced-motion`이면 애니메이션 없음. **스포트라이트 구멍 안의 대상은 클릭 가능**(오버레이는 `pointer-events: none`, 어두운 부분만 클릭 막음 — 구현: 4개 패널로 둘러싸거나 `clip-path`).
+  2. **코치 상태**: `src/domain/coach.ts` 순수 함수 `coachStep(session, ui)` — 세션·UI 상태(evidenceSeen, side, draftReady, assistantUsed, assistantOpen, pendingVote…)에서 현재 단계와 완료 여부를 계산. `session.coachEnabled: boolean`(기본 true)과 `coachDismissed: number[]`(건너뛴/끝난 단계)를 `types.ts`·`session.ts`에 추가(액션 `COACH_SET_ENABLED`, `COACH_DISMISS`). 화면마다 처음 한 번: 단계가 완료되거나 건너뛰면 dismissed에 기록. 운영 메뉴에 "안내 끄기/켜기" 토글(`OperatorMenu`), 새 체험 시작 시 초기화.
+  3. **INTRO**: "진행 5단계·약 4분"과 "팁" 블록 제거, 목적·성공 기준(T102 강조)만 남기고 CTA를 두 개로 — 주 "안내 받으며 시작 ▶"(coachEnabled=true) / 보조 "안내 없이 시작"(false). ATTRACT는 그대로.
+  4. **기존 가이드 제거·통합**(시안 제거 목록): `GuideHint` 사용처 전부(BRIEFING·OPINIONS·MOTION·VOTE·RESULT) 제거 → 컴포넌트·css·테스트 삭제; `StepGuide`(T98 칩, DISCUSS·REACTIONS) 제거 → `domain/stepGuide.ts`·css·테스트 삭제; `cta-disabled-hint` 문구들(자료 먼저·입장 먼저·비서실장 N/3·문구 고르면 전달 등) 제거(버튼 `disabled`와 `aria-describedby`용 sr-only 문장만 남김); `[data-guide='next']` 맥동 규칙과 모든 `data-guide` 속성 제거(스포트라이트가 대신). MOTION의 2초 뒤 CTA 전환, RESULT 회의 기록 1회 하이라이트도 제거. **유지**: 버튼 잠금(게이팅) 전부, 상단 진행 표시, 설득 현황판, 비서실장 팝업 `assistant-intro` 소개·체크(코치가 그 위에 다음 버튼만 밝힘), REACTIONS 비활성 전달 버튼 `cta--outline`(T98) 유지, T102의 말풍선·발언 흐름 역할 분담 유지.
+  5. **코치 끔 상태(안내 없이 시작)**: 코치가 전혀 나오지 않아도 버튼 잠금만으로 진행이 막히지 않게, 잠긴 버튼에는 짧은 sr-only 설명만. 운영자가 중간에 켜면 현재 화면 단계부터.
+  6. **문서**: DESIGN_SPEC "## T103 — 튜토리얼 코치" 단락(9단계 표·스타일·상태·제거 목록, T95/T97/T98 단락에 "T103에서 코치로 대체" 주석), FACILITATOR_GUIDE(코치 설명·안내 끄기·건너뛰기), TASKS 행.
+  7. **테스트·e2e**: `tests/domain/coach.test.ts`(9단계 전이·dismissed·enabled), `tests/components/Coach.test.tsx`(렌더·건너뛰기·알겠어요·reduced-motion), 각 화면 테스트에서 제거된 가이드 단언 삭제·코치 단언 추가, `e2e/coach.spec.ts`(신규: 안내 받으며 시작 → 9단계 완주, 안내 없이 시작 → 코치 0개 완주, 건너뛰기, 운영 메뉴 끄기), 기존 e2e의 `*-guide-hint`·`step-guide`·`cta-hint`·`data-guide` 단언 전부 정리, `screenshots.spec.ts`에 `coach-briefing.png`(1단계)·`coach-assistant.png`(5단계 팝업) 추가, 기존 스크린샷은 코치 없이(안내 없이 시작 경로) 찍어 화면 자체를 보여 준다.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 서버·시나리오 문장 변경, 게이팅(버튼 잠금) 완화, 붉은 박스·영문 UI, 설득 현황판·비서실장 소개 제거.
+- 완료 확인: `npm run check`, e2e 1080·720 각각(`--project=` 순차) PASS, 720에서 9단계 코치 말풍선이 화면 밖으로 나가지 않음(스크린샷 2장 + 직접 확인한 단계 목록 보고).
+- 크기: L — 커밋은 1·2 → 3 → 4·5 → 6·7 순.
 
 ---
 
