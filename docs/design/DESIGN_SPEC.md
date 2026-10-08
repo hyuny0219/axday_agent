@@ -653,13 +653,38 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 | 문구 있음, 비서실장 N/3 | AI 비서실장을 먼저 써 보세요 (N/3) | 비서실장 열기 버튼(`assistant-toggle`) |
 | 문구 있음, 비서실장 3/3 | (힌트 없음) | 의견 전달 버튼 |
 
-입장을 고른 뒤 오른쪽 종이의 안내 한 줄(`discuss-assistant-tip`)은 "비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다"다.
+(T98에서 오른쪽 종이의 안내 한 줄 `discuss-assistant-tip`은 진행 단계 안내판으로 바뀌었다.)
 
 **팝업 첫 화면(`AssistantPanel`의 `requiredFeatures`, DISCUSS만 넘긴다)**: 결과 영역 위에 소개 블록(`assistant-intro`) — 제목 "AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요"와 기능 세 줄(체크 `assistant-check-*` ☐/☑ + 이름 + 쉬운 말 한 문장). 사용한 기능 버튼에는 "· 완료"가 붙고, 아직 안 쓴 첫 기능 버튼에 하이라이트가 걸린다. 결과(또는 오류)가 생기면 블록이 한 줄(`assistant-intro--compact`, "☑ 의견 한눈에 보기 ☐ 조건 추천 ☐ 내 발언 정리")로 줄어든다. 세 개가 다 되면 "이제 팝업을 닫고 의견을 전달하세요"(`assistant-intro-done`)가 뜨고 팝업 닫기 버튼에 하이라이트가 걸린다(`DialogShell`의 `closeGuide`). 1280×720에서는 소개·기능 버튼이 줄지 않고 결과 영역(`assistant-panel__results`)만 안쪽 스크롤한다. 색은 종이 톤 토큰만 쓰고 붉은 박스는 쓰지 않는다.
 
 **실패·연결 지연도 사용으로 센다**: 막히는 참가자가 없게, 결과를 렌더했을 때뿐 아니라 오류·시간 초과 안내(`assistant-error`)를 본 경우도 같은 유형을 `failed:true`로 기록한다. 정리한 초안을 화면에 보인 것도 `DRAFT_REFINE`(`applied:false`)로 기록한다. 결과 화면 "AI가 도운 일"은 바뀌지 않는다 — `failed` 기록과 `applied:false`인 정리는 줄을 만들지 않고, "조건 추천 N회" 집계도 `failed`는 세지 않는다.
 
 영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
+
+## T98 — 진행 단계 안내판 (2026-10-08)
+
+**사용자 지시**: "반응에 답하기에 의견 전달하는 버튼이 없어. 화면 안에서 추천문구 선택 -> AI비서실장 -> 비서실장 기능1,2,3 수행 -> 의견전달이 자연스럽게 이루어질 수 있도록 좀더 명확한 가이드를 줘야 할 것 같아. 문장 한 줄보다는 좀더 포커싱해서 눈에 확 들어오게 하고 어떤 순서로 하면 좋은지 권고안."
+
+**안내판(`StepGuide`, `src/components/parts/StepGuide.tsx`, `stepGuide.css`)**: 오른쪽 종이 제목("내 의견 쓰기"·"다시 답하기") 바로 아래 가로 한 줄 번호 칩이다. 상태 계산은 순수 함수 `stepGuideState({ side, draftReady, featuresUsed, requireAssistant })`(`src/domain/stepGuide.ts`)가 하고, 컴포넌트는 그리기만 한다. 현재 칩은 "아직 끝나지 않은 첫 칩"이라 앞 칩이 안 끝났으면 뒤 칩을 먼저 채워도 현재가 되지 않는다.
+
+| 칩 | DISCUSS(4칩) | REACTIONS(3칩) | 끝남 조건 |
+| --- | --- | --- | --- |
+| ① | 입장 고르기 | 입장 고르기 | 입장을 골랐다 |
+| ② | 추천 문구 고르기 | 추천 답변 고르기 | 문구가 있고 확인 대기가 아니다 |
+| ③ | AI 비서실장 세 가지(체크 3개) | 답변 전달 | 세 기능을 한 번씩 썼다(T97 `assistantFeaturesUsed`와 같은 값) |
+| ④ | 의견 전달 | (없음) | 끝나지 않음(마지막) |
+
+REACTIONS는 비서실장을 선택 사항으로 두므로 칩에서 빼고 오른쪽 끝에 "AI 비서실장은 선택" 꼬리표만 둔다. 게이팅은 더하지 않는다.
+
+**칩 상태**: `done`(체크 표시·흐림), `current`(크고 진하게, 종이색 배경, 앰버 테두리와 그림자, `data-guide="next"` 맥동 테두리), `upcoming`(흐림). 현재 칩 아래에 지시 문장 한 줄이 나온다 — ① "찬성/반대 중 하나를 고르세요" ② "마음에 드는 문구를 눌러 담으세요(여러 개 가능)" ③ "왼쪽 아래 'AI 비서실장에게 맡기기'를 열어 세 가지를 한 번씩 써 보세요" ④ "왼쪽 아래 '의견 전달'을 누르세요". ③ 칩의 체크 3개(한눈에 보기·조건 추천·발언 정리)는 팝업 `assistant-intro`의 체크와 같은 상태다. 같은 현재 칩이 가리키는 실제 조작 대상(입장 버튼 줄 → 문구 카드 영역 → 비서실장 열기 버튼 → 전달 버튼)에도 `data-guide="next"`를 함께 건다.
+
+**정리한 한 줄 안내**: DISCUSS의 `discuss-guide-hint`·`discuss-assistant-tip`과 REACTIONS의 `reactions-guide-hint`는 안내판이 대신하므로 지웠다. 왼쪽 열 CTA 아래 `cta-disabled-hint`("AI 비서실장을 먼저 써 보세요 (N/3)")는 그대로다.
+
+**REACTIONS 전달 버튼 가시성**: 비활성 "답변 전달 ▶"이 점선·흐림이라 없어 보였다. 비활성일 때 `cta cta--outline`(`shell.css`)을 써서 종이색 굵은 실선 테두리와 선명한 종이색 글자의 빈 버튼으로 보이게 했고, 활성되면 기존 주황 CTA다. 아래 힌트(`reactions-cta-hint`)는 "문구를 고르거나 직접 쓰면 전달할 수 있습니다"로 키웠다(`cta-disabled-hint--strong`). `답하지 않고 넘어가기`는 세 버튼 중 가장 작은 보조 버튼 그대로다. MOTION·VOTE 버튼 스타일은 바꾸지 않았다.
+
+**1280×720 규칙**: 칩은 한 줄을 유지하고 글자만 줄인다(칩 12px, 현재 칩 14px, 지시 문장 14px). 지시 문장은 현재 칩 것 하나만 보인다. 안내판이 늘어난 만큼 한 줄 안내 두 개를 뺐으므로 오른쪽 종이의 문구 카드와 근거 자료 버튼이 밀려 잘리지 않아야 하며, `noscroll.spec.ts`가 안내판과 CTA가 뷰포트 안에 보이는지 확인한다. 색은 종이 톤 토큰만 쓰고 붉은 박스·영문 문구는 쓰지 않는다.
+
+영향받은 파일: `src/domain/stepGuide.ts`, `src/components/parts/StepGuide.tsx`, `src/styles/screens/{stepGuide,shell}.css`, `src/components/screens/{DiscussScreen,ReactionsScreen}.tsx`, `tests/components/{StepGuide,DiscussScreen,ReactionsScreen}.test.tsx`, `e2e/{assistant-gate,reactions,noscroll}.spec.ts`.
 
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
 
