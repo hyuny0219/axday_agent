@@ -100,7 +100,7 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
       opening: 'FOR',
     },
     CFO: {
-      lens: '시범 자동 승인 결과의 규칙 밖 승인을 회사 전체 규모의 비용 위험로 봅니다.',
+      lens: '시범 자동 승인 결과의 규칙 밖 승인을 회사 전체 규모의 비용 위험으로 봅니다.',
       evidenceIds: ['E2'],
       opening: 'AGAINST',
     },
