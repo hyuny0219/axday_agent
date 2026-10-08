@@ -97,6 +97,9 @@ export interface AssistantPanelProps {
    * P2-1). false면 "적용" 대신 "직접 써 주세요" 안내를 보인다. 없으면 모두 적용 가능으로
    * 본다. 묶음은 구성 조건이 전부 가능할 때만 "모두 적용"을 보인다. */
   canApplyCondition?: (conditionId: string) => boolean;
+  /** 값이 바뀌면(0 제외) 열려 있는 팝업을 닫는다(PR #20 Codex 31차 P2-1). 화면이 확인 창을
+   * 띄울 때 팝업의 포커스 트랩이 확인 창을 가리지 않게 한다. 자동으로 다시 열지는 않는다. */
+  closeRequest?: number;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -140,6 +143,7 @@ export function AssistantPanel({
   onRecommendCondition,
   onRecommendConditions,
   canApplyCondition,
+  closeRequest = 0,
   draftText,
   draftRevision,
   transcript,
@@ -149,6 +153,11 @@ export function AssistantPanel({
   adapter = scriptedAssistantAdapter,
 }: AssistantPanelProps) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (closeRequest > 0) {
+      setOpen(false);
+    }
+  }, [closeRequest]);
   useEffect(() => {
     onOpenChange?.(open);
   }, [open, onOpenChange]);

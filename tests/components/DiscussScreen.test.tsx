@@ -527,6 +527,8 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     await openCompare();
     fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
     fireEvent.click(await screen.findByTestId('rebuild-confirm-rebuild'));
+    // 확인 창이 뜨면 비서실장 팝업은 닫혀 있다(Codex 31차 P2-1).
+    expect(screen.queryByTestId('assistant-panel')).not.toBeInTheDocument();
     for (const id of ['P1', 'P3']) {
       expect(screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]')).toBeChecked();
     }
@@ -534,5 +536,23 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
       ['LIMIT'],
       ['REVIEW'],
     ]);
+  });
+
+  it('직접 쓴 내용 유지를 고르면 묶음 적용 기록을 남기지 않는다(Codex 31차 P2-2)', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    fireEvent.click(await screen.findByTestId('rebuild-confirm-keep'));
+    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY')).toEqual([]);
+  });
+
+  it('DISCUSS는 고른 문구의 조건이 본문을 고쳐도 제안으로 남아 적용 버튼이 그대로 보인다(Codex 31차 P2-3 확인)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-opening')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
   });
 });

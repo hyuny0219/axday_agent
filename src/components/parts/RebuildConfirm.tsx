@@ -2,12 +2,21 @@
 // 덮어쓰지 않는다(CLAUDE_IMPLEMENTATION.md 4장 "편집 손실 방지"). 기본은 '유지'이므로
 // 그 버튼을 주 CTA 스타일로 강조한다.
 
+import { useEffect, useRef } from 'react';
+
 export interface RebuildConfirmProps {
   onKeep: () => void;
   onRebuild: () => void;
 }
 
 export function RebuildConfirm({ onKeep, onRebuild }: RebuildConfirmProps) {
+  // 나타나면 확인 버튼으로 포커스를 보낸다(PR #20 Codex 31차 P2-1) — 비서실장 팝업이 막 닫히며
+  // 포커스를 되돌리는 것보다 나중에 가도록 한 틱 미룬다.
+  const keepRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => keepRef.current?.focus(), 0);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <div
       className="rebuild-confirm"
@@ -22,6 +31,7 @@ export function RebuildConfirm({ onKeep, onRebuild }: RebuildConfirmProps) {
         <button
           type="button"
           className="cta rebuild-confirm__keep"
+          ref={keepRef}
           onClick={onKeep}
           data-testid="rebuild-confirm-keep"
         >

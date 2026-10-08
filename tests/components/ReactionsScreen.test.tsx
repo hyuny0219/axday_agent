@@ -600,3 +600,65 @@ describe('ReactionsScreen 비서실장 게이팅 없음(T97)', () => {
     expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
   });
 });
+
+// PR #20 Codex 31차: 확인 창은 비서실장 팝업을 닫고 보이며, 유지는 기록하지 않고, 표시·실행 검사가 같다.
+describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
+  const sc = aiApprovalScenario;
+  const logIndex = sc.followUp.options.findIndex(
+    (option) => option.proposeConditionId === 'LOG' && (option.side ?? 'FOR') === 'FOR',
+  );
+
+  function renderReactions(actions: { type: string; evidenceIds: string[] }[]) {
+    return render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={sc}
+        onAssistantAction={(event) => actions.push(event)}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
+      />,
+    );
+  }
+
+  async function applyLogOnDirtyText() {
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '제 나름의 답변입니다.' } });
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    fireEvent.click(await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 }));
+    await screen.findByTestId('rebuild-confirm');
+  }
+
+  it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderReactions(actions);
+    await applyLogOnDirtyText();
+    expect(screen.queryByTestId('assistant-panel')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('rebuild-confirm-rebuild'));
+    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+    expect(actions.filter((e) => e.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([['LOG']]);
+  });
+
+  it('직접 쓴 내용 유지를 고르면 조건 적용 기록을 남기지 않는다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderReactions(actions);
+    await applyLogOnDirtyText();
+    fireEvent.click(screen.getByTestId('rebuild-confirm-keep'));
+    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+    expect(actions.filter((e) => e.type === 'CONDITION_RECOMMEND_APPLY')).toEqual([]);
+  });
+
+  it('추천 답변을 고른 뒤 본문을 고쳐 조건이 빠지면 적용 버튼 대신 직접 써 달라고 안내한다', async () => {
+    expect(logIndex).toBeGreaterThanOrEqual(0);
+    renderReactions([]);
+    fireEvent.click(screen.getByTestId(`followup-option-${logIndex}`));
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '제 나름의 답변입니다.' } });
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-apply-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-manual-LOG')).toHaveTextContent('직접 써 주세요');
+  });
+});
