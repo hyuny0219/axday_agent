@@ -105,6 +105,29 @@ describe('AssistantPanel "조건 추천" 적용 기록(T96)', () => {
   });
 });
 
+describe('AssistantPanel 묶음 일괄 적용(Codex 28차 P2-1)', () => {
+  it('onRecommendConditions가 있으면 묶음 전체를 한 번에 넘기고 반영된 조건만 기록한다', async () => {
+    const onAssistantAction = vi.fn();
+    const onRecommendConditions = vi.fn((ids: string[]) => ids.filter((id) => id !== 'LIMIT'));
+    const onRecommendCondition = vi.fn().mockReturnValue(true);
+    render(
+      <AssistantPanel
+        {...baseProps(onAssistantAction, onRecommendCondition)}
+        onRecommendConditions={onRecommendConditions}
+      />,
+    );
+    await openRecommendation();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    });
+    expect(onRecommendConditions).toHaveBeenCalledTimes(1);
+    expect(onRecommendConditions).toHaveBeenCalledWith(['LIMIT', 'REVIEW']);
+    expect(onRecommendCondition).not.toHaveBeenCalled();
+    const applyCalls = onAssistantAction.mock.calls.filter(([event]) => event.type === 'CONDITION_RECOMMEND_APPLY');
+    expect(applyCalls.map(([event]) => event.evidenceIds)).toEqual([['REVIEW']]);
+  });
+});
+
 // T97: DISCUSS 전용 첫 화면 소개·체크리스트와 실패 기록.
 describe('AssistantPanel 필수 사용 소개(T97)', () => {
   const noopAction = () => {};

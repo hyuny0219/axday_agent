@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { ParticipantStance, SessionMode, Stance, Transcript } from '../../domain/types';
 import { buildConditionRecommendation } from '../conditionRecommendation';
+import { latestSuggestedConditionIds } from '../liveTranscript';
 import type {
   AssistantAdapter,
   CompareConditionsResult,
@@ -62,6 +63,10 @@ export interface AssistantPanelProps {
   requiredFeatures?: RequiredFeatures;
   /** T97: true면 열기 버튼에 다음 행동 강조(data-guide)를 건다. */
   toggleGuide?: boolean;
+  /** PR #20 Codex 29차 P2: true면 열기 버튼을 잠그고 "먼저 추천 문구를 골라 주세요"를 보인다
+   * (DISCUSS에서 문구 선택 전에 세 기능을 써 순서를 우회하지 못하게). 창이 열려 있는 동안은
+   * 영향이 없다. */
+  toggleLocked?: boolean;
   scenario: Scenario;
   sessionId: string;
   /** 참가자가 지금까지 확정한 조건 ID(조건 추천에 씀). */
@@ -83,6 +88,11 @@ export interface AssistantPanelProps {
    * 돌려준다 — 매칭되는 문구가 없거나 확인 대기(RebuildConfirm)만 열렸으면 false다
    * (Codex 27차 검토 P2-3, 실제로 반영됐을 때만 "추천 조건 N개 반영"을 기록한다). */
   onRecommendCondition?: (conditionId: string) => boolean | Promise<boolean>;
+  /** 복합 조합 묶음의 "모두 적용"(PR #20 Codex 28차 P2-1). 조건 여러 개를 화면이 한 번의
+   * 상태 업데이트로 반영하고, 실제로 반영된 조건 id만 돌려준다. 같은 렌더에서 캡처한
+   * 상태로 조건마다 따로 갱신하면 뒤 호출이 앞 호출을 덮어쓰기 때문이다. 없으면 조건을
+   * 하나씩 onRecommendCondition으로 적용한다. */
+  onRecommendConditions?: (conditionIds: string[]) => string[] | Promise<string[]>;
   /** 현재 참가자가 쓰고 있는 원문(내 발언 정리에 씀). */
   draftText: string;
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
@@ -115,6 +125,7 @@ function evidenceLabel(scenario: Scenario, id: string): string {
 export function AssistantPanel({
   requiredFeatures,
   toggleGuide = false,
+  toggleLocked = false,
   scenario,
   sessionId,
   selectedConditionIds,
@@ -123,6 +134,7 @@ export function AssistantPanel({
   stances,
   liveSuggestedConditionIds,
   onRecommendCondition,
+  onRecommendConditions,
   draftText,
   draftRevision,
   transcript,
@@ -297,6 +309,13 @@ export function AssistantPanel({
   // T96 "조건 추천" 본문(규칙 기반, scripted·live 공통·즉시 — adapter 응답과 무관하게
   // scenario.voteRules·requiredConditionsFor로 바로 계산한다). 아직 찬성이 아닌 임원들을
   // 움직이는 데 필요한 조건만 골라 "이 조건이 움직이는 임원 · 푸는 걱정"으로 보여준다.
+  // live 발언의 제안 조건은 따로 안 넘기면 transcript의 역할별 최신 발언에서 뽑는다
+  // (PR #20 Codex 28차 P2-3).
+  const transcriptStatements = transcript.statements;
+  const effectiveLiveSuggestions = useMemo(
+    () => liveSuggestedConditionIds ?? latestSuggestedConditionIds(transcriptStatements),
+    [liveSuggestedConditionIds, transcriptStatements],
+  );
   const recommendation = useMemo(
     () =>
       buildConditionRecommendation(
@@ -305,9 +324,9 @@ export function AssistantPanel({
         participantStance,
         mode,
         stances,
-        liveSuggestedConditionIds,
+        effectiveLiveSuggestions,
       ),
-    [scenario, selectedConditionIds, participantStance, mode, stances, liveSuggestedConditionIds],
+    [scenario, selectedConditionIds, participantStance, mode, stances, effectiveLiveSuggestions],
   );
 
   // Codex 27차 검토 P2-3: "적용"을 눌러도 매칭되는 추천 문구가 없거나(예: REACTIONS
@@ -331,8 +350,21 @@ export function AssistantPanel({
   /** 복합 조합 묶음("○○ + △△ 모두 있어야 움직임")의 "적용" — 조합 안의 조건을
    * 하나씩 같은 규칙으로 적용한다. */
   async function handleApplyBundle(conditionIds: readonly string[]) {
-    for (const conditionId of conditionIds) {
-      await handleApplyRecommendation(conditionId);
+    if (!onRecommendConditions) {
+      for (const conditionId of conditionIds) {
+        await handleApplyRecommendation(conditionId);
+      }
+      return;
+    }
+    // 묶음 전체를 화면에 한 번에 넘겨 단일 상태 업데이트로 반영하게 한다. 실제로
+    // 반영된 조건만 기록한다("추천 조건 N개 반영"이 실제 수와 같아야 한다).
+    const appliedIds = await onRecommendConditions([...conditionIds]);
+    for (const conditionId of appliedIds) {
+      onAssistantAction({
+        type: 'CONDITION_RECOMMEND_APPLY',
+        mode: compareResult?.mode ?? 'scripted',
+        evidenceIds: [conditionId],
+      });
     }
   }
 
@@ -370,11 +402,17 @@ export function AssistantPanel({
         type="button"
         className="cta cta--secondary assistant-panel__toggle"
         onClick={() => setOpen(true)}
+        disabled={toggleLocked}
         data-testid="assistant-toggle"
         data-guide={toggleGuide ? 'next' : undefined}
       >
         AI 비서실장에게 맡기기
       </button>
+      {toggleLocked && (
+        <p className="cta-disabled-hint" data-testid="assistant-toggle-hint">
+          먼저 추천 문구를 골라 주세요
+        </p>
+      )}
       {open && (
         <DialogShell
           testId="assistant-panel"

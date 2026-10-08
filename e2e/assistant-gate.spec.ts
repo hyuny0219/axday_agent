@@ -26,6 +26,17 @@ async function runFeature(page: Page, feature: 'summary' | 'compare' | 'refine')
   }
 }
 
+test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 보이며, 문구를 고르면 열린다', async ({ page }) => {
+  await reachDiscuss(page);
+
+  await expect(page.getByTestId('assistant-toggle')).toBeDisabled();
+  await expect(page.getByTestId('assistant-toggle-hint')).toContainText('먼저 추천 문구를 골라 주세요');
+
+  await page.getByTestId('phrase-card-P1').click();
+  await expect(page.getByTestId('assistant-toggle')).toBeEnabled();
+  await expect(page.getByTestId('assistant-toggle-hint')).toHaveCount(0);
+});
+
 test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 (0/3)이며 하이라이트는 비서실장 버튼에 있다', async ({ page }) => {
   await reachDiscuss(page);
 

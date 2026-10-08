@@ -127,3 +127,61 @@ describe('buildConditionRecommendation(T96, live 모드, Codex 27차 검토 P2-4
     expect(result.usedRuleFallback).toBe(true);
   });
 });
+
+describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2)', () => {
+  it('AGAINST면 이미 반대인 CFO·CISO는 대상에서 빠지고 지금 찬성인 CEO를 반대로 돌리는 조건을 추천한다', () => {
+    const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
+    // 안건① 초기 상태: CEO 찬성, CFO·CISO 반대(참가자와 같은 쪽).
+    expect(stances.CEO).toBe('FOR');
+    expect(stances.CFO).toBe('AGAINST');
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+
+    expect(result.openingLine).toContain('CEO');
+    expect(result.openingLine).not.toContain('CAIO'); // 미정이지만 규칙표 표가 이미 NO라 돌릴 필요가 없다
+    expect(result.openingLine).not.toContain('CFO');
+    expect(result.openingLine).not.toContain('CISO');
+    expect(result.openingLine).toContain('반대로 돌리려면');
+    // 조건 방향도 반대 쪽 — 표를 NO로 바꾸는 FULL_AUTO가 CEO를 움직인다.
+    const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
+    expect(byId.get('FULL_AUTO')?.movedMemberIds).toEqual(['CEO']);
+    // 찬성 쪽으로 움직이는 조건(LOG 등)은 추천하지 않는다.
+    expect(byId.has('LOG')).toBe(false);
+    expect(result.bundles).toEqual([]);
+  });
+
+  it('AGAINST인데 임원 4명이 모두 반대면 그렇게 말한다', () => {
+    const allAgainst: Record<ExecMemberId, Stance> = {
+      CEO: 'AGAINST',
+      CFO: 'AGAINST',
+      CAIO: 'AGAINST',
+      CISO: 'AGAINST',
+    };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', allAgainst);
+    expect(result.openingLine).toBe('지금 임원 4명 모두 반대 쪽입니다.');
+    expect(result.rows).toEqual([]);
+  });
+});
+
+describe('buildConditionRecommendation(반대 입장 보강)', () => {
+  it('표정은 미정이어도 규칙표 표가 이미 NO인 CAIO는 대상에서 빠진다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    expect(result.openingLine).toContain('CEO');
+    expect(result.openingLine).not.toContain('CAIO');
+  });
+
+  it('미정·반대뿐이고 규칙표도 NO면 돌릴 임원이 없다고 말한다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'AGAINST', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    expect(result.openingLine).toBe('지금 찬성 쪽인 임원이 없습니다.');
+  });
+
+  it('AGAINST의 live는 방향 없는 발언 제안을 쓰지 않고 규칙표 참고값으로 대신한다', () => {
+    const stances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'live', stances, { CEO: ['LOG'] });
+    const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
+    expect(byId.has('LOG')).toBe(false);
+    expect(byId.get('FULL_AUTO')?.movedMemberIds).toEqual(['CEO']);
+    expect(result.usedRuleFallback).toBe(true);
+  });
+});

@@ -130,6 +130,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(discussOpenEvidence).toBeFocused();
 
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
+  // 문구를 고르기 전에는 비서실장 버튼이 잠겨 있으므로 먼저 추천 문구를 하나 고른다.
+  await page.locator('[data-testid^="phrase-card-"]').first().click();
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
   await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');

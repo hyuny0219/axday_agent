@@ -15,7 +15,7 @@
 
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
-import type { RoleStatus, SessionMode, Stance } from '../../domain/types';
+import type { RoleStatus, SessionMode, Stance, Statement } from '../../domain/types';
 import { useEffect, useMemo, useState } from 'react';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
@@ -44,6 +44,8 @@ export interface MotionScreenProps {
   /** 있으면 실패한 역할만 FOLLOWUP을 다시 부른다(T65 "응답 없는 임원 다시 요청", 1회). */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
   onFreeze: (confirmedConditionIds: string[]) => void;
+  /** live 회의 기록의 발언들 — 설득 현황판의 첫 의견 입장·제안 조건에 쓴다. */
+  statements?: Statement[];
 }
 
 export function MotionScreen({
@@ -55,6 +57,7 @@ export function MotionScreen({
   roleStatus,
   onRetryFailedRoles,
   onFreeze,
+  statements,
 }: MotionScreenProps) {
   const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions), [opinions]);
   const participantStance = useMemo(() => collectParticipantStance(opinions), [opinions]);
@@ -117,6 +120,7 @@ export function MotionScreen({
           participantStance={participantStance}
           stances={stances}
           mode={mode ?? 'scripted'}
+          statements={statements}
         />
         <ExecStanceList stances={stances} />
         {onRetryFailedRoles && failedRoleIds.length > 0 && (

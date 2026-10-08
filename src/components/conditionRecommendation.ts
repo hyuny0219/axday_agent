@@ -17,7 +17,7 @@
 
 import type { ExecMemberId, Scenario } from '../content/types';
 import type { ParticipantStance, SessionMode, Stance } from '../domain/types';
-import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../domain/voting';
+import { EXEC_MEMBER_ORDER, decideMember, requiredConditionsFor } from '../domain/voting';
 
 export interface ConditionRecommendationRow {
   conditionId: string;
@@ -42,16 +42,25 @@ export interface ConditionRecommendation {
   usedRuleFallback: boolean;
 }
 
-/** scripted voteRules 기준, confirmedIds에 conditionId 하나만 더했을 때 그 임원이
- * YES로 바뀌는지(복합 조합의 일부만으로는 바뀌지 않음을 가른다). */
-function singleAdditionPersuades(
+/** scripted voteRules 기준, confirmedIds에 conditionId 하나만 더했을 때 그 임원의 표가
+ * 참가자 목표(찬성이면 YES, 반대면 NO)로 바뀌는지(복합 조합의 일부만으로는 바뀌지
+ * 않음을 가른다). */
+function singleAdditionReachesTarget(
   scenario: Scenario,
   memberId: ExecMemberId,
   confirmedIds: readonly string[],
   participantStance: ParticipantStance,
   conditionId: string,
+  targetVote: 'YES' | 'NO',
 ): boolean {
-  return requiredConditionsFor(scenario, memberId, [...confirmedIds, conditionId], participantStance).persuaded;
+  const voteWith = (ids: readonly string[]) =>
+    decideMember(scenario.voteRules[memberId], {
+      conditionIds: [...ids],
+      executionMode: 'DEFAULT',
+      participantStance,
+    });
+  // 이미 목표 표인 임원은 "조건이 움직였다"가 아니므로 지금 표가 목표와 다를 때만 센다.
+  return voteWith(confirmedIds) !== targetVote && voteWith([...confirmedIds, conditionId]) === targetVote;
 }
 
 export function buildConditionRecommendation(
@@ -65,7 +74,24 @@ export function buildConditionRecommendation(
   // (4) "아직 찬성이 아닌 임원"은 항상 실제 표정으로 가른다 — scripted는 stances 자체가
   // voteRules로 계산된 값이라 requiredConditionsFor(...).persuaded와 결과가 같고, live는
   // 실제 LLM 판단을 그대로 반영한다.
-  const notYetForMembers = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] !== 'FOR');
+  // 참가자 목표(PersuasionBoard의 targetVote와 같다): AGAINST면 임원을 반대로, 그 외
+  // (찬성·미선택)는 찬성으로 움직이는 것이다. 추천 대상·조건 방향·문구가 모두 이를 따른다
+  // (PR #20 Codex 28차 P2-2).
+  const targetStance: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+  const targetVote = targetStance === 'AGAINST' ? 'NO' : 'YES';
+  // 반대 목표에서는 표정이 미정이어도 규칙표 표가 이미 NO인 임원은 돌릴 필요가 없어
+  // 대상에서 뺀다(표정이 찬성인 임원은 규칙표와 무관하게 대상이다).
+  const alreadyNoByRules = (memberId: ExecMemberId) =>
+    targetStance === 'AGAINST' &&
+    stances[memberId] !== 'FOR' &&
+    decideMember(scenario.voteRules[memberId], {
+      conditionIds: [...confirmedConditionIds],
+      executionMode: 'DEFAULT',
+      participantStance,
+    }) === 'NO';
+  const notYetForMembers = EXEC_MEMBER_ORDER.filter(
+    (memberId) => stances[memberId] !== targetStance && !alreadyNoByRules(memberId),
+  );
   const candidates = scenario.conditions.filter((condition) => !confirmedConditionIds.includes(condition.id));
 
   let usedRuleFallback = false;
@@ -73,7 +99,11 @@ export function buildConditionRecommendation(
   // 임원별로 "이 조건 하나만 추가하면 움직인다"에 해당하는 조건 id 목록을 모은다.
   const singleMovesByMember = new Map<ExecMemberId, string[]>();
   for (const memberId of notYetForMembers) {
-    if (mode === 'live') {
+    // 발언의 suggestedConditionIds는 방향 정보가 없는 "찬성으로 움직이는 제안"이라 반대
+    // 목표에서는 쓰지 않고 규칙표 참고값으로 대신한다(PR #20 Codex 28차 검토 보강).
+    if (mode === 'live' && targetStance === 'AGAINST') {
+      usedRuleFallback = true;
+    } else if (mode === 'live') {
       const hints = liveSuggestedConditionIds?.[memberId]?.filter((id) => !confirmedConditionIds.includes(id));
       if (hints && hints.length > 0) {
         singleMovesByMember.set(memberId, [...hints]);
@@ -84,7 +114,14 @@ export function buildConditionRecommendation(
     }
     const moves = candidates
       .filter((condition) =>
-        singleAdditionPersuades(scenario, memberId, confirmedConditionIds, participantStance, condition.id),
+        singleAdditionReachesTarget(
+          scenario,
+          memberId,
+          confirmedConditionIds,
+          participantStance,
+          condition.id,
+          targetVote,
+        ),
       )
       .map((condition) => condition.id);
     singleMovesByMember.set(memberId, moves);
@@ -105,7 +142,7 @@ export function buildConditionRecommendation(
   // (1) 단일 조건으로는 아무것도 못 움직이는 임원 — scripted 규칙표의 "가장 작은 조합"이
   // 2개 이상이면 묶음으로 보여준다. live는 발언 제안 기반이라 "조합" 개념이 없어 건너뛴다.
   const bundleMap = new Map<string, { ids: string[]; members: ExecMemberId[] }>();
-  if (mode === 'scripted') {
+  if (mode === 'scripted' && targetStance === 'FOR') {
     for (const memberId of notYetForMembers) {
       if ((singleMovesByMember.get(memberId) ?? []).length > 0) {
         continue;
@@ -135,12 +172,29 @@ export function buildConditionRecommendation(
     if (!neededLabels.includes(bundleLabel)) neededLabels.push(bundleLabel);
   }
 
-  const openingLine =
-    notYetForMembers.length === 0
-      ? '지금 임원 4명 모두 찬성 쪽입니다.'
-      : neededLabels.length > 0
-        ? `지금 반대인 ${notYetForMembers.join('·')}를 움직이려면 '${neededLabels.join("'·'")}'이 필요합니다`
-        : `지금 반대인 ${notYetForMembers.join('·')}는 조건만으로는 움직이기 어렵습니다`;
+  const notYetText = notYetForMembers.join('·');
+  let openingLine: string;
+  if (targetStance === 'AGAINST') {
+    // 반대 입장: 지금 반대가 아닌 임원을 반대로 돌리는 쪽으로 말한다.
+    const currentWord = notYetForMembers.every((memberId) => stances[memberId] === 'FOR')
+      ? '지금 찬성인'
+      : '아직 반대가 아닌';
+    openingLine =
+      notYetForMembers.length === 0
+        ? EXEC_MEMBER_ORDER.every((memberId) => stances[memberId] === 'AGAINST')
+          ? '지금 임원 4명 모두 반대 쪽입니다.'
+          : '지금 찬성 쪽인 임원이 없습니다.'
+        : neededLabels.length > 0
+          ? `${currentWord} ${notYetText}를 반대로 돌리려면 '${neededLabels.join("'·'")}'이 필요합니다`
+          : `${currentWord} ${notYetText}는 조건만으로는 돌리기 어렵습니다`;
+  } else {
+    openingLine =
+      notYetForMembers.length === 0
+        ? '지금 임원 4명 모두 찬성 쪽입니다.'
+        : neededLabels.length > 0
+          ? `지금 반대인 ${notYetText}를 움직이려면 '${neededLabels.join("'·'")}'이 필요합니다`
+          : `지금 반대인 ${notYetText}는 조건만으로는 움직이기 어렵습니다`;
+  }
 
   return { openingLine, rows, bundles, usedRuleFallback: mode === 'live' && usedRuleFallback };
 }

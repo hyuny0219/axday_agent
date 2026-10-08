@@ -11,10 +11,11 @@
 
 import { useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { ParticipantStance, SessionMode, Stance } from '../../domain/types';
+import type { ParticipantStance, SessionMode, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
+import { latestSuggestedConditionIds } from '../liveTranscript';
 import { openingStanceOf } from '../openingStance';
 import '../../styles/screens/persuasionBoard.css';
 
@@ -32,6 +33,10 @@ export interface PersuasionBoardProps {
    * voteRules는 live 결정권이 없으므로, 이 값이 있으면 "움직일 조건"에 함께 보여주고
    * "참고" 표시를 붙인다. */
   liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>;
+  /** live 회의 기록의 발언들(세션 transcript.statements). 첫 의견 입장(첫 OPINIONS 발언의
+   * stance)과, liveSuggestedConditionIds를 따로 안 넘겼을 때의 제안 조건(역할별 최신
+   * 발언)을 여기서 뽑는다(PR #20 Codex 28차 P2-3·P2-4). scripted는 쓰지 않는다. */
+  statements?: readonly Statement[];
 }
 
 function conditionLabel(scenario: Scenario, id: string): string {
@@ -61,8 +66,9 @@ function buildRow(
   stances: Record<ExecMemberId, Stance>,
   mode: SessionMode,
   liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>,
+  statements: readonly Statement[] = [],
 ): Row {
-  const opening = openingStanceOf(scenario, memberId);
+  const opening = openingStanceOf(scenario, memberId, mode, statements);
   const current = stances[memberId];
   const stanceChanged = opening !== current;
   const stanceText = stanceChanged
@@ -132,6 +138,7 @@ export function PersuasionBoard({
   stances,
   mode,
   liveSuggestedConditionIds,
+  statements,
 }: PersuasionBoardProps) {
   // 설득 현황판 접기/펼치기(2026-10-08 팀리드 지시 — 1280×720 DISCUSS 왼쪽 열이 4행
   // 전부를 펼친 채로는 세로로 넘쳐 하단 CTA가 잘렸다). 좁은 화면(≤1280px)에서만 기본
@@ -143,8 +150,10 @@ export function PersuasionBoard({
   const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
   const notYetTargetMembers = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] !== targetVote);
   const persuadedCount = EXEC_MEMBER_ORDER.length - notYetTargetMembers.length;
+  const liveHints =
+    mode === 'live' ? (liveSuggestedConditionIds ?? latestSuggestedConditionIds(statements ?? [])) : undefined;
   const rows = EXEC_MEMBER_ORDER.map((memberId) =>
-    buildRow(scenario, memberId, confirmedConditionIds, participantStance, stances, mode, liveSuggestedConditionIds),
+    buildRow(scenario, memberId, confirmedConditionIds, participantStance, stances, mode, liveHints, statements),
   );
 
   return (

@@ -455,23 +455,45 @@ export function ReactionsScreen({
   // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
   // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
   function handleRecommendCondition(conditionId: string): boolean {
+    return handleRecommendConditions([conditionId]).length > 0;
+  }
+
+  // 묶음 "모두 적용"(PR #20 Codex 28차 P2-1) — 선택 목록을 로컬에서 접어 한 번만 반영하고,
+  // 실제로 반영된 조건 id를 돌려준다.
+  function handleRecommendConditions(conditionIds: string[]): string[] {
     if (pendingOptionIndex !== null) {
-      return false;
+      return [];
     }
     const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
-    const index = scenario.followUp.options.findIndex(
-      (option, idx) =>
-        option.proposeConditionId === conditionId &&
-        !option.keepPrevious &&
-        (option.side ?? 'FOR') === resolvedSide &&
-        !selectedOptionIds.includes(String(idx)),
-    );
-    if (index < 0) {
-      // 예: REACTIONS 찬성 경로에 REVIEW 쪽 추천 답변이 없는 안건(Codex 27차 검토
-      // P2-3) — 매칭되는 문구가 없으면 아무것도 체크되지 않았으므로 false.
-      return false;
+    let next = selectedOptionIds;
+    const appliedIds: string[] = [];
+    for (const conditionId of conditionIds) {
+      const index = scenario.followUp.options.findIndex(
+        (option, idx) =>
+          option.proposeConditionId === conditionId &&
+          !option.keepPrevious &&
+          (option.side ?? 'FOR') === resolvedSide &&
+          !next.includes(String(idx)),
+      );
+      if (index < 0) {
+        // 예: REACTIONS 찬성 경로에 REVIEW 쪽 추천 답변이 없는 안건(Codex 27차 검토
+        // P2-3) — 매칭되는 문구가 없으면 아무것도 체크되지 않았다.
+        continue;
+      }
+      if (dirty) {
+        // 직접 고친 내용이 있으면 확인 UI만 열고(handleToggleOption과 같은 규칙) 멈춘다.
+        setPendingOptionIndex(index);
+        break;
+      }
+      next = [...next, String(index)];
+      appliedIds.push(conditionId);
     }
-    return handleToggleOption(index);
+    if (appliedIds.length > 0) {
+      setSelectedOptionIds(next);
+      setTextValue(composeText(next));
+      setDraftRevision((value) => value + 1);
+    }
+    return appliedIds;
   }
 
   function handleSubmit() {
@@ -631,6 +653,7 @@ export function ReactionsScreen({
             participantStance={boardParticipantStance}
             stances={stances}
             mode={mode}
+            statements={statements}
           />
           <button
             type="button"
@@ -758,6 +781,7 @@ export function ReactionsScreen({
           participantStance={boardParticipantStance}
           stances={stances}
           mode={mode}
+          statements={statements}
         />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />
@@ -804,6 +828,7 @@ export function ReactionsScreen({
             mode={mode}
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
+            onRecommendConditions={handleRecommendConditions}
             draftText={textValue}
             draftRevision={draftRevision}
             transcript={transcript}
