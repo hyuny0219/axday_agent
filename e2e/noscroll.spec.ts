@@ -7,7 +7,7 @@
 // 열어 가장 내용이 많은 상태에서 단언한다(card "비서실장 드로어 열린 상태 포함").
 
 import { test, expect, type Page, type Route } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 /**
  * 문서 스크롤이 없어도 패널 안에서 내용이 잘릴 수 있다(T56: 회의록 최신 항목이 아래로
@@ -141,7 +141,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // overflow:visible이라 안쪽 scrollHeight 검사로는 못 잡는다) expectNoPageScroll이
   // 못 잡았다 — CTA 자체가 뷰포트 안에 보이는지 직접 단언한다.
   await expectFullyVisible(page, 'submit-opinion', 'DISCUSS(CTA)');
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -324,7 +324,7 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
   await page.getByTestId('phrase-card-P4').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   await expect(

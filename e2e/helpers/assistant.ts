@@ -8,7 +8,7 @@ const FEATURES = ['summary', 'compare', 'refine'] as const;
 // live 어댑터의 5초 시간 제한 뒤 실패 안내가 뜨는 경우까지 기다린다.
 const FEATURE_TIMEOUT_MS = 15_000;
 
-export async function useAssistantAllFeatures(page: Page): Promise<void> {
+export async function tryAllAssistantFeatures(page: Page): Promise<void> {
   await page.getByTestId('assistant-toggle').click();
   const panel = page.getByTestId('assistant-panel');
   await expect(panel).toBeVisible();

@@ -9,7 +9,7 @@
 // 때마다(OPINIONS → REACTIONS) 값이 갱신되는 것으로 확인한다.
 
 import { test, expect, type Page } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function enterOpinions(page: Page) {
   await page.goto('/?mode=scripted');
@@ -49,7 +49,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await page.getByTestId('phrase-card-P2').click();
     await page.getByTestId('phrase-card-P3').click();
     await page.getByTestId('phrase-card-P4').click();
-    await useAssistantAllFeatures(page);
+    await tryAllAssistantFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
@@ -99,7 +99,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await page.getByTestId('discuss-side-for').click();
     // 조건 키워드가 전혀 없는 문장(어떤 조건도 제안하지 않는다).
     await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
-    await useAssistantAllFeatures(page);
+    await tryAllAssistantFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
@@ -149,7 +149,7 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -192,7 +192,7 @@ test.describe('live mock: 무대 표정', () => {
     await page.getByRole('button', { name: '내 의견 말하기' }).click();
     await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('phrase-card-P1').click();
-    await useAssistantAllFeatures(page);
+    await tryAllAssistantFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();

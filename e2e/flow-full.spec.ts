@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 VERDICTS 5행과 결론이 보인다', async ({
   page,
@@ -20,7 +20,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
   await expect(page.getByRole('button', { name: '반대', exact: true })).toHaveCount(0);
 
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -71,7 +71,7 @@ test('추천 문구를 하나도 고르지 않고 직접 입력만으로 ATTRACT
   // DISCUSS: 추천 문구 카드를 클릭하지 않고 직접 입력만 채운다.
   const draftTextarea = page.getByTestId('draft-editor-textarea');
   await draftTextarea.fill('작은 범위로 먼저 시작하고 결과를 확인한 뒤 넓히면 좋겠습니다.');
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -125,7 +125,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   // LIMIT(결재 금액 한도) + REVIEW(사람 표본 재검토)만 확정한다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P3').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -183,7 +183,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
   await page.getByTestId('discuss-side-for').click();
 
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -237,7 +237,7 @@ test('반대 쪽 추천 문구만 골라도 완주하고, 조건이 없어 원�
   await expect(page.getByTestId('phrase-card-P6')).toBeVisible();
 
   await page.getByTestId('phrase-card-N4').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion2 = page.getByTestId('submit-opinion');
   await expect(submitOpinion2).toBeEnabled();
   await submitOpinion2.click();

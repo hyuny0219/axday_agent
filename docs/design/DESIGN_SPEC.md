@@ -659,7 +659,7 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 **실패·연결 지연도 사용으로 센다**: 막히는 참가자가 없게, 결과를 렌더했을 때뿐 아니라 오류·시간 초과 안내(`assistant-error`)를 본 경우도 같은 유형을 `failed:true`로 기록한다. 정리한 초안을 화면에 보인 것도 `DRAFT_REFINE`(`applied:false`)로 기록한다. 결과 화면 "AI가 도운 일"은 바뀌지 않는다 — `failed` 기록과 `applied:false`인 정리는 줄을 만들지 않고, "조건 추천 N회" 집계도 `failed`는 세지 않는다.
 
-영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`useAssistantAllFeatures`), `e2e/assistant-gate.spec.ts`.
+영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
 
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
 

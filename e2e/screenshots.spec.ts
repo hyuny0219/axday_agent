@@ -9,7 +9,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { test, expect, type Page } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 // P1~P4 문구를 그대로 이어 붙인 뒤, 실제 이사회 발언처럼 이어지는 문장을 더해
 // 300자 제한에 가깝지만 넘지 않는 분량으로 만든다(축약 없이 실제 콘텐츠).
@@ -134,7 +134,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(assistantDialog).toHaveCount(0);
 
   // 비서실장 세 기능을 쓰고 나면 전달 버튼이 열린 상태가 된다.
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await expect(submitOpinion).toBeEnabled();
   await capture(page, testInfo.project.name, 'discuss');
 
@@ -218,7 +218,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 반대 3으로 부결이면서 "내 표와 같은 표 2석(CEO)"인 C_Result_Reject.html 조합이
   // 그대로 재현된다(e2e/stance.spec.ts의 "조건 없이 진행" 경로와 같다).
   await page.getByTestId('draft-editor-textarea').fill('이 안건을 검토했습니다.');
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
   await page.getByTestId('reactions-advance').click();

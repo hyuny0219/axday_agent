@@ -8,7 +8,7 @@
 // 건드리지 않는다 — docs/TASKS.md T36 참고).
 
 import { test, expect, type Page, type Route } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 const EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
@@ -99,7 +99,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
 
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -141,7 +141,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
@@ -174,7 +174,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -222,7 +222,7 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -288,7 +288,7 @@ test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 �
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();

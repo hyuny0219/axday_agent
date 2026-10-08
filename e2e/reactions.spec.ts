@@ -5,7 +5,7 @@
 // REACTIONS 후속 입력에서 이전에 확정한 조건과 새 제안이 충돌할 때 UI가 전달을
 // 막는지 확인한다(T25 만들 것 2: 누적 조건 충돌 재검사).
 import { test, expect, type Page, type Route } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function enterExperienceFirstReactions(page: Page) {
   await page.goto('/?mode=scripted');
@@ -23,7 +23,7 @@ async function enterExperienceFirstReactions(page: Page) {
 async function reachReactionsWithDataVetoConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
   await page.getByTestId('phrase-card-P3').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
@@ -38,7 +38,7 @@ async function reachReactionsWithDataVetoConfirmed(page: Page) {
 async function reachReactionsWithRecordConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
   await page.getByTestId('phrase-card-P2').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
@@ -117,7 +117,7 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
   await enterExperienceFirstReactions(page);
   // P1 = SCOPE만 확정한 채 첫 의견을 전달한다(DATA_VETO는 아직 없다).
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
   await page.getByTestId('reactions-advance').click();
@@ -382,7 +382,7 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   await page.getByRole('button', { name: '내 의견 말하기' }).click();
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 

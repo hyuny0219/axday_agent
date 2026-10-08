@@ -1,5 +1,5 @@
 import { test, expect, type Page } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 import { aiApprovalScenario } from '../src/content/scenarios/aiApproval';
 import { buildDraftText } from '../src/domain/draft';
 
@@ -26,7 +26,7 @@ test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다
   const textarea = page.getByTestId('draft-editor-textarea');
   await expect(textarea).toHaveValue(buildDraftText(aiApprovalScenario, ['P1', 'P2']));
 
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();
@@ -40,7 +40,7 @@ test('문구를 고르지 않고 직접 입력만으로도 의견을 전달할 �
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill('작은 범위로 먼저 시작하고 결과를 확인한 뒤 넓히면 좋겠습니다.');
 
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();

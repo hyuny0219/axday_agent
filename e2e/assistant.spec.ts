@@ -1,5 +1,5 @@
 import { test, expect, type Page } from './fixtures';
-import { useAssistantAllFeatures } from './helpers/assistant';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function reachDiscuss(page: Page) {
   await page.goto('/?mode=scripted');
@@ -15,7 +15,7 @@ async function reachDiscuss(page: Page) {
 
 async function finishToResult(page: Page) {
   // T97: 전달 전에 세 기능을 한 번씩 써야 한다. 이미 쓴 기능은 건너뛴다.
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -134,7 +134,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await page.getByTestId('assistant-close').click();
 
   // T97: 나머지 두 기능도 한 번씩 써야 전달이 열린다.
-  await useAssistantAllFeatures(page);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
