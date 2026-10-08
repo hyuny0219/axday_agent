@@ -1,0 +1,152 @@
+/* 진행 단계 안내판(T98). 오른쪽 종이 제목 아래 가로 한 줄 번호 칩. 현재 칩만 크고
+   진하게(종이 어두운 톤 + 앰버 테두리), 끝난 칩은 체크+흐림, 남은 칩은 흐림.
+   색은 종이 톤 토큰만 쓰고 붉은 박스는 쓰지 않는다. 맥동 테두리는 shell.css의
+   [data-guide='next'] 전역 규칙이 맡는다. */
+.step-guide {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step-guide__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.step-guide__chip {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 2px solid var(--paper-border);
+  background-color: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: 14px;
+  line-height: 1.25;
+  opacity: 0.55;
+}
+
+.step-guide__chip--done {
+  opacity: 0.6;
+}
+
+.step-guide__chip--current {
+  flex-grow: 1.5;
+  opacity: 1;
+  border-color: var(--amber);
+  background-color: var(--paper);
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 #3a2a12;
+}
+
+.step-guide__num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--ink);
+  color: var(--paper);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.step-guide__chip--current .step-guide__num {
+  background-color: var(--amber);
+  color: #0b0d10;
+}
+
+.step-guide__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.step-guide__checks {
+  flex-basis: 100%;
+  display: flex;
+  gap: 6px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.step-guide__tag {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 4px 8px;
+  border: 1px dashed var(--paper-border);
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.step-guide__say {
+  margin: 0;
+  padding: 6px 12px;
+  background-color: rgba(224, 163, 74, 0.2);
+  border-left: 4px solid var(--amber);
+  color: var(--ink);
+  font-family: var(--font-label);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (max-width: 1280px) {
+  .step-guide {
+    gap: 5px;
+  }
+
+  .step-guide__list {
+    gap: 5px;
+  }
+
+  .step-guide__chip {
+    padding: 4px 6px;
+    gap: 1px 5px;
+    font-size: 11px;
+  }
+
+  .step-guide__chip--current {
+    font-size: 12px;
+    box-shadow: 2px 2px 0 #3a2a12;
+  }
+
+  .step-guide__num {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .step-guide__checks {
+    font-size: 11px;
+    gap: 3px;
+  }
+
+  .step-guide__tag {
+    padding: 3px 5px;
+    font-size: 10px;
+  }
+
+  .step-guide__say {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+}

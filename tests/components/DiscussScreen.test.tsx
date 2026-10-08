@@ -431,12 +431,62 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     );
   });
 
-  it('안내 한 줄이 비서실장 세 가지를 한 번씩 쓰면 전달이 열린다고 알려 준다', () => {
+  it('예전 한 줄 안내는 없고 안내판이 대신한다(T98)', () => {
     renderDiscuss([]);
-    expect(screen.getByTestId('discuss-assistant-tip')).toHaveTextContent(
-      '비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다',
-    );
+    expect(screen.queryByTestId('discuss-assistant-tip')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('discuss-guide-hint')).not.toBeInTheDocument();
+    expect(screen.getByTestId('step-guide')).toBeInTheDocument();
   });
+
+  it('안내판 현재 칩이 입장 → 문구 → 비서실장 → 전달 순으로 옮겨 가고 실제 조작 대상도 같이 강조된다(T98)', () => {
+    const { unmount } = render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        roleStatus={idle}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={[]}
+      />,
+    );
+    // ① 입장 미선택
+    expect(screen.getByTestId('step-chip-side')).toHaveAttribute('data-status', 'current');
+    expect(screen.getByTestId('discuss-side-select')).toHaveAttribute('data-guide', 'next');
+    fireEvent.click(screen.getByTestId('discuss-side-for'));
+    // ② 문구
+    expect(screen.getByTestId('step-chip-side')).toHaveAttribute('data-status', 'done');
+    expect(screen.getByTestId('step-chip-phrase')).toHaveAttribute('data-status', 'current');
+    expect(screen.getByTestId('discuss-side-select')).not.toHaveAttribute('data-guide');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    // ③ 비서실장
+    expect(screen.getByTestId('step-chip-assistant')).toHaveAttribute('data-status', 'current');
+    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-guide', 'next');
+    unmount();
+
+    // ④ 세 기능을 다 쓴 뒤
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        roleStatus={idle}
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={[entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW'), entry('DRAFT_REFINE')]}
+        initialSide="FOR"
+      />,
+    );
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('step-chip-submit')).toHaveAttribute('data-status', 'current');
+    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-guide', 'next');
+    expect(screen.getByTestId('step-check-compare')).toHaveAttribute('data-checked', 'true');
+  });
+
 });
 
 // PR #20 Codex 28차 P2-1: 복합 추천 "모두 적용"은 조건 여러 개를 단일 상태 업데이트로 반영한다.

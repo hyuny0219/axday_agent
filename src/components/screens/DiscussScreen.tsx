@@ -45,7 +45,8 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
-import { GuideHint } from '../parts/GuideHint';
+import { StepGuide } from '../parts/StepGuide';
+import { stepGuideState } from '../../domain/stepGuide';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
@@ -195,6 +196,9 @@ export function DiscussScreen({
   const assistantDone = assistantUsed.size >= ASSISTANT_FEATURE_ORDER.length;
   const draftReady = pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
+  // T98: 오른쪽 종이 안내판의 현재 칩. 같은 칩이 가리키는 실제 조작 대상(입장 버튼·
+  // 문구 카드·비서실장 버튼·전달 버튼)에도 data-guide를 함께 건다.
+  const guideCurrent = stepGuideState({ side, draftReady, featuresUsed: assistantUsed }).current;
 
   // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
   // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
@@ -445,7 +449,7 @@ export function DiscussScreen({
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
             requiredFeatures={{ used: assistantUsed }}
-            toggleGuide={draftReady && !assistantDone}
+            toggleGuide={guideCurrent === 'assistant'}
             toggleLocked={!draftReady}
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
@@ -456,7 +460,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
-            data-guide={canSubmit ? 'next' : undefined}
+            data-guide={guideCurrent === 'submit' && canSubmit ? 'next' : undefined}
           >
             의견 전달 ▶
           </button>
@@ -483,13 +487,19 @@ export function DiscussScreen({
             <h2 className="discuss-screen__title">내 의견 쓰기</h2>
             <span className="discuss-screen__phrase-hint">추천 문구 · 여러 개 선택 가능</span>
           </div>
+          <StepGuide
+            variant="discuss"
+            side={side}
+            draftReady={draftReady}
+            featuresUsed={assistantUsed}
+          />
           <p className="discuss-screen__guide">
             문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
           </p>
           <div
             className="side-select"
             data-testid="discuss-side-select"
-            data-guide={side === null ? 'next' : undefined}
+            data-guide={guideCurrent === 'side' ? 'next' : undefined}
           >
             <button
               type="button"
@@ -517,17 +527,9 @@ export function DiscussScreen({
             </p>
           ) : (
             <>
-              {draft.draftText.trim() === '' && (
-                <GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
-              )}
-              {/* T97: 입장을 고른 뒤 비서실장 세 기능을 한 번씩 써야 의견 전달이
-                  열린다는 안내(강조는 비서실장 버튼의 data-guide가 맡는다). */}
-              <p className="discuss-screen__guide" data-testid="discuss-assistant-tip">
-                비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다
-              </p>
               <div
                 className="discuss-screen__phrase-list"
-                data-guide={draft.draftText.trim() === '' ? 'next' : undefined}
+                data-guide={guideCurrent === 'phrase' ? 'next' : undefined}
               >
                 {scenario.phrases
                   .filter((phrase) => {
