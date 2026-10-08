@@ -601,14 +601,11 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'RESULT',
 ]);
 
-/** 회의록 패널을 렌더하는 단계(v1.0 7절). DISCUSS·REACTIONS는 입력이 왼쪽 열을 이미
- * 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
-const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
-  'BRIEFING',
-  'OPINIONS',
-  'MOTION',
-  'VOTE',
-]);
+/** 발언 흐름 패널을 렌더하는 단계(v1.0 7절, T102 조정). 임원 발언 전문은 오른쪽 종이
+ * 카드(OPINIONS·REACTIONS)에서만 읽으므로 그 단계와 DISCUSS에서는 같은 말을 두 번
+ * 보여주지 않는다. 오른쪽에 발언 카드가 없는 MOTION·VOTE에서만 복습용으로 둔다(BRIEFING은
+ * 아직 발언이 없는 안내 한 줄). RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
+const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['BRIEFING', 'MOTION', 'VOTE']);
 
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
@@ -619,16 +616,10 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { session, dispatch, roundLog, reactionsStep } = useSession();
+  const { session, dispatch, roundLog } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
-  // REACTIONS "반응 듣기"(T89)는 OPINIONS처럼 발언 흐름(MinutesPanel)을 보여준다 —
-  // "다시 답하기"는 DISCUSS와 같이 입력이 왼쪽 열을 이미 채우므로 보여주지 않는다
-  // (기존 MINUTES_STAGES 규칙과 같은 이유).
-  const showMinutes =
-    (MINUTES_STAGES.has(session.stage) ||
-      (session.stage === 'REACTIONS' && reactionsStep === 'listen')) &&
-    scenario !== null;
+  const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
   const fit = useViewportFit();
   const wrapperStyle: CSSProperties | undefined =
     fit.mode === 'scale' ? ({ '--app-scale': fit.scale } as CSSProperties) : undefined;

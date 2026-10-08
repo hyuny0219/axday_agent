@@ -100,10 +100,10 @@ describe('MinutesPanel 전체 표시·스크롤', () => {
     expect(screen.getByTestId('minutes-count')).toHaveTextContent('12건');
   });
 
-  it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "발언 흐름"이다', () => {
+  it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "지금까지 발언"이다', () => {
     render(<MinutesPanel entries={many} />);
     expect(screen.getByTestId('minutes-list')).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('region', { name: '발언 흐름' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '지금까지 발언' })).toBeInTheDocument();
   });
 
   it('새 항목이 오면 목록을 맨 아래로 내린다', () => {
