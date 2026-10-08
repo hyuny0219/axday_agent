@@ -119,6 +119,15 @@ describe('buildConditionRecommendation(T96, live 모드, Codex 27차 검토 P2-4
     expect(result.openingLine).toContain('CISO');
     expect(result.openingLine).toContain('CAIO');
     expect(result.openingLine).not.toContain('CFO');
+    // PR #20 Codex 39차 검토 P2: 고민 중(UNDECIDED)이 섞이면 '지금 반대인'이라고 단정하지 않는다.
+    expect(result.openingLine).toContain('아직 찬성이 아닌');
+    expect(result.openingLine).not.toContain('지금 반대인');
+  });
+
+  it('아직 찬성이 아닌 임원이 모두 반대일 때만 "지금 반대인"이라고 말한다(Codex 39차 P2)', () => {
+    const liveStances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'FOR', CISO: 'AGAINST' };
+    const result = buildConditionRecommendation(scenario, [], 'FOR', 'live', liveStances);
+    expect(result.openingLine).toContain('지금 반대인');
   });
 
   it('live는 임원 발언의 suggestedConditionIds가 있으면 그 값을 우선 쓰고 규칙표로 대체하지 않는다', () => {

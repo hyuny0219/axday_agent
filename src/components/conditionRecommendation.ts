@@ -197,12 +197,17 @@ export function buildConditionRecommendation(
           ? `${currentWord} ${notYetText}를 반대로 돌리려면 '${neededLabels.join("'·'")}'이 필요합니다`
           : `${currentWord} ${notYetText}는 조건만으로는 돌리기 어렵습니다`;
   } else {
+    // 찬성 입장: 아직 찬성이 아닌 임원 중 고민 중(UNDECIDED)이 섞이면 '반대'라고 단정하지
+    // 않는다 — 같은 화면의 입장 표시('고민 중')와 모순됐다(PR #20 Codex 39차 검토 P2).
+    const currentWord = notYetForMembers.every((memberId) => stances[memberId] === 'AGAINST')
+      ? '지금 반대인'
+      : '아직 찬성이 아닌';
     openingLine =
       notYetForMembers.length === 0
         ? '지금 임원 4명 모두 찬성 쪽입니다.'
         : neededLabels.length > 0
-          ? `지금 반대인 ${notYetText}를 움직이려면 '${neededLabels.join("'·'")}'이 필요합니다`
-          : `지금 반대인 ${notYetText}는 조건만으로는 움직이기 어렵습니다`;
+          ? `${currentWord} ${notYetText}를 움직이려면 '${neededLabels.join("'·'")}'이 필요합니다`
+          : `${currentWord} ${notYetText}는 조건만으로는 움직이기 어렵습니다`;
   }
 
   return { openingLine, rows, bundles, usedRuleFallback: mode === 'live' && usedRuleFallback };
