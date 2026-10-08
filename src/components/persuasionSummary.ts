@@ -1,51 +1,31 @@
 // 결과 화면 "이사님의 조건이 임원 표를 몇 명 바꿨는지" 요약과, 부결된 임원의 "한 끗
 // 차이" 안내(T96, 2026-10-08 사용자 지시 "내 의견과 조건으로 임원을 설득하는 것임을
-// 참가자가 느끼게"). resultSummary.ts의 execRows.changed는 "조건이 하나도 없는 안건"
-// 기준(countVotesChangedByConditions와 같은 계산, T43 게이지)이지만, 여기서는 참가자가
-// 실제로 체감하는 "내 말에 설득됐나" — 첫 의견 때의 입장과 최종 표를 비교한다. 기준이
-// 달라 resultSummary.ts를 고치지 않고 별도 파일로 둔다.
+// 참가자가 느끼게").
+//
+// Codex 27차 검토 P2-2: 처음에는 "첫 의견 때의 입장(openingStance)"과 최종 표를
+// 비교했는데, CAIO처럼 첫 의견이 'UNDECIDED'(미정)인 임원은 조건을 하나도 안 붙여도
+// voteRules의 always 분기로 표결 시점에는 반드시 YES/NO 중 하나가 되므로 "조건이
+// 바꾼 표"로 잘못 셌다. resultSummary.ts의 execRows.changed(T43 게이지)가 이미 쓰는
+// "같은 최종안에서 조건만 뺀 표(baseline)와 비교"(domain/voting.ts의
+// countVotesChangedByConditions, decideMember(...baselineCtx) 패턴)를 그대로 재사용해
+// 실제로 조건 때문에 결과가 달라진 임원만 센다. live는 이 "조건 없는 안건" 가정 자체가
+// 성립하지 않아(LLM이 실제로 판단한 결과이지 규칙표가 아니다, resultSummary.ts의
+// execRows.changed와 같은 전제) 0으로 둔다.
 
-import type { ExecMemberId, Scenario, Vote } from '../content/types';
-import type { Session, Stance } from '../domain/types';
-import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../domain/voting';
-import { openingStanceOf } from './openingStance';
+import type { ExecMemberId, Scenario } from '../content/types';
+import type { Session } from '../domain/types';
+import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, requiredConditionsFor } from '../domain/voting';
 
-function stanceMatchesVote(stance: Stance, vote: Vote): boolean {
-  if (stance === 'FOR') return vote === 'YES';
-  if (stance === 'AGAINST') return vote === 'NO';
-  return false;
-}
-
-function firstLiveOpinionStance(
-  session: Pick<Session, 'transcript'>,
-  memberId: ExecMemberId,
-): Stance {
-  const first = session.transcript.statements.find(
-    (item) => item.roleId === memberId && item.stage === 'OPINIONS',
-  );
-  return first?.stance ?? 'UNDECIDED';
-}
-
-/** 임원 4명 중 "첫 의견 때의 입장"과 최종 표가 다른 사람 수(T96). scripted는 시나리오
- * 데이터의 openingStance, live는 실제 OPINIONS 발언의 stance를 쓴다. 최종표가
- * UNCAST(미표결)면 세지 않는다 — 응답이 없었을 뿐 설득된 적도 없다. */
-export function countVotesChangedFromOpening(
+/** 임원 4명 중 지금 최종안(조건 포함)과 조건 없는 baseline의 표가 다른 사람 수(T96).
+ * scripted만 계산하고(live는 규칙표로 "조건 없었다면"을 가정할 수 없어 0) */
+export function countVotesChangedByFinalConditions(
   scenario: Scenario,
-  session: Pick<Session, 'mode' | 'transcript' | 'ballots'>,
+  session: Pick<Session, 'mode' | 'finalMotion'>,
 ): number {
-  let changed = 0;
-  for (const memberId of EXEC_MEMBER_ORDER) {
-    const vote = session.ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
-    if (vote === 'UNCAST') {
-      continue;
-    }
-    const opening =
-      session.mode === 'live' ? firstLiveOpinionStance(session, memberId) : openingStanceOf(scenario, memberId);
-    if (!stanceMatchesVote(opening, vote)) {
-      changed += 1;
-    }
+  if (session.mode !== 'scripted' || !session.finalMotion) {
+    return 0;
   }
-  return changed;
+  return countVotesChangedByConditions(scenario, session.finalMotion);
 }
 
 /** 부결(NO)한 임원이 조건 1~2개만 더 있었으면 찬성이었을지(T96, "한 끗 차이"). scripted

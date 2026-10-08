@@ -3,7 +3,7 @@
 // 확인한다.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PersuasionBoard } from '../../src/components/parts/PersuasionBoard';
 import { aiApprovalScenario } from '../../src/content/scenarios';
 import { scriptedStances } from '../../src/domain/stance';
@@ -13,8 +13,31 @@ afterEach(() => {
   cleanup();
 });
 
+/** 2026-10-08 팀리드 지시: 기본은 접힘(요약 한 줄만) — 임원별 4행은 "자세히 보기"를
+ * 눌러야 보인다(1280×720 DISCUSS 왼쪽 열 세로 넘침 방지). 행 단위 단언이 필요한
+ * 테스트는 먼저 펼친다. */
+function expand() {
+  fireEvent.click(screen.getByTestId('persuasion-board-toggle'));
+}
+
 describe('PersuasionBoard(T96, 안건①)', () => {
-  it('참가자가 찬성 쪽이고 조건이 없으면 CFO 행에 "움직일 조건 · 결재 금액 한도·사람 표본 재검토"가 보인다', () => {
+  it('기본은 접힌 요약 한 줄이고, 아직 설득되지 않은 임원 코드가 보인다', () => {
+    const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions: [] });
+    render(
+      <PersuasionBoard
+        scenario={aiApprovalScenario}
+        confirmedConditionIds={[]}
+        participantStance="FOR"
+        stances={stances}
+        mode="scripted"
+      />,
+    );
+    expect(screen.queryByTestId('persuasion-board-row-CFO')).toBeNull();
+    expect(screen.getByTestId('persuasion-board-summary')).toHaveTextContent('CFO·CAIO·CISO 남음');
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/4');
+  });
+
+  it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람 표본 재검토"가 보인다', () => {
     const opinions: Opinion[] = [];
     const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
     render(
@@ -26,6 +49,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
         mode="scripted"
       />,
     );
+    expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
       '움직일 조건 · 결재 금액 한도·사람 표본 재검토',
     );
@@ -47,6 +71,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
         mode="scripted"
       />,
     );
+    expand();
     expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('미정 → 찬성');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('설득 완료');
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 2/4');
@@ -64,6 +89,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
         mode="scripted"
       />,
     );
+    expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
       "'결재 금액 한도·사람 표본 재검토' 조건이 빠지면 반대로 남습니다",
     );

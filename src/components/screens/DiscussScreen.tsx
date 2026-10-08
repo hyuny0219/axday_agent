@@ -240,14 +240,17 @@ export function DiscussScreen({
     setDraftRevision((value) => value + 1);
   }
 
-  function handleTogglePhrase(phraseId: string) {
+  /** true면 즉시 적용됨, false면 RebuildConfirm 확인 대기(Codex 27차 검토 P2-3 —
+   * handleRecommendCondition이 이 값으로 "실제로 반영됐는지"를 가른다). */
+  function handleTogglePhrase(phraseId: string): boolean {
     const result = togglePhrase(draft, scenario, phraseId);
     if (result.kind === 'applied') {
       setDraft(result.state);
       setDraftRevision((value) => value + 1);
-      return;
+      return true;
     }
     setPendingPhraseId(result.pendingPhraseId);
+    return false;
   }
 
   function handleKeep() {
@@ -285,16 +288,17 @@ export function DiscussScreen({
   // 이미 그 조건으로 체크된 문구가 있으면(재적용) 아무것도 하지 않는다. 입장을 아직
   // 고르지 않았으면 'FOR' 쪽 문구를 기본으로 삼는다(PersuasionBoard·AssistantPanel의
   // 기본 설득 목표와 같다).
-  function handleRecommendCondition(conditionId: string) {
+  function handleRecommendCondition(conditionId: string): boolean {
     const phrase = scenario.phrases.find(
       (candidate) =>
         candidate.conditionId === conditionId &&
         (candidate.side ?? 'FOR') === (side ?? 'FOR') &&
         !draft.selectedPhraseIds.includes(candidate.id),
     );
-    if (phrase) {
-      handleTogglePhrase(phrase.id);
+    if (!phrase) {
+      return false;
     }
+    return handleTogglePhrase(phrase.id);
   }
 
   function handleSubmit() {
@@ -336,6 +340,8 @@ export function DiscussScreen({
             sessionId={sessionId}
             selectedConditionIds={confirmedConditionIds}
             participantStance={side}
+            mode={mode}
+            stances={stances}
             onRecommendCondition={handleRecommendCondition}
             draftText={draft.draftText}
             draftRevision={draftRevision}

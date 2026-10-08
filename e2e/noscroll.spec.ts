@@ -135,6 +135,11 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
   await page.getByTestId('assistant-close').click();
 
+  // 2026-10-08 팀리드 지시: 설득 현황판(T96)이 더해지며 왼쪽 열이 세로로 넘쳐 하단
+  // CTA가 뷰포트 밖으로 밀렸는데도 문서 스크롤 자체는 없어(.app-body__actions가
+  // overflow:visible이라 안쪽 scrollHeight 검사로는 못 잡는다) expectNoPageScroll이
+  // 못 잡았다 — CTA 자체가 뷰포트 안에 보이는지 직접 단언한다.
+  await expectFullyVisible(page, 'submit-opinion', 'DISCUSS(CTA)');
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -157,6 +162,9 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'REACTIONS(비서실장 팝업 열림)');
   await page.getByTestId('assistant-close').click();
 
+  // T96: DISCUSS와 같은 이유로 REACTIONS(다시 답하기)도 CTA가 뷰포트 안에 보이는지
+  // 직접 확인한다.
+  await expectFullyVisible(page, 'submit-followup', 'REACTIONS(다시 답하기 CTA)');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
   await submitFollowup.click();
@@ -166,6 +174,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectFullyVisible(page, 'minutes-panel', 'MOTION');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'MOTION');
+  // T96: MOTION 왼쪽 열도 같은 공용 설득 현황판을 쓰므로 함께 확인한다.
+  await expectFullyVisible(page, 'freeze-motion', 'MOTION(CTA)');
 
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
@@ -173,6 +183,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectFullyVisible(page, 'minutes-panel', 'VOTE');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
+  // T96: VOTE도 함께 확인한다 — 찬성 라디오가 왼쪽 열(BALLOTS) 바로 아래 오른쪽
+  // 종이가 아니라 오른쪽 열 안에 있어 왼쪽 열 넘침과는 무관하지만, 왼쪽 열 자체
+  // (PersuasionBoard + BALLOTS)가 뷰포트를 넘지 않는지는 vote-ballots로 확인한다.
+  await expectFullyVisible(page, 'vote-ballots', 'VOTE(왼쪽 열)');
 
   // VOTE의 "발언 흐름" 항목 수를 기억해 둔다 — RESULT의 회의록 전문(T58 흡수)이
   // 같은 buildMinutes 계산을 쓰므로 항목 수가 같아야 한다(카드 완료 확인).

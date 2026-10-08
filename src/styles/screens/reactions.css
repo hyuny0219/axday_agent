@@ -53,8 +53,9 @@
 
 @media (max-width: 1280px) {
   .reactions-screen__hud {
-    gap: 8px;
-    padding: 10px 12px;
+    /* T96: 설득 현황판이 더해진 왼쪽 열 세로 예산을 더 번다(2026-10-08 팀리드 지시). */
+    gap: 6px;
+    padding: 8px 10px;
   }
 }
 
@@ -89,8 +90,11 @@
 @media (max-width: 1280px) {
   .reactions-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
-    width: 180px;
-    font-size: 17px;
+    /* T96(2026-10-08 팀리드 지시): 설득 현황판이 더해지며 왼쪽 열 세로 예산이
+       빠듯해졌다 — 버튼 세 개(비서실장·답하지 않고 넘어가기·답변 전달)가 한 줄에
+       들어가게 너비를 더 줄여 두 줄 줄바꿈 자체를 없앤다(최소 터치 높이는 그대로). */
+    width: 140px;
+    font-size: 15px;
   }
 }
 
@@ -103,8 +107,8 @@
 @media (max-width: 1280px) {
   .reactions-screen__submit-row .cta {
     min-height: 56px;
-    width: 200px;
-    font-size: 20px;
+    width: 170px;
+    font-size: 17px;
   }
 }
 
@@ -118,8 +122,8 @@
 
 @media (max-width: 1280px) {
   .reactions-screen__submit-row .reactions-screen__keep-previous {
-    padding: 0 14px;
-    font-size: 13px;
+    padding: 0 6px;
+    font-size: 10px;
   }
 }
 
