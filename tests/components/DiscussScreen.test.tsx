@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DiscussScreen, type DiscussScreenProps } from '../../src/components/screens/DiscussScreen';
-import { aiApprovalScenario, anonBoardScenario } from '../../src/content/scenarios';
+import { aiApprovalScenario, anonBoardScenario, experienceFirstScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
 import { scriptedStances } from '../../src/domain/stance';
@@ -469,5 +469,70 @@ describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
       const checkbox = screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]');
       expect(checkbox).toBeChecked();
     }
+  });
+});
+
+describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 30차 P2)', () => {
+  const idleRoles: Record<ExecMemberId, RoleStatus> = { CEO: 'idle', CFO: 'idle', CAIO: 'idle', CISO: 'idle' };
+
+  function renderWith(
+    sc: typeof aiApprovalScenario,
+    initialSide: 'FOR' | 'AGAINST',
+    actions: { type: string; evidenceIds: string[] }[] = [],
+  ) {
+    return render(
+      <ControlledDiscuss
+        scenario={sc}
+        sessionId="s1"
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        roleStatus={idleRoles}
+        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
+        onSubmit={noop}
+        onAssistantAction={(event) => actions.push(event)}
+        assistantActions={[]}
+        initialSide={initialSide}
+      />,
+    );
+  }
+
+  async function openCompare() {
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '직접 쓴 의견입니다.' } });
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+  }
+
+  it.each([
+    ['ai-approval', aiApprovalScenario, 'FULL_AUTO'],
+    ['experience-first', experienceFirstScenario, 'EXP_ONLY'],
+  ])('AGAINST + %s: 적용할 문구가 없는 추천은 버튼 없이 직접 써 달라고 안내한다', async (_name, sc, conditionId) => {
+    renderWith(sc, 'AGAINST');
+    await openCompare();
+    expect(screen.getByTestId(`assistant-recommend-row-${conditionId}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`assistant-recommend-apply-${conditionId}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-manual-${conditionId}`)).toHaveTextContent('직접 써 주세요');
+  });
+
+  it('FOR에서는 기존대로 적용 버튼이 보인다', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-apply-LOG')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+  });
+
+  it('직접 쓴 뒤 묶음 적용 → 확인(다시 구성) 하면 두 문구가 모두 체크되고 기록도 2건이다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    fireEvent.click(await screen.findByTestId('rebuild-confirm-rebuild'));
+    for (const id of ['P1', 'P3']) {
+      expect(screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]')).toBeChecked();
+    }
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
   });
 });

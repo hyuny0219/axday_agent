@@ -81,6 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
+import { findFollowUpIndexForCondition } from '../recommendMatch';
 import { changeCauseLabel, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
 import { scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
@@ -255,6 +256,8 @@ export function ReactionsScreen({
   // 다시 구성하지 않은 동안) true다. P1-a·P1-b(위 주석) 모두 이 플래그로 가른다.
   const [dirty, setDirty] = useState(false);
   const [pendingOptionIndex, setPendingOptionIndex] = useState<number | null>(null);
+  // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 승인 시 전체를 한 번에 반영한다.
+  const [pendingBatch, setPendingBatch] = useState<{ index: number; conditionId: string }[] | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
@@ -284,6 +287,7 @@ export function ReactionsScreen({
     }
     onChooseSide(next);
     setPendingOptionIndex(null);
+    setPendingBatch(null);
     if (selectedOptionIds.length === 0) {
       return;
     }
@@ -394,36 +398,44 @@ export function ReactionsScreen({
     return true;
   }
 
-  /** RebuildConfirm '직접 쓴 내용 유지': 체크 상태만 바꾸고 textValue는 그대로 둔다
-   * (dirty 유지). */
-  function handleKeepCustomText() {
+  /** RebuildConfirm 승인: 대기 중인 선택(추천 묶음이면 전체)을 한 번에 반영한다. */
+  function resolvePendingOptions(choice: 'keep' | 'rebuild') {
     if (pendingOptionIndex === null) {
       return;
     }
-    const idStr = String(pendingOptionIndex);
-    setSelectedOptionIds((previous) =>
-      previous.includes(idStr) ? previous.filter((id) => id !== idStr) : [...previous, idStr],
-    );
+    const batch = pendingBatch ?? [{ index: pendingOptionIndex, conditionId: null }];
+    const toggled = batch.map((item) => String(item.index));
+    const flip = (previous: string[]) => {
+      const kept = previous.filter((id) => !toggled.includes(id));
+      const added = toggled.filter((id) => !previous.includes(id));
+      return [...kept, ...added];
+    };
+    if (choice === 'keep') {
+      // 체크 상태만 바꾸고 textValue는 그대로 둔다(dirty 유지).
+      setSelectedOptionIds(flip);
+    } else {
+      // 새 선택 전체 기준으로 textValue를 다시 짓고 dirty를 푼다.
+      const next = flip(selectedOptionIds);
+      setSelectedOptionIds(next);
+      setTextValue(composeText(next));
+      setDirty(false);
+      setDraftRevision((value) => value + 1);
+    }
     setPendingOptionIndex(null);
+    setPendingBatch(null);
+    for (const item of batch) {
+      if (item.conditionId !== null) {
+        onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
+      }
+    }
   }
 
-  /** RebuildConfirm '선택 문구로 다시 구성': 새 선택 전체 기준으로 textValue를 다시
-   * 짓고(domain/draft.ts의 buildDraftText와 같은 전체 재구성) dirty를 푼다. */
+  function handleKeepCustomText() {
+    resolvePendingOptions('keep');
+  }
+
   function handleRebuildFromOptions() {
-    if (pendingOptionIndex === null) {
-      return;
-    }
-    const idStr = String(pendingOptionIndex);
-    setSelectedOptionIds((previous) => {
-      const next = previous.includes(idStr)
-        ? previous.filter((id) => id !== idStr)
-        : [...previous, idStr];
-      setTextValue(composeText(next));
-      return next;
-    });
-    setDirty(false);
-    setDraftRevision((value) => value + 1);
-    setPendingOptionIndex(null);
+    resolvePendingOptions('rebuild');
   }
 
   function handleTextChange(text: string) {
@@ -465,25 +477,32 @@ export function ReactionsScreen({
       return [];
     }
     const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
+    if (dirty) {
+      // 직접 고친 내용이 있으면 확인 UI를 먼저 띄운다(handleToggleOption과 같은 규칙).
+      // 묶음 전체를 보존해 승인 시 한 번에 반영하고 그때 기록한다.
+      const batch: { index: number; conditionId: string }[] = [];
+      for (const conditionId of conditionIds) {
+        const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, [
+          ...selectedOptionIds,
+          ...batch.map((item) => String(item.index)),
+        ]);
+        if (index >= 0) {
+          batch.push({ index, conditionId });
+        }
+      }
+      const first = batch[0];
+      if (first) {
+        setPendingBatch(batch);
+        setPendingOptionIndex(first.index);
+      }
+      return [];
+    }
     let next = selectedOptionIds;
     const appliedIds: string[] = [];
     for (const conditionId of conditionIds) {
-      const index = scenario.followUp.options.findIndex(
-        (option, idx) =>
-          option.proposeConditionId === conditionId &&
-          !option.keepPrevious &&
-          (option.side ?? 'FOR') === resolvedSide &&
-          !next.includes(String(idx)),
-      );
+      const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, next);
       if (index < 0) {
-        // 예: REACTIONS 찬성 경로에 REVIEW 쪽 추천 답변이 없는 안건(Codex 27차 검토
-        // P2-3) — 매칭되는 문구가 없으면 아무것도 체크되지 않았다.
         continue;
-      }
-      if (dirty) {
-        // 직접 고친 내용이 있으면 확인 UI만 열고(handleToggleOption과 같은 규칙) 멈춘다.
-        setPendingOptionIndex(index);
-        break;
       }
       next = [...next, String(index)];
       appliedIds.push(conditionId);
@@ -829,6 +848,9 @@ export function ReactionsScreen({
             stances={stances}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
+            canApplyCondition={(conditionId) =>
+              findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR') >= 0
+            }
             draftText={textValue}
             draftRevision={draftRevision}
             transcript={transcript}
