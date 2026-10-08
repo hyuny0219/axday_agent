@@ -10,8 +10,10 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T100 | 진행 중 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
+| T101 | 대기(T98 머지 후) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
 | T98 | 진행 중 | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
-| T99 | 진행 중 | BRIEFING 가독성 — 상황·제안·미정 글자 키우고 핵심 단어 강조, 근거 자료 4장을 쉬운 문장 톤으로 통일·축약(2026-10-08 사용자 지시 "근거자료 글씨가 너무 많아서 쉬운 문장톤으로"). 상세는 아래 T99 카드 |
+| T99 | 완료 | BRIEFING 가독성 — 상황·제안·미정 글자 키우고 핵심 단어 강조, 근거 자료 4장을 쉬운 문장 톤으로 통일·축약(2026-10-08 사용자 지시 "근거자료 글씨가 너무 많아서 쉬운 문장톤으로"). 상세는 아래 T99 카드 |
 | T97 | 완료 | DISCUSS에서 AI 비서실장 필수 사용(2026-10-08 사용자 지시 "추천문구 선택 → AI 비서실장 기능 활용 → 의견 전달"). 추천 문구를 고른 뒤 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 한 번씩 써야 "의견 전달"이 열린다. 팝업 첫 화면에 기능 소개+체크리스트. 다시 답하기(REACTIONS)는 선택 사항 유지. 상세는 아래 T97 카드 |
 | T96 | 완료 | 설득 가시화·AI 비서실장 조건 추천(2026-10-08 사용자 지시 "내 의견과 조건으로 임원을 설득하는 것임을 참가자가 느끼게"). `domain/voting.ts`에 `requiredConditionsFor`(scripted voteRules에서 YES로 가는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) 신설. 공용 `PersuasionBoard`(임원 4명의 "첫 의견 → 지금" 입장 + 움직일 조건 + "설득한 임원 N/4")를 DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열에 표시. REACTIONS 반응 카드 "바뀜" 배지를 "반대 → 찬성"(전후 입장)으로 바꾸고 원인 조건 한 줄(`changeCauseLabel`)을 더함, "유지" 카드의 빈 대사는 시나리오 `holdReasons` 한 문장으로 대체. RESULT 상단에 "이사님의 조건 N개가 임원 M명의 표를 바꿨습니다"(`components/persuasionSummary.ts`), 부결한 임원 행에 조건 1~2개 "한 끗 차이" 안내. AI 비서실장 "조건 비교하기"를 "조건 추천"으로 강화(`components/conditionRecommendation.ts`, 규칙 기반·즉시) — 추천 행 "적용"으로 해당 추천 문구를 체크, 사용 기록에 "조건 추천 N회"·"추천 조건 N개 반영" 집계(`domain/assistantLog.ts`). 1라운드 PASS. `npm run check`(단위 631)·e2e 로컬 전체(mock 8790·preview 4174) 통과. 상세는 아래 T96 카드와 `docs/design/DESIGN_SPEC.md` T96 단락 |
 | T95 | 완료 | 소개 화면(INTRO)·화면별 진행 가이드·게이팅(2026-10-08 사용자 지시). `SessionStage`에 INTRO 추가, `IntroScreen`(목적·5단계·성공 기준·팁) 신설, 공용 `GuideHint`+`data-guide="next"` 맥동 테두리(`prefers-reduced-motion` 대응)로 BRIEFING(자료 팝업 게이팅)·OPINIONS(0.8초 순차 노출·잠금)·DISCUSS/REACTIONS·MOTION·VOTE·RESULT에 하이라이트. BRIEFING의 "특별 이사의 임무" 점선 상자는 INTRO와 중복돼 제거(상황·제안·미정 글자 키워 공간 채움). 1라운드 PASS. `npm run check`(단위 601)·e2e 전체 152건 + 수정분 재검증(briefing·flow-early·a11y·no-stray-english·screenshots, mock 8796·preview 4177) 통과, `docs/screenshots`에 `intro.png` 추가. 상세는 아래 T95 카드와 `docs/design/DESIGN_SPEC.md` T95 단락 |
@@ -80,6 +82,53 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T100 문구·용어 통일(규칙 점검 반영) — 금지어·쉬운 말·중복 안내·문서
+
+- 목표(2026-10-08 사용자 지시 "전체 화면과 흐름상 지금까지의 규칙과 어긋나는 부분 체크" → Opus 점검 결과 반영): 화면·시나리오·문서의 **문구**만 고친다. 레이아웃·CSS·집계 로직은 T101.
+- 읽을 것: `server/prompts/plainLanguage.ts`(FORBIDDEN_WORDS), `src/content/scenarios/{aiApproval,experienceFirst}.ts`, `src/components/parts/{Header,MinutesPanel,DialogShell,StageBand,Avatar}.tsx`, `src/components/screens/{Attract,Intro,Select,Briefing,Opinions,Discuss,Reactions,Motion,Vote,Result}Screen.tsx`, `src/components/minutes.ts`, `docs/FACILITATOR_GUIDE.md`, `docs/design/DESIGN_SPEC.md`(T83 대응표), `tests/content/*.test.ts`(쉬운 말 검사), `e2e/*.spec.ts`(문구 단언 갱신 필요).
+- 용어 결정(팀 리드가 정함, 그대로 적용):
+  - 참가자 호칭은 **"이사님"**으로 통일(ATTRACT·INTRO의 "당신"도 "이사님"으로; 무대 명패·발언 흐름의 "나"는 자리 표시라 유지).
+  - "사건 01"/"안건" → 화면 전부 **"안건 01"**(헤더·SELECT 카드 태그·결과 보고·팝업). 헤더 "세션 5B04" → **"회의 5B04"**.
+  - "투표"·"표결" → **"표결"**로 통일(VOTE 제목 "최종 표결 · 이사님 1표", 버튼 "표결 확정").
+  - "추천 문구"·"추천 답변" → DISCUSS는 "추천 문구", REACTIONS 2/2는 **"추천 답변"**으로 화면 안에서 한 가지만(힌트·가이드·안내 모두).
+  - 입력칸 이름: DISCUSS "내 발언", REACTIONS "내 답변" 유지(단계가 다르므로). REACTIONS 1/2의 "답하기 ▶" → **"답하러 가기 ▶"**.
+  - 임원 입장의 "미정" → **"고민 중"**(BRIEFING의 미정 항목과 구분; 현황판·명패·반응 배지·결과 모두). 데이터의 Stance 값은 그대로, 라벨만.
+  - 설득 도장 이름 → **"설득 도장"** 한 가지(소개·결과·도장 안·가이드). "보너스"·"미획득" 영어·한자어 제거 → "설득 도장 · 같은 표 3석부터"/"설득 도장은 다음 기회에".
+  - 근거 자료 버튼 → 모든 화면 **"근거 자료 보기"**(BRIEFING "· 자료 4장" 꼬리 유지 가능), 팝업 안 "02 단계에서 …" → "임원 의견을 들으면 여기에 쌓입니다".
+  - 무대 "CLASSIFIED" 금색 상자는 유지(비밀요원 분위기, 사용자 허용 범위). "Esc나 바깥을 누르면 닫힙니다" → "바깥을 누르거나 닫기를 누르면 닫힙니다".
+- 만들 것:
+  1. **금지어 제거(must)**: 조건 라벨 "사람 표본 재검토" → "사람이 일부 다시 보기", "사람 검토 전면 생략" → "사람 확인 없이 전부 맡기기"(aiApproval.ts 조건·추천 문구·keywords·holdReasons·결과 문구·server/scenario-data.ts 동기화·docs/SCENARIO_AI_APPROVAL.md), 자료 제목 "시범 자동승인 집계" → "시범 자동 승인 결과", 제안 원문 "재검토 절차" 정리. experienceFirst.ts의 "복기"·"전례 없는 상황 한정"·"재검토"·"데이터 경고 시"·"절대 우선"·"양식"을 쉬운 말로(의미·표결 규칙 불변). `tests/content`의 쉬운 말 검사를 조건 라벨·추천 문구·keywords·자료 제목·holdReasons·결과 문구까지 넓혀 금지어 0을 고정.
+  2. **안내 문구 쉬운 말**: "열람 가능 · 눌러서 입장" → "골라서 들어가기", "참가자 확정 전 비공개"/"봉인" → "확정 전까지 가려 둡니다", "가결 … 부결" 설명 → "찬성이 3표 넘으면 통과", "집계 · 5석 과반" → "표 세기 · 5석 중 3석", "회의록 전문 (보기)" → "회의 기록 전체 보기", "조건 없이 원안 그대로 상정" → "조건 없이 처음 안 그대로 표결", "표결 안건 · 수정안" → "표결할 안건 · 조건을 붙인 안", "확정 버튼으로만…" → "확정을 눌러야 표가 들어갑니다", 발언 흐름 "N건 · 스크롤" → "N건". aiApproval.ts:431 "운영 전에 확인할 조건"과 experienceFirst.ts:420(복사된 것, 경험 안건에 안 맞음)을 안건별로 맞는 쉬운 문장으로.
+  3. **중복 안내 제거**: BRIEFING 무대 말풍선은 상황 문장 반복 대신 짧은 안내("자료부터 같이 보시죠"), BRIEFING 안내 두 줄 중 왼쪽 "근거 자료를 먼저 확인해 주세요"만 남김(오른쪽 "먼저 근거 자료 4장을 열어 보세요" 제거 — T95 게이팅 힌트는 유지), MOTION의 "고정한 뒤에는…"/"누르면 조건을 더 바꿀 수 없습니다" 중 하나만, VOTE 안내 중복 하나만.
+  4. **단계 이름 정렬**: 상단 단계 표시와 화면 제목을 맞춘다 — "02 임원 의견"↔제목 "임원 의견 듣기", "03 내 의견"↔"내 의견 쓰기"(들어가는 버튼 "내 의견 쓰러 가기 ▶", 내는 버튼 "의견 전달 ▶" 유지), "04 반응에 답하기"↔"반응 듣기 1/2"·"다시 답하기 2/2" 유지, "05 표결"↔"표결할 안건 확인"·"최종 표결".
+  5. **문서**: FACILITATOR_GUIDE.md 옛 내용 정리(:5 모드 표시, :11 안건 3개, :19 "설득 성공 점수처럼 설명하지 않음"→설득이 목표임을 안내, :82 "AI가 도운 일" 패널, :118 "추가 도장", :140 "EXHIBIT A", :173 유지 문구), DESIGN_SPEC T83 대응표에 "T86에서 대체" 주석. docs/TASKS.md T100 행.
+  6. 테스트·e2e: 문구 단언 전부 갱신, `e2e/no-stray-english`·`tests/content` 통과.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`, `server/scenario-data.ts`(동기화만).
+- 하지 말 것: 표결 규칙·조건 ID·시나리오 구조 변경, 프롬프트 버전 변경, CSS/레이아웃 변경(T101), DiscussScreen/ReactionsScreen의 구조 변경(T98과 충돌 — 두 파일은 **문자열만** 바꾸고 JSX 구조는 건드리지 않는다).
+- 완료 확인: `npm run check`, 전체 e2e(1080·720) PASS, 금지어 검사 0.
+- 크기: M.
+
+---
+
+## T101 스타일·집계 일관성(규칙 점검 반영) — CSS 누수·720 겹침·현황판 기본값·설득 숫자
+
+- 목표: Opus 점검에서 나온 레이아웃·스타일·집계 어긋남 수정. **T98 머지 뒤 시작**(같은 파일).
+- 읽을 것: `src/styles/screens/{discuss,reactions,result,dialogShell}.css`, `src/components/parts/{PersuasionBoard,AssistantPanel,DialogShell}.tsx`, `src/components/screens/{Discuss,Reactions,Result}Screen.tsx`, `src/components/{persuasionSummary,minutes}.ts`, `src/components/screens/IntroScreen.tsx`, `docs/screenshots/desktop-720/{result-reject,discuss,motion,reactions-answer}.png`.
+- 만들 것:
+  1. **CSS 누수**: `.discuss-screen__submit-row .cta`·`.reactions-screen__submit-row .cta`(및 1280 분기)가 submit-row 안에 렌더되는 DialogShell(비서실장 팝업)의 닫기·기능 버튼까지 키우는 문제 → 선택자를 `> .cta`로 좁히거나 팝업을 portal로 빼서 비서실장 팝업 닫기(120px)·기능 버튼이 근거 자료 팝업과 같은 크기가 되게. 같은 원인으로 덮이던 "AI 비서실장에게 맡기기" 토글 크기(글자가 양끝에 닿음)도 의도값(225px/21px)으로. T98의 outline 변형과 충돌 없이.
+  2. **720**: "답하지 않고 넘어가기" 10px → 문구를 "넘어가기"로 줄이고 15px 이상; 결과(부결) "설득 도장은 다음 기회에" 상자가 부결 도장 원과 겹치지 않게 위치 분리; 결과(부결) 임원 판단 줄 "…" 잘림 → 두 줄 허용; DISCUSS 입력칸이 줄 중간부터 보이는 문제(초기 스크롤 위치 0으로); MOTION 발언 흐름 첫 줄이 제목에 가리는 문제.
+  3. **현황판 기본값**: DISCUSS에서 입장을 고르기 전(side=null)에는 설득 현황판·비서실장 조건 추천이 찬성을 목표로 계산하지 않는다 — 현황판은 "입장을 고르면 설득 목표가 보입니다" 한 줄만, 비서실장 버튼은 T97대로 잠김. REACTIONS는 이전 입장 사용(변경 없음).
+  4. **설득 숫자 통일**: 처음부터 참가자와 같은 편인 임원은 "처음부터 같은 편"으로 표시하고 "설득한 임원 N/M"의 분모에서 뺀다(PersuasionBoard·persuasionSummary·ResultScreen 제목·도장 문구·IntroScreen 성공 기준 "나를 포함해 같은 표 3석"). scripted·live 모두. 단위 테스트로 세 숫자(현황판·결과 제목·도장)가 같은 세션에서 모순되지 않음을 고정.
+  5. **발언 흐름 유지 문구**: minutes.ts의 고정 문구 "앞서 말씀드린 입장 그대로입니다." 대신 반응 카드와 같은 `holdReasons`를 쓴다.
+  6. 결과 "AI가 도운 일"의 "조건 추천 N회" 줄에 추천한 조건 이름과 그중 최종안에 들어간 것(T96 집계 재사용)을 덧붙인다 — "조건 추천 1회 · 결재 금액 한도, 승인 사유 기록 → 2개 반영".
+  7. 테스트·e2e·문서(DESIGN_SPEC T101 단락, FACILITATOR_GUIDE 설득 숫자 설명).
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 표결 규칙 변경, 시나리오 문장 변경(T100), 서버 변경.
+- 완료 확인: `npm run check`, 전체 e2e(1080·720) PASS, 720 스크린샷(result-reject·discuss·motion·reactions-answer·discuss-assistant-intro) 확인.
+- 크기: M.
 
 ---
 
