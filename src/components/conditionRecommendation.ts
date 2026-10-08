@@ -77,6 +77,15 @@ export function buildConditionRecommendation(
   // 참가자 목표(PersuasionBoard의 targetVote와 같다): AGAINST면 임원을 반대로, 그 외
   // (찬성·미선택)는 찬성으로 움직이는 것이다. 추천 대상·조건 방향·문구가 모두 이를 따른다
   // (PR #20 Codex 28차 P2-2).
+  // T101: 입장을 아직 고르지 않았으면(DISCUSS side=null) 찬성을 목표로 가정해 계산하지 않는다.
+  if (participantStance === null) {
+    return {
+      openingLine: '입장을 고르면 설득 목표에 맞는 조건을 추천해 드립니다',
+      rows: [],
+      bundles: [],
+      usedRuleFallback: false,
+    };
+  }
   const targetStance: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
   const targetVote = targetStance === 'AGAINST' ? 'NO' : 'YES';
   // 반대 목표에서는 표정이 미정이어도 규칙표 표가 이미 NO인 임원은 돌릴 필요가 없어

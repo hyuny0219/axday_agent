@@ -58,8 +58,8 @@ export function IntroScreen({ onNext }: IntroScreenProps) {
             <div className="intro-screen__block">
               <span className="intro-screen__label">성공 기준</span>
               <p className="intro-screen__success" data-testid="intro-success">
-                임원을 설득해 이사님과 같은 표가 3석 이상이면 &lsquo;설득 성공&rsquo; 도장을
-                받습니다.
+                임원을 설득해, 나를 포함해 같은 표가 3석 이상이면 &lsquo;설득 성공&rsquo; 도장을
+                받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.
               </p>
             </div>
           </div>

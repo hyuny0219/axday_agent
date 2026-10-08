@@ -17,6 +17,7 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
 import { latestSuggestedConditionIds } from '../liveTranscript';
 import { openingStanceOf } from '../openingStance';
+import { computePersuasionTally, persuadedCountLabel } from '../persuasionSummary';
 import '../../styles/screens/persuasionBoard.css';
 
 export interface PersuasionBoardProps {
@@ -67,6 +68,7 @@ function buildRow(
   mode: SessionMode,
   liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>,
   statements: readonly Statement[] = [],
+  alreadySame = false,
 ): Row {
   const opening = openingStanceOf(scenario, memberId, mode, statements);
   const current = stances[memberId];
@@ -87,6 +89,11 @@ function buildRow(
     return uniqueInOrder(ids)
       .map((id) => conditionLabel(scenario, id))
       .join('·');
+  }
+
+  // T101: 처음부터 참가자와 같은 편인 임원은 설득 대상이 아니다.
+  if (alreadySame) {
+    return { memberId, stanceText, stanceChanged, conditionNote: '처음부터 같은 편' };
   }
 
   if (targetVote === 'FOR') {
@@ -147,14 +154,37 @@ export function PersuasionBoard({
   // 변화가 한눈에 보이게)대로 기본 펼침. 첫 렌더에서 한 번만 판단한다(테스트 jsdom은
   // matchMedia가 없어 접힘으로 시작한다).
   const [expanded, setExpanded] = useState(() => isWideViewport());
-  const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
-  const notYetTargetMembers = EXEC_MEMBER_ORDER.filter((memberId) => stances[memberId] !== targetVote);
-  const persuadedCount = EXEC_MEMBER_ORDER.length - notYetTargetMembers.length;
+  const targetVote: 'FOR' | 'AGAINST' = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+  const tally = computePersuasionTally(scenario, mode, statements ?? [], targetVote, stances);
   const liveHints =
     mode === 'live' ? (liveSuggestedConditionIds ?? latestSuggestedConditionIds(statements ?? [])) : undefined;
   const rows = EXEC_MEMBER_ORDER.map((memberId) =>
-    buildRow(scenario, memberId, confirmedConditionIds, participantStance, stances, mode, liveHints, statements),
+    buildRow(
+      scenario,
+      memberId,
+      confirmedConditionIds,
+      participantStance,
+      stances,
+      mode,
+      liveHints,
+      statements,
+      tally.alreadySame.includes(memberId),
+    ),
   );
+
+  // T101: 입장을 아직 고르지 않았으면(DISCUSS side=null) 찬성을 목표로 가정해 보여주지
+  // 않는다 — 한 줄 안내만 둔다.
+  if (participantStance === null) {
+    return (
+      <div className="persuasion-board" data-testid="persuasion-board" aria-label="설득 현황판">
+        <div className="persuasion-board__head">
+          <span className="persuasion-board__summary" data-testid="persuasion-board-pending">
+            입장을 고르면 설득 목표가 보입니다
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // 2026-10-08 팀리드 지시(2차): 접힌 상태에서도 "설득 현황판" 제목 줄 + 요약 줄
@@ -163,11 +193,11 @@ export function PersuasionBoard({
     <div className="persuasion-board" data-testid="persuasion-board" aria-label="설득 현황판">
       <div className="persuasion-board__head">
         <span className="persuasion-board__count" data-testid="persuasion-board-count">
-          설득한 임원 {persuadedCount}/4
+          {persuadedCountLabel(tally)}
         </span>
         {!expanded && (
           <span className="persuasion-board__summary" data-testid="persuasion-board-summary">
-            {notYetTargetMembers.length === 0 ? '모두 설득 완료' : `${notYetTargetMembers.join('·')} 남음`}
+            {tally.remaining.length === 0 ? '모두 같은 편' : `${tally.remaining.join('·')} 남음`}
           </span>
         )}
         <button

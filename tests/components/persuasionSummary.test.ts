@@ -8,13 +8,16 @@ import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
 import { decideBoard } from '../../src/domain/voting';
 import {
+  computePersuasionTally,
+  persuadedCountLabel,
   countVotesChangedByFinalConditions,
   liveStanceChangeLine,
   nextTrySuggestionLabel,
   oneStepAwayNote,
 } from '../../src/components/persuasionSummary';
 import { experienceFirstScenario } from '../../src/content/scenarios';
-import type { Ballot, Motion, Session, Statement } from '../../src/domain/types';
+import { persuasionStamp } from '../../src/domain/stance';
+import type { Ballot, Motion, Session, Stance, Statement } from '../../src/domain/types';
 
 const scenario = aiApprovalScenario;
 
@@ -157,5 +160,73 @@ describe('liveStanceChangeLine(Codex 33차 P2-1)', () => {
     ]);
     expect(line).toBe('임원 입장은 처음과 같았습니다');
     expect(line).not.toContain('조건');
+  });
+});
+
+describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 같은 세션에서 모순되지 않는다', () => {
+  function subsets(ids: string[]): string[][] {
+    const result: string[][] = [[]];
+    for (const id of ids) {
+      for (const existing of [...result]) result.push([...existing, id]);
+    }
+    return result;
+  }
+
+  it('두 안건·두 입장·모든 조건 조합에서 같은 편 좌석 = 나 + 처음부터 같은 편 + 설득한 임원, 분모 = 4 - 처음부터 같은 편', () => {
+    for (const sc of [aiApprovalScenario, experienceFirstScenario]) {
+      for (const side of ['FOR', 'AGAINST'] as const) {
+        for (const conditionIds of subsets(sc.conditions.map((condition) => condition.id))) {
+          const id = 'm';
+          const motion: Motion = {
+            id,
+            scenarioId: sc.id,
+            kind: conditionIds.length === 0 ? 'original' : 'amended',
+            conditionIds,
+            baseConditionIds: [],
+            effectiveConditionIds: conditionIds,
+            executionMode: 'DEFAULT',
+            frozenAt: 0,
+            text: sc.originalMotion.text,
+            hash: 'h',
+          };
+          const ballots = decideBoard(sc, motion, side);
+          const participantVote = side === 'FOR' ? 'YES' : 'NO';
+          const finalStances = {} as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+          for (const ballot of ballots) {
+            const memberId = ballot.memberId as 'CEO' | 'CFO' | 'CAIO' | 'CISO';
+            finalStances[memberId] = ballot.vote === 'YES' ? 'FOR' : ballot.vote === 'NO' ? 'AGAINST' : 'UNDECIDED';
+          }
+          const tally = computePersuasionTally(sc, 'scripted', [], side, finalStances);
+          const seats = persuasionStamp(
+            [...ballots, { ...ballots[0], memberId: 'PARTICIPANT', vote: participantVote }],
+            participantVote,
+          ).sameVoteSeats;
+          expect(1 + tally.alreadySame.length + tally.persuaded.length).toBe(seats);
+          expect(tally.total).toBe(4 - tally.alreadySame.length);
+          expect(tally.persuaded.length).toBeLessThanOrEqual(tally.total);
+          expect(tally.alreadySame.length + tally.persuaded.length + tally.remaining.length).toBe(4);
+        }
+      }
+    }
+  });
+
+  it('안건①: 찬성이면 처음부터 찬성인 CEO를 분모에서 빼 "설득한 임원 0/3"이고, 반대면 CFO·CISO를 빼 "0/2"다', () => {
+    const none: Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance> = {
+      CEO: 'FOR',
+      CFO: 'AGAINST',
+      CAIO: 'UNDECIDED',
+      CISO: 'AGAINST',
+    };
+    const forTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'FOR', none);
+    expect(forTally.alreadySame).toEqual(['CEO']);
+    expect(persuadedCountLabel(forTally)).toBe('설득한 임원 0/3');
+    const againstTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'AGAINST', none);
+    expect(againstTally.alreadySame).toEqual(['CFO', 'CISO']);
+    expect(persuadedCountLabel(againstTally)).toBe('설득한 임원 0/2');
+  });
+
+  it('모두 처음부터 같은 편이면 숫자 대신 말로 표시한다', () => {
+    const tally = { target: 'FOR' as const, alreadySame: ['CEO', 'CFO', 'CAIO', 'CISO'] as never[], persuaded: [], remaining: [], total: 0 };
+    expect(persuadedCountLabel(tally)).toBe('모두 처음부터 같은 편');
   });
 });

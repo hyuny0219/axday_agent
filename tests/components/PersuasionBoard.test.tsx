@@ -34,7 +34,8 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     );
     expect(screen.queryByTestId('persuasion-board-row-CFO')).toBeNull();
     expect(screen.getByTestId('persuasion-board-summary')).toHaveTextContent('CFO·CAIO·CISO 남음');
-    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/4');
+    // T101: CEO는 처음부터 같은 편이라 분모(4)에서 빠진다.
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 
   it('참가자가 찬성 쪽이고 조건이 없으면 "자세히 보기"를 눌렀을 때 CFO 행에 "움직일 조건 · 결재 금액 한도·사람 표본 재검토"가 보인다', () => {
@@ -53,9 +54,9 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
       '움직일 조건 · 결재 금액 한도·사람 표본 재검토',
     );
-    // CEO는 FULL_AUTO 없이는 이미 찬성이라 "설득 완료"다.
-    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('설득 완료');
-    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/4');
+    // CEO는 처음부터 찬성이라 "처음부터 같은 편"이고 설득 분모에서 빠진다(T101).
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('처음부터 같은 편');
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 
   it('LOG 조건을 확정하면 CAIO 행이 "미정 → 찬성"으로 바뀌고 설득한 임원 수가 늘어난다', () => {
@@ -74,10 +75,10 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expand();
     expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('미정 → 찬성');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('설득 완료');
-    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 2/4');
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/3');
   });
 
-  it('참가자가 반대 쪽이면 아직 NO인 CFO 행이 "조건이 빠지면 반대로 남습니다"로 뒤집혀 보인다', () => {
+  it('참가자가 반대 쪽이면 처음부터 반대인 CFO 행은 "처음부터 같은 편"이고 조건이 빠지면 반대로 남는 임원은 문구가 뒤집혀 보인다', () => {
     const opinions: Opinion[] = [];
     const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
     render(
@@ -90,12 +91,27 @@ describe('PersuasionBoard(T96, 안건①)', () => {
       />,
     );
     expand();
-    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent(
-      "'결재 금액 한도·사람 표본 재검토' 조건이 빠지면 반대로 남습니다",
+    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('처음부터 같은 편');
+    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('처음부터 같은 편');
+    // CFO·CISO는 처음부터 반대라 분모에서 빠지고, CEO·CAIO 둘만 설득 대상이다(아직 0명).
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/2');
+  });
+
+  it('입장을 아직 고르지 않았으면(participantStance=null) 찬성 목표로 계산하지 않고 한 줄 안내만 보인다(T101)', () => {
+    const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions: [] });
+    render(
+      <PersuasionBoard
+        scenario={aiApprovalScenario}
+        confirmedConditionIds={[]}
+        participantStance={null}
+        stances={stances}
+        mode="scripted"
+      />,
     );
-    // 참가자가 반대 쪽일 때 "설득한 임원"은 지금 NO(반대)인 임원 수다 — 아직 아무
-    // 의견도 전달하지 않은 시점이라 CAIO는 첫 반응이 UNDECIDED(미정)라 포함되지 않고
-    // CFO·CISO만 반대다.
-    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 2/4');
+    expect(screen.getByTestId('persuasion-board-pending')).toHaveTextContent(
+      '입장을 고르면 설득 목표가 보입니다',
+    );
+    expect(screen.queryByTestId('persuasion-board-count')).toBeNull();
+    expect(screen.queryByTestId('persuasion-board-toggle')).toBeNull();
   });
 });

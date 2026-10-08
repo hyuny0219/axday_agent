@@ -95,6 +95,16 @@ describe('buildConditionRecommendation(T96, 안건①, scripted)', () => {
   });
 });
 
+describe('buildConditionRecommendation(T101, 입장 미선택)', () => {
+  it('participantStance가 null이면 찬성을 목표로 계산하지 않고 추천 행 없이 안내 한 줄만 돌려준다', () => {
+    const stances = scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] });
+    const result = buildConditionRecommendation(scenario, [], null, 'scripted', stances);
+    expect(result.rows).toEqual([]);
+    expect(result.bundles).toEqual([]);
+    expect(result.openingLine).toContain('입장을 고르면');
+  });
+});
+
 describe('buildConditionRecommendation(T96, live 모드, Codex 27차 검토 P2-4)', () => {
   it('live는 scripted 규칙표가 아니라 실제 stances로 "아직 찬성이 아닌 임원"을 가른다', () => {
     // scripted 규칙표라면 조건 없이 CFO·CAIO·CISO가 모두 아직 찬성이 아니지만, live는

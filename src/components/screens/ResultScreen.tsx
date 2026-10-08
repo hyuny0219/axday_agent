@@ -26,6 +26,8 @@ import {
   liveStanceChangeLine,
   nextTrySuggestionLabel,
   oneStepAwayNote,
+  computePersuasionTally,
+  persuadedCountLabel,
 } from '../persuasionSummary';
 import { buildMinutes, type RoundLogEntry } from '../minutes';
 import { MinutesPanel } from '../parts/MinutesPanel';
@@ -119,6 +121,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     }
     return result;
   }, [resultSummary]);
+  // T101: 설득 현황판·결과 제목·도장이 같은 숫자를 쓰도록 같은 함수(computePersuasionTally)로
+  // 센다. 최종 표(finalStances)와 참가자 표 기준이다.
+  const persuasionTally = useMemo(
+    () =>
+      persuasion
+        ? computePersuasionTally(
+            scenario,
+            session.mode,
+            session.transcript.statements,
+            persuasion.participantVote === 'NO' ? 'AGAINST' : 'FOR',
+            finalStances,
+          )
+        : null,
+    [scenario, session.mode, session.transcript.statements, persuasion, finalStances],
+  );
   const persuasionSummaryLine = useMemo(() => {
     if (!finalMotion) return null;
     // live는 조건 없는 대조 표결이 없어 인과 문구·규칙표 추천을 쓰지 않고 관측 가능한 것만
@@ -268,7 +285,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             // 빼고 이 한 곳에만 남긴다(설득 도장 자체·"BONUS" 연출은 오른쪽 도장 칸에
             // 그대로 있다).
             <p className="result-tally__caption" data-testid="result-tally-caption">
-              이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 같은 표 {persuasion.sameVoteSeats}석
+              이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 나를 포함해 같은 표 {persuasion.sameVoteSeats}석
+              {persuasionTally ? ` · ${persuadedCountLabel(persuasionTally)}` : ''}
+              {persuasionTally && persuasionTally.total > 0 && persuasionTally.alreadySame.length > 0
+                ? ` · 처음부터 같은 편 ${persuasionTally.alreadySame.length}명은 세지 않음`
+                : ''}
               {persuasion.earned ? ' — 설득 도장을 받았습니다' : ' · 3석부터 설득 도장을 받습니다'}
               {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
             </p>

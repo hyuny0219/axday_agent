@@ -120,3 +120,48 @@ export function nextTrySuggestionLabel(
   }
   return null;
 }
+
+/** "설득한 임원 N/M" 한 곳 계산(T101) — 설득 현황판·결과 제목·설득 도장이 같은 세션에서
+ * 서로 모순되지 않도록 세 곳이 모두 이 함수 하나를 쓴다.
+ *
+ * - alreadySame: 처음부터(첫 의견 때) 참가자와 같은 편이고 지금도 그 편인 임원. 설득할
+ *   필요가 없었으므로 "설득한 임원"의 분모(total)에서 뺀다.
+ * - persuaded: 처음엔 같은 편이 아니었는데 지금 참가자 편이 된 임원.
+ * - remaining: 나머지(아직 못 움직였거나, 처음엔 같은 편이었다가 돌아선 임원).
+ * 불변식: total === 4 - alreadySame.length, 같은 편 좌석 수(참가자 포함) ===
+ * 1 + alreadySame.length + persuaded.length(UNCAST 임원이 없을 때). */
+export interface PersuasionTally {
+  target: 'FOR' | 'AGAINST';
+  alreadySame: ExecMemberId[];
+  persuaded: ExecMemberId[];
+  remaining: ExecMemberId[];
+  total: number;
+}
+
+export function computePersuasionTally(
+  scenario: Scenario,
+  mode: Session['mode'],
+  statements: readonly Statement[],
+  target: 'FOR' | 'AGAINST',
+  currentStances: Record<ExecMemberId, Stance>,
+): PersuasionTally {
+  const alreadySame: ExecMemberId[] = [];
+  const persuaded: ExecMemberId[] = [];
+  const remaining: ExecMemberId[] = [];
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    const current = currentStances[memberId];
+    if (current !== target) {
+      remaining.push(memberId);
+    } else if (openingStanceOf(scenario, memberId, mode, statements) === target) {
+      alreadySame.push(memberId);
+    } else {
+      persuaded.push(memberId);
+    }
+  }
+  return { target, alreadySame, persuaded, remaining, total: EXEC_MEMBER_ORDER.length - alreadySame.length };
+}
+
+/** 위 계산의 "N/M" 표시. M이 0(모두 처음부터 같은 편)이면 숫자 대신 말로 한다. */
+export function persuadedCountLabel(tally: PersuasionTally): string {
+  return tally.total === 0 ? '모두 처음부터 같은 편' : `설득한 임원 ${tally.persuaded.length}/${tally.total}`;
+}
