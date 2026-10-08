@@ -194,11 +194,17 @@ export function MotionScreen({
               type="button"
               className="cta"
               disabled={freezeDisabled}
+              aria-describedby={freezeDisabled ? 'motion-freeze-why' : undefined}
               onClick={() => onFreeze(confirmedConditionIds)}
               data-testid="freeze-motion"
             >
               이 안건으로 표결 ▶
             </button>
+            {freezeDisabled && (
+              <span id="motion-freeze-why" className="sr-only">
+                임원 후속 판단이 끝나면 열립니다
+              </span>
+            )}
             <span className="motion-screen__cta-hint">누르면 조건을 더 바꿀 수 없습니다</span>
           </div>
           {freezeDisabled && (

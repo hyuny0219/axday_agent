@@ -42,6 +42,37 @@ const SPOT_PAD = 4;
 const GAP = 18;
 const MARGIN = 12;
 
+/** 겹치거나 맞닿은 구멍은 하나의 큰 사각형으로 합친다(evenodd에서 겹친 부분이 다시 막히지 않게). */
+export function mergeOverlapping(boxes: Box[]): Box[] {
+  const result = boxes.map((item) => ({ ...item }));
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer: for (let i = 0; i < result.length; i += 1) {
+      for (let j = i + 1; j < result.length; j += 1) {
+        const a = result[i]!;
+        const b = result[j]!;
+        const touches =
+          a.left <= b.left + b.width &&
+          b.left <= a.left + a.width &&
+          a.top <= b.top + b.height &&
+          b.top <= a.top + a.height;
+        if (touches) {
+          const left = Math.min(a.left, b.left);
+          const top = Math.min(a.top, b.top);
+          const right = Math.max(a.left + a.width, b.left + b.width);
+          const bottom = Math.max(a.top + a.height, b.top + b.height);
+          result.splice(j, 1);
+          result[i] = { left, top, width: right - left, height: bottom - top };
+          merged = true;
+          break outer;
+        }
+      }
+    }
+  }
+  return result;
+}
+
 function sameBox(a: Box | null, b: Box | null): boolean {
   if (a === null || b === null) return a === b;
   return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
@@ -206,7 +237,11 @@ export function Coach({
   });
 
   // Esc는 건너뛰기. 팝업(DialogShell)의 Esc 닫기보다 먼저 받아 그쪽으로 넘기지 않는다.
+  const visible = box !== null;
   useEffect(() => {
+    if (!visible) {
+      return;
+    }
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -216,7 +251,7 @@ export function Coach({
     }
     window.addEventListener('keydown', handleKey, true);
     return () => window.removeEventListener('keydown', handleKey, true);
-  }, [onSkip]);
+  }, [onSkip, visible]);
 
   // 포커스는 말풍선으로 옮기고, 끝나면 원래 있던 곳으로 돌려준다. 팝업 안에서는 팝업이
   // 정한 포커스를 빼앗지 않는다.
@@ -249,7 +284,7 @@ export function Coach({
   const placed = placeBubble(spot, size, placement, view);
   // 어두운 덮개는 한 장이고, 대상(과 운영 메뉴) 자리는 clip-path로 구멍을 뚫어 비운다.
   // clip-path 밖은 클릭도 통과하므로 구멍 안의 대상은 그대로 누를 수 있다.
-  const holes = [spot, ...exempt.map((item) => ({ ...item }))];
+  const holes = mergeOverlapping([spot, ...exempt]);
   const clipPath = `path(evenodd, "M0 0H${view.width}V${view.height}H0Z ${holes
     .map((h) => `M${h.left} ${h.top}h${h.width}v${h.height}h${-h.width}Z`)
     .join(' ')}")`;

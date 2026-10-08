@@ -250,6 +250,7 @@ export function VoteScreen({
               type="button"
               className="cta"
               disabled={pendingVote === null || submitted}
+              aria-describedby={pendingVote === null && !submitted ? 'vote-confirm-why' : undefined}
               onClick={handleConfirm}
               data-testid="confirm-vote"
               data-coach="vote-confirm"
@@ -267,6 +268,11 @@ export function VoteScreen({
                 '표결 확정 ▶'
               )}
             </button>
+            {pendingVote === null && !submitted && (
+              <span id="vote-confirm-why" className="sr-only">
+                찬성 또는 반대 도장을 먼저 고르세요
+              </span>
+            )}
             <p className="vote-screen__cta-note">
               확정을 눌러야 표가 들어갑니다. 확정하면 임원 표가 공개되고 결과로 넘어갑니다.
               <br />

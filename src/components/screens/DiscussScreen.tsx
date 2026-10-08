@@ -201,6 +201,7 @@ export function DiscussScreen({
   useCoachReport({
     side,
     draftReady,
+    canSubmit,
     assistantUsedCount: assistantUsed.size,
     assistantOpen,
   });

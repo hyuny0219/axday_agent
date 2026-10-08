@@ -1,6 +1,6 @@
 // 진행 도우미(튜토리얼 코치, T103) 문구. 9단계 표(docs/TASKS.md T103)를 그대로 옮겼다.
 // 제목의 핵심 말(`keys`)은 화면의 `.key-term` 강조로 그려진다. 새 문구는 쉬운 말만 쓴다
-// (server/prompts/plainLanguage.ts FORBIDDEN_WORDS 0건, tests/content/coach.test.ts).
+// (server/prompts/plainLanguage.ts FORBIDDEN_WORDS 0건, tests/components/Coach.test.tsx).
 
 export type CoachPlacement = 'right' | 'left' | 'below' | 'above';
 

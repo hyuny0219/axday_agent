@@ -59,10 +59,10 @@ describe('coachStep — 화면별 단계', () => {
     });
 
     s = { ...s, coachDismissed: [3, 4, 5] };
-    expect(coachStep(s, ui({ side: 'FOR', draftReady: true, assistantUsedCount: 3 }))).toEqual({
-      step: 6,
-      done: false,
-    });
+    const ready = { side: 'FOR', draftReady: true, assistantUsedCount: 3, canSubmit: true } as const;
+    expect(coachStep(s, ui(ready))).toEqual({ step: 6, done: false });
+    // 문구를 지워 전달이 닫히면 4단계로 돌아간다.
+    expect(coachStep(s, ui({ ...ready, draftReady: false, canSubmit: false }))).toEqual({ step: 4, done: false });
   });
 
   it('REACTIONS는 반응 듣기(7)에서만 나오고 다시 답하기에는 코치가 없다', () => {

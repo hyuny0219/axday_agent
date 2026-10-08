@@ -20,6 +20,8 @@ export interface CoachUi {
   draftReady: boolean;
   /** DISCUSS: 비서실장 기능을 한 번씩 써 본 개수(0~3). */
   assistantUsedCount: number;
+  /** DISCUSS: 의견 전달 버튼이 열려 있는가(문구 준비 + 비서실장 세 가지). */
+  canSubmit: boolean;
   /** DISCUSS: 비서실장 팝업이 열려 있는가. */
   assistantOpen: boolean;
   /** REACTIONS: 반응 듣기(listen) 또는 다시 답하기(answer). */
@@ -32,6 +34,7 @@ export const EMPTY_COACH_UI: CoachUi = {
   side: null,
   draftReady: false,
   assistantUsedCount: 0,
+  canSubmit: false,
   assistantOpen: false,
   reactionsStep: 'listen',
 };
@@ -102,6 +105,10 @@ export function coachStep(session: Session, ui: CoachUi): CoachStepState | null 
   for (const step of coachStepsOf(session, ui)) {
     if (session.coachDismissed.includes(step)) {
       continue;
+    }
+    // 6단계는 전달 버튼이 열려 있을 때만 나온다. 문구를 지워 닫히면 4단계로 돌아간다.
+    if (step === 6 && !ui.canSubmit) {
+      return ui.draftReady ? null : { step: 4, done: false };
     }
     // 단계 4·5·6은 앞 단계가 끝난 것을 전제로 한다. 입장을 바꾸거나 문구를 지워
     // 조건이 뒤로 물러나도(예: 4단계 뒤 draftReady=false) 이미 기록된 단계는 건너뛴다.

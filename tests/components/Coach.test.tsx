@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { Coach, placeBubble } from '../../src/components/parts/Coach';
+import { Coach, mergeOverlapping, placeBubble } from '../../src/components/parts/Coach';
 import { CoachHost } from '../../src/components/parts/CoachHost';
 import { EMPTY_COACH_UI } from '../../src/domain/coach';
 import { createInitialSession } from '../../src/domain/session';
@@ -155,6 +155,29 @@ describe('Coach 운영 메뉴 예외', () => {
       'data-holes',
       '396,196,208,88;1200,8,56,40',
     );
+  });
+});
+
+describe('Esc·구멍 합치기', () => {
+  it('아무것도 그리지 않는 동안에는 Esc를 가로채지 않는다', () => {
+    const onSkip = vi.fn();
+    render(<Coach step={2} total={9} targetSelector="[data-coach='none']" title="t" body="b" placement="left" onSkip={onSkip} />);
+    const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    window.dispatchEvent(event);
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('겹치는 구멍은 하나로 합친다', () => {
+    const merged = mergeOverlapping([
+      { left: 0, top: 0, width: 100, height: 50 },
+      { left: 90, top: 10, width: 100, height: 100 },
+      { left: 500, top: 500, width: 10, height: 10 },
+    ]);
+    expect(merged).toEqual([
+      { left: 0, top: 0, width: 190, height: 110 },
+      { left: 500, top: 500, width: 10, height: 10 },
+    ]);
   });
 });
 
