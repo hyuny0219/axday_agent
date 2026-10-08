@@ -217,6 +217,8 @@ describe('DiscussScreen', () => {
     );
     const info = screen.getByTestId('discuss-info');
     expect(info.hasAttribute('inert')).toBe(false);
+    fireEvent.click(screen.getByTestId('discuss-side-for'));
+    fireEvent.click(document.querySelector('[data-testid^="phrase-card-"]') as HTMLElement);
     fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 맡기기' }));
     expect(info.hasAttribute('inert')).toBe(true);
     // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글 라벨이 "숨기기"로 바뀌지
@@ -367,6 +369,15 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     );
   }
 
+  it('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 보이며, 고르면 열린다(Codex 29차 P2)', () => {
+    renderDiscuss([]);
+    expect(screen.getByTestId('assistant-toggle')).toBeDisabled();
+    expect(screen.getByTestId('assistant-toggle-hint')).toHaveTextContent('먼저 추천 문구를 골라 주세요');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('assistant-toggle')).toBeEnabled();
+    expect(screen.queryByTestId('assistant-toggle-hint')).not.toBeInTheDocument();
+  });
+
   it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며, 하이라이트는 문구 목록에 있다', () => {
     renderDiscuss([]);
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
@@ -446,6 +457,7 @@ describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
         initialSide="FOR"
       />,
     );
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     fireEvent.click(screen.getByTestId('assistant-action-compare'));
     fireEvent.click(await screen.findByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW', {}, { timeout: 2000 }));

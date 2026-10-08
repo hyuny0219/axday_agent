@@ -399,6 +399,7 @@ export function DiscussScreen({
             onAssistantAction={onAssistantAction}
             requiredFeatures={{ used: assistantUsed }}
             toggleGuide={draftReady && !assistantDone}
+            toggleLocked={!draftReady}
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />

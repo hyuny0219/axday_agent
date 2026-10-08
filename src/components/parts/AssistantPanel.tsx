@@ -63,6 +63,10 @@ export interface AssistantPanelProps {
   requiredFeatures?: RequiredFeatures;
   /** T97: true면 열기 버튼에 다음 행동 강조(data-guide)를 건다. */
   toggleGuide?: boolean;
+  /** PR #20 Codex 29차 P2: true면 열기 버튼을 잠그고 "먼저 추천 문구를 골라 주세요"를 보인다
+   * (DISCUSS에서 문구 선택 전에 세 기능을 써 순서를 우회하지 못하게). 창이 열려 있는 동안은
+   * 영향이 없다. */
+  toggleLocked?: boolean;
   scenario: Scenario;
   sessionId: string;
   /** 참가자가 지금까지 확정한 조건 ID(조건 추천에 씀). */
@@ -121,6 +125,7 @@ function evidenceLabel(scenario: Scenario, id: string): string {
 export function AssistantPanel({
   requiredFeatures,
   toggleGuide = false,
+  toggleLocked = false,
   scenario,
   sessionId,
   selectedConditionIds,
@@ -397,11 +402,17 @@ export function AssistantPanel({
         type="button"
         className="cta cta--secondary assistant-panel__toggle"
         onClick={() => setOpen(true)}
+        disabled={toggleLocked}
         data-testid="assistant-toggle"
         data-guide={toggleGuide ? 'next' : undefined}
       >
         AI 비서실장에게 맡기기
       </button>
+      {toggleLocked && (
+        <p className="cta-disabled-hint" data-testid="assistant-toggle-hint">
+          먼저 추천 문구를 골라 주세요
+        </p>
+      )}
       {open && (
         <DialogShell
           testId="assistant-panel"
