@@ -454,6 +454,7 @@ function StageRouter() {
           onChooseSide={setSidePick}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload, stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
+          assistantActions={session.assistantActions}
           assistantAdapter={assistantAdapter}
         />
       );

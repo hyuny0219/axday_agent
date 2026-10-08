@@ -37,12 +37,16 @@ export interface AssistantAction {
   requestedAt?: number;
   /** '내 발언 정리'는 '내 발언에 적용'을 눌렀을 때만 true다. */
   applied?: boolean;
+  /** T97: 결과를 못 받고(실패·연결 지연) 안내 문구만 본 경우 true다. "써 봤다"로는
+   * 세지만(assistantFeaturesUsed) 결과 화면 'AI가 도운 일'에는 나오지 않는다. */
+  failed?: boolean;
 }
 
 /** AssistantPanel이 결과를 실제로 렌더·적용했을 때 넘기는 입력. requestedAt은 세션
  * reducer가 주입된 Clock(now)으로 채운다 — 컴포넌트가 자체 시계를 만들지 않는다. */
 export type AssistantActionEvent = Pick<AssistantAction, 'type' | 'mode' | 'evidenceIds'> & {
   applied?: boolean;
+  failed?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -70,6 +74,7 @@ export function encodeAssistantLogEntry(event: AssistantActionEvent, requestedAt
     evidenceIds: event.evidenceIds,
     requestedAt,
     applied: event.applied ?? false,
+    ...(event.failed ? { failed: true } : {}),
   };
   return JSON.stringify(entry);
 }
@@ -93,6 +98,7 @@ export function decodeAssistantLogEntry(label: string): AssistantAction | null {
         evidenceIds: parsed.evidenceIds,
         requestedAt: typeof parsed.requestedAt === 'number' ? parsed.requestedAt : undefined,
         applied: typeof parsed.applied === 'boolean' ? parsed.applied : undefined,
+        ...(parsed.failed === true ? { failed: true } : {}),
       };
     }
   } catch {
@@ -105,6 +111,9 @@ export function decodeAssistantLogEntry(label: string): AssistantAction | null {
  * 절대 "실제 AI 사용"이라 말하지 않는다(AGENT_BOARDROOM_SPEC.md 4장) — live일 때만
  * "(실제 AI 호출)"을 문장 끝에 덧붙인다. */
 function describeEntry(entry: AssistantAction): string | null {
+  if (entry.failed) {
+    return null;
+  }
   const base = (() => {
     switch (entry.type) {
       case 'OPINION_SUMMARY':
@@ -143,6 +152,9 @@ function countConditionRecommendation(actionLabels: readonly string[]): {
   for (const label of actionLabels) {
     const entry = decodeAssistantLogEntry(label);
     if (!entry) {
+      continue;
+    }
+    if (entry.failed) {
       continue;
     }
     if (entry.type === 'CONDITION_RECOMMEND_VIEW') {
@@ -189,6 +201,41 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
     lines.push(`추천 조건 ${recommendation.appliedConditionIds.length}개 반영`);
   }
   return lines;
+}
+
+export type AssistantFeatureKey = 'summary' | 'compare' | 'refine';
+
+export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['summary', 'compare', 'refine'];
+
+const FEATURE_OF_ACTION: Partial<Record<AssistantActionType, AssistantFeatureKey>> = {
+  OPINION_SUMMARY: 'summary',
+  CONDITION_RECOMMEND_VIEW: 'compare',
+  CONDITION_COMPARE: 'compare',
+  DRAFT_REFINE: 'refine',
+};
+
+/**
+ * T97: DISCUSS에서 AI 비서실장 세 기능(한눈에 보기·조건 추천·발언 정리)을 각각 한 번
+ * 이상 써 봤는지. 결과를 렌더했을 때뿐 아니라 실패·연결 지연 안내를 본 경우(failed)도
+ * "써 본 것"으로 센다 — 연결이 늦어도 참가자가 막히지 않게 한다. 기록은 세션 단위라
+ * stage는 지금 'DISCUSS'뿐이지만, 단계별 요구가 생기면 여기서 가른다.
+ */
+export function assistantFeaturesUsed(
+  assistantActions: readonly string[],
+  stage: 'DISCUSS',
+): Set<AssistantFeatureKey> {
+  const used = new Set<AssistantFeatureKey>();
+  if (stage !== 'DISCUSS') {
+    return used;
+  }
+  for (const label of assistantActions) {
+    const entry = decodeAssistantLogEntry(label);
+    const feature = entry ? FEATURE_OF_ACTION[entry.type] : undefined;
+    if (feature) {
+      used.add(feature);
+    }
+  }
+  return used;
 }
 
 /** AI 비서실장 도움을 하나라도 사용했는지. ResultScreen이 안내 문구 분기에 쓴다. */

@@ -26,9 +26,18 @@ import {
   resolveConfirm,
   togglePhrase,
 } from '../../domain/draft';
-import { confirmConditions, findConflicts, proposeFromPhrases, proposeFromText } from '../../domain/conditions';
+import {
+  confirmConditions,
+  findConflicts,
+  proposeFromPhrases,
+  proposeFromText,
+} from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
-import type { AssistantActionEvent } from '../../domain/assistantLog';
+import {
+  ASSISTANT_FEATURE_ORDER,
+  assistantFeaturesUsed,
+  type AssistantActionEvent,
+} from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -65,6 +74,9 @@ export interface DiscussScreenProps {
   side: 'FOR' | 'AGAINST' | null;
   onChooseSide: (next: 'FOR' | 'AGAINST') => void;
   onSubmit: (payload: DiscussSubmitPayload) => void;
+  /** 이번 세션의 AI 비서실장 사용 기록(session.assistantActions). 세 기능을 한 번씩
+   * 써 봤는지 판정해 '의견 전달'을 여는 데 쓴다(T97). */
+  assistantActions?: readonly string[];
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
   onAssistantAction: (event: AssistantActionEvent) => void;
   /** live/scripted 중 App.tsx가 session.mode로 고른 비서실장 어댑터. */
@@ -111,6 +123,7 @@ export function DiscussScreen({
   onChooseSide,
   onSubmit,
   onAssistantAction,
+  assistantActions = [],
   assistantAdapter,
 }: DiscussScreenProps) {
   const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
@@ -170,7 +183,15 @@ export function DiscussScreen({
   );
 
   const showNoMatchHint = draft.draftText.trim() !== '' && proposedConditionIds.length === 0;
-  const canSubmit = pendingPhraseId === null && isSubmittable(draft);
+  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견
+  // 전달 순서. 실패·연결 지연 안내를 본 것도 사용으로 센다(assistantFeaturesUsed).
+  const assistantUsed = useMemo(
+    () => assistantFeaturesUsed(assistantActions, 'DISCUSS'),
+    [assistantActions],
+  );
+  const assistantDone = assistantUsed.size >= ASSISTANT_FEATURE_ORDER.length;
+  const draftReady = pendingPhraseId === null && isSubmittable(draft);
+  const canSubmit = draftReady && assistantDone;
 
   // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
   // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
@@ -322,7 +343,9 @@ export function DiscussScreen({
           stances={stances}
           mode={mode}
         />
-        {pendingPhraseId !== null && <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />}
+        {pendingPhraseId !== null && (
+          <RebuildConfirm onKeep={handleKeep} onRebuild={handleRebuild} />
+        )}
         <div className="discuss-screen__hud" data-testid="discuss-hud">
           <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
           <ConditionChips
@@ -348,6 +371,8 @@ export function DiscussScreen({
             transcript={transcript}
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
+            requiredFeatures={{ used: assistantUsed }}
+            toggleGuide={draftReady && !assistantDone}
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
@@ -363,12 +388,18 @@ export function DiscussScreen({
           </button>
           {!canSubmit && (
             <p className="cta-disabled-hint" data-testid="discuss-cta-hint">
-              추천 문구를 고르거나 직접 써 주세요
+              {draftReady
+                ? `AI 비서실장을 먼저 써 보세요 (${assistantUsed.size}/${ASSISTANT_FEATURE_ORDER.length})`
+                : '추천 문구를 고르거나 직접 써 주세요'}
             </p>
           )}
         </div>
       </div>
-      <div className="app-body__content screen discuss-screen__info" ref={infoRef} data-testid="discuss-info">
+      <div
+        className="app-body__content screen discuss-screen__info"
+        ref={infoRef}
+        data-testid="discuss-info"
+      >
         <div className="discuss-screen__paper">
           <div className="discuss-screen__head">
             <span className="discuss-screen__step">3단계</span>
@@ -415,10 +446,10 @@ export function DiscussScreen({
               {draft.draftText.trim() === '' && (
                 <GuideHint text="문구를 고르거나 직접 써 주세요" testId="discuss-guide-hint" />
               )}
-              {/* T96(2026-10-08 사용자 지시): 강제가 아닌 제안 — 입장을 고른 뒤 한 번
-                  비서실장의 "조건 추천"을 알려준다(data-guide 강조는 없다). */}
+              {/* T97: 입장을 고른 뒤 비서실장 세 기능을 한 번씩 써야 의견 전달이
+                  열린다는 안내(강조는 비서실장 버튼의 data-guide가 맡는다). */}
               <p className="discuss-screen__guide" data-testid="discuss-assistant-tip">
-                비서실장에게 조건 추천을 받아 보세요
+                비서실장 세 가지를 한 번씩 써 보면 의견 전달이 열립니다
               </p>
               <div
                 className="discuss-screen__phrase-list"

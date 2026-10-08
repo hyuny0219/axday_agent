@@ -133,3 +133,108 @@
   color: var(--ink-muted);
   font-size: var(--fs-meta);
 }
+
+/* T97(2026-10-08 사용자 지시 "AI 비서실장을 필수적으로 사용하게끔"): 팝업 본문을
+   세로로 나눈다 — 소개·기능 버튼은 줄지 않고, 결과 영역만 남는 높이 안에서 안쪽
+   스크롤을 허용한다(1280×720의 DialogShell 높이 안에 소개가 들어가게). 붉은 박스는
+   쓰지 않고 종이 톤 토큰만 쓴다(T89). */
+.assistant-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100%;
+  min-height: 0;
+}
+
+.assistant-panel__content > .assistant-panel__actions {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.assistant-panel__results {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.assistant-panel__done-mark {
+  font-size: var(--fs-meta);
+  color: var(--ink-muted);
+}
+
+.assistant-intro {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+}
+
+.assistant-intro__title {
+  margin: 0 0 var(--space-1);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.assistant-intro__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assistant-intro__item {
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+}
+
+.assistant-intro__check {
+  display: inline-block;
+  width: 1.6em;
+  font-size: 1.15em;
+}
+
+.assistant-intro__desc {
+  color: var(--ink-muted);
+}
+
+.assistant-intro--compact {
+  padding: 4px var(--space-2);
+}
+
+.assistant-intro__compact-line {
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+
+.assistant-intro__done {
+  margin: 4px 0 0;
+  font-weight: 700;
+  font-size: var(--fs-meta);
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .assistant-intro {
+    padding: 6px var(--space-1);
+  }
+
+  .assistant-intro__title {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .assistant-intro__item {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .assistant-panel__content > .assistant-panel__actions .cta {
+    padding: 0 var(--space-1);
+    font-size: 14px;
+  }
+}

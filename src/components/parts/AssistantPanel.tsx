@@ -19,12 +19,13 @@ import type {
   SummarizeOpinionsResult,
 } from '../../services/assistant/types';
 import { scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
-import type { AssistantActionEvent } from '../../domain/assistantLog';
+import type { AssistantActionEvent, AssistantFeatureKey } from '../../domain/assistantLog';
+import { ASSISTANT_FEATURE_ORDER } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { DialogShell } from './DialogShell';
 import '../../styles/screens/assistant.css';
 
-type FeatureKey = 'summary' | 'compare' | 'refine';
+type FeatureKey = AssistantFeatureKey;
 type Status = 'idle' | 'loading' | 'done' | 'error';
 
 // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
@@ -37,12 +38,30 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   refine: '내 발언 정리',
 };
 
+// T97: 팝업 첫 화면 소개(DISCUSS만). 기능마다 쉬운 말 한 문장.
+const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
+  summary: '임원 네 명 말을 한 줄씩 정리합니다',
+  compare: '어떤 임원을 어떤 조건으로 움직일 수 있는지 알려 줍니다',
+  refine: '지금 쓴 발언을 더 또렷하게 다듬어 줍니다',
+};
+
 const FALLBACK_MESSAGE = '연결이 늦어 미리 준비한 정리를 보여 드립니다.';
 // 내 발언 정리 실패 시 문구는 AGENT_BOARDROOM_SPEC.md 4장 원문 그대로 쓴다(다른 두
 // 기능은 FALLBACK_MESSAGE를 그대로 유지).
 const REFINE_FALLBACK_MESSAGE = '정리하지 못했습니다. 원문으로 계속할 수 있습니다';
 
+/** T97: DISCUSS가 넘기면 팝업 첫 화면에 소개·체크리스트를 그린다. */
+export interface RequiredFeatures {
+  /** 이번 세션에서 이미 써 본 기능(실패·연결 지연 포함). */
+  used: ReadonlySet<FeatureKey>;
+  /** 세 기능이 모두 채워지는 순간 한 번 호출된다. */
+  onAllUsed?: () => void;
+}
+
 export interface AssistantPanelProps {
+  requiredFeatures?: RequiredFeatures;
+  /** T97: true면 열기 버튼에 다음 행동 강조(data-guide)를 건다. */
+  toggleGuide?: boolean;
   scenario: Scenario;
   sessionId: string;
   /** 참가자가 지금까지 확정한 조건 ID(조건 추천에 씀). */
@@ -94,6 +113,8 @@ function evidenceLabel(scenario: Scenario, id: string): string {
 }
 
 export function AssistantPanel({
+  requiredFeatures,
+  toggleGuide = false,
   scenario,
   sessionId,
   selectedConditionIds,
@@ -114,6 +135,22 @@ export function AssistantPanel({
   useEffect(() => {
     onOpenChange?.(open);
   }, [open, onOpenChange]);
+
+  const usedCount = requiredFeatures
+    ? ASSISTANT_FEATURE_ORDER.filter((feature) => requiredFeatures.used.has(feature)).length
+    : 0;
+  const allUsed = requiredFeatures !== undefined && usedCount === ASSISTANT_FEATURE_ORDER.length;
+  const nextFeature = requiredFeatures
+    ? ASSISTANT_FEATURE_ORDER.find((feature) => !requiredFeatures.used.has(feature))
+    : undefined;
+  const onAllUsed = requiredFeatures?.onAllUsed;
+  const allUsedNotifiedRef = useRef(false);
+  useEffect(() => {
+    if (allUsed && !allUsedNotifiedRef.current) {
+      allUsedNotifiedRef.current = true;
+      onAllUsed?.();
+    }
+  }, [allUsed, onAllUsed]);
   const [activeFeature, setActiveFeature] = useState<FeatureKey | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [summaryResult, setSummaryResult] = useState<SummarizeOpinionsResult | null>(null);
@@ -227,10 +264,32 @@ export function AssistantPanel({
         setRefineResult(result);
         setRefineResultRevision(requestDraftRevision);
         setStatus('done');
+        // T97: 정리한 초안을 화면에 보여준 것도 "써 본 것"이다(applied:false — 결과 화면
+        // 'AI가 도운 일'에는 '내 발언에 적용'을 눌렀을 때만 나온다).
+        onAssistantAction({
+          type: 'DRAFT_REFINE',
+          mode: result.mode,
+          evidenceIds: result.evidenceIds,
+          applied: false,
+        });
       }
     } catch {
       if (!isStillCurrent(requestId)) return;
       setStatus('error');
+      // T97: 실패·연결 지연 안내를 본 것도 "써 본 것"으로 센다(failed:true — 결과
+      // 화면 'AI가 도운 일'에는 나오지 않는다). 막히는 참가자가 없게 하기 위함이다.
+      onAssistantAction({
+        type:
+          feature === 'summary'
+            ? 'OPINION_SUMMARY'
+            : feature === 'compare'
+              ? 'CONDITION_RECOMMEND_VIEW'
+              : 'DRAFT_REFINE',
+        mode,
+        evidenceIds: [],
+        applied: false,
+        failed: true,
+      });
     }
   }
 
@@ -311,6 +370,7 @@ export function AssistantPanel({
         className="cta cta--secondary assistant-panel__toggle"
         onClick={() => setOpen(true)}
         data-testid="assistant-toggle"
+        data-guide={toggleGuide ? 'next' : undefined}
       >
         AI 비서실장에게 맡기기
       </button>
@@ -321,184 +381,276 @@ export function AssistantPanel({
           title="AI 비서실장"
           onClose={() => setOpen(false)}
           closeTestId="assistant-close"
+          closeGuide={allUsed}
         >
-          <div className="assistant-panel__actions">
-            {(Object.keys(FEATURE_LABELS) as FeatureKey[]).map((feature) => (
-              <button
-                key={feature}
-                type="button"
-                className="cta cta--secondary"
-                onClick={() => runFeature(feature)}
-                data-testid={`assistant-action-${feature}`}
+          <div className="assistant-panel__content">
+            {requiredFeatures && (
+              <div
+                className={`assistant-intro${status === 'idle' ? '' : ' assistant-intro--compact'}`}
+                data-testid={status === 'idle' ? 'assistant-intro' : 'assistant-intro-compact'}
               >
-                {FEATURE_LABELS[feature]}
-              </button>
-            ))}
-          </div>
-          {status === 'loading' && <p data-testid="assistant-loading">정리하는 중입니다…</p>}
-          {status === 'error' && (
-            <div role="alert" data-testid="assistant-error">
-              <p>{activeFeature === 'refine' ? REFINE_FALLBACK_MESSAGE : FALLBACK_MESSAGE}</p>
-              {activeFeature === 'summary' && (
-                <ul data-testid="assistant-summary-fallback-statements">
-                  {transcript.statements.length > 0 ? (
-                    transcript.statements.map((statement) => (
-                      <li key={statement.id}>
-                        {MEMBER_LABELS[statement.roleId]}: {statement.text}
-                      </li>
-                    ))
-                  ) : (
-                    <li>아직 도착한 발언이 없습니다.</li>
-                  )}
-                </ul>
-              )}
-            </div>
-          )}
-          {status === 'done' && activeFeature === 'summary' && summaryResult && (
-            <div data-testid="assistant-result-summary">
-              {summaryResult.mode === 'live' ? (
-                <p data-testid="assistant-summary-text">{summaryResult.summaryText}</p>
-              ) : (
-                <>
-                  <h4>공통점</h4>
-                  <ul>
-                    {summaryResult.commonPoints.map((point) => (
-                      <li key={point.memberId}>
-                        {MEMBER_LABELS[point.memberId]}: {point.text}
-                      </li>
-                    ))}
-                  </ul>
-                  <h4>쟁점</h4>
-                  <ul>
-                    {summaryResult.disagreements.map((point) => (
-                      <li key={point.memberId}>
-                        {MEMBER_LABELS[point.memberId]}: {point.text}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              <p className="assistant-panel__evidence">
-                근거: {summaryResult.evidenceIds.map((id) => evidenceLabel(scenario, id)).join(', ')}
-              </p>
-            </div>
-          )}
-          {status === 'done' && activeFeature === 'compare' && compareResult && (
-            <div data-testid="assistant-result-compare">
-              {/* T96 조건 추천(규칙 기반, scripted·live 공통): 아직 설득되지 않은
-                  임원을 움직이는 조건과, 그 조건이 푸는 걱정을 먼저 보여준다. */}
-              <h4>조건 추천</h4>
-              <p data-testid="assistant-recommend-opening">
-                {recommendation.openingLine}
-                {recommendation.usedRuleFallback && ' (참고)'}
-              </p>
-              {recommendation.rows.length > 0 && (
-                <ul data-testid="assistant-recommend-rows">
-                  {recommendation.rows.map((row) => (
-                    <li key={row.conditionId} data-testid={`assistant-recommend-row-${row.conditionId}`}>
-                      <span className="assistant-panel__recommend-label">{row.label}</span>
-                      <span className="assistant-panel__recommend-moves">
-                        움직이는 임원 · {row.movedMemberIds.join('·')}
-                      </span>
-                      {row.worry && (
-                        <span className="assistant-panel__recommend-worry">푸는 걱정 · {row.worry}</span>
-                      )}
-                      <button
-                        type="button"
-                        className="cta cta--secondary"
-                        onClick={() => handleApplyRecommendation(row.conditionId)}
-                        data-testid={`assistant-recommend-apply-${row.conditionId}`}
-                      >
-                        적용
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {/* Codex 27차 검토 P2-1: 조건 2개 이상을 모두 확정해야 YES가 되는 임원은
-                  단일 조건 행 대신 묶음으로 보여준다 — "LIMIT 하나만 있으면 CFO가
-                  움직인다"는 거짓 정보를 막는다. */}
-              {recommendation.bundles.length > 0 && (
-                <ul data-testid="assistant-recommend-bundles">
-                  {recommendation.bundles.map((bundle) => {
-                    const bundleKey = bundle.conditionIds.join('+');
-                    return (
-                      <li key={bundleKey} data-testid={`assistant-recommend-bundle-${bundleKey}`}>
-                        <span className="assistant-panel__recommend-label">
-                          {bundle.labels.join(' + ')} 모두 있어야 움직임
-                        </span>
-                        <span className="assistant-panel__recommend-moves">
-                          움직이는 임원 · {bundle.movedMemberIds.join('·')}
-                        </span>
-                        <button
-                          type="button"
-                          className="cta cta--secondary"
-                          onClick={() => handleApplyBundle(bundle.conditionIds)}
-                          data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
+                {status === 'idle' ? (
+                  <>
+                    <h3 className="assistant-intro__title">
+                      AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요
+                    </h3>
+                    <ul className="assistant-intro__list">
+                      {ASSISTANT_FEATURE_ORDER.map((feature) => {
+                        const used = requiredFeatures.used.has(feature);
+                        return (
+                          <li key={feature} className="assistant-intro__item">
+                            <span
+                              className="assistant-intro__check"
+                              role="img"
+                              aria-label={used ? '완료' : '아직 안 씀'}
+                              data-checked={used ? 'true' : 'false'}
+                              data-testid={`assistant-check-${feature}`}
+                            >
+                              {used ? '☑' : '☐'}
+                            </span>
+                            <strong>{FEATURE_LABELS[feature]}</strong>
+                            <span className="assistant-intro__desc">
+                              {' '}
+                              — {FEATURE_DESCRIPTIONS[feature]}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                ) : (
+                  <p
+                    className="assistant-intro__compact-line"
+                    data-testid="assistant-intro-compact-line"
+                  >
+                    {ASSISTANT_FEATURE_ORDER.map((feature, index) => (
+                      <span key={feature}>
+                        {index > 0 && ' '}
+                        <span
+                          role="img"
+                          aria-label={requiredFeatures.used.has(feature) ? '완료' : '아직 안 씀'}
+                          data-testid={`assistant-check-${feature}`}
+                          data-checked={requiredFeatures.used.has(feature) ? 'true' : 'false'}
                         >
-                          모두 적용
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <h4>원안과의 차이</h4>
-              {compareResult.addedConditionIds.length > 0 ? (
-                <ul>
-                  {compareResult.addedConditionIds.map((id) => (
-                    <li key={id}>{conditionLabel(scenario, id)}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>지금까지 확정한 조건이 없습니다.</p>
-              )}
-              <h4>남은 확인 사항</h4>
-              {compareResult.remainingConditionIds.length > 0 ? (
-                <ul>
-                  {compareResult.remainingConditionIds.map((id) => (
-                    <li key={id}>{conditionLabel(scenario, id)}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>남은 확인 사항이 없습니다.</p>
-              )}
+                          {requiredFeatures.used.has(feature) ? '☑' : '☐'}
+                        </span>{' '}
+                        {FEATURE_LABELS[feature]}
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {allUsed && (
+                  <p className="assistant-intro__done" data-testid="assistant-intro-done">
+                    이제 팝업을 닫고 의견을 전달하세요
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="assistant-panel__actions">
+              {(Object.keys(FEATURE_LABELS) as FeatureKey[]).map((feature) => {
+                const used = requiredFeatures?.used.has(feature) ?? false;
+                return (
+                  <button
+                    key={feature}
+                    type="button"
+                    className="cta cta--secondary"
+                    onClick={() => runFeature(feature)}
+                    data-testid={`assistant-action-${feature}`}
+                    data-guide={nextFeature === feature ? 'next' : undefined}
+                  >
+                    {FEATURE_LABELS[feature]}
+                    {used && (
+                      <span
+                        className="assistant-panel__done-mark"
+                        data-testid={`assistant-done-${feature}`}
+                      >
+                        {' '}
+                        · 완료
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          {status === 'done' && activeFeature === 'refine' && refineResult && (
-            <div data-testid="assistant-result-refine">
-              <div className="assistant-panel__refine-compare">
-                <div className="assistant-panel__refine-original">
-                  <h4>원문</h4>
-                  <p data-testid="assistant-refine-original">{draftText}</p>
+            <div className="assistant-panel__results" data-testid="assistant-results">
+              {status === 'loading' && <p data-testid="assistant-loading">정리하는 중입니다…</p>}
+              {status === 'error' && (
+                <div role="alert" data-testid="assistant-error">
+                  <p>{activeFeature === 'refine' ? REFINE_FALLBACK_MESSAGE : FALLBACK_MESSAGE}</p>
+                  {activeFeature === 'summary' && (
+                    <ul data-testid="assistant-summary-fallback-statements">
+                      {transcript.statements.length > 0 ? (
+                        transcript.statements.map((statement) => (
+                          <li key={statement.id}>
+                            {MEMBER_LABELS[statement.roleId]}: {statement.text}
+                          </li>
+                        ))
+                      ) : (
+                        <li>아직 도착한 발언이 없습니다.</li>
+                      )}
+                    </ul>
+                  )}
                 </div>
-                <div className="assistant-panel__refine-draft-wrap">
-                  <h4>정리한 초안</h4>
-                  <p className="assistant-panel__refine-draft" data-testid="assistant-refine-draft">
-                    {refineResult.draftText}
+              )}
+              {status === 'done' && activeFeature === 'summary' && summaryResult && (
+                <div data-testid="assistant-result-summary">
+                  {summaryResult.mode === 'live' ? (
+                    <p data-testid="assistant-summary-text">{summaryResult.summaryText}</p>
+                  ) : (
+                    <>
+                      <h4>공통점</h4>
+                      <ul>
+                        {summaryResult.commonPoints.map((point) => (
+                          <li key={point.memberId}>
+                            {MEMBER_LABELS[point.memberId]}: {point.text}
+                          </li>
+                        ))}
+                      </ul>
+                      <h4>쟁점</h4>
+                      <ul>
+                        {summaryResult.disagreements.map((point) => (
+                          <li key={point.memberId}>
+                            {MEMBER_LABELS[point.memberId]}: {point.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  <p className="assistant-panel__evidence">
+                    근거:{' '}
+                    {summaryResult.evidenceIds.map((id) => evidenceLabel(scenario, id)).join(', ')}
                   </p>
                 </div>
-              </div>
-              <div className="assistant-panel__refine-choices">
-                <button
-                  type="button"
-                  className="cta cta--secondary"
-                  onClick={handleApplyRefine}
-                  data-testid="assistant-apply-refine"
-                >
-                  내 발언에 적용
-                </button>
-                <button
-                  type="button"
-                  className="cta cta--secondary"
-                  onClick={handleKeepOriginal}
-                  data-testid="assistant-keep-original"
-                >
-                  원문 유지
-                </button>
-              </div>
+              )}
+              {status === 'done' && activeFeature === 'compare' && compareResult && (
+                <div data-testid="assistant-result-compare">
+                  {/* T96 조건 추천(규칙 기반, scripted·live 공통): 아직 설득되지 않은
+                  임원을 움직이는 조건과, 그 조건이 푸는 걱정을 먼저 보여준다. */}
+                  <h4>조건 추천</h4>
+                  <p data-testid="assistant-recommend-opening">
+                    {recommendation.openingLine}
+                    {recommendation.usedRuleFallback && ' (참고)'}
+                  </p>
+                  {recommendation.rows.length > 0 && (
+                    <ul data-testid="assistant-recommend-rows">
+                      {recommendation.rows.map((row) => (
+                        <li
+                          key={row.conditionId}
+                          data-testid={`assistant-recommend-row-${row.conditionId}`}
+                        >
+                          <span className="assistant-panel__recommend-label">{row.label}</span>
+                          <span className="assistant-panel__recommend-moves">
+                            움직이는 임원 · {row.movedMemberIds.join('·')}
+                          </span>
+                          {row.worry && (
+                            <span className="assistant-panel__recommend-worry">
+                              푸는 걱정 · {row.worry}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className="cta cta--secondary"
+                            onClick={() => handleApplyRecommendation(row.conditionId)}
+                            data-testid={`assistant-recommend-apply-${row.conditionId}`}
+                          >
+                            적용
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {/* Codex 27차 검토 P2-1: 조건 2개 이상을 모두 확정해야 YES가 되는 임원은
+                  단일 조건 행 대신 묶음으로 보여준다 — "LIMIT 하나만 있으면 CFO가
+                  움직인다"는 거짓 정보를 막는다. */}
+                  {recommendation.bundles.length > 0 && (
+                    <ul data-testid="assistant-recommend-bundles">
+                      {recommendation.bundles.map((bundle) => {
+                        const bundleKey = bundle.conditionIds.join('+');
+                        return (
+                          <li
+                            key={bundleKey}
+                            data-testid={`assistant-recommend-bundle-${bundleKey}`}
+                          >
+                            <span className="assistant-panel__recommend-label">
+                              {bundle.labels.join(' + ')} 모두 있어야 움직임
+                            </span>
+                            <span className="assistant-panel__recommend-moves">
+                              움직이는 임원 · {bundle.movedMemberIds.join('·')}
+                            </span>
+                            <button
+                              type="button"
+                              className="cta cta--secondary"
+                              onClick={() => handleApplyBundle(bundle.conditionIds)}
+                              data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
+                            >
+                              모두 적용
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <h4>원안과의 차이</h4>
+                  {compareResult.addedConditionIds.length > 0 ? (
+                    <ul>
+                      {compareResult.addedConditionIds.map((id) => (
+                        <li key={id}>{conditionLabel(scenario, id)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>지금까지 확정한 조건이 없습니다.</p>
+                  )}
+                  <h4>남은 확인 사항</h4>
+                  {compareResult.remainingConditionIds.length > 0 ? (
+                    <ul>
+                      {compareResult.remainingConditionIds.map((id) => (
+                        <li key={id}>{conditionLabel(scenario, id)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>남은 확인 사항이 없습니다.</p>
+                  )}
+                </div>
+              )}
+              {status === 'done' && activeFeature === 'refine' && refineResult && (
+                <div data-testid="assistant-result-refine">
+                  <div className="assistant-panel__refine-compare">
+                    <div className="assistant-panel__refine-original">
+                      <h4>원문</h4>
+                      <p data-testid="assistant-refine-original">{draftText}</p>
+                    </div>
+                    <div className="assistant-panel__refine-draft-wrap">
+                      <h4>정리한 초안</h4>
+                      <p
+                        className="assistant-panel__refine-draft"
+                        data-testid="assistant-refine-draft"
+                      >
+                        {refineResult.draftText}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="assistant-panel__refine-choices">
+                    <button
+                      type="button"
+                      className="cta cta--secondary"
+                      onClick={handleApplyRefine}
+                      data-testid="assistant-apply-refine"
+                    >
+                      내 발언에 적용
+                    </button>
+                    <button
+                      type="button"
+                      className="cta cta--secondary"
+                      onClick={handleKeepOriginal}
+                      data-testid="assistant-keep-original"
+                    >
+                      원문 유지
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </DialogShell>
       )}
     </div>
