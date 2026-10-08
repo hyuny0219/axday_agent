@@ -128,11 +128,11 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
   return (
     <section
       className={`minutes${collapsed ? ' minutes--collapsed' : ''}`}
-      aria-label="발언 흐름"
+      aria-label="지금까지 발언"
       data-testid="minutes-panel"
     >
       <header className="minutes__head">
-        <h2 className="minutes__title">발언 흐름</h2>
+        <h2 className="minutes__title">지금까지 발언</h2>
         <span className="minutes__count" data-testid="minutes-count">
           {entryCountLabel(entries.length)}
         </span>

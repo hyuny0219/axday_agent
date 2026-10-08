@@ -123,6 +123,10 @@ export function OpinionsScreen({
       >
         {locked ? '임원 의견을 듣는 중…' : '내 의견 쓰러 가기 ▶'}
       </button>
+      {/* T102: 발언 흐름 패널을 뺀 세로 여백에 "읽는 곳은 오른쪽"이라는 안내 한 줄. */}
+      <p className="opinions-screen__read-hint" data-testid="opinions-read-hint">
+        임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요
+      </p>
     </div>
   );
 

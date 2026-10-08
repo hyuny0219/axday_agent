@@ -27,6 +27,7 @@ import type {
 } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { firstSentenceClipped } from '../stageText';
+import { bubbleLineOf } from '../bubbleText';
 import { STANCE_LABEL } from '../moodLabel';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
@@ -87,7 +88,8 @@ function scriptedReactionFor(
       : scenario.reactions.filter(
           (r) => r.memberId === memberId && previousConfirmedIds.includes(r.conditionId),
         );
-  return matches.length > 0 ? (matches[0]?.text ?? null) : null;
+  const first = matches[0];
+  return first ? (first.bubble ?? bubbleLineOf(first.text)) : null;
 }
 
 /** 임원 한 명의 이번 단계 말풍선 상태를 계산한다(DESIGN_SPEC.md v1.0 1절 "화면별 상태"). */
@@ -116,7 +118,7 @@ function execSeatOverlay(
         (item) => item.roleId === memberId && item.stage === statementStage,
       );
       if (status === 'answered' && statement) {
-        return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(statement.text), dimmed: false };
+        return { bubbleKind: 'speech', bubbleText: bubbleLineOf(statement.text), dimmed: false };
       }
       if (status === 'failed') {
         // 응답 실패는 본문 카드(LiveStatementCards "응답 지연·확인 필요")가 전담한다.
@@ -128,14 +130,15 @@ function execSeatOverlay(
 
     if (stage === 'OPINIONS') {
       const opinion = scenario.initialOpinions.find((item) => item.memberId === memberId);
-      return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(opinion?.text ?? ''), dimmed: false };
+      const line = opinion ? (opinion.bubble ?? bubbleLineOf(opinion.text)) : '';
+      return { bubbleKind: 'speech', bubbleText: line, dimmed: false };
     }
 
     const lastOpinion = opinions[opinions.length - 1] ?? null;
     const previousConfirmedIds = lastOpinion?.confirmedConditionIds ?? [];
     const reactionText = scriptedReactionFor(scenario, memberId, previousConfirmedIds);
     if (reactionText) {
-      return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(reactionText), dimmed: false };
+      return { bubbleKind: 'speech', bubbleText: reactionText, dimmed: false };
     }
     return { bubbleKind: 'none', bubbleText: '', dimmed: true };
   }

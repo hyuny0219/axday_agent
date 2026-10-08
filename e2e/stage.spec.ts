@@ -182,6 +182,21 @@ test.describe('1920×1080에서 무대 열', () => {
     await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText(MY_OPINION_TEXT);
   });
 
+  test('OPINIONS 말풍선은 18자 이하 한 구절이고 발언 흐름 패널은 없다(T102)', async ({ page }) => {
+    await enterBriefing(page);
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await expect(page.locator('.opinion-card')).toHaveCount(4);
+    for (const memberId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      const text = await page.getByTestId(`stage-bubble-${memberId}`).locator('.stage-band__bubble-text').innerText();
+      expect(text.length, `${memberId} 말풍선`).toBeGreaterThan(0);
+      expect(text.length, `${memberId} 말풍선은 한 구절`).toBeLessThanOrEqual(19);
+    }
+    await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+    await expect(page.getByTestId('opinions-read-hint')).toBeVisible();
+  });
+
   test('BRIEFING·REACTIONS·VOTE·RESULT는 스크롤 없이 한 화면에 보인다', async ({ page }) => {
     await enterBriefing(page);
     await expectNoPageScroll(page);
