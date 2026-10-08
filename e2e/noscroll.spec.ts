@@ -57,13 +57,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.getByTestId('scenario-card-ai-approval').click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
-  await expectFullyVisible(page, 'minutes-panel', 'BRIEFING');
   // 사건 표기 eyebrow(T47): 안건 제목 위 한 줄이 잘리지 않고 보인다.
   await expect(page.getByTestId('briefing-incident')).toBeInViewport();
-  // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
-  // (무대·행동·회의록)이 잘리지 않는다.
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
+  // T102: BRIEFING에는 발언 흐름 패널이 없다(패널이 있는 화면은 MOTION·VOTE뿐).
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
   // T68: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있고, 남는
   // 세로 여유로 오른쪽 열의 나머지 카드(현재 상황·제안·미정·할 일)가 잘리지 않는다.
   await expect(page.getByTestId('open-evidence')).toBeVisible();

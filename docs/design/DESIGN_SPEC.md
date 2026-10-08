@@ -724,10 +724,10 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 | --- | --- | --- |
 | 오른쪽 종이 카드 | 임원 발언 **전문**을 읽는 유일한 곳 | OPINIONS, REACTIONS |
 | 무대 말풍선 | "지금 누가 어떤 기류인지" **핵심 한 구절**(최대 18자)과 입장 배지 | OPINIONS, REACTIONS |
-| 지금까지 발언(옛 발언 흐름) | 복습용. 오른쪽에 발언 카드가 없는 화면에서만 | BRIEFING, MOTION, VOTE |
+| 지금까지 발언(옛 발언 흐름) | 복습용. 오른쪽에 발언 카드가 없는 화면에서만 | MOTION, VOTE |
 
-- **말풍선 한 구절**: scripted는 `InitialOpinion.bubble`·`Reaction.bubble`(두 활성 안건 모든 발언, 18자 이하). live는 서버 변경 없이 `bubbleLineOf`(`src/components/bubbleText.ts`)가 첫 문장을 쉼표·마침표 앞에서 끊고 18자를 넘으면 "…"을 붙인다. BRIEFING·MOTION 의장 말풍선과 REACTIONS의 참가자 본인 말풍선은 그대로다.
-- **패널 위치**: `App.tsx`의 `MINUTES_STAGES`는 BRIEFING·MOTION·VOTE만 둔다. OPINIONS·REACTIONS·DISCUSS에서는 렌더하지 않는다. RESULT는 기존 "회의 기록 전체 보기"를 쓴다. 패널 제목은 "지금까지 발언"이다.
+- **말풍선 한 구절**: scripted는 `InitialOpinion.bubble`·`Reaction.bubble`(두 활성 안건 모든 발언, 18자 이하). live는 서버 변경 없이 `bubbleLineOf`(`src/components/bubbleText.ts`)가 첫 문장을 쉼표·마침표 앞에서 끊고 18자를 넘으면 "…"을 붙인다. BRIEFING·MOTION 의장 말풍선은 그대로다. REACTIONS의 참가자 본인 말풍선도 `bubbleLineOf`로 같은 규칙(최대 18자, 넘으면 17자+"…")을 쓴다. 쉼표·마침표 양옆이 숫자("12,345원")면 끊지 않고, 끊은 뒤 짝 없는 여는 따옴표는 뗀다.
+- **패널 위치**: `App.tsx`의 `MINUTES_STAGES`는 MOTION·VOTE만 둔다. BRIEFING은 오른쪽 "상황" 문장과 같은 한 줄뿐이라 뺐다. OPINIONS·REACTIONS·DISCUSS에서는 렌더하지 않는다. RESULT는 기존 "회의 기록 전체 보기"를 쓴다. 패널 제목은 "지금까지 발언"이다.
 - **빈자리**: OPINIONS 왼쪽 열은 무대와 CTA만 두고 CTA 아래에 "임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요" 한 줄을 둔다(18px, 720 15px). REACTIONS 1/2는 무대, 설득 현황판, CTA만 둔다.
 - **INTRO 강조**: 목적·성공 기준·팁을 `HighlightText`와 `INTRO_HIGHLIGHT_TERMS`로 강조한다(기존 `.key-term`, 붉은 박스 없음). 목적·성공 기준 글자는 1080 20px·720 16px, 성공 기준 줄은 굵게.
 
