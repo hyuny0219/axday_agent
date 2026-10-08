@@ -10,6 +10,8 @@ export interface CoachStepCopy {
   /** title 안에서 강조할 말(글자가 그대로 일치할 때만). */
   keys: readonly string[];
   body: string;
+  /** live(실제 모델) 세션에서 대신 보여 줄 보조 문장 — scripted 전용 요소(전환 배지 등)를 말하지 않는다. */
+  bodyLive?: string;
   placement: CoachPlacement;
 }
 
@@ -61,6 +63,9 @@ export const COACH_STEPS: readonly CoachStepCopy[] = [
     title: '이사님 말에 임원들이 답했습니다',
     keys: ['임원들이 답했습니다'],
     body: '반대 → 찬성 배지는 이사님 조건으로 움직인 임원입니다. 답해도 되고 넘어가도 됩니다.',
+    // live에서는 전환 배지가 없고(LiveStatementCards는 지금 입장만 보여 준다) 입장 변화가 조건
+    // 때문이라고 단정할 수도 없다(PR #20 Codex 36차 검토 P2).
+    bodyLive: '카드마다 지금 입장(찬성·반대·고민 중)을 확인해 보세요. 답해도 되고 넘어가도 됩니다.',
     placement: 'left',
   },
   {
@@ -103,10 +108,13 @@ export function coachAckLabel(step: number): string {
   return step === 9 ? COACH_FINAL_ACK_LABEL : COACH_ACK_LABEL;
 }
 
-export function coachCopy(step: number): CoachStepCopy {
+export function coachCopy(step: number, mode: 'scripted' | 'live' = 'scripted'): CoachStepCopy {
   const found = COACH_STEPS.find((item) => item.step === step);
   if (!found) {
     throw new Error(`알 수 없는 코치 단계: ${step}`);
+  }
+  if (mode === 'live' && found.bodyLive) {
+    return { ...found, body: found.bodyLive };
   }
   return found;
 }

@@ -6,7 +6,7 @@ import { Coach, mergeOverlapping, placeBubble } from '../../src/components/parts
 import { CoachHost } from '../../src/components/parts/CoachHost';
 import { EMPTY_COACH_UI } from '../../src/domain/coach';
 import { createInitialSession } from '../../src/domain/session';
-import { COACH_STEPS } from '../../src/content/coach';
+import { COACH_STEPS, coachCopy } from '../../src/content/coach';
 import { findForbiddenWords } from '../../server/prompts/plainLanguage';
 
 function mockMatchMedia(reduced: boolean) {
@@ -59,6 +59,18 @@ function renderCoach(extra: Partial<React.ComponentProps<typeof Coach>> = {}) {
   );
   return { onSkip, onAck };
 }
+
+describe('coachCopy의 live 분기(PR #20 Codex 36차 검토 P2)', () => {
+  it('7단계는 live에서 전환 배지를 말하지 않고 지금 입장을 확인하라고 안내한다', () => {
+    expect(coachCopy(7, 'scripted').body).toContain('반대 → 찬성 배지');
+    expect(coachCopy(7, 'live').body).not.toContain('배지');
+    expect(coachCopy(7, 'live').body).toContain('지금 입장');
+    expect(coachCopy(7).body).toBe(coachCopy(7, 'scripted').body);
+  });
+  it('bodyLive가 없는 단계는 live에서도 같은 문장을 쓴다', () => {
+    expect(coachCopy(1, 'live').body).toBe(coachCopy(1, 'scripted').body);
+  });
+});
 
 describe('Coach', () => {
   it('머리에 "진행 도우미 · N/9"와 제목·보조 문장을 그린다', () => {

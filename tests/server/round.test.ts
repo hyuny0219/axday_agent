@@ -425,6 +425,44 @@ describe('callRole의 1회 재시도(T91)', () => {
     expect(calls).toBe(1);
   });
 
+  // PR #20 Codex 36차 검토 P2: 첫 시도가 응답까지 받았다가 검증에서 떨어지고 두 번째가 성공하면
+  // 캐시 토큰은 두 시도를 합쳐 기록한다(마지막 시도만 남기면 비용·캐시 분석이 어긋난다).
+  it('재시도하면 두 시도의 캐시 토큰을 합쳐 로그에 남긴다', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        if (calls === 1) {
+          // 스키마에 맞지 않는 응답(stance 누락 등) → invalid_response로 분류돼 재시도 대상이 된다.
+          return { json: { roleId: envelope.roleId, message: 123 }, modelId: 'fake-model', usage: { cacheReadInputTokens: 100, cacheCreationInputTokens: 10 } };
+        }
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+          usage: { cacheReadInputTokens: 200, cacheCreationInputTokens: 5 },
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-cache', budgetMs: 8000, roleIds: ['CEO'] });
+    await handleRound(input, { provider: fakeProvider });
+    const line = consoleSpy.mock.calls[0]?.[0] as string;
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    expect(parsed.attempts).toBe(2);
+    expect(parsed.status).toBe('answered');
+    expect(parsed.cacheReadTokens).toBe(300);
+    expect(parsed.cacheWriteTokens).toBe(15);
+  });
+
   it('재시도 여부를 로그 한 줄의 attempts 필드로 남긴다', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     let calls = 0;

@@ -112,3 +112,11 @@ export const roleIdsSchema = z
   .min(1)
   .max(EXEC_ROLE_IDS.length)
   .refine((ids) => new Set(ids).size === ids.length, { message: 'roleIds must be unique' });
+
+/** 재시도 두 번의 캐시 토큰을 합친다(PR #20 Codex 36차 검토 P2 — 첫 시도가 응답까지 받았다가
+ * 검증에서 실패하고 두 번째가 성공하면, 마지막 시도만 기록해 비용·캐시 분석이 어긋났다).
+ * 둘 다 없으면 undefined, 하나만 있으면 그 값. */
+export function sumTokens(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined && b === undefined) return undefined;
+  return (a ?? 0) + (b ?? 0);
+}

@@ -23,7 +23,7 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -217,6 +217,9 @@ async function attemptRole(
         providerErrorClass: 'invalid_response',
         latencyMs,
         modelId: result.modelId,
+        // 응답까지는 받았으므로 캐시 토큰은 실제로 쓰였다 — 재시도 합산에 넣는다(Codex 36차 P2).
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
         promptVersion: PROMPT_VERSION,
       };
     }
@@ -269,7 +272,14 @@ async function callRole(
     const remainingMs = timeoutMs - (clock.now() - overallStart);
     if (remainingMs >= MIN_RETRY_REMAINING_MS) {
       attempts = 2;
-      outcome = await attemptRole(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock);
+      const first = outcome;
+      const second = await attemptRole(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock);
+      // 캐시 토큰은 두 시도를 합산한다(PR #20 Codex 36차 검토 P2).
+      outcome = {
+        ...second,
+        cacheReadTokens: sumTokens(first.cacheReadTokens, second.cacheReadTokens),
+        cacheWriteTokens: sumTokens(first.cacheWriteTokens, second.cacheWriteTokens),
+      };
     }
   }
   const latencyMs = clock.now() - overallStart;

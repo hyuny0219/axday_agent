@@ -44,7 +44,7 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
   }
 
   const step = state.step;
-  const copy = coachCopy(step);
+  const copy = coachCopy(step, session.mode);
   const target = coachTarget(step, session, ui);
   const inDialog = isCoachInDialog(step, ui);
   const dialogCopy = inDialog ? assistantDialogCopy(ui.assistantUsedCount, ASSISTANT_FEATURE_TOTAL) : null;
