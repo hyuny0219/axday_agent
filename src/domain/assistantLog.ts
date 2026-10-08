@@ -181,7 +181,13 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
     if (!existing) {
       order.push(entry.type);
     }
-    if (!existing || (entry.applied && !existing.applied)) {
+    // 성공 기록(failed 아님)은 같은 유형의 실패 기록을 대체한다(재시도 성공). applied:true는
+    // 기존대로 먼저 있던 applied:false보다 우선하되, 실패 기록은 성공을 덮지 못한다.
+    const replaces =
+      !existing ||
+      (existing.failed && !entry.failed) ||
+      (!entry.failed && entry.applied && !existing.applied);
+    if (replaces) {
       latestByType.set(entry.type, entry);
     }
   }

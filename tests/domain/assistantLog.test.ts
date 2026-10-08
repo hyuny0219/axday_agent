@@ -206,3 +206,33 @@ describe('실패 기록(failed)은 결과 화면 "AI가 도운 일"에 나오지
     expect(decodeAssistantLogEntry(ok)).not.toHaveProperty('failed');
   });
 });
+
+describe('실패 뒤 재시도 성공 병합 (T97 검토)', () => {
+  it('live 요약이 실패했다가 성공하면 확인 줄이 나온다', () => {
+    const failed = encodeAssistantLogEntry(
+      { type: 'OPINION_SUMMARY', mode: 'live', evidenceIds: [], failed: true },
+      0,
+    );
+    const ok = encodeAssistantLogEntry(
+      { type: 'OPINION_SUMMARY', mode: 'live', evidenceIds: ['E1'] },
+      1,
+    );
+    expect(describeAdditionalHelp([failed, ok])).toEqual([
+      '의견 한눈에 보기를 확인했습니다. (실제 AI 호출)',
+    ]);
+  });
+
+  it('성공 뒤 실패가 와도 성공 줄이 유지된다', () => {
+    const failed = encodeAssistantLogEntry(
+      { type: 'OPINION_SUMMARY', mode: 'live', evidenceIds: [], failed: true },
+      1,
+    );
+    const ok = encodeAssistantLogEntry(
+      { type: 'OPINION_SUMMARY', mode: 'live', evidenceIds: ['E1'] },
+      0,
+    );
+    expect(describeAdditionalHelp([ok, failed])).toEqual([
+      '의견 한눈에 보기를 확인했습니다. (실제 AI 호출)',
+    ]);
+  });
+});

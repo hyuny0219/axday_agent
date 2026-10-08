@@ -257,6 +257,7 @@ export function AssistantPanel({
         if (!isStillCurrent(requestId)) return;
         if (requestDraftRevision !== draftRevision) {
           // 응답을 기다리는 사이 원문이 더 바뀌었다 — 이 초안은 이미 낡았다.
+          // 의도: 낡은 초안은 사용으로 세지 않는다(기록 없이 idle) — 참가자가 다시 누르면 센다.
           setStatus('idle');
           setActiveFeature(null);
           return;
