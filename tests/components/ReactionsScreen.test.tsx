@@ -579,6 +579,47 @@ describe('반응 듣기 잠금(T89, live)', () => {
   });
 });
 
+// T98: 비활성이어도 "있는 버튼"으로 보이는 빈 버튼(cta--outline)과 3칩 안내판.
+describe('ReactionsScreen 전달 버튼 가시성·안내판(T98)', () => {
+  function renderAnswer() {
+    return render(
+      <ReactionsScreen
+        {...baseProps()}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={stances}
+      />,
+    );
+  }
+
+  it('답을 쓰기 전에도 전달 버튼이 렌더되고 빈 버튼(outline) 클래스를 쓴다', () => {
+    renderAnswer();
+    const button = screen.getByTestId('submit-followup');
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('cta--outline');
+    expect(screen.getByTestId('reactions-cta-hint')).toHaveTextContent(
+      '문구를 고르거나 직접 쓰면 전달할 수 있습니다',
+    );
+    fireEvent.click(screen.getByTestId('followup-option-0'));
+    expect(screen.getByTestId('submit-followup')).not.toHaveClass('cta--outline');
+  });
+
+  it('안내판은 3칩이고 비서실장은 선택이라는 꼬리표가 붙는다', () => {
+    renderAnswer();
+    expect(screen.getByTestId('step-chip-side')).toBeInTheDocument();
+    expect(screen.getByTestId('step-chip-phrase')).toBeInTheDocument();
+    expect(screen.getByTestId('step-chip-submit')).toBeInTheDocument();
+    expect(screen.queryByTestId('step-chip-assistant')).not.toBeInTheDocument();
+    expect(screen.getByTestId('step-optional-tag')).toHaveTextContent('AI 비서실장은 선택');
+    expect(screen.getByTestId('step-chip-phrase')).toHaveAttribute('data-status', 'current');
+    fireEvent.click(screen.getByTestId('followup-option-0'));
+    expect(screen.getByTestId('step-chip-submit')).toHaveAttribute('data-status', 'current');
+    expect(screen.getByTestId('submit-followup')).toHaveAttribute('data-guide', 'next');
+  });
+});
+
 // T97: DISCUSS는 비서실장 세 기능을 써야 전달이 열리지만, 다시 답하기(REACTIONS)는 선택
 // 사항 그대로다 — 비서실장 사용 기록이 하나도 없어도 전달할 수 있다.
 describe('ReactionsScreen 비서실장 게이팅 없음(T97)', () => {
