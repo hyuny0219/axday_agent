@@ -695,6 +695,19 @@ REACTIONS는 비서실장을 선택 사항으로 두므로 칩에서 빼고 오�
 
 영향받은 파일: `src/domain/stepGuide.ts`, `src/components/parts/StepGuide.tsx`, `src/styles/screens/{stepGuide,shell}.css`, `src/components/screens/{DiscussScreen,ReactionsScreen}.tsx`, `tests/components/{StepGuide,DiscussScreen,ReactionsScreen}.test.tsx`, `e2e/{assistant-gate,reactions,noscroll}.spec.ts`.
 
+## T101 — 스타일·집계 일관성 (2026-10-08)
+
+Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설득 숫자 어긋남을 고쳤다. 표결 규칙과 시나리오 문장은 바꾸지 않았다.
+
+- **CSS 누수**: `.discuss-screen__submit-row .cta`·`.reactions-screen__submit-row .cta`가 줄 안에 그려지는 비서실장 팝업(DialogShell)의 닫기·기능 버튼과 "AI 비서실장에게 맡기기" 토글까지 키웠다. 선택자를 직계(`> .cta`, `> .reactions-screen__keep-previous`)로 좁혀 팝업 버튼은 근거 자료 팝업과 같은 크기, 토글은 의도값(1080 225px·21px, 720 DISCUSS 180px·17px, REACTIONS 140px·15px)으로 돌아왔다. T98의 `cta--outline`은 `> .cta` 안에서 그대로 동작한다.
+- **720 규칙**: "넘어가기"(옛 "답하지 않고 넘어가기", 읽어 주는 이름은 `aria-label`로 유지) 15px 이상. 결과(부결) 설득 도장 칸을 원 아래로 늘려 "미획득" 상자가 도장 원과 겹치지 않는다. 임원 판단 줄은 두 줄까지 보인다. DISCUSS 입력칸은 칸을 쓰는 중이 아닐 때 항상 맨 위 줄부터 보인다(`DraftEditor`). 발언 흐름은 위로 읽을 내용이 있을 때 위쪽 가장자리를 옅게 흐려 잘린 첫 줄이 제목에 가려진 것처럼 보이지 않게 한다(`MinutesPanel`, `minutes.css`).
+- **입장 미선택(DISCUSS side=null)**: 설득 현황판은 "입장을 고르면 설득 목표가 보입니다" 한 줄만 보이고, 조건 추천(`buildConditionRecommendation`)은 찬성을 목표로 가정하지 않고 빈 결과와 안내 한 줄을 돌려준다. 비서실장 버튼은 T97대로 잠긴다. REACTIONS는 이전 입장을 그대로 쓴다.
+- **설득 숫자 통일**: `computePersuasionTally`(`src/components/persuasionSummary.ts`) 한 곳에서 센다. 처음부터(첫 의견 때) 참가자와 같은 편이고 지금도 그 편인 임원은 "처음부터 같은 편"으로 표시하고 "설득한 임원 N/M"의 분모에서 뺀다. 모두 그런 경우는 숫자 대신 "모두 처음부터 같은 편". 설득 현황판, 결과 제목 줄("이사님 표 찬성 · 나를 포함해 같은 표 N석 · 설득한 임원 N/M"), 설득 도장 칸의 "같은 표 N석", 소개 화면 성공 기준("나를 포함해 같은 표가 3석 이상")이 같은 숫자를 쓴다. 불변식은 같은 편 좌석(나 포함) = 1 + 처음부터 같은 편 + 설득한 임원, 분모 = 4 − 처음부터 같은 편이며 `tests/components/persuasionSummary.test.ts`가 두 안건·두 입장·모든 조건 조합에서 확인한다. scripted·live 모두 `openingStanceOf` 기준이다. 도장 판정(나 포함 3석)은 그대로다.
+- **발언 흐름 유지 문구**: `minutes.ts`의 "앞서 말씀드린 입장 그대로입니다."는 `scenario.holdReasons`가 없을 때만 쓰고, 있으면 반응 카드와 같은 역할별 유지 이유를 쓴다.
+- **AI가 도운 일**: "조건 추천 1회 · 결재 금액 한도, 승인 사유 기록 → 2개 반영"처럼 추천한 조건 이름(세 개까지, 넘으면 "외 N개")과 그중 최종안에 남은 반영 개수를 한 줄로 보인다. 조건 추천 사용 기록(`CONDITION_RECOMMEND_VIEW`)의 `evidenceIds`에 추천한 조건 id를 담는다.
+
+영향받은 파일: `src/styles/screens/{discuss,reactions,result,minutes}.css`, `src/components/parts/{PersuasionBoard,AssistantPanel,DraftEditor,MinutesPanel}.tsx`, `src/components/{persuasionSummary,conditionRecommendation,minutes}.ts`, `src/domain/assistantLog.ts`, `src/components/screens/{Result,Intro,Reactions}Screen.tsx`.
+
 ## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
 
 **사용자 지시**: "내가 의견을 내고 어떤 조건을 붙여야 AI 임원을 설득할 수 있는지 표현되고, 내 발언에 따라 임원 입장이 변하는 것이 잘 보이게. 이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 따라 하고 느끼게. AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을 고르는 데 큰 도움이 된다고 느끼게."

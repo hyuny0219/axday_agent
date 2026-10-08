@@ -82,7 +82,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 5');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
     await expect(page.getByTestId('result-tally-caption')).toContainText(
-      '찬성 · 같은 표 5석 — 설득 도장을 받았습니다',
+      '찬성 · 나를 포함해 같은 표 5석 · 설득한 임원 3/3 · 처음부터 같은 편 1명은 세지 않음 — 설득 도장을 받았습니다',
     );
   });
 
@@ -133,7 +133,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 2');
     await expect(page.getByTestId('persuasion-stamp')).toHaveCount(0);
     await expect(page.getByTestId('result-tally-caption')).toContainText(
-      '찬성 · 같은 표 2석 · 3석부터 설득 도장을 받습니다',
+      '찬성 · 나를 포함해 같은 표 2석 · 설득한 임원 0/3 · 처음부터 같은 편 1명은 세지 않음 · 3석부터 설득 도장을 받습니다',
     );
   });
 });
@@ -217,8 +217,9 @@ test.describe('live mock: 무대 표정', () => {
     // YES를 더하면 찬성 3석 → 참가자 표와 같은 표 3석(경계), 도장을 얻는다.
     await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3');
     await expect(page.getByTestId('persuasion-stamp')).toBeVisible();
-    await expect(page.getByTestId('result-tally-caption')).toContainText(
-      '찬성 · 같은 표 3석 — 설득 도장을 받았습니다',
-    );
+    // live 첫 의견(mock)에 따라 "처음부터 같은 편" 수가 달라 분모는 고정하지 않는다(T101).
+    await expect(page.getByTestId('result-tally-caption')).toContainText('찬성 · 나를 포함해 같은 표 3석');
+    await expect(page.getByTestId('result-tally-caption')).toContainText(/설득한 임원 \d\/\d|모두 처음부터 같은 편/);
+    await expect(page.getByTestId('result-tally-caption')).toContainText('설득 도장을 받았습니다');
   });
 });

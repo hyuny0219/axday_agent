@@ -67,6 +67,11 @@ test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확�
   await expect(page.getByTestId('submit-followup')).toBeVisible();
   await expect(page.getByTestId('submit-followup')).toHaveClass(/cta--outline/);
   await expect(page.getByTestId('step-optional-tag')).toBeVisible();
+  // T101: "넘어가기"는 720에서도 15px 이상이다.
+  const keepPrevious = page.getByTestId('keep-previous-answer');
+  await expect(keepPrevious).toHaveText('넘어가기');
+  const keepFontSize = await keepPrevious.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
+  expect(keepFontSize).toBeGreaterThanOrEqual(15);
 
   // EXP_ONLY 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
   await page.getByTestId('condition-chip-EXP_ONLY').click();
