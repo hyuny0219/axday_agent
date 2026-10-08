@@ -538,14 +538,18 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     ]);
   });
 
-  it('직접 쓴 내용 유지를 고르면 묶음 적용 기록을 남기지 않는다(Codex 31차 P2-2)', async () => {
+  it('직접 쓴 내용 유지를 골라도 선택 문구의 조건이 확정되므로 묶음 기록이 2건 남는다(Codex 32차 P2-1)', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderWith(aiApprovalScenario, 'FOR', actions);
     await openCompare();
     fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
     fireEvent.click(await screen.findByTestId('rebuild-confirm-keep'));
     expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
-    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY')).toEqual([]);
+    expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('직접 쓴 의견입니다.');
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
   });
 
   it('DISCUSS는 고른 문구의 조건이 본문을 고쳐도 제안으로 남아 적용 버튼이 그대로 보인다(Codex 31차 P2-3 확인)', async () => {

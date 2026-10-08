@@ -294,10 +294,10 @@ export function DiscussScreen({
     setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
     setPendingBatch(null);
-    // '유지'는 직접 쓴 글을 그대로 두어 조건이 제안되지 않으므로 기록하지 않는다(PR #20
-    // Codex 31차 P2-2). 다시 구성했을 때만 실제 반영분을 기록한다.
+    // DISCUSS는 직접 쓴 글(dirty)이어도 선택 문구의 조건이 제안에 들어가므로(phraseConditionIds)
+    // 유지·다시 구성 모두 실제 확정된 조건을 기록한다(PR #20 Codex 32차 P2-1).
     for (const item of batch) {
-      if (choice === 'rebuild' && item.conditionId !== null) {
+      if (item.conditionId !== null) {
         onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
       }
     }
