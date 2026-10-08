@@ -142,6 +142,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // CTA가 뷰포트 밖으로 밀렸는데도 문서 스크롤 자체는 없어(.app-body__actions가
   // overflow:visible이라 안쪽 scrollHeight 검사로는 못 잡는다) expectNoPageScroll이
   // 못 잡았다 — CTA 자체가 뷰포트 안에 보이는지 직접 단언한다.
+  await expectFullyVisible(page, 'step-guide', 'DISCUSS(진행 단계 안내판)');
   await expectFullyVisible(page, 'submit-opinion', 'DISCUSS(CTA)');
   await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
@@ -168,6 +169,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   // T96: DISCUSS와 같은 이유로 REACTIONS(다시 답하기)도 CTA가 뷰포트 안에 보이는지
   // 직접 확인한다.
+  await expectFullyVisible(page, 'step-guide', 'REACTIONS(진행 단계 안내판)');
   await expectFullyVisible(page, 'submit-followup', 'REACTIONS(다시 답하기 CTA)');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();

@@ -642,6 +642,29 @@
     0 0 16px rgba(224, 163, 74, 0.35);
 }
 
+/* 비활성이어도 "있는 버튼"으로 보이는 빈 버튼(T98, REACTIONS 답변 전달 전용 — 사용자
+   지적 "의견 전달하는 버튼이 없어"). 점선·흐린 잉크 대신 종이색 굵은 실선 테두리와
+   선명한 종이색 글자를 쓴다. 클릭은 여전히 disabled로 막힌다. MOTION·VOTE는 쓰지 않는다. */
+.cta.cta--outline:disabled {
+  background-color: transparent;
+  border: 3px solid var(--paper);
+  color: var(--paper);
+  opacity: 1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.cta-disabled-hint.cta-disabled-hint--strong {
+  font-size: 17px;
+  color: var(--paper);
+}
+
+@media (max-width: 1280px) {
+  .cta-disabled-hint.cta-disabled-hint--strong {
+    font-size: 13px;
+  }
+}
+
 /* 진행 스트립(v0.9, T67에서 헤더 가운데로 이동): ① 상황 파악 → ⑤ 표결 5단계를
    헤더 한 줄 가운데 표시한다(App.tsx가 아니라 Header.tsx가 렌더한다). 헤더 자체
    패딩을 그대로 쓰므로 이 요소에는 별도 padding을 두지 않는다. min-width:0으로

@@ -63,6 +63,10 @@ test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확�
   );
 
   await expect(page.getByTestId('submit-followup')).toBeDisabled();
+  // T98: 비활성이어도 화면에 보이는 빈 버튼이고 3칩 안내판이 현재 단계를 알려 준다.
+  await expect(page.getByTestId('submit-followup')).toBeVisible();
+  await expect(page.getByTestId('submit-followup')).toHaveClass(/cta--outline/);
+  await expect(page.getByTestId('step-optional-tag')).toBeVisible();
 
   // EXP_ONLY 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
   await page.getByTestId('condition-chip-EXP_ONLY').click();
