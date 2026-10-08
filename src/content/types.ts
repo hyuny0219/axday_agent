@@ -71,6 +71,9 @@ export type OpeningStance = 'FOR' | 'AGAINST' | 'UNDECIDED';
 export interface InitialOpinion {
   memberId: ExecMemberId;
   text: string;
+  /** 무대 말풍선에 쓰는 핵심 한 구절(T102, 최대 18자). 전문은 오른쪽 종이 카드에서만
+   * 읽는다. 없으면 StageBand가 text에서 bubbleLineOf로 줄여 쓴다. */
+  bubble?: string;
   evidenceIds: string[];
   /** OPINIONS 단계(아직 참가자가 말하지 않은 동안, DISCUSS 포함) "출발 성향"(PR #13
    * Codex 3차 검토 — server/scenario-data.ts의 roleLenses[role].opening과 같은 값을
@@ -110,6 +113,8 @@ export interface Reaction {
   conditionId: string | 'none';
   memberId: ExecMemberId;
   text: string;
+  /** 무대 말풍선용 핵심 한 구절(T102, 최대 18자). InitialOpinion.bubble과 같다. */
+  bubble?: string;
 }
 
 /** 추천 답변이 어느 입장에서 하는 말인지(T89, 사용자 지시 "반응에 답하기에서도 내
