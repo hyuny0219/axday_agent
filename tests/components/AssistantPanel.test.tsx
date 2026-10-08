@@ -4,7 +4,7 @@
 
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AssistantPanel } from '../../src/components/parts/AssistantPanel';
 import { aiApprovalScenario } from '../../src/content/scenarios';
 import { scriptedStances } from '../../src/domain/stance';
@@ -232,5 +232,40 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
         expect.objectContaining({ type, failed: true }),
       );
     }
+  });
+});
+
+describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
+  it('로딩 중 팝업을 닫으면 늦게 도착한 응답은 기록되지 않고, 다시 열어 실행하면 정상 기록된다', async () => {
+    const onAssistantAction = vi.fn();
+    let releaseFirst: () => void = () => {};
+    let calls = 0;
+    const adapter: AssistantAdapter = {
+      ...scriptedAssistantAdapter,
+      summarizeOpinions: async (req) => {
+        calls += 1;
+        if (calls === 1) {
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+        }
+        return scriptedAssistantAdapter.summarizeOpinions(req);
+      },
+    };
+    render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={adapter} />);
+
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-summary'));
+    fireEvent.click(screen.getByTestId('assistant-close'));
+    await act(async () => {
+      releaseFirst();
+    });
+    expect(onAssistantAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-summary'));
+    await waitFor(() => {
+      expect(onAssistantAction.mock.calls.filter(([e]) => e.type === 'OPINION_SUMMARY')).toHaveLength(1);
+    });
   });
 });

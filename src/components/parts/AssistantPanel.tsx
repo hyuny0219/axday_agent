@@ -153,9 +153,10 @@ export function AssistantPanel({
   adapter = scriptedAssistantAdapter,
 }: AssistantPanelProps) {
   const [open, setOpen] = useState(false);
+  const closePopupRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (closeRequest > 0) {
-      setOpen(false);
+      closePopupRef.current();
     }
   }, [closeRequest]);
   useEffect(() => {
@@ -225,6 +226,22 @@ export function AssistantPanel({
       }
     }
   }, [draftRevision, refineResultRevision, activeFeature]);
+
+  // PR #20 Codex 32차 P2-2: 로딩 중에 팝업을 닫으면 진행 중 요청을 무효화하고 idle로
+  // 되돌린다 — 닫힌 뒤 도착한 응답·오류가 화면에 보인 적 없이 사용으로 집계되지 않게
+  // 한다(isStillCurrent가 false가 되어 기록 없이 버려진다). 이미 끝난 결과는 그대로 둔다.
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  function closePopup() {
+    if (statusRef.current === 'loading') {
+      currentRequestRef.current?.controller.abort();
+      currentRequestRef.current = null;
+      setStatus('idle');
+      setActiveFeature(null);
+    }
+    setOpen(false);
+  }
+  closePopupRef.current = closePopup;
 
   function isStillCurrent(requestId: string): boolean {
     return currentRequestRef.current?.requestId === requestId;
@@ -432,7 +449,7 @@ export function AssistantPanel({
           testId="assistant-panel"
           titleId="assistant-panel-title"
           title="AI 비서실장"
-          onClose={() => setOpen(false)}
+          onClose={closePopup}
           closeTestId="assistant-close"
           closeGuide={allUsed}
         >
