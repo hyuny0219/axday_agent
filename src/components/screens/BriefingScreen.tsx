@@ -92,7 +92,8 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
             {undecidedItems.length > 0 && (
               <p className="briefing-screen__undecided">
                 <span className="briefing-screen__label briefing-screen__label--unknown">미정</span>
-                <span className="briefing-screen__undecided-muted"><HighlightText text={undecidedItems.join(' · ')} terms={terms} />
+                <span className="briefing-screen__undecided-muted">
+                  <HighlightText text={undecidedItems.join(' · ')} terms={terms} />
                 </span>
               </p>
             )}
