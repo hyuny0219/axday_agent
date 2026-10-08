@@ -65,7 +65,7 @@ describe('VoteScreen', () => {
   });
 
   // T85 #2: 아직 표를 고르지 않아 확정 버튼이 비활성일 때만 안내 한 줄을 보여준다.
-  it('아직 표를 고르지 않으면 안내가 보이고, 고르면 사라진다', () => {
+  it('옛 한 줄 안내 없이 도장·확정 버튼이 코치 대상이다', () => {
     const motion = freezeMotion(scenario, [], 0);
     const { rerender } = render(
       <VoteScreen
@@ -79,7 +79,9 @@ describe('VoteScreen', () => {
         onConfirmVote={noop}
       />,
     );
-    expect(screen.getByTestId('vote-guide-hint')).toHaveTextContent('찬성 또는 반대 도장을 고르세요');
+    expect(screen.queryByTestId('vote-guide-hint')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-coach="vote-stamps"]')).not.toBeNull();
+    expect(screen.getByTestId('confirm-vote')).toHaveAttribute('data-coach', 'vote-confirm');
 
     rerender(
       <VoteScreen

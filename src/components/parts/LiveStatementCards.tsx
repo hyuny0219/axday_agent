@@ -74,6 +74,8 @@ export interface LiveStatementCardsProps {
   onRetryFailedRoles?: () => void;
   /** 라운드당 1회 제한(T65) — 호출부가 이미 한 번 눌렀으면 true로 넘겨 버튼을 잠근다. */
   retryDisabled?: boolean;
+  /** 진행 도우미(T103)가 밝힐 대상 이름(data-coach). */
+  coachTarget?: string;
 }
 
 // 화면에는 자료 ID(E1~E4)를 쓰지 않고 자료명만 보여준다(T52). 일치하는 자료가 없으면
@@ -107,6 +109,7 @@ export function LiveStatementCards({
   variant = 'grid',
   onRetryFailedRoles,
   retryDisabled = false,
+  coachTarget,
 }: LiveStatementCardsProps) {
   const isGrid = variant === 'grid';
   const isReaction = variant === 'reaction';
@@ -131,7 +134,7 @@ export function LiveStatementCards({
     ) : null;
 
   return (
-    <div className="live-round">
+    <div className="live-round" data-coach={coachTarget}>
       <div className="live-round__cards" data-testid={`live-round-${stage}`}>
       {EXEC_MEMBER_ORDER.map((roleId) => {
         const rawStatus = roleStatus[roleId];

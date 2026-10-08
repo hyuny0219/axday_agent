@@ -50,14 +50,14 @@ describe('BriefingScreen', () => {
     render(<BriefingScreen scenario={anonBoardScenario} onNext={onNext} />);
     const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
     expect(nextButton).toBeDisabled();
-    expect(screen.getByTestId('briefing-cta-hint')).toBeInTheDocument();
-    expect(screen.getByTestId('open-evidence')).toHaveAttribute('data-guide', 'next');
+    expect(nextButton).toHaveAccessibleDescription('근거 자료를 먼저 확인해 주세요');
+    expect(screen.getByTestId('open-evidence')).toHaveAttribute('data-coach', 'evidence-open');
 
     fireEvent.click(nextButton);
     expect(onNext).not.toHaveBeenCalled();
   });
 
-  it('근거 자료를 한 번 열어 닫으면 "의견 듣기"가 활성화되고 하이라이트가 CTA로 옮긴다', () => {
+  it('근거 자료를 한 번 열어 닫으면 "의견 듣기"가 활성화된다', () => {
     const onNext = vi.fn();
     render(<BriefingScreen scenario={anonBoardScenario} onNext={onNext} />);
     fireEvent.click(screen.getByTestId('open-evidence'));
@@ -65,7 +65,6 @@ describe('BriefingScreen', () => {
 
     const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
     expect(nextButton).toBeEnabled();
-    expect(nextButton).toHaveAttribute('data-guide', 'next');
 
     fireEvent.click(nextButton);
     expect(onNext).toHaveBeenCalledTimes(1);

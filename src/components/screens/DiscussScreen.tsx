@@ -45,8 +45,7 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
-import { StepGuide } from '../parts/StepGuide';
-import { stepGuideState } from '../../domain/stepGuide';
+import { useCoachReport } from '../coachUi';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
@@ -198,9 +197,13 @@ export function DiscussScreen({
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
-  // T98: 오른쪽 종이 안내판의 현재 칩. 같은 칩이 가리키는 실제 조작 대상(입장 버튼·
-  // 문구 카드·비서실장 버튼·전달 버튼)에도 data-guide를 함께 건다.
-  const guideCurrent = stepGuideState({ side, draftReady, featuresUsed: assistantUsed }).current;
+  // 진행 도우미(T103): 코치가 단계를 정하는 데 쓰는 화면 상태를 알린다.
+  useCoachReport({
+    side,
+    draftReady,
+    assistantUsedCount: assistantUsed.size,
+    assistantOpen,
+  });
 
   // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
   // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
@@ -451,7 +454,6 @@ export function DiscussScreen({
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
             requiredFeatures={{ used: assistantUsed }}
-            toggleGuide={guideCurrent === 'assistant'}
             toggleLocked={!draftReady}
             toggleLockedHint={side === null ? '먼저 입장을 골라 주세요' : undefined}
             onOpenChange={handleAssistantOpenChange}
@@ -463,18 +465,19 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
-            data-guide={guideCurrent === 'submit' && canSubmit ? 'next' : undefined}
+            data-coach="submit-opinion"
+            aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
           >
             의견 전달 ▶
           </button>
           {!canSubmit && (
-            <p className="cta-disabled-hint" data-testid="discuss-cta-hint">
+            <span id="discuss-submit-why" className="sr-only" data-testid="discuss-cta-hint">
               {side === null
                 ? '먼저 입장을 골라 주세요'
                 : draftReady
                 ? `AI 비서실장을 먼저 써 보세요 (${assistantUsed.size}/${ASSISTANT_FEATURE_ORDER.length})`
                 : '추천 문구를 고르거나 직접 써 주세요'}
-            </p>
+            </span>
           )}
         </div>
       </div>
@@ -492,19 +495,13 @@ export function DiscussScreen({
             <h2 className="discuss-screen__title">내 의견 쓰기</h2>
             <span className="discuss-screen__phrase-hint">추천 문구 · 여러 개 선택 가능</span>
           </div>
-          <StepGuide
-            variant="discuss"
-            side={side}
-            draftReady={draftReady}
-            featuresUsed={assistantUsed}
-          />
           <p className="discuss-screen__guide">
             문구를 고르면 왼쪽 내 발언에 이어 붙습니다. 직접 고쳐 써도 됩니다.
           </p>
           <div
             className="side-select"
             data-testid="discuss-side-select"
-            data-guide={guideCurrent === 'side' ? 'next' : undefined}
+            data-coach="side-select"
           >
             <button
               type="button"
@@ -534,7 +531,7 @@ export function DiscussScreen({
             <>
               <div
                 className="discuss-screen__phrase-list"
-                data-guide={guideCurrent === 'phrase' ? 'next' : undefined}
+                data-coach="phrase-list"
               >
                 {scenario.phrases
                   .filter((phrase) => {

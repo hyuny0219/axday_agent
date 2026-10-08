@@ -75,15 +75,14 @@ describe('Coach', () => {
     expect(screen.queryByTestId('coach')).toBeNull();
   });
 
-  it('스포트라이트는 대상 둘레(4px 여유)에 놓이고, 어두운 패널 4개가 구멍을 비워 둔다', () => {
+  it('스포트라이트는 대상 둘레(4px 여유)에 놓이고, 어두운 덮개가 그 자리를 비워 둔다', () => {
     addTarget('t', { left: 400, top: 200, width: 200, height: 80 });
     renderCoach();
     const spot = screen.getByTestId('coach-spot');
     expect(spot).toHaveStyle({ left: '396px', top: '196px', width: '208px', height: '88px' });
-    const panels = document.querySelectorAll('.coach__dim');
-    expect(panels).toHaveLength(4);
-    expect((panels[0] as HTMLElement).style.height).toBe('196px');
-    expect((panels[2] as HTMLElement).style.width).toBe('396px');
+    // 어두운 덮개는 한 장이고 대상 자리가 구멍으로 비어 있다(구멍 안은 클릭도 통과).
+    expect(document.querySelectorAll('.coach__dim')).toHaveLength(1);
+    expect(screen.getByTestId('coach-dim')).toHaveAttribute('data-holes', '396,196,208,88');
   });
 
   it('"건너뛰기"와 Esc는 onSkip을 부른다', () => {
@@ -140,6 +139,22 @@ describe('Coach', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Coach 운영 메뉴 예외', () => {
+  it('운영 버튼 자리는 어둡게 덮지 않는 구멍으로 더한다', () => {
+    addTarget('t', { left: 400, top: 200, width: 200, height: 80 });
+    const trigger = document.createElement('button');
+    trigger.className = 'operator-menu__trigger';
+    trigger.getBoundingClientRect = () =>
+      ({ left: 1200, top: 8, width: 56, height: 40, right: 1256, bottom: 48, x: 1200, y: 8, toJSON: () => ({}) }) as DOMRect;
+    document.body.appendChild(trigger);
+    renderCoach();
+    expect(screen.getByTestId('coach-dim')).toHaveAttribute(
+      'data-holes',
+      '396,196,208,88;1200,8,56,40',
+    );
   });
 });
 

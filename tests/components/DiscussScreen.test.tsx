@@ -13,6 +13,8 @@ import { aiApprovalScenario, anonBoardScenario, experienceFirstScenario } from '
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
 import { scriptedStances } from '../../src/domain/stance';
+import { CoachUiContext } from '../../src/components/coachUi';
+import type { CoachUi } from '../../src/domain/coach';
 import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
 afterEach(() => {
@@ -378,25 +380,21 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.queryByTestId('assistant-toggle-hint')).not.toBeInTheDocument();
   });
 
-  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며, 하이라이트는 문구 목록에 있다', () => {
+  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며, 코치 대상 속성이 걸리지 않는다', () => {
     renderDiscuss([]);
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
     expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
       '추천 문구를 고르거나 직접 써 주세요',
     );
-    expect(screen.getByTestId('assistant-toggle')).not.toHaveAttribute('data-guide');
-    expect(screen.getByTestId('submit-opinion')).not.toHaveAttribute('data-guide');
   });
 
-  it('문구만 고르면 힌트가 (0/3)으로 바뀌고 하이라이트가 비서실장 버튼으로 옮겨 간다', () => {
+  it('문구만 고르면 힌트가 (0/3)으로 바뀐다', () => {
     renderDiscuss([]);
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
     expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
       'AI 비서실장을 먼저 써 보세요 (0/3)',
     );
-    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-guide', 'next');
-    expect(screen.getByTestId('submit-opinion')).not.toHaveAttribute('data-guide');
   });
 
   it('두 개만 써도 (2/3)이고 전달은 계속 막혀 있다', () => {
@@ -406,7 +404,7 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
   });
 
-  it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 하이라이트가 전달 버튼으로 옮겨 가며 힌트가 사라진다', () => {
+  it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 힌트가 사라진다', () => {
     renderDiscuss([
       entry('OPINION_SUMMARY'),
       entry('CONDITION_RECOMMEND_VIEW', true),
@@ -414,8 +412,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     ]);
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     expect(screen.getByTestId('submit-opinion')).toBeEnabled();
-    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-guide', 'next');
-    expect(screen.getByTestId('assistant-toggle')).not.toHaveAttribute('data-guide');
     expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
   });
 
@@ -458,42 +454,15 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     );
   });
 
-  it('예전 한 줄 안내는 없고 안내판이 대신한다(T98)', () => {
+  it('예전 한 줄 안내와 단계 칩은 없다(T103에서 코치로 대체)', () => {
     renderDiscuss([]);
     expect(screen.queryByTestId('discuss-assistant-tip')).not.toBeInTheDocument();
     expect(screen.queryByTestId('discuss-guide-hint')).not.toBeInTheDocument();
-    expect(screen.getByTestId('step-guide')).toBeInTheDocument();
+    expect(screen.queryByTestId('step-guide')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-guide]')).toBeNull();
   });
 
-  it('안내판 현재 칩이 입장 → 문구 → 비서실장 → 전달 순으로 옮겨 가고 실제 조작 대상도 같이 강조된다(T98)', () => {
-    const { unmount } = render(
-      <ControlledDiscuss
-        scenario={aiApprovalScenario}
-        sessionId="s1"
-        transcript={emptyTranscript}
-        mode="scripted"
-        roleStatus={idle}
-        stances={stances}
-        onSubmit={noop}
-        onAssistantAction={noop}
-        assistantActions={[]}
-      />,
-    );
-    // ① 입장 미선택
-    expect(screen.getByTestId('step-chip-side')).toHaveAttribute('data-status', 'current');
-    expect(screen.getByTestId('discuss-side-select')).toHaveAttribute('data-guide', 'next');
-    fireEvent.click(screen.getByTestId('discuss-side-for'));
-    // ② 문구
-    expect(screen.getByTestId('step-chip-side')).toHaveAttribute('data-status', 'done');
-    expect(screen.getByTestId('step-chip-phrase')).toHaveAttribute('data-status', 'current');
-    expect(screen.getByTestId('discuss-side-select')).not.toHaveAttribute('data-guide');
-    fireEvent.click(screen.getByTestId('phrase-card-P1'));
-    // ③ 비서실장
-    expect(screen.getByTestId('step-chip-assistant')).toHaveAttribute('data-status', 'current');
-    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-guide', 'next');
-    unmount();
-
-    // ④ 세 기능을 다 쓴 뒤
+  it('코치 대상 속성이 입장·문구 목록·비서실장·전달 버튼에 걸려 있다(T103)', () => {
     render(
       <ControlledDiscuss
         scenario={aiApprovalScenario}
@@ -504,16 +473,43 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
-        assistantActions={[entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW'), entry('DRAFT_REFINE')]}
+        assistantActions={[]}
         initialSide="FOR"
       />,
     );
-    fireEvent.click(screen.getByTestId('phrase-card-P1'));
-    expect(screen.getByTestId('step-chip-submit')).toHaveAttribute('data-status', 'current');
-    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-guide', 'next');
-    expect(screen.getByTestId('step-check-compare')).toHaveAttribute('data-checked', 'true');
+    expect(screen.getByTestId('discuss-side-select')).toHaveAttribute('data-coach', 'side-select');
+    expect(document.querySelector('[data-coach="phrase-list"]')).not.toBeNull();
+    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-coach', 'assistant-toggle');
+    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-coach', 'submit-opinion');
   });
 
+  it('입장·문구·비서실장 사용 수를 코치에게 알린다(T103)', () => {
+    const reports: Partial<CoachUi>[] = [];
+    const report = (patch: Partial<CoachUi>) => reports.push(patch);
+    render(
+      <CoachUiContext.Provider value={report}>
+        <ControlledDiscuss
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          roleStatus={idle}
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+          assistantActions={[entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW')]}
+        />
+      </CoachUiContext.Provider>,
+    );
+    const latest = () => Object.assign({}, ...reports) as Partial<CoachUi>;
+    expect(latest()).toMatchObject({ side: null, draftReady: false, assistantUsedCount: 2, assistantOpen: false });
+    fireEvent.click(screen.getByTestId('discuss-side-for'));
+    expect(latest().side).toBe('FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(latest().draftReady).toBe(true);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(latest().assistantOpen).toBe(true);
+  });
 });
 
 // PR #20 Codex 28차 P2-1: 복합 추천 "모두 적용"은 조건 여러 개를 단일 상태 업데이트로 반영한다.

@@ -61,8 +61,6 @@ export interface RequiredFeatures {
 
 export interface AssistantPanelProps {
   requiredFeatures?: RequiredFeatures;
-  /** T97: true면 열기 버튼에 다음 행동 강조(data-guide)를 건다. */
-  toggleGuide?: boolean;
   /** PR #20 Codex 29차 P2: true면 열기 버튼을 잠그고 "먼저 추천 문구를 골라 주세요"를 보인다
    * (DISCUSS에서 문구 선택 전에 세 기능을 써 순서를 우회하지 못하게). 창이 열려 있는 동안은
    * 영향이 없다. */
@@ -133,7 +131,6 @@ function evidenceLabel(scenario: Scenario, id: string): string {
 
 export function AssistantPanel({
   requiredFeatures,
-  toggleGuide = false,
   toggleLocked = false,
   toggleLockedHint,
   scenario,
@@ -438,15 +435,16 @@ export function AssistantPanel({
         className="cta cta--secondary assistant-panel__toggle"
         onClick={() => setOpen(true)}
         disabled={toggleLocked}
+        aria-describedby={toggleLocked ? 'assistant-toggle-why' : undefined}
         data-testid="assistant-toggle"
-        data-guide={toggleGuide ? 'next' : undefined}
+        data-coach="assistant-toggle"
       >
         AI 비서실장에게 맡기기
       </button>
       {toggleLocked && (
-        <p className="cta-disabled-hint" data-testid="assistant-toggle-hint">
+        <span id="assistant-toggle-why" className="sr-only" data-testid="assistant-toggle-hint">
           {toggleLockedHint ?? '먼저 추천 문구를 골라 주세요'}
-        </p>
+        </span>
       )}
       {open && (
         <DialogShell
@@ -455,7 +453,7 @@ export function AssistantPanel({
           title="AI 비서실장"
           onClose={closePopup}
           closeTestId="assistant-close"
-          closeGuide={allUsed}
+          closeCoach="assistant-close"
         >
           <div className="assistant-panel__content">
             {requiredFeatures && (
@@ -530,7 +528,7 @@ export function AssistantPanel({
                     className="cta cta--secondary"
                     onClick={() => runFeature(feature)}
                     data-testid={`assistant-action-${feature}`}
-                    data-guide={nextFeature === feature ? 'next' : undefined}
+                    data-coach={nextFeature === feature ? 'assistant-next' : undefined}
                   >
                     {FEATURE_LABELS[feature]}
                     {used && (

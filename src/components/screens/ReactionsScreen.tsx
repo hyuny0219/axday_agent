@@ -92,9 +92,6 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
-import { GuideHint } from '../parts/GuideHint';
-import { StepGuide } from '../parts/StepGuide';
-import { stepGuideState } from '../../domain/stepGuide';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
 // 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
@@ -365,14 +362,6 @@ export function ReactionsScreen({
     textValue.trim() !== '' &&
     textValue.length <= DRAFT_MAX_LENGTH &&
     conflictPairs.length === 0;
-  // T98: 오른쪽 종이 안내판(3칩: 입장·추천 답변·답변 전달). 비서실장은 선택이라 칩에서
-  // 뺀다. 같은 현재 칩이 가리키는 실제 조작 대상에 data-guide를 함께 건다.
-  const guideCurrent = stepGuideState({
-    side,
-    draftReady: canSubmit,
-    featuresUsed: new Set(),
-    requireAssistant: false,
-  }).current;
 
   /** true면 즉시 적용됨, false면 막혔거나(RebuildConfirm 등) 적용되지 않음(Codex 27차
    * 검토 P2-3 — handleRecommendCondition이 이 값으로 "실제로 반영됐는지"를 가른다). */
@@ -703,10 +692,15 @@ export function ReactionsScreen({
             onClick={onAdvanceStep}
             disabled={listenLocked}
             data-testid="reactions-advance"
-            data-guide={!listenLocked ? 'next' : undefined}
+            aria-describedby={listenLocked ? 'reactions-advance-why' : undefined}
           >
             {listenLocked ? '임원 반응을 듣는 중…' : '답하러 가기 ▶'}
           </button>
+          {listenLocked && (
+            <span id="reactions-advance-why" className="sr-only">
+              임원 반응이 다 나오면 열립니다
+            </span>
+          )}
           <button
             type="button"
             className="cta cta--secondary"
@@ -727,9 +721,6 @@ export function ReactionsScreen({
                 이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다
               </h2>
             </div>
-            {!listenLocked && (
-              <GuideHint text="임원들의 반응을 읽고 답해 보세요" testId="reactions-listen-guide-hint" />
-            )}
             {mode === 'live' ? (
               <LiveStatementCards
                 scenario={scenario}
@@ -740,9 +731,10 @@ export function ReactionsScreen({
                 variant="reaction"
                 onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
                 retryDisabled={retryUsed}
+                coachTarget="reaction-cards"
               />
             ) : (
-              <div className="reactions-screen__cards">
+              <div className="reactions-screen__cards" data-coach="reaction-cards">
                 {EXEC_MEMBER_ORDER.map((memberId) => {
                   const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
                   const opposition = oppositionReactionText(
@@ -898,14 +890,14 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
-            data-guide={guideCurrent === 'submit' && canSubmit ? 'next' : undefined}
+            aria-describedby={!canSubmit ? 'reactions-submit-why' : undefined}
           >
             답변 전달 ▶
           </button>
           {!canSubmit && (
-            <p className="cta-disabled-hint cta-disabled-hint--strong" data-testid="reactions-cta-hint">
+            <span id="reactions-submit-why" className="sr-only" data-testid="reactions-cta-hint">
               추천 답변을 고르거나 직접 쓰면 전달할 수 있습니다
-            </p>
+            </span>
           )}
         </div>
       </div>
@@ -918,7 +910,6 @@ export function ReactionsScreen({
             <h2 className="discuss-screen__title">다시 답하기</h2>
             <span className="discuss-screen__phrase-hint">추천 답변 · 여러 개 선택 가능</span>
           </div>
-          <StepGuide variant="reactions" side={side} draftReady={canSubmit} />
           <p className="discuss-screen__guide" data-testid="followup-question">
             {followUpPrompt.askedBy}가 묻습니다 · {followUpPrompt.question}
           </p>
@@ -927,7 +918,6 @@ export function ReactionsScreen({
           <div
             className="side-select"
             data-testid="reactions-side-select"
-            data-guide={guideCurrent === 'side' ? 'next' : undefined}
           >
             <button
               type="button"
@@ -957,7 +947,6 @@ export function ReactionsScreen({
             <>
               <div
                 className="discuss-screen__phrase-list"
-                data-guide={guideCurrent === 'phrase' ? 'next' : undefined}
               >
               {scenario.followUp.options.map((option, index) => {
                 // keepPrevious 카드는 더 이상 여기 그리지 않는다(T84 #1) — 보조 버튼

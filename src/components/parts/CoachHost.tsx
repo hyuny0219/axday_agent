@@ -45,6 +45,7 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
 
   const step = state.step;
   const copy = coachCopy(step);
+  const target = coachTarget(step, session, ui);
   const inDialog = isCoachInDialog(step, ui);
   const dialogCopy = inDialog ? assistantDialogCopy(ui.assistantUsedCount, ASSISTANT_FEATURE_TOTAL) : null;
   const title = dialogCopy ? dialogCopy.title : copy.title;
@@ -64,10 +65,10 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
     <Coach
       step={step}
       total={COACH_TOTAL}
-      targetSelector={`[data-coach='${coachTarget(step, session, ui)}']`}
+      targetSelector={`[data-coach='${target}']`}
       title={<HighlightText text={title} terms={keys} />}
       body={body}
-      placement={inDialog ? 'right' : copy.placement}
+      placement={inDialog ? (target === 'assistant-close' ? 'left' : 'below') : copy.placement}
       onAck={isReadStep(step) ? dismissStep : undefined}
       ackLabel={coachAckLabel(step)}
       onSkip={skipScreen}

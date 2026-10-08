@@ -23,8 +23,8 @@ export interface DialogShellProps {
   eyebrow?: string;
   onClose: () => void;
   closeTestId: string;
-  /** true면 닫기 버튼에 다음 행동 강조(data-guide)를 건다(T97 — 비서실장을 다 쓴 뒤). */
-  closeGuide?: boolean;
+  /** 닫기 버튼에 붙일 코치 대상 이름(data-coach, T103 — 비서실장을 다 쓴 뒤 닫기를 밝힌다). */
+  closeCoach?: string;
   /** 하단 안내 두 줄. 기본값은 EvidenceDialog와 같다. */
   footerHint?: readonly [string, string];
   children: ReactNode;
@@ -38,7 +38,7 @@ export function DialogShell({
   eyebrow,
   onClose,
   closeTestId,
-  closeGuide = false,
+  closeCoach,
   footerHint = ['바깥을 누르거나 닫기를 누르면 닫힙니다', '열린 동안 뒤 화면은 멈춤'],
   children,
 }: DialogShellProps) {
@@ -130,7 +130,7 @@ export function DialogShell({
             ref={closeButtonRef}
             aria-label="닫기"
             data-testid={closeTestId}
-            data-guide={closeGuide ? 'next' : undefined}
+            data-coach={closeCoach}
           >
             닫기
           </button>

@@ -35,6 +35,9 @@ interface Box {
   height: number;
 }
 
+/** 코치가 떠 있어도 누를 수 있어야 하는 요소(운영자가 안내를 끄는 통로). */
+const EXEMPT_SELECTORS = ['.operator-menu__trigger', '.operator-menu__panel'];
+
 const SPOT_PAD = 4;
 const GAP = 18;
 const MARGIN = 12;
@@ -150,6 +153,7 @@ export function Coach({
   dim = false,
 }: CoachProps) {
   const [box, setBox] = useState<Box | null>(null);
+  const [exempt, setExempt] = useState<Box[]>([]);
   const [view, setView] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
   const [size, setSize] = useState({ width: 360, height: 160 });
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -160,6 +164,15 @@ export function Coach({
   const measure = useCallback(() => {
     const next = readBox(resolveTarget(targetRef, targetSelector));
     setBox((prev) => (sameBox(prev, next) ? prev : next));
+    // 운영 메뉴(운영 버튼과 열린 메뉴)는 항상 눌러 볼 수 있게 어둡게 덮지 않는다.
+    const extra = EXEMPT_SELECTORS.flatMap((selector) =>
+      Array.from(document.querySelectorAll(selector)).map((el) => readBox(el)),
+    ).filter((item): item is Box => item !== null);
+    setExempt((prev) =>
+      prev.length === extra.length && prev.every((item, index) => sameBox(item, extra[index] ?? null))
+        ? prev
+        : extra,
+    );
     setView((prev) =>
       prev.width === window.innerWidth && prev.height === window.innerHeight
         ? prev
@@ -234,21 +247,12 @@ export function Coach({
     height: box.height + SPOT_PAD * 2,
   };
   const placed = placeBubble(spot, size, placement, view);
-  const right = spot.left + spot.width;
-  const bottom = spot.top + spot.height;
-  const clampTop = Math.max(0, Math.min(spot.top, view.height));
-  const clampBottom = Math.max(clampTop, Math.min(bottom, view.height));
-  const panels: CSSProperties[] = [
-    { left: 0, top: 0, width: '100%', height: clampTop },
-    { left: 0, top: clampBottom, width: '100%', height: Math.max(0, view.height - clampBottom) },
-    { left: 0, top: clampTop, width: Math.max(0, spot.left), height: clampBottom - clampTop },
-    {
-      left: Math.max(0, right),
-      top: clampTop,
-      width: Math.max(0, view.width - right),
-      height: clampBottom - clampTop,
-    },
-  ];
+  // 어두운 덮개는 한 장이고, 대상(과 운영 메뉴) 자리는 clip-path로 구멍을 뚫어 비운다.
+  // clip-path 밖은 클릭도 통과하므로 구멍 안의 대상은 그대로 누를 수 있다.
+  const holes = [spot, ...exempt.map((item) => ({ ...item }))];
+  const clipPath = `path(evenodd, "M0 0H${view.width}V${view.height}H0Z ${holes
+    .map((h) => `M${h.left} ${h.top}h${h.width}v${h.height}h${-h.width}Z`)
+    .join(' ')}")`;
 
   const tailStyle: CSSProperties =
     placed.side === 'left' || placed.side === 'right' ? { top: placed.tail } : { left: placed.tail };
@@ -260,9 +264,12 @@ export function Coach({
       data-step={step}
       data-motion={reduced ? 'none' : 'normal'}
     >
-      {panels.map((style, index) => (
-        <div key={index} className="coach__dim" style={style} />
-      ))}
+      <div
+        className="coach__dim"
+        data-testid="coach-dim"
+        data-holes={holes.map((h) => `${h.left},${h.top},${h.width},${h.height}`).join(';')}
+        style={{ clipPath }}
+      />
       <div
         className="coach__spot"
         data-testid="coach-spot"

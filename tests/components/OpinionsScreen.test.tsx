@@ -57,7 +57,8 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
 
     const nextButton = screen.getByTestId('opinions-next');
     expect(nextButton).toBeDisabled();
-    expect(screen.getByTestId('opinions-guide-hint')).toBeInTheDocument();
+    expect(nextButton).toHaveAccessibleDescription('임원 의견이 다 나오면 열립니다');
+    expect(document.querySelector('[data-coach="opinion-cards"]')).not.toBeNull();
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(0);
 
     act(() => {
@@ -73,8 +74,7 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
       anonBoardScenario.initialOpinions.length,
     );
     expect(nextButton).toBeEnabled();
-    expect(nextButton).toHaveAttribute('data-guide', 'next');
-    expect(screen.queryByTestId('opinions-guide-hint')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-guide]')).toBeNull();
   });
 });
 

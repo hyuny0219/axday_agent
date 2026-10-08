@@ -584,12 +584,6 @@
   }
 }
 
-/* 종이 위(VOTE)의 CTA 비활성 안내는 어두운 HUD 색(shell.css 기본값) 대신 종이 톤
-   --ink-muted를 쓴다(T85 #2). */
-.vote-screen__cta-row .cta-disabled-hint {
-  color: var(--ink-muted);
-}
-
 /* 비활성 CTA 자체도 종이 위에서는 shell.css 기본값(--text-muted, 어두운 HUD용 밝은
    회청색)이 크림 종이 위에서 대비가 떨어진다 — 종이 톤 --ink-muted·--paper-border로
    덮어쓴다(T85 #2). */

@@ -17,6 +17,7 @@ import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { HighlightText } from '../parts/HighlightText';
+import { useCoachReport } from '../coachUi';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -30,6 +31,8 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 비활성"): 근거 자료 팝업을 한 번 열어 닫기 전까지 "의견 듣기 ▶"를 잠근다. 다시
   // 열어도(두 번째부터) 이미 본 것으로 유지한다.
   const [evidenceSeen, setEvidenceSeen] = useState(false);
+
+  useCoachReport({ evidenceSeen, evidenceOpen });
 
   function handleCloseEvidence() {
     setEvidenceOpen(false);
@@ -55,14 +58,14 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           className="cta briefing-screen__cta"
           onClick={onNext}
           disabled={!evidenceSeen}
-          data-guide={evidenceSeen ? 'next' : undefined}
+          aria-describedby={!evidenceSeen ? 'briefing-next-why' : undefined}
         >
           의견 듣기 ▶
         </button>
         {!evidenceSeen && (
-          <p className="cta-disabled-hint" data-testid="briefing-cta-hint">
+          <span id="briefing-next-why" className="sr-only">
             근거 자료를 먼저 확인해 주세요
-          </p>
+          </span>
         )}
       </div>
       <div className="app-body__content screen briefing-screen__info">
@@ -107,7 +110,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               className="cta cta--secondary"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
-              data-guide={!evidenceSeen ? 'next' : undefined}
+              data-coach="evidence-open"
             >
               근거 자료 보기 · 자료 4장
             </button>

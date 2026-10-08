@@ -15,7 +15,6 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import { useMatchMedia } from '../useMatchMedia';
-import { GuideHint } from '../parts/GuideHint';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
 
@@ -119,11 +118,16 @@ export function OpinionsScreen({
         onClick={onNext}
         disabled={locked}
         data-testid="opinions-next"
-        data-guide={!locked ? 'next' : undefined}
+        aria-describedby={locked ? 'opinions-next-why' : undefined}
       >
         {locked ? '임원 의견을 듣는 중…' : '내 의견 쓰러 가기 ▶'}
       </button>
       {/* T102: 발언 흐름 패널을 뺀 세로 여백에 "읽는 곳은 오른쪽"이라는 안내 한 줄. */}
+      {locked && (
+        <span id="opinions-next-why" className="sr-only">
+          임원 의견이 다 나오면 열립니다
+        </span>
+      )}
       <p className="opinions-screen__read-hint" data-testid="opinions-read-hint">
         임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요
       </p>
@@ -150,9 +154,6 @@ export function OpinionsScreen({
         <span>같은 자료를 읽고 각자의 관점에서 말합니다.</span>
         <span className="opinions-screen__tally">{stanceSummaryLine(stances)}</span>
       </div>
-      {locked ? (
-        <GuideHint text="임원 네 명의 의견을 읽어 보세요" testId="opinions-guide-hint" />
-      ) : null}
     </>
   );
 
@@ -171,6 +172,7 @@ export function OpinionsScreen({
               stances={stances}
               onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
               retryDisabled={retryUsed}
+              coachTarget="opinion-cards"
             />
           </div>
         </div>
@@ -184,7 +186,7 @@ export function OpinionsScreen({
       <div className="app-body__content screen opinions-screen__info">
         <div className="opinions-screen__paper">
           {paperHead}
-          <div className="opinions-screen__cards">
+          <div className="opinions-screen__cards" data-coach="opinion-cards">
             {scenario.initialOpinions.slice(0, revealedCount).map((opinion) => {
               const stance = stances[opinion.memberId];
               const evidenceLabel = lastEvidenceLabel(scenario, opinion.evidenceIds);

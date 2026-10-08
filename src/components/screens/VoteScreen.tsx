@@ -24,7 +24,6 @@ import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { buildMotionDisplay } from '../motionDisplay';
-import { GuideHint } from '../parts/GuideHint';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 import '../../styles/screens/vote.css';
 import '../../styles/screens/live.css';
@@ -213,13 +212,10 @@ export function VoteScreen({
               </p>
             )}
           </div>
-          {pendingVote === null && (
-            <GuideHint text="찬성 또는 반대 도장을 고르세요" testId="vote-guide-hint" />
-          )}
           <fieldset
             className="vote-screen__choices"
             disabled={submitted}
-            data-guide={pendingVote === null ? 'next' : undefined}
+            data-coach="vote-stamps"
           >
             <legend className="vote-screen__sr-only">이사님의 최종 표를 선택해 주세요</legend>
             {VOTE_ORDER.map((vote) => (
@@ -256,7 +252,7 @@ export function VoteScreen({
               disabled={pendingVote === null || submitted}
               onClick={handleConfirm}
               data-testid="confirm-vote"
-              data-guide={pendingVote !== null && !submitted ? 'next' : undefined}
+              data-coach="vote-confirm"
             >
               {submitted ? (
                 <>

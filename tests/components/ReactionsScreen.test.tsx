@@ -606,17 +606,14 @@ describe('ReactionsScreen 전달 버튼 가시성·안내판(T98)', () => {
     expect(screen.getByTestId('submit-followup')).not.toHaveClass('cta--outline');
   });
 
-  it('안내판은 3칩이고 비서실장은 선택이라는 꼬리표가 붙는다', () => {
+  it('단계 칩 없이 다시 답하기 화면에는 코치 대상도 걸리지 않는다(T103)', () => {
     renderAnswer();
-    expect(screen.getByTestId('step-chip-side')).toBeInTheDocument();
-    expect(screen.getByTestId('step-chip-phrase')).toBeInTheDocument();
-    expect(screen.getByTestId('step-chip-submit')).toBeInTheDocument();
-    expect(screen.queryByTestId('step-chip-assistant')).not.toBeInTheDocument();
-    expect(screen.getByTestId('step-optional-tag')).toHaveTextContent('AI 비서실장은 선택');
-    expect(screen.getByTestId('step-chip-phrase')).toHaveAttribute('data-status', 'current');
-    fireEvent.click(screen.getByTestId('followup-option-0'));
-    expect(screen.getByTestId('step-chip-submit')).toHaveAttribute('data-status', 'current');
-    expect(screen.getByTestId('submit-followup')).toHaveAttribute('data-guide', 'next');
+    expect(screen.queryByTestId('step-guide')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('step-chip-side')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-guide]')).toBeNull();
+    expect(screen.getByTestId('submit-followup')).toHaveAccessibleDescription(
+      '추천 답변을 고르거나 직접 쓰면 전달할 수 있습니다',
+    );
   });
 });
 
