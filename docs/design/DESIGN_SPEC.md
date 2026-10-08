@@ -640,6 +640,15 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 영향받은 파일: `src/app/App.tsx`(SessionContextValue·SessionProvider·AppShell·StageRouter), `src/components/screens/ReactionsScreen.tsx`(두 서브스텝 분기), `src/components/parts/DialogShell.tsx`(신규)·`src/components/parts/EvidenceDialog.tsx`·`src/components/parts/AssistantPanel.tsx`, `src/styles/screens/dialogShell.css`(신규)·`evidenceDialog.css`(본문만 남김)·`assistant.css`(드로어 규칙 삭제)·`reactions.css`(`.reaction-card__text--full`). 영향받은 테스트: `tests/components/DiscussScreen.test.tsx`(비서실장 팝업 닫기를 `assistant-close`로), `tests/components/ReactionsScreen.test.tsx`(`step`·`onAdvanceStep` prop 추가, 반응 카드 배지 테스트는 `step="listen"`). e2e는 REACTIONS를 지나는 거의 모든 spec에 `reactions-advance` 클릭 한 줄을 추가했다(`reactions.spec.ts`의 두 헬퍼, `stage.spec.ts`의 `enterReactions`, `minutes.spec.ts`·`retry.spec.ts`·`viewport-fit.spec.ts`·`no-stray-english.spec.ts`·`flow-full.spec.ts`의 개별 테스트) — "답하지 않고 넘어가기"만 쓰는 spec(대부분의 완주 경로)은 그 버튼이 "반응 듣기"에도 그대로 있어 무수정 통과했다. 비서실장 드로어 관련 e2e(`reactions.spec.ts`·`viewport-fit.spec.ts`·`noscroll.spec.ts`)는 "AI 비서실장 숨기기" 역할 이름 클릭을 `assistant-close` testid 클릭으로 바꿨다. `screenshots.spec.ts`는 `reactions.png`(반응 듣기)에 더해 `reactions-answer.png`(다시 답하기)를 새로 캡처한다.
 
+## T99 — BRIEFING 가독성 (2026-10-08)
+
+**사용자 지시** "브리핑 화면의 글씨 크기와 중요 단어들이 눈에 확 들어오도록", "상황 파악의 근거 자료 글씨가 너무 많아서 쉬운 문장 톤으로 통일".
+
+- **핵심 말 강조**: `Scenario.highlightTerms`(안건당 6개)와 같은 글자를 `HighlightText`(`src/components/parts/HighlightText.tsx`, 순수 함수 `splitByTerms`)가 `<mark class="key-term">`로 감싼다. 상황·제안·미정 줄에만 쓰고 제목(h2)은 제외. 겹치면 긴 말이 우선, 일치하지 않는 말은 건너뛴다. 스타일은 붉은 박스 없이 진한 잉크 굵게(800) + 연한 종이색 바탕(`--paper-mark`) + 갈색 밑줄이고 `mark` 기본 노랑은 덮어쓴다.
+- **글자 크기**: 상황·제안·미정 본문 1080 20→24px, 720 16→19px(줄 간격 1.4), 라벨 15→18px·12→14px.
+- **근거 자료**: 두 안건 E1~E4 `content`를 문장 2개 이하·문장당 45자 이하로 다시 썼다(숫자·사실 그대로). 카드에서 `insight`를 먼저 크게(1080 16→19px 굵게, 720 13→15px), `content`는 작게 아래(14→16px, 11→13px). `server/scenario-data.ts`의 같은 자료 문장도 함께 맞췄다(동기화 테스트는 없고 프롬프트 버전은 올리지 않았다).
+- 검사: `tests/content/{aiApproval,experienceFirst}.test.ts`에 자료 문장 수·길이·금지어와 highlightTerms 일치 검사, `tests/components/{HighlightText,BriefingScreen}.test.tsx`.
+
 ## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)
 
 **사용자 지시**: "추천문구들을 고르고나서 AI비서실장을 필수적으로 사용하게끔. 첫 AI비서실장에서 제공되는 기능들을 간략하게 소개하고 한번씩 사용하게하여 의견 전달을 할 수 있도록 가이드라인이나 버튼활성화/비활성화. 순서는 추천문구 선택 -> AI비서실장 기능활용 -> 의견전달 순."

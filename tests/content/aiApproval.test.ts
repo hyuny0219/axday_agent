@@ -412,3 +412,30 @@ describe('쉬운 말(T94)', () => {
     }
   });
 });
+
+describe('근거 자료 content는 쉬운 짧은 문장이다(T99)', () => {
+  it('문장 수가 2개 이하이고 문장당 45자 이하이며 금지어가 없다', () => {
+    for (const card of scenario.evidence) {
+      const lengths = sentenceCharLengths(card.content);
+      expect(lengths.length, card.id).toBeLessThanOrEqual(2);
+      for (const length of lengths) {
+        expect(length, `${card.id}: ${card.content}`).toBeLessThanOrEqual(45);
+      }
+      expect(findForbiddenWords(card.content), card.id).toEqual([]);
+    }
+  });
+
+  it('핵심 말(highlightTerms)이 4~6개이고 상황·제안·미정 문장에 실제로 들어 있다', () => {
+    const terms = scenario.highlightTerms ?? [];
+    expect(terms.length).toBeGreaterThanOrEqual(4);
+    expect(terms.length).toBeLessThanOrEqual(6);
+    const haystack = [
+      scenario.chairBriefing.situation,
+      scenario.motionBreakdown.proposal,
+      ...scenario.motionBreakdown.undecidedItems.map((i) => i.text),
+    ].join(' ');
+    for (const term of terms) {
+      expect(haystack, term).toContain(term);
+    }
+  });
+});
