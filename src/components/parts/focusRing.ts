@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import '../../styles/screens/focus.css';
+import { useDialogOpen } from './useDialogOpen';
 import { FOCUS_DELAY_MS, focusDisabledBySearch, isFocusArmed } from '../../domain/nextStep';
 
 /** 점선을 붙일 요소에 펼쳐 쓴다. `active`가 아니면 아무 속성도 붙지 않는다. */
@@ -16,25 +17,6 @@ function readFocusEnabled(): boolean {
     return true;
   }
   return !focusDisabledBySearch(window.location.search);
-}
-
-function readDialogOpen(): boolean {
-  return typeof document !== 'undefined' && document.querySelector('[role="dialog"]') !== null;
-}
-
-/** 팝업(role=dialog)이 열려 있는지 — CoachHost와 같은 방식으로 지켜본다. */
-export function useDialogOpen(): boolean {
-  const [open, setOpen] = useState(readDialogOpen);
-  useEffect(() => {
-    function check() {
-      setOpen(readDialogOpen());
-    }
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['role'] });
-    return () => observer.disconnect();
-  }, []);
-  return open;
 }
 
 export interface FocusGate {

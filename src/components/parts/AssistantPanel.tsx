@@ -25,6 +25,7 @@ import { ASSISTANT_FEATURE_ORDER } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { DialogShell } from './DialogShell';
 import { nextStepAttr } from './focusRing';
+import { useDialogOpen } from './useDialogOpen';
 import '../../styles/screens/assistant.css';
 
 type FeatureKey = AssistantFeatureKey;
@@ -161,6 +162,7 @@ export function AssistantPanel({
   adapter = scriptedAssistantAdapter,
 }: AssistantPanelProps) {
   const [open, setOpen] = useState(false);
+  const dialogOpen = useDialogOpen();
   const closePopupRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (closeRequest > 0) {
@@ -453,7 +455,7 @@ export function AssistantPanel({
         disabled={toggleLocked}
         aria-describedby={toggleLocked ? 'assistant-toggle-why' : undefined}
         data-testid="assistant-toggle"
-        {...nextStepAttr(focusNext && !open && !toggleLocked)}
+        {...nextStepAttr(focusNext && !dialogOpen && !toggleLocked)}
       >
         AI 비서실장에게 맡기기
       </button>

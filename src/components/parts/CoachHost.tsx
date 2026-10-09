@@ -11,6 +11,7 @@ import { COACH_CLOSE_LABEL, coachCopy } from '../../content/coach';
 import { Coach, CoachIcon } from './Coach';
 import { clearCoachPos } from './coachPosition';
 import { HighlightText } from './HighlightText';
+import { useDialogOpen } from './useDialogOpen';
 
 export interface CoachHostProps {
   session: Session;
@@ -45,16 +46,7 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
     }
   }, [session.sessionId]);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  useEffect(() => {
-    function check() {
-      setDialogOpen(document.querySelector('[role="dialog"]') !== null);
-    }
-    check();
-    const observer = new MutationObserver(check);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['role'] });
-    return () => observer.disconnect();
-  }, []);
+  const dialogOpen = useDialogOpen();
 
   useEffect(() => {
     if (!reopened) {
