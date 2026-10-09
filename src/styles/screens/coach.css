@@ -18,7 +18,7 @@
   position: absolute;
   inset: 0;
   background: rgba(8, 12, 22, 0.72);
-  pointer-events: auto;
+  pointer-events: none; /* 임시 핫픽스(2026-10-09): 덮개가 팝업 버튼 클릭을 막음 — T104에서 덮개 자체를 없앤다 */
 }
 
 .coach--dialog .coach__dim {

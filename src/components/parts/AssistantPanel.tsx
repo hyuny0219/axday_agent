@@ -248,6 +248,12 @@ export function AssistantPanel({
   }
 
   async function runFeature(feature: FeatureKey) {
+    // 사용자 보고(2026-10-09 "의견 한눈에 보기가 잘 안 눌리고 수행도 잘 안 됨"): 정리하는 3초 동안
+    // 같은 버튼을 거듭 누르면 요청이 그때마다 새로 나가 앞 요청이 취소돼 결과가 늦게/안 보였다.
+    // 정리하는 중에는 같은 기능 재호출을 무시한다(버튼도 비활성).
+    if (status === 'loading') {
+      return;
+    }
     currentRequestRef.current?.controller.abort();
     const controller = new AbortController();
     const requestId = crypto.randomUUID();
@@ -527,10 +533,12 @@ export function AssistantPanel({
                     type="button"
                     className="cta cta--secondary"
                     onClick={() => runFeature(feature)}
+                    disabled={status === 'loading'}
+                    aria-busy={status === 'loading' && activeFeature === feature ? true : undefined}
                     data-testid={`assistant-action-${feature}`}
                     data-coach={nextFeature === feature ? 'assistant-next' : undefined}
                   >
-                    {FEATURE_LABELS[feature]}
+                    {status === 'loading' && activeFeature === feature ? `${FEATURE_LABELS[feature]} · 정리 중…` : FEATURE_LABELS[feature]}
                     {used && (
                       <span
                         className="assistant-panel__done-mark"
