@@ -8,13 +8,16 @@
 //  2) 대신 서술격·"에 서/속"·"으로" 연결이면 선언으로 보고, 바로 뒤가 의문·조건·유보·열거형
 //     (LEAVE_OPEN: 인지·이라면·일 수도·에서 말씀 …)이면 부정 전방탐색으로 제외한다.
 //  3) 뒤에 명사가 이어지는 수식형("승인 쪽 조건", "찬성 편 임원")은 쪽/편 바로 뒤가 서술격이 아니므로 걸리지 않는다.
-//  4) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
+//  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴은 매칭 위치부터 다음 문장 경계까지의 절이
+//     "?"로 끝나거나 까·까요·는지요로 끝나면 질문으로 보고 제외한다(절 단위 규칙, isInQuestionClause).
+//     선언 문장 뒤의 별도 질문 문장("승인 쪽입니다. …하시겠습니까?")은 첫 절이 "."로 끝나므로 걸린다.
+//  5) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
 //     "걸려야 하는 문장"/"중립 문장" 목록에 먼저 추가한 뒤 패턴을 고친다. 찬성·반대 단어 자체를 쓴 문장은
 //     (의문형이라도) 단어 패턴이 걸린다 — 의도된 엄격함.
 
 /** 의문·조건·유보·열거형 접미(쪽/편 바로 뒤에 이 접미가 오면 방향 선언이 아니다). */
 const LEAVE_OPEN =
-  '인지|인가|일지|일까|일는지|이라면|이면|다면|라면|이든|이거나|인 ?줄|인 것인지|인 것 같지는|이기보다|이라기보다|은지|운지|을지|을까|는지|지는 않|지 않|라고 보기|다고 보기|라 하기|다고 하기|이라 할 수는|일 수도|일 수 있|일지도|으로 볼지|으로 봐야 할지|로 볼지|로 봐야 할지|에서 말씀|에서 제안|에서 요청';
+  '입니까|이겠습니까|이에요\\?|이죠\\?|이겠어요\\?|이겠지요\\?|인지요|인지|인가|일지|일까|일는지|이라면|이면|다면|라면|이든|이거나|인 ?줄|인 것인지|인 것 같지는|이기보다|이라기보다|은지|운지|을지|을까|는지|지는 않|지 않|라고 보기|다고 보기|라 하기|다고 하기|이라 할 수는|일 수도|일 수 있|일지도|으로 볼지|으로 봐야 할지|로 볼지|로 봐야 할지|에서 말씀|에서 제안|에서 요청';
 
 /** 임원 FOLLOWUP 발언에서 최종 방향을 밝히는 표현을 가리는 패턴(T114, Codex 54차). 참가자 발언에는
  * 적용하지 않는다 — 참가자가 자기 입장을 말하는 것은 막을 이유가 없다. 지나치게 넓히면 평범한
@@ -49,7 +52,7 @@ export const VERDICT_PATTERNS: ReadonlyArray<{ pattern: RegExp; why: string }> =
     why: '"○○ 쪽입니다·쪽이라고 하겠습니다·편으로 답하겠습니다·쪽임을 밝힙니다" 꼴의 명사형 입장 선언. 쪽·편 바로 뒤가 서술격(이·입·일·인·임)·"에 서/속"·"으로"이면 선언으로 보고, 의문·조건·유보형(LEAVE_OPEN)이나 뒤에 명사가 이어지는 수식형("쪽 조건")은 제외한다',
   },
   {
-    pattern: new RegExp('(?:승인|찬성|반대|가결|부결)에 가깝(?!다면|은지|운지|지는|다고 보기|다고 하기|기는|지 않)|(?:승인|찬성|반대|가결|부결)에 가까운 (?:입장|쪽|편)'),
+    pattern: new RegExp('(?:승인|찬성|반대|가결|부결)에 가깝(?!다면|은지|운지|지는|다고 보기|다고 하기|기는|지 않|습니까)|(?:승인|찬성|반대|가결|부결)에 가까운 (?:입장|쪽|편)'),
     why: '"○○에 가깝다"는 기울기를 밝히는 우회 선언. "가깝다면·가까운지·가깝지는 않" 같은 조건·의문·부정 유보형은 제외',
   },
   {
@@ -65,10 +68,30 @@ export const VERDICT_PATTERNS: ReadonlyArray<{ pattern: RegExp; why: string }> =
 export function findVerdictWords(text: string): string[] {
   const found: string[] = [];
   for (const { pattern } of VERDICT_PATTERNS) {
-    const match = pattern.exec(text);
-    if (match) found.push(match[0]);
+    // 단어 하나뿐인 패턴(찬성·반대…)은 질문 안에 있어도 잡는다(의도된 엄격함). 서술 꼴 패턴만 질문 절을 제외한다.
+    const isPlainWord = PLAIN_WORD_SOURCE.test(pattern.source);
+    const scan = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
+    for (const match of text.matchAll(scan)) {
+      if (!isPlainWord && isInQuestionClause(text, match.index ?? 0)) continue;
+      found.push(match[0]);
+      break;
+    }
   }
   return found;
+}
+
+const PLAIN_WORD_SOURCE = /^[가-힣|]+$/;
+
+/** 매칭 위치부터 다음 문장 경계(. ! ? … 줄바꿈)까지의 절이 질문인지(?로 끝나거나 까·까요·는지요로 끝남).
+ * 어미 열거(LEAVE_OPEN)만으로는 의문형 어미가 계속 새므로 절 단위로 한 번 더 거른다. 선언 문장 뒤에 별도
+ * 질문 문장이 오는 "승인 쪽입니다. 더 묻지 않으시겠습니까?"는 첫 절이 "."로 끝나므로 걸린다. */
+function isInQuestionClause(text: string, from: number): boolean {
+  const boundary = /[.!?…\n]/g;
+  boundary.lastIndex = from;
+  const end = boundary.exec(text);
+  const clause = text.slice(from, end ? end.index : text.length).trim();
+  if (end && text[end.index] === '?') return true;
+  return /(까|까요|는지요)$/.test(clause);
 }
 
 /** 서버가 방향 단어가 든 FOLLOWUP 발언을 대체할 때 쓰는 역할별 한 문장(영문 없음). */
