@@ -90,6 +90,15 @@ describe('declaredDirection(T115)', () => {
       ['화면을 보니 찬성합니다.', 'FOR'], ['반면 저는 반대합니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('이중 부정 조사형과 "-면" 판별(Codex 71차)', () => {
+    for (const [text, expected] of [
+      ['찬성하지 않을 수가 없습니다.', 'FOR'], ['찬성하지 않을 수는 없습니다.', 'FOR'], ['반대하지 않을 리가 없습니다.', 'AGAINST'],
+      ['찬성 안 할 수가 없습니다.', 'FOR'], ['찬성하지 않으면 안 됩니다.', 'FOR'],
+      ['서면 의견으로 반대합니다.', 'AGAINST'], ['대면 회의에서 찬성합니다.', 'FOR'], ['지면 관계상 반대합니다.', 'AGAINST'],
+      ['화면 설계를 보면 찬성합니다.', null], ['조건이 붙으면 찬성합니다.', null], ['기록을 남기면 찬성 쪽입니다.', null],
+      ['그렇다면 찬성합니다.', null], ['검토되면 찬성하겠습니다.', null], ['열면 반대합니다.', null], ['전면 찬성합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

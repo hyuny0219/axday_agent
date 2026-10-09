@@ -228,7 +228,10 @@ const NEGATED_TAIL = new RegExp(
     ')\\S*',
 );
 
-const DOUBLE_NEGATED_TAIL = /^\s?(?:하|시키|되)?지 (?:않을|아니할) 수(?:는)? 없/;
+// 이중 부정(조사 선택): 찬성하지 않을 수가/는/도 없습니다 · 반대하지 않을 리가 없습니다 · 찬성 안 할 수가 없습니다 ·
+// 찬성하지 않으면 안 됩니다. 단일 부정 검사보다 먼저 본다.
+const DOUBLE_NEGATED_TAIL =
+  /^\s?(?:(?:하|시키|되)?(?:지|치) ?(?:않|아니)(?:을|할) ?(?:수|리)(?:가|는|도|야)? ?없|안 ?할 ?수(?:가|는|도)? ?없|(?:하|시키|되)?지 ?않으면 ?안 ?됩)/;
 
 const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
@@ -257,9 +260,30 @@ const FOR_IDIOMS: readonly RegExp[] = [/표를 (?:보태|드리)|힘을 보태/]
 const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
 
 /** 조건·의문 문장은 선언으로 보지 않는다("한도를 정하면 찬성하겠습니다", "찬성할까요?"). 부정은 위에서 따로 처리한다. */
-// 조건 어미 "-면"은 용언 활용일 때만 센다. 명사 끝 음절(전면·측면·표면·정면·평면·국면·직면·당면·화면·장면·단면·
-// 외면·후면·양면·반면)은 앞 음절로 걸러낸다. 지·내·이처럼 용언 어간도 되는 음절은 일부러 거르지 않는다(조건으로 본다).
-const HEDGED_SENTENCE = /(?:(?:(?!전|측|표|정|평|국|직|당|화|장|단|외|후|양|반)[가-힣])면(?=[ ,]|$)|다면|라면|경우|한다면|수도 (?:있|없)|을지|일지|할지|인지|일까|을까|할까|\?)/;
+// 조건 어미 "-면"은 실제 조건절일 때만 센다(명사 목록만으로는 서면·대면 같은 명사를 다 못 거른다).
+//  (0) 명사 끝 음절(전면·측면·표면·정면·평면·국면·직면·당면·화면·장면·단면·외면·후면·양면·반면)이면 명사다.
+//  (a) 면 바로 앞 음절이 으·다·라·하·되·이·시·려·거·니이거나 ㄹ받침이면 조건 어미다(붙으면·그렇다면·검토되면·열면).
+//  (b) 그 밖의 모음 어간(가면·보면·남기면·서면·대면·지면)은 뒤 어절이 명사·조사 결합(으로·의·을·를·에·회의·방식·의견·
+//      심사·절차·관계·자료·보고·설계)이면 명사("서면 의견으로", "지면 관계상"), 아니면 조건이다.
+const MYEON_NOUN_SYLLABLES = '전측표정평국직당화장단외후양반';
+const MYEON_CONDITIONAL_SYLLABLES = '으다라하되이시려거니';
+const MYEON_NOUN_FOLLOWER = /^(?:으로|의|을|를|에|에서|보고|회의|방식|의견|심사|절차|관계|자료|설계)/;
+
+function hasConditionalMyeon(sentence: string): boolean {
+  const words = sentence.split(/\s+/);
+  for (let i = 0; i < words.length; i += 1) {
+    const word = (words[i] ?? '').replace(/[,、]+$/, '');
+    if (word.length < 2 || !word.endsWith('면')) continue;
+    const prev = word[word.length - 2] ?? '';
+    if (MYEON_NOUN_SYLLABLES.includes(prev)) continue;
+    if (MYEON_CONDITIONAL_SYLLABLES.includes(prev) || finalConsonantIndex(prev) === 8) return true;
+    if (MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '')) continue;
+    return true;
+  }
+  return false;
+}
+
+const HEDGED_SENTENCE = /(?:다면|라면|경우|한다면|수도 (?:있|없)|을지|일지|할지|인지|일까|을까|할까|\?)/;
 
 function sentencesOf(text: string): string[] {
   return text.split(/[.!?…\n]+/).map((part) => part.trim()).filter((part) => part.length > 0);
@@ -280,7 +304,9 @@ export function declaredDirection(
     // "?"는 문장 분리에서 지워지므로 원문에서 그 문장 뒤에 "?"가 오는지도 본다.
     const index = text.indexOf(sentence);
     const asked = /^[\s.…!?]*\?/.test(text.slice(index + sentence.length));
-    if (asked || HEDGED_SENTENCE.test(sentence)) continue;
+    // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
+    const forHedge = sentence.replace(/않으면 ?안 ?됩/g, '않아야 합');
+    if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge)) continue;
     for (const match of sentence.matchAll(NOUN_SCAN)) {
       const noun = RESULT_NOUNS.find((n) => n.word === match[0]);
       if (!noun) continue;
