@@ -214,6 +214,9 @@ const NOUN_SCAN = new RegExp(`(${RESULT_NOUNS.map((n) => n.word).join('|')})`, '
 // 맞지 않아 null이다. 부정 서술에서 "찬성 입장은 아직 아닙니다"처럼 중간에 다른 말이 끼면 null로 둔다(교정 안 함).
 const NEGATED_TAIL = new RegExp(
   '^\\s?(?:' +
+    // 불가피의 부정 활용: 찬성은 불가피하지 않습니다 / 반대가 불가피한 것은 아닙니다
+    '(?:은|는|이|가)? ?불가피(?:하지 (?:않|못)|한 것은 아(?:니|닙)|하다고 보지)' +
+    '|' +
     // 명사 + 조사 + 부정 서술: 가결은 어렵습니다 / 승인이 안 됩니다 / 승인 불가입니다
     '(?:은|는|이|가)?\\s?(?:어렵(?:습|다|네|죠|겠|어|지)|힘(?:듭|들(?:겠|다|어))|불가(?:능|합|하|해|입|이다|라)|곤란(?:합|하|해)|안 ?(?:됩|되겠|된다|돼)|없(?:습|다|어|네|죠|겠)|아(?:닙|니다|니에))' +
     '|' +
@@ -224,6 +227,8 @@ const NEGATED_TAIL = new RegExp(
     '(?:하|시키|되|해 드리|해 주)?(?:지 (?:않|못)|기 (?:어렵|힘들|곤란)|기는 (?:어렵|힘들)|기가 (?:어렵|힘들)|(?:할|ㄹ) 수 (?:는 )?없)' +
     ')\\S*',
 );
+
+const DOUBLE_NEGATED_TAIL = /^\s?(?:하|시키|되)?지 (?:않을|아니할) 수(?:는)? 없/;
 
 const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
@@ -239,7 +244,7 @@ const AFFIRMED_TAIL = new RegExp(
     '입장(?:입니다|이에요|이다|이라)' +
     '|' +
     // 불가피("찬성은 불가피합니다")는 그 방향이 피할 수 없다는 긍정 선언이다. 불가결·불가역은 해당 없음.
-    '(?:은|는|이|가)? ?불가피' +
+    '(?:은|는|이|가)? ?불가피(?:합|하다|해 보|할 것|하겠)' +
     '|' +
     // 방향 조사: 승인으로 가겠습니다 / 가결로 보겠습니다
     '(?:으로|로) (?:가겠|하겠|정하겠|보겠)' +
@@ -252,7 +257,9 @@ const FOR_IDIOMS: readonly RegExp[] = [/표를 (?:보태|드리)|힘을 보태/]
 const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
 
 /** 조건·의문 문장은 선언으로 보지 않는다("한도를 정하면 찬성하겠습니다", "찬성할까요?"). 부정은 위에서 따로 처리한다. */
-const HEDGED_SENTENCE = /(?:[가-힣]면(?=[ ,]|$)|다면|라면|경우|한다면|수도|을지|일지|할지|인지|일까|을까|할까|\?)/;
+// 조건 어미 "-면"은 용언 활용일 때만 센다. 명사 끝 음절(전면·측면·표면·정면·평면·국면·직면·당면·화면·장면·단면·
+// 외면·후면·양면·반면)은 앞 음절로 걸러낸다. 지·내·이처럼 용언 어간도 되는 음절은 일부러 거르지 않는다(조건으로 본다).
+const HEDGED_SENTENCE = /(?:(?:(?!전|측|표|정|평|국|직|당|화|장|단|외|후|양|반)[가-힣])면(?=[ ,]|$)|다면|라면|경우|한다면|수도 (?:있|없)|을지|일지|할지|인지|일까|을까|할까|\?)/;
 
 function sentencesOf(text: string): string[] {
   return text.split(/[.!?…\n]+/).map((part) => part.trim()).filter((part) => part.length > 0);
@@ -272,13 +279,15 @@ export function declaredDirection(
   for (const sentence of sentencesOf(text)) {
     // "?"는 문장 분리에서 지워지므로 원문에서 그 문장 뒤에 "?"가 오는지도 본다.
     const index = text.indexOf(sentence);
-    const asked = text.slice(index + sentence.length).trimStart().startsWith('?');
+    const asked = /^[\s.…!?]*\?/.test(text.slice(index + sentence.length));
     if (asked || HEDGED_SENTENCE.test(sentence)) continue;
     for (const match of sentence.matchAll(NOUN_SCAN)) {
       const noun = RESULT_NOUNS.find((n) => n.word === match[0]);
       if (!noun) continue;
       const tail = sentence.slice((match.index ?? 0) + match[0].length);
-      if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
+      // 이중 부정("찬성하지 않을 수 없습니다")은 그 방향의 긍정이다 — 단일 부정 판정보다 먼저 본다.
+      if (DOUBLE_NEGATED_TAIL.test(tail)) found.add(noun.direction);
+      else if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
       else if (AFFIRMED_TAIL.test(tail)) found.add(noun.direction);
     }
     const negated = IDIOM_NEGATION.test(sentence);
