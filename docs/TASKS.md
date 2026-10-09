@@ -11,6 +11,8 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T116 | 진행 중 | 내 답변·내 의견 HUD: 조건 칩을 작게, 입력 상자 높이 고정 + 넘치면 안쪽 스크롤 → 아래 버튼 줄이 밀리지 않게(2026-10-09 사용자 지시). 상세는 아래 T116 카드 |
+| T115 | 진행 중 | AI 비서실장 조건 추천이 임원 찬성/반대와 **정반대 방향**으로 안내되는 경우 수정(2026-10-09 사용자 지시, 원인 조사 선행). 상세는 아래 T115 카드 |
 | T114 | 완료 | 답변 뒤에는 임원 찬반 방향을 **봉인**(현황판 입장 열·설득 문구·무대 표정·2차 발언 입장) → 결과 화면에서 임원 표를 **한 장씩 순차 공개**(2026-10-09 사용자 지시: "답하기 후 AI 임원들의 찬반 방향을 몰라야 결과가 더 극적"). 상세는 아래 T114 카드 **구현 결과(2026-10-09)**: `PersuasionBoard`·`ExecStanceList`에 `sealed`(입장 열 `?` 가림 배지·비고 "답변을 들었습니다 · 결과에서 공개"·집계 가림, 처음부터 같은 편은 유지), `App`이 MOTION·VOTE 무대에 중립 표정, 프롬프트 v13(`FOLLOWUP_NO_VERDICT_RULE`)·mock FOLLOWUP 문장 방향 없음, 결과 임원 표 4장을 0.9초 간격 CSS 지연으로 순차 공개(무대 배지·좌측 막대·우측 행 동기, 집계·결론은 4.1초, 도장 4.2초·성공/실패 4.6초, reduced-motion·skip 즉시). 부수 수정: 표결 확정 클릭이 결과 화면의 skip 리스너에 같은 이벤트로 잡혀 연출이 항상 즉시 건너뛰어지던 문제를 `event.timeStamp` 가드로 해결. 비고 문구는 표가 결과에서 공개되므로 카드의 "표결에서 공개" 대신 "결과에서 공개". 문서 `DESIGN_SPEC` T114·`tuning-v13.md`(live 실측은 승인 뒤) |
 | T113 | 완료 | 화면마다 "다음 할 일" 하나에 **숨쉬는 점선 테두리**(A안)로 시선 유도(2026-10-09 사용자 지시, 시안 https://claude.ai/artifact/6vsQwSsu43MobLEUgvd98i). 상세는 아래 T113 카드 |
 | T112 | 완료 | 코치 안내 아이콘·말풍선을 마우스로 끌어 옮김(위치 기억·더블클릭 되돌리기·화살표 키)(2026-10-09 사용자 지시). 상세는 아래 T112 카드 |
@@ -97,6 +99,32 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T116 내 답변 HUD — 조건 칩 축소 + 입력 상자 고정 높이·안쪽 스크롤
+
+- 목표(2026-10-09 사용자 지시): "내 답변의 조건이 붙으면서 아래 버튼들이 밀리는데, 조건을 좀 더 작게 하고 내 답변의 텍스트박스는 고정이고 텍스트가 넘어갔을 때 스크롤 되도록 변경해 줘." REACTIONS 2/2(내 답변)와 같은 구조의 DISCUSS(내 의견) HUD 둘 다 적용(공용 `DraftEditor`+`ConditionChips`).
+- 읽을 것: `src/components/parts/{DraftEditor,ConditionChips}.tsx`, `src/components/screens/{DiscussScreen,ReactionsScreen}.tsx`의 `.reactions-screen__hud`·`discuss-screen__hud`·`*__submit-row`, `src/styles/screens/{discuss,reactions}.css`, `e2e/noscroll.spec.ts`(720 세로 예산), `docs/design/DESIGN_SPEC.md` T73·T74·T84 단락.
+- 만들 것:
+  1. **조건 칩 축소**: 칩 글자 크기·안쪽 여백·높이를 한 단계 줄이고(예: 13px→12px, 높이 28px 안팎), 칩 줄은 최대 2줄까지만 차지하고 그 이상이면 칩 영역 자체가 가로 스크롤 또는 "+N" 접기 중 하나로(720에서 버튼 줄이 밀리지 않는 쪽을 택하고 DESIGN_SPEC에 근거 기록). 칩의 선택/해제·제안 표시·키보드 접근성은 그대로.
+  2. **입력 상자 고정 높이**: `DraftEditor`의 textarea를 화면별 고정 높이(1080·720 각각 CSS 변수로)로 두고 `overflow-y: auto`, 내용이 넘치면 안쪽 스크롤. 자동 늘어나기(auto-grow)가 있으면 제거. 글자 수 카운터·오류 줄 위치 유지. 포커스 시 스크롤이 커서를 따라가게(기본 동작 확인).
+  3. **버튼 줄 고정**: HUD를 `grid-template-rows: auto 1fr auto`(머리줄 / 입력+칩 / 제출 줄) 꼴로 바꿔 제출 줄([AI 비서실장][답하지 않고 넘어가기][답변 전달])이 항상 같은 y에 있게. 왼쪽 열 전체 높이는 지금과 동일(세로 예산 불변).
+  4. 문서: DESIGN_SPEC "## T116 — HUD 고정 높이" 단락(치수 표 1080/720), TASKS 행.
+  5. 테스트·e2e: DraftEditor 단위(고정 높이·overflow 속성·auto-grow 없음), e2e `noscroll`(조건 칩 6개 + 긴 답변 600자 상태에서 제출 줄 boundingBox y가 빈 상태와 같고 페이지 세로 스크롤 없음, 1080·720), `reactions`·`discuss` 스펙 통과, 스크린샷 `discuss.png`·`reactions.png` 두 해상도 갱신 뒤 Read.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 조건 제안·확정 규칙(domain/conditions) 변경, 버튼 모양(T111) 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e noscroll·reactions·discuss·flow-full·screenshots 1080·720 각각 PASS.
+- 크기: S~M.
+
+## T115 AI 비서실장 조건 추천 방향 오류 수정
+
+- 목표(2026-10-09 사용자 지시): "AI 비서실장의 조건 추천이 AI 임원들의 찬성/반대와 정반대로 알려주는 경우가 있어." 비서실장 패널(`AssistantPanel`)의 조건 추천("임원별 설득 포인트"·"움직일 조건"·추천 문구)이 임원의 실제 입장/목표 방향과 반대로 나오는 경로를 찾아 고친다.
+- 조사 먼저(원인 가설, 재현 테스트부터): ① 참가자 입장이 AGAINST일 때 `conditionRecommendation.ts`·`requiredConditionsFor`의 targetVote 뒤집기 누락 ② REACTIONS 2/2에서 입장을 바꾼 뒤(Codex 48~51차 수정 영역: `effectiveOpinions`·`effectiveStances`·`awaitingAnswerIds`) 비서실장이 받는 `participantStance`/`stances`/`confirmedConditionIds` 가 다른 기준을 쓰는 경우 ③ live 모드에서 `liveSuggestedConditionIds`(임원 발언에서 뽑은 제안 조건)가 임원의 현재 stance와 무관하게 "움직일 조건"으로 붙는 경우 ④ T114 봉인 이후 MOTION·VOTE에서 비서실장이 보이는 경우가 있는지 ⑤ 추천 문구(`phrases`)의 `side`와 참가자 입장 불일치 ⑥ 처음부터 같은 편인 임원(T101 alreadySame)에게 "움직일 조건" 추천. 각 가설을 단위 테스트로 재현해 실제로 깨지는 것만 고친다.
+- 읽을 것: `src/components/conditionRecommendation.ts`, `src/components/parts/{AssistantPanel,PersuasionBoard}.tsx`, `src/components/screens/{DiscussScreen,ReactionsScreen}.tsx`, `src/domain/{stance,conditions,voting}.ts`, `tests/components/{AssistantPanel,PersuasionBoard,ReactionsScreen}.test.tsx`, DESIGN_SPEC T96·T98·T101·T109·T110 단락.
+- 만들 것: 재현 단위 테스트(실패→통과), 최소 수정, 추천 문구·근거 문장이 임원 입장·목표 방향과 일치함을 확인하는 속성 테스트(참가자 FOR/AGAINST × 안건 2개 × 임원 4명 전수: 추천 조건을 적용하면 규칙표상 그 임원이 목표 쪽으로 움직여야 한다 — 움직이지 않는 추천은 버그), DESIGN_SPEC "## T115 — 추천 방향 일치 규칙" 단락(원인·수정·불변식), TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 표결 규칙표(domain/voting·stance)의 결과 변경, 프롬프트 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e discuss·reactions·stance·flow-full 1080·720 각각 PASS.
+- 크기: M.
 
 ## T114 답변 뒤 임원 방향 봉인 + 결과 순차 공개
 
