@@ -8,9 +8,9 @@ import { test, expect, type Page, type Route } from './fixtures';
 import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function enterExperienceFirstReactions(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -378,10 +378,10 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   page,
 }) => {
   await mockOpinionsAgainstThenReactionsFor(page);
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

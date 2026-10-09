@@ -14,7 +14,7 @@ describe('IntroScreen', () => {
   const noop = () => undefined;
 
   it('목적·성공 기준만 보여 주고 진행 5단계·팁은 없다(T103)', () => {
-    render(<IntroScreen onStartWithCoach={noop} onStartWithoutCoach={noop} />);
+    render(<IntroScreen onStart={noop} />);
 
     expect(screen.getByRole('heading', { name: '오늘 이사님은 특별 이사입니다' })).toBeInTheDocument();
     const purposes = Array.from(document.querySelectorAll('.intro-screen__purpose')).map((el) => el.textContent);
@@ -26,7 +26,7 @@ describe('IntroScreen', () => {
   });
 
   it('꼭 읽어야 할 말을 key-term mark로 강조한다(T102)', () => {
-    render(<IntroScreen onStartWithCoach={noop} onStartWithoutCoach={noop} />);
+    render(<IntroScreen onStart={noop} />);
 
     const marked = Array.from(document.querySelectorAll('mark.key-term')).map((el) => el.textContent);
     expect(marked).toEqual(
@@ -35,23 +35,13 @@ describe('IntroScreen', () => {
     expect(screen.getByTestId('intro-success').querySelectorAll('mark.key-term').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('"안내 받으며 시작 ▶"는 코치 켜고 시작 콜백만 부른다', () => {
-    const withCoach = vi.fn();
-    const withoutCoach = vi.fn();
-    render(<IntroScreen onStartWithCoach={withCoach} onStartWithoutCoach={withoutCoach} />);
+  it('시작 버튼은 "안내 받으며 시작 ▶" 하나뿐이고 누르면 콜백을 부른다', () => {
+    const onStart = vi.fn();
+    render(<IntroScreen onStart={onStart} />);
 
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: '안내 없이 시작' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '안내 받으며 시작 ▶' }));
-    expect(withCoach).toHaveBeenCalledTimes(1);
-    expect(withoutCoach).not.toHaveBeenCalled();
-  });
-
-  it('"안내 없이 시작"은 코치 끄고 시작 콜백만 부른다', () => {
-    const withCoach = vi.fn();
-    const withoutCoach = vi.fn();
-    render(<IntroScreen onStartWithCoach={withCoach} onStartWithoutCoach={withoutCoach} />);
-
-    fireEvent.click(screen.getByRole('button', { name: '안내 없이 시작' }));
-    expect(withoutCoach).toHaveBeenCalledTimes(1);
-    expect(withCoach).not.toHaveBeenCalled();
+    expect(onStart).toHaveBeenCalledTimes(1);
   });
 });

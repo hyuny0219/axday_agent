@@ -3,10 +3,10 @@
 // 다시 답하기(REACTIONS)는 비서실장 없이도 전달할 수 있다.
 import { test, expect, type Page } from './fixtures';
 
-async function reachDiscuss(page: Page, url = '/?mode=scripted', pickSide = true) {
+async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickSide = true) {
   await page.goto(url);
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -112,7 +112,7 @@ test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 
   await page.route('**/api/assistant/refine', (route) =>
     route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"fail"}' }),
   );
-  await reachDiscuss(page, '/');
+  await reachDiscuss(page, '/?coach=off');
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
@@ -149,7 +149,7 @@ test('다시 답하기(REACTIONS)는 비서실장을 쓰지 않아도 전달할 
 
 // PR #20 Codex 35차 P2-1: 입장을 고르지 않고 직접 쓴 글로 순서를 건너뛰지 못한다.
 test('입장을 고르기 전에는 직접 글을 써도 비서실장과 의견 전달이 잠기고 입장을 먼저 고르라고 알려 준다', async ({ page }) => {
-  await reachDiscuss(page, '/?mode=scripted', false);
+  await reachDiscuss(page, '/?mode=scripted&coach=off', false);
 
   await page.getByTestId('draft-editor-textarea').fill('작은 범위로 먼저 시작합시다.');
   await expect(page.getByTestId('assistant-toggle')).toBeDisabled();

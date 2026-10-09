@@ -11,9 +11,9 @@ import { tryAllAssistantFeatures } from './helpers/assistant';
 const MY_OPINION_TEXT = '소액부터 자동 승인하고 결과를 확인한 뒤 넓힙시다.';
 
 async function enterBriefing(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 }
 
@@ -134,9 +134,9 @@ test.describe('1920×1080에서 무대 열', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 
   test('BRIEFING부터 무대가 왼쪽 열에 원본 16:9로 렌더된다', async ({ page }) => {
-    await page.goto('/?mode=scripted');
+    await page.goto('/?mode=scripted&coach=off');
     await page.getByRole('button', { name: '체험 시작' }).click();
-    await page.getByRole('button', { name: '안내 없이 시작' }).click();
+    await page.getByRole('button', { name: '안내 받으며 시작' }).click();
 
     // SELECT는 무대 렌더 대상이 아니다(진입 전, DESIGN_SPEC.md v1.0 1절).
     await expect(page.getByTestId('stage-band')).toHaveCount(0);

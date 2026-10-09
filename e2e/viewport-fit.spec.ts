@@ -37,7 +37,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   page,
 }) => {
   await page.setViewportSize({ width: 1272, height: 698 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   // 2열 조종석 배치가 그대로 유지된다(1열로 풀리지 않는다) — 축소 wrapper가
   // data-fit="scale"일 때만 적용되는 상태다.
@@ -52,7 +52,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await startCta.click();
 
   await expectNoPageScroll(page, 'INTRO');
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
 
   await expectNoPageScroll(page, 'SELECT');
   // T84 #10: 카드 자체가 입장 버튼이다 — 별도 "이사회 입장" CTA가 없다.
@@ -124,7 +124,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
 
 test('1272×698에서 운영 메뉴 패널이 화면 안에 정상 위치한다', async ({ page }) => {
   await page.setViewportSize({ width: 1272, height: 698 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   await page.getByTestId('operator-menu-button').click();
   const panel = page.getByTestId('operator-menu-panel');
@@ -138,7 +138,7 @@ test('1920×1080·1280×720에서는 축소가 걸리지 않는다(natural, scal
     { width: 1280, height: 720 },
   ]) {
     await page.setViewportSize(size);
-    await page.goto('/?mode=scripted');
+    await page.goto('/?mode=scripted&coach=off');
     const fitMode = await page.locator('.app-scale-wrapper').getAttribute('data-fit');
     expect(fitMode, `${size.width}×${size.height}`).toBe('natural');
   }
@@ -150,9 +150,9 @@ test('1920×1080·1280×720에서는 축소가 걸리지 않는다(natural, scal
 // 세로 예산이 그대로 빠듯한 크기이며, 실측으로 잘림이 나던 창이다(2026-09-23).
 test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리지 않는다', async ({ page }) => {
   await page.setViewportSize({ width: 1568, height: 777 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

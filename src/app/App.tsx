@@ -34,7 +34,7 @@ import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
-import { detectInitialMode } from './mode';
+import { coachOffByQuery, detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
 import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
@@ -125,10 +125,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
       if (action.type === 'OPERATOR_RESET') {
         requestRegistry.abortAll();
       }
-      return reduce(state, action, now);
+      const next = reduce(state, action, now);
+      // `?coach=off`는 페이지 단위 설정이라 새 체험으로 리셋해도 유지한다(T104).
+      return action.type === 'OPERATOR_RESET' && coachOffByQuery() ? { ...next, coachEnabled: false } : next;
     },
     undefined,
-    () => createInitialSession(appClock.now()),
+    // 코치는 기본 켜짐. 운영·테스트용 `?coach=off`로 시작할 때만 끈다(T104).
+    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery() }),
   );
 
   // 회의록 패널의 라운드별 기록(roundLog, v1.0 7절, T41). stage가 실린 SET_ROLE_STATUS만
@@ -404,14 +407,7 @@ function StageScreen() {
     case 'INTRO':
       return (
         <IntroScreen
-          onStartWithCoach={() => {
-            dispatch({ type: 'COACH_SET_ENABLED', enabled: true });
-            dispatch({ type: 'NEXT_STAGE' });
-          }}
-          onStartWithoutCoach={() => {
-            dispatch({ type: 'COACH_SET_ENABLED', enabled: false });
-            dispatch({ type: 'NEXT_STAGE' });
-          }}
+          onStart={() => dispatch({ type: 'NEXT_STAGE' })}
         />
       );
 

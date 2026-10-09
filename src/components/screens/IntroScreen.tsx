@@ -10,10 +10,9 @@ import '../../styles/screens/select.css';
 import '../../styles/screens/intro.css';
 
 export interface IntroScreenProps {
-  /** "안내 받으며 시작 ▶" — 진행 도우미(T103)를 켜고 안건 선택으로 간다. */
-  onStartWithCoach: () => void;
-  /** "안내 없이 시작" — 진행 도우미 없이 안건 선택으로 간다. */
-  onStartWithoutCoach: () => void;
+  /** "안내 받으며 시작 ▶" 하나뿐(T104) — 안건 선택으로 간다. 진행 도우미(T103)는 기본으로 켜져
+   * 있고, 끄는 길은 운영 메뉴 "안내 끄기"와 URL `?coach=off`다. */
+  onStart: () => void;
 }
 
 /** 체험 전 안내에서 꼭 읽어야 할 말(T102, 2026-10-08 사용자 — "중요한 단어를 브리핑과
@@ -29,7 +28,7 @@ export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
 const SUCCESS_TEXT =
   '임원을 설득해, 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.';
 
-export function IntroScreen({ onStartWithCoach, onStartWithoutCoach }: IntroScreenProps) {
+export function IntroScreen({ onStart }: IntroScreenProps) {
   return (
     <section className="screen intro-screen">
       {/* 배경은 SelectScreen과 같은 "기밀 작전실" 장식(select.css 클래스 재사용,
@@ -78,18 +77,10 @@ export function IntroScreen({ onStartWithCoach, onStartWithoutCoach }: IntroScre
           <button
             type="button"
             className="cta intro-screen__cta"
-            onClick={onStartWithCoach}
+            onClick={onStart}
             data-testid="intro-start-coach"
           >
             안내 받으며 시작 ▶
-          </button>
-          <button
-            type="button"
-            className="cta cta--secondary intro-screen__cta-plain"
-            onClick={onStartWithoutCoach}
-            data-testid="intro-start-plain"
-          >
-            안내 없이 시작
           </button>
         </div>
       </div>

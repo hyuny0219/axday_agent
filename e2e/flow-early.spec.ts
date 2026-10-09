@@ -4,11 +4,11 @@ import { test, expect } from './fixtures';
 // 모두 active라 "준비 중" 카드가 없다 — 이제는 두 카드 모두 선택할 수 있는지, 그리고
 // 그중 하나로 임원 의견까지 도달하는지 확인한다.
 test('대기에서 임원 의견까지 도달하고, 안건 선택 카드 2장이 모두 활성이다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
 
   // T78: 시안(S1_Select) 카드는 2장이고, 둘 다 선택 가능한 안건이다.
   await expect(page.getByTestId('scenario-card-ai-approval')).toBeEnabled();

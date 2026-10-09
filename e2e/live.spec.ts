@@ -15,7 +15,7 @@ type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -75,7 +75,7 @@ async function mockRoleFailure(page: Page, failingRoleId: ExecRoleId): Promise<v
 }
 
 test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 근거를 보여준다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
 
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
@@ -164,7 +164,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
     await route.continue();
   });
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
@@ -211,7 +211,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
 test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다', async ({ page }) => {
   await mockRoleFailure(page, 'CAIO');
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
@@ -251,7 +251,7 @@ test('서버 상태 확인이 실패하면 scripted로 기존 흐름을 그대�
   // /api/health만 끊어 "서버 없이 기동"과 같은 상황을 만든다(mode.ts의 안전한 폴백 경로).
   await page.route('**/api/health', (route) => route.abort());
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
 
   // T86: 참가자 화면에는 모드 배지를 전혀 보여주지 않는다(헤더 배지는 항상 없음, ATTRACT
   // 부제는 모드와 무관한 고정 문구) — scripted로 떨어졌는지는 아래 동작으로 확인한다.
@@ -272,11 +272,11 @@ test('서버 상태 확인이 실패하면 scripted로 기존 흐름을 그대�
 test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 응답하고 완주한다', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-experience-first').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

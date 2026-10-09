@@ -18,12 +18,12 @@ async function advanceClock(page: Page, ms: number): Promise<void> {
 
 async function enterScenario(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 }
 
 test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ page }) => {
-  await page.goto('/?testClock=1&mode=scripted');
+  await page.goto('/?testClock=1&mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -44,7 +44,7 @@ test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ pag
 });
 
 test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -67,7 +67,7 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
 });
 
 test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -78,7 +78,7 @@ test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 
 });
 
 test('표결 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -133,7 +133,7 @@ async function openProbeUntilSettled(page: Page): Promise<void> {
 }
 
 test('mock 서버 기준 "모델 연결 확인"은 실제 mock 제공자 정보를 보여준다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await page.getByTestId('operator-menu-button').click();
 
   await openProbeUntilSettled(page);
@@ -156,7 +156,7 @@ test('모델 연결 확인이 실패하면 오류 메시지를 보여준다', as
     });
   });
 
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-probe').click();
 
@@ -166,7 +166,7 @@ test('모델 연결 확인이 실패하면 오류 메시지를 보여준다', as
 test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted로 기동한다', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-restart-scripted').click();
 

@@ -12,7 +12,7 @@ type ExecRoleId = (typeof EXEC_ROLE_IDS)[number];
 
 async function enterAiAssistant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -142,7 +142,7 @@ test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하
   await page.setViewportSize({ width: 1280, height: 720 });
   await mockAllReactionsFail(page);
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
@@ -183,7 +183,7 @@ test('REACTIONS에서 임원 4명이 모두 실패해도 재요청 버튼은 하
 test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"으로 카드·표정이 갱신된다', async ({ page }) => {
   await mockReactionsFailureThenRetrySucceeds(page, 'CFO');
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
@@ -216,7 +216,7 @@ test('REACTIONS에서 CFO가 실패하면 "응답 없는 임원 다시 요청"�
 test('VOTE에서 CAIO가 미표결이면 "미표결 임원 다시 요청"으로 결과에 실제 표가 반영된다', async ({ page }) => {
   await mockVoteFailureThenRetrySucceeds(page, 'CAIO');
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);
@@ -252,7 +252,7 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
 }) => {
   await mockFollowupFailureThenRetrySucceeds(page, 'CFO');
 
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await enterAiAssistant(page);

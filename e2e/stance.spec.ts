@@ -12,9 +12,9 @@ import { test, expect, type Page } from './fixtures';
 import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function enterOpinions(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -139,9 +139,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 });
 
 test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남는다(sr-only)', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 없이 시작' }).click();
+  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -168,11 +168,11 @@ test.describe('live mock: 무대 표정', () => {
   test('라운드가 도착하면 표정 배지가 채워지고 RESULT까지 고정되며 표 집계와 도장 여부가 일치한다', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/?coach=off');
     await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
     await page.getByRole('button', { name: '체험 시작' }).click();
-    await page.getByRole('button', { name: '안내 없이 시작' }).click();
+    await page.getByRole('button', { name: '안내 받으며 시작' }).click();
     await page.getByTestId('scenario-card-ai-approval').click();
     await page.getByTestId('open-evidence').click();
     await page.keyboard.press('Escape');
