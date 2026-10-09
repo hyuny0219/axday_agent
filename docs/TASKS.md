@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T104 | 진행 중 | 코치 순서 조정(상황판 먼저 → 근거 자료, 10단계), INTRO 버튼 하나(안내 받으며 시작)·팝업 크기 확대, 코치 끄기는 운영 메뉴·`?coach=off`로만(2026-10-09 사용자 지시). 상세는 아래 T104 카드 |
 | T103 | 완료 | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
 | T102 | 완료 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS·DISCUSS에서 숨기고 MOTION·VOTE에서만, 제목 "지금까지 발언")(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
 | T100 | 완료 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
@@ -84,6 +85,23 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T104 코치 순서(상황판 → 근거 자료)·INTRO 버튼 하나·팝업 확대
+
+- 목표(2026-10-09 사용자 지시): "상황 파악 시 근거 자료를 무조건 먼저 보게 되어 있어서 상황판 확인 후 근거 자료를 볼 수 있도록. 체험 전 안내에서는 무조건 안내 받을 수 있도록 버튼을 하나만, 팝업 크기를 여유 있게 키워."
+- 읽을 것: `src/content/coach.ts`(COACH_STEPS), `src/domain/coach.ts`(coachStep·coachStepsOf·단계 번호), `src/components/parts/{Coach,CoachHost}.tsx`(coachTarget·placement), `src/components/screens/{Briefing,Intro}Screen.tsx`, `src/styles/screens/{intro,briefing,coach}.css`, `src/app/App.tsx`(INTRO 시작 액션·`?mode=` 쿼리 처리 위치), `src/domain/{types,session}.ts`(coachEnabled), `src/components/parts/OperatorMenu.tsx`(안내 끄기), `e2e/{coach,screenshots,briefing,noscroll,a11y}.spec.ts`, `tests/components/{Coach,IntroScreen,BriefingScreen}.test.tsx`, `tests/domain/coach.test.ts`, `docs/design/DESIGN_SPEC.md` T103 단락, `docs/FACILITATOR_GUIDE.md`.
+- 만들 것:
+  1. **코치 10단계**: 1단계를 둘로 나눈다 — **1/10 BRIEFING 상황판**: 스포트라이트는 상황·제안·미정 블록(`briefing-status`), 말풍선 "먼저 **상황**을 읽어 보세요 / 무슨 일이 생겼고, 무엇을 제안했고, 무엇이 아직 정해지지 않았는지 세 줄입니다", 읽기 단계라 "알겠어요 ▶"로 넘어감. **2/10 BRIEFING 근거 자료**: 기존 1단계 그대로(자료 버튼 스포트라이트, 팝업 닫으면 완료). 이후 단계는 번호만 +1(총 10, 머리 "진행 도우미 · N/10"). `domain/coach.ts`의 전이·`coachStepsOf`(BRIEFING = [1,2])·테스트, `content/coach.ts`·`CoachHost`의 coachTarget 갱신. 게이팅(자료를 봐야 "의견 듣기" 열림)은 그대로.
+  2. **INTRO 버튼 하나**: "안내 없이 시작" 제거, "안내 받으며 시작 ▶" 하나만(라벨은 "시작하기 ▶"가 아니라 그대로 — 안내가 기본임을 알린다). `coachEnabled`는 항상 true로 시작. 코치를 끄는 길은 운영 메뉴 "안내 끄기"와 **URL `?coach=off`**(운영·테스트용, `?mode=` 처리와 같은 곳에서 읽어 초기 세션의 coachEnabled=false) 두 가지. `e2e/screenshots.spec.ts`와 "안내 없이 시작"을 쓰던 e2e는 `?coach=off`로 바꾼다(기본 화면 스크린샷은 코치 없이 유지).
+  3. **INTRO 팝업 확대**: 종이 카드를 1080에서 폭 940→1180px, 높이 여유(패딩 36→48px), 제목 28→34px, 본문 20→22px(720은 비례: 폭 760→880, 본문 16→18) — 글자가 종이 안에서 답답하지 않게. 720에서 CTA·강조 줄이 잘리지 않는지 확인(viewport-fit·noscroll e2e).
+  4. 문서: DESIGN_SPEC T103 단락의 9단계 표를 10단계로, T104 단락 추가(순서 이유·`?coach=off`), FACILITATOR_GUIDE(INTRO 버튼 하나·코치 끄는 법), TASKS 행.
+  5. 테스트·e2e: `tests/domain/coach.test.ts`(10단계·BRIEFING 2단계 전이), `tests/components/Coach.test.tsx`(문구·N/10), `tests/components/IntroScreen.test.tsx`(버튼 하나), `e2e/coach.spec.ts`(1~10 완주, 1단계 알겠어요 → 2단계 자료), `e2e/screenshots.spec.ts`(`?coach=off`, `coach-briefing.png`는 1단계 상황판 스포트라이트로, `coach-evidence.png` 2단계 추가 가능), 기존 "안내 없이 시작" 참조 전부 정리.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 게이팅 완화, 서버·시나리오 문장 변경, 영문 UI·붉은 박스.
+- 완료 확인: `npm run check`, e2e 1080·720 각각(`--project=` 순차) PASS, 720 `intro.png`·`coach-briefing.png` Read 확인.
+- 크기: S~M.
 
 ---
 
