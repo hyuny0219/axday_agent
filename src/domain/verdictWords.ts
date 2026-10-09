@@ -360,6 +360,23 @@ function hasConditionalMyeon(sentence: string): boolean {
   return false;
 }
 
+// 조건·시점 절 표지 일반형(Codex 92차). 방향 선언 문장에 아래 표지가 있으면 조건부 선언이라 AMBIGUOUS다("조건이 충족될 때 찬성합니다",
+// "충족 시 승인하겠습니다", "지키는 한 반대하지 않겠습니다", "갖춰져야 찬성할 수 있습니다"). 표: ① 시점 조건 — ㄹ받침 음절+때(에는·에·는·만·라도), 경우, 시(에는),
+// 는 한, 이후·뒤에·후에·다음에·나서, 전에는·까지는 ② 전제·조건 명사 — 전제(로·하에), 조건(으로·이라면 …), 선에서·범위에서·한도에서, 이상이면, 기준으로,
+// 보장·확보·충족·이행(되면·된다면·될 때·시·되어야) ③ 필요조건 연결 — 되어야·돼야·있어야·넣어야·지켜야·갖춰야·맞아야·따라야·-져야(찬성해야 합니다 같은 방향 동사 자체의 -해야는 제외), 거든·을수록·는 대로.
+const CONDITIONAL_CLAUSE_MARKERS =
+  /(?:(?:^|\s)시(?:에는|에)?(?=\s|,|$)|는 한(?:에서|에서는)?(?=\s|,|$)|(?:이후|뒤|후|다음)에(?:는|야)?(?=\s|,|$)|나서(?:야)?(?=\s|,|$)|전에는|까지는|전제(?:로|하에|라면)|조건(?:으로|이라면|이면|하에|이 붙으면|을 걸고)|선에서|범위에서|한도에서|이상(?:이면|일 때)|기준(?:으로|에 맞으면)|(?:보장|확보|충족|이행)(?:되면|된다면|된다는|될 때|시|되어야)|(?:되어야|돼야|있어야|넣어야|지켜야|갖춰야|맞아야|따라야|[가-힣]져야)|거든(?=\s|,|$)|을수록|할수록|는 대로)/;
+const TIME_WHEN = /([가-힣])\s?때(?:에는|에|는|만|라도)?(?=\s|,|$)/g;
+
+function hasConditionalClause(sentence: string): boolean {
+  if (CONDITIONAL_CLAUSE_MARKERS.test(sentence)) return true;
+  for (const match of sentence.matchAll(TIME_WHEN)) {
+    // ㄹ받침 음절 + 때(될 때·할 때·충족될 때)만 시점 조건이다("그때"는 과거 표지가 따로 처리한다).
+    if (finalConsonantIndex(match[1]) === 8) return true;
+  }
+  return false;
+}
+
 const HEDGED_SENTENCE = /(?:다면|라면|경우|한다면|수도 (?:있|없)|을지|일지|할지|인지|일까|을까|할까|\?)/;
 
 function sentencesOf(text: string): string[] {
@@ -458,7 +475,7 @@ function classifySentence(
   if (!hasDirectionWord(target, participantStance)) return null;
   // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
   const forHedge = target.replace(/않으면 ?안 ?됩/g, '않아야 합');
-  if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge) || QUOTE_FORM.test(target)) return 'AMBIGUOUS';
+  if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge) || hasConditionalClause(forHedge) || QUOTE_FORM.test(target)) return 'AMBIGUOUS';
   const found = new Set<DeclaredDirection>();
   // 문장 안의 모든 방향 명사 출현을 훑는다: 선언 꼬리로 해소됐거나, 설명문이거나, 약한 방향어(승인·통과)가 아니면 미해소 → AMBIGUOUS.
   let unresolved = false;

@@ -256,6 +256,15 @@ describe('declaredDirection(T115)', () => {
       ['찬성합니다. 반대편 의견을 듣고 제 생각을 바꿨습니다.', null], ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('조건·시점 절 표지 일반형(Codex 92차). "경우에 따라 다르지만 저는 찬성합니다"는 허용된 놓침', () => {
+    for (const [text, expected] of [
+      ['조건이 충족될 때 찬성합니다.', null], ['한도를 정하면 찬성하겠습니다.', null], ['기록이 보장되는 경우 찬성합니다.', null],
+      ['사람이 최종 확인한다는 전제로 찬성합니다.', null], ['로그가 남는 선에서 찬성합니다.', null],
+      ['한도를 지키는 한 반대하지 않겠습니다.', null], ['검토가 끝난 뒤에 찬성하겠습니다.', null], ['조건 충족 시 승인하겠습니다.', null],
+      ['조건이 모두 갖춰져야 찬성할 수 있습니다.', null], ['찬성해야 합니다.', 'FOR'], ['반대해야 합니다.', 'AGAINST'],
+      ['지금 찬성합니다.', 'FOR'], ['그때 찬성했습니다.', null], ['경우에 따라 다르지만 저는 찬성합니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
