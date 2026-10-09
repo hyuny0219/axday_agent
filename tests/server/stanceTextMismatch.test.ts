@@ -129,6 +129,16 @@ describe('declaredDirection(T115)', () => {
       ['비대면 회의에서 찬성합니다.', 'FOR'], ['지면 관계상 반대합니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('목적어 뒤 -면과 인용 어미(Codex 75차)', () => {
+    for (const [text, expected] of [
+      ['로그를 켜면 자료를 확인해 찬성하겠습니다.', null], ['기능을 끄면 자료를 보고 반대하겠습니다.', null],
+      ['서면 의견으로 반대합니다.', 'AGAINST'], ['원칙적으로 서면 의견으로 반대합니다.', 'AGAINST'],
+      ['전적으로 비대면 회의에 찬성합니다.', 'FOR'], ['자료를 보면 의견이 달라질 수 있습니다.', null],
+      ['다른 이사는 찬성하지 않다고 했습니다.', null], ['찬성하지 않다는 입장입니다.', null], ['찬성하지 않다.', 'AGAINST'],
+      ['찬성하지 않다만 조건은 보겠습니다.', 'AGAINST'], ['반대하지 않습니다.', 'FOR'], ['CFO가 반대한다고 들었습니다.', null],
+      ['찬성하지 않을 수 없습니다.', 'FOR'], ['찬성할 수밖에 없겠습니다.', 'FOR'], ['반대하지 않겠습니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
