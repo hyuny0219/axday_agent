@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T119 | 진행 중 | 조건은 **직접 작성 없이** 추천 문구·추천 답변만으로 모두 붙일 수 있게: 첫 추천 문구는 조건 1~2개를 일부러 비우고, 추가 답변 단계의 추천 답변이 남은 조건을 전부 커버(조건 비교·조건 추천도 도달 가능한 조건만 안내)(2026-10-10 사용자 지시). 상세는 아래 T119 카드 |
 | T118 | 진행 중 | 첫 의견 전달 뒤(반응 듣기·답하기)에는 임원이 **어느 쪽으로 기울었는지** 보이게('반대 → 찬성 쪽 · 답변하면 확정'), 봉인은 답변 뒤~표결 전(MOTION·VOTE)에만 유지(2026-10-10 사용자 지시). 상세는 아래 T118 카드 |
 | T117 | 완료 | 반응에 답하기(2/2) HUD: 버튼 잘림 재현·수정(여러 뷰포트), 내 발언 조건 칩을 **한 줄**에(2026-10-10 사용자 지시, T116 후속). 상세는 아래 T117 카드 |
 | T116 | 완료 | 내 답변·내 의견 HUD: 조건 칩을 작게, 입력 상자 높이 고정 + 넘치면 안쪽 스크롤 → 아래 버튼 줄이 밀리지 않게(2026-10-09 사용자 지시). 상세는 아래 T116 카드 |
@@ -101,6 +102,20 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T119 조건 커버리지 — 직접 작성 없이 추천만으로 모든 조건 도달
+
+- 목표(2026-10-10 사용자 지시): "조건 비교를 눌러 보면 조건을 추가하기 위해 직접 작성해야 하는 건이 있는데, 이런 건 최대한 없애고 첫 번째 추천 문구에서는 조건이 1~2개 빠진 채로 추천 문구를 주고, 마지막에 보완하기 위해 추가 가능한 조건들을 모두 넣어서 직접 작성하여 조건을 추가하는 것이 없게 해 줘." 참가자가 자유 입력으로 조건 키워드를 쳐야만 붙는 조건이 없어야 한다. 현재 안건 ①(aiApproval)의 `FULL_AUTO`는 어떤 추천 문구·추천 답변에서도 제안되지 않는다(자유 입력 전용). 안건 ②(experienceFirst)는 ID 집합은 모두 제안되지만 단계·입장별 커버리지는 미확인.
+- 읽을 것: `src/content/scenarios/{aiApproval,experienceFirst}.ts`(conditions·voteRules·phrases·followUp.options·roleLenses), `src/domain/{conditions,voting,stance}.ts`(proposeFromText·requiredConditionsFor), `src/components/parts/AssistantPanel.tsx`("처음 안과의 차이"·"남은 확인 사항"·조건 추천), `src/components/conditionRecommendation.ts`, `src/components/parts/ConditionChips.tsx`("+ 새 조건"), `tests/content/*`(기존 콘텐츠 불변식), DESIGN_SPEC T73·T74·T84·T98·T115 단락.
+- 만들 것:
+  1. **콘텐츠 불변식(테스트 먼저)**: 안건 × 참가자 입장(FOR·AGAINST)마다 (a) 규칙표(`voteRules`)가 어떤 임원의 표를 바꾸는 데 쓰는 모든 조건은 `phrases`(그 입장 side 또는 BOTH) ∪ `followUp.options`(그 입장 side 또는 BOTH)에서 제안 가능해야 한다, (b) 첫 단계 `phrases`만으로는 그 조건 집합 중 **정확히 1~2개가 빠져야** 하고(첫 의견만으로 전원 설득이 안 되는 난이도 유지, T110과 일관), (c) `followUp.options`는 (b)에서 빠진 조건을 **모두** 제안해야 한다, (d) 각 옵션 문구는 `proposeFromText(text)`가 선언한 `proposeConditionId`를 돌려줘야 한다(기존 테스트 확장). 두 안건 모두에서 실패하는 항목을 먼저 보고.
+  2. **콘텐츠 수정**: 불변식이 깨지는 곳을 데이터로 고친다 — 안건 ① FOR/AGAINST의 `followUp.options`에 `FULL_AUTO`(와 빠진 다른 조건)를 제안하는 답변 문구 추가(기존 톤·길이 유지, 조건 키워드가 `proposeFromText`에 걸리게), 첫 단계 `phrases`가 모든 조건을 다 주고 있으면 1~2개를 추가 답변 쪽으로 옮김. 안건 ②도 같은 기준으로 정리. 옵션 수가 늘면 2/2 화면 추천 답변 그리드가 720에서 넘치지 않는지 확인(필요하면 2열 카드 높이·세로 예산 조정, noscroll e2e).
+  3. **비서실장 안내**: "처음 안과의 차이"·"남은 확인 사항"·조건 추천에서 아직 안 붙은 조건을 안내할 때 **어디서 붙일 수 있는지**("추천 문구 N번" / "추가 답변에서 고를 수 있습니다")를 함께 말하고, 추천 문구·추천 답변 어디에도 없는 조건은 안내하지 않는다(불변식 덕에 없어야 하지만 방어적으로). 자유 입력 경로("+ 새 조건")는 남기되 필수 경로가 아님을 DESIGN_SPEC에 명시.
+  4. 문서: DESIGN_SPEC "## T119 — 조건 커버리지 규칙" 단락(안건별 조건 × 첫 문구/추가 답변 커버리지 표, 불변식 4개), FACILITATOR_GUIDE 한 줄, TASKS 행. `docs/eval` 평가 세트가 조건 키워드에 의존하면 케이스 갱신.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 규칙표(voteRules) 결과 변경, 프롬프트 변경, 조건 ID 추가·삭제, 영문 UI.
+- 완료 확인: `npm run check`, e2e discuss·reactions·flow-full·stance·noscroll 1080·720 각각 PASS, 2/2 추천 답변 스크린샷(`reactions-answer.png` 두 해상도) 갱신 뒤 Read.
+- 크기: M.
 
 ## T118 첫 의견 뒤 기울어진 방향 표시 — 봉인은 답변 뒤~표결 전에만
 
