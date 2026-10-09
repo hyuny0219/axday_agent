@@ -165,6 +165,14 @@ describe('declaredDirection(T115)', () => {
       ['비대면 회의에서 찬성합니다.', 'FOR'], ['회의에서 비대면 방식으로 찬성합니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('2음절 동형어는 연어 사전으로만 명사 확정(Codex 79차)', () => {
+    for (const [text, expected] of [
+      ['회의에서 서면 결의로 승인합니다.', 'FOR'], ['협상에서 지면 의견을 바꿔 반대하겠습니다.', null],
+      ['그 편에 서면 결정을 내리고 찬성하겠습니다.', null], ['이 안건을 서면 결의로 승인합니다.', 'FOR'],
+      ['서면 의견으로 반대합니다.', 'AGAINST'], ['지면 관계상 반대합니다.', 'AGAINST'], ['협상에서 지면 반대하겠습니다.', null],
+      ['화면 설계를 보면 찬성합니다.', null], ['회의에서 비대면 방식으로 찬성합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
