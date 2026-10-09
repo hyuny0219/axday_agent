@@ -11,7 +11,7 @@
 //  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴에는 절 단위 보조 규칙을 쓰고(isInQuestionClause),
 //     종결 판정은 어미 목록이 아니라 글자 종류로 한다: 절 경계는 문장 부호·쉼표뿐이고, 매칭이 끝나는 어절부터
 //     처음 만나는 종결 어절이 의문 어미(까·까요·나요·가요·는지요)이거나 바로 뒤가 "?"이면 질문(제외),
-//     [다요죠네](만)로 끝나면 선언이다. 연결 어미는 경계가 아니다. "쪽이/편이 + 공백"은 주격 조사라
+//     활용 꼴 종결(어요·니다·죠 등, 명사 "필요"는 제외)로 끝나면 선언이다. 연결 어미는 경계가 아니다. "쪽이/편이 + 공백"은 주격 조사라
 //     뒤 어절이 맞·옳·낫·타당·합리·좋·우세·유리·적절로 시작할 때만 선언으로 본다.
 //  5) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
 //     "걸려야 하는 문장"/"중립 문장" 목록에 먼저 추가한 뒤 패턴을 고친다. 찬성·반대 단어 자체를 쓴 문장은
@@ -86,8 +86,23 @@ const PLAIN_WORD_SOURCE = /^[가-힣|]+$/;
 
 /** 어절이 질문으로 끝나는가(까·까요·나요·가요·는지요). */
 const QUESTION_WORD_END = /(?:까|까요|나요|가요|는지요)$/;
-/** 어절이 평서 종결 글자(다·요·죠·네, 뒤에 '만'이 붙어도 됨)로 끝나는가. 어미를 하나씩 열거하지 않는다. */
-const DECLARATIVE_WORD_END = /[다요죠네](?:만)?$/;
+/** 평서 종결 활용 꼴(요·다·네·죠, 뒤에 '만'이 붙어도 됨). 글자 하나만 보면 "필요·중요·주요·수요·개요·소요·강요"
+ * 같은 명사가 걸리므로 '요'는 활용 꼴(어요·아요·여요·해요·예요·에요·이요·게요·래요·데요·고요·네요·군요)일 때만,
+ * '다'는 니다·는다·ㄴ다(받침 ㄴ + 다)·이다·었다·았다·겠다·했다·있다·없다·같다·않다일 때만 종결로 본다. */
+const DECLARATIVE_CORE =
+  /(?:[어아여해예에이게래데고네군]요|죠|(?:이|하|었|았|겠)네|니다|는다|[이었았겠했있없같않]다)$/;
+
+function isDeclarativeWord(rawWord: string): boolean {
+  const word = rawWord.endsWith('만') ? rawWord.slice(0, -1) : rawWord;
+  if (word === '네') return true;
+  if (DECLARATIVE_CORE.test(word)) return true;
+  // "한다·된다·본다"처럼 받침 ㄴ + 다
+  const beforeDa = word.endsWith('다') ? word.charCodeAt(word.length - 2) : NaN;
+  if (beforeDa >= 0xac00 && beforeDa <= 0xd7a3) {
+    return (beforeDa - 0xac00) % 28 === 4;
+  }
+  return false;
+}
 
 /** 질문 절 보조 규칙(어미 열거 LEAVE_OPEN만으로는 의문형이 계속 샌다) — 종결 판정은 글자 종류로 한다.
  *  절 경계는 문장 부호(. ! ? … 줄바꿈)와 쉼표(, 、)뿐이다. 매칭이 끝나는 어절부터 공백 단위로 읽으며
@@ -107,7 +122,7 @@ function isInQuestionClause(text: string, matchStart: number, matchEnd: number):
     const word = text.slice(position, wordEnd);
     if (word.length > 0) {
       if (QUESTION_WORD_END.test(word) || (wordEnd === segEnd && text[wordEnd] === '?')) return true;
-      if (DECLARATIVE_WORD_END.test(word)) return false;
+      if (isDeclarativeWord(word)) return false;
     }
     position = wordEnd;
   }
