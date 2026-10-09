@@ -96,13 +96,13 @@ export function useCoachPosition(defaultPoint: Point) {
     };
   }, []);
 
+  // 렌더마다 크기를 다시 읽는다(같은 값이면 상태가 안 바뀌어 반복되지 않는다) — 의존성 배열을 일부러 비운다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const next = { width: el.offsetWidth, height: el.offsetHeight };
     setSize((prev) => (prev.width === next.width && prev.height === next.height ? prev : next));
-    // 렌더마다 크기를 다시 읽는다(같은 값이면 상태가 안 바뀌어 반복되지 않는다).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   });
 
   let point: Point = defaultPoint;
