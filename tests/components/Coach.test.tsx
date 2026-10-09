@@ -163,6 +163,19 @@ describe('안내 아이콘(T106)', () => {
     expect(screen.getByTestId('coach-icon')).toBeInTheDocument();
   });
 
+  it('팝업(role=dialog)이 열려 있는 동안 Esc는 다시 연 안내를 닫지 않는다', async () => {
+    render(
+      <>
+        <div role="dialog" aria-label="팝업" />
+        <CoachHost session={sessionAt('DISCUSS', { coachDismissed: [3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId('coach-icon'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByTestId('coach')).toBeInTheDocument();
+  });
+
   it('화면이 바뀌면 다시 연 상태가 초기화되고, 코치가 꺼져 있거나 안내 없는 화면에는 아이콘이 없다', () => {
     const { rerender } = render(
       <CoachHost session={sessionAt('OPINIONS', { coachDismissed: [2, 3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />,

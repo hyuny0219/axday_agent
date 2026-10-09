@@ -182,7 +182,9 @@ test('알겠어요로 닫으면 안내 아이콘이 남고, 누르면 다시 열
   // 다시 연 안내는 다른 조작으로는 닫히지 않는다.
   await page.getByTestId('open-evidence').click();
   await expect(page.getByTestId('evidence-dialog')).toBeVisible();
-  await page.getByTestId('evidence-dialog-close').click();
+  // 팝업이 열려 있는 동안 Esc는 팝업만 닫고 안내는 남는다.
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
   await expect(page.getByTestId('coach')).toHaveCount(1);
   await page.getByTestId('coach-ack').click();
   await expect(page.getByTestId('coach')).toHaveCount(0);
