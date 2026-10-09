@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T106 | 진행 중 | 코치 말풍선을 닫아도 작은 '안내' 아이콘으로 남겨 언제든 다시 볼 수 있게(2026-10-09 사용자 지시). 상세는 아래 T106 카드 |
 | T105 | 진행 중 | 근거 자료 카드·임원 의견/반응 카드의 중요한 말 강조(브리핑과 같은 `.key-term`): 안건별 강조어 + 조건 이름 + 숫자·단위 자동 강조, live 발언도 적용(2026-10-09 사용자 지시). 상세는 아래 T105 카드 |
 | T104 | 완료 | 코치를 화면 사용법 안내형으로 개정(화면당 말풍선 하나·6화면 "안내 N/6"·덮개·강제 없음·첫 조작/알겠어요로 닫힘), INTRO 버튼은 "확인" 하나·팝업 확대, 코치 끄기는 운영 메뉴·`?coach=off`로만(2026-10-09 사용자 지시, 초기 10단계 안은 폐기). 상세는 아래 T104 카드와 DESIGN_SPEC T103·T104 단락 |
 | T103 | 완료 | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
@@ -86,6 +87,22 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T106 코치 안내를 아이콘으로 다시 열기
+
+- 목표(2026-10-09 사용자 지시): "안내 팝업이 '알겠어요'를 누르면 사라져서 한 번 보고 사라지는 게 아니라 아이콘 형태로 해서 다시 볼 수 있으면 좋겠어."
+- 읽을 것: `src/components/parts/{Coach,CoachHost}.tsx`, `src/domain/coach.ts`(화면별 1회 표시·dismissed), `src/content/coach.ts`, `src/styles/screens/coach.css`, `src/components/parts/OperatorMenu.tsx`(안내 끄기), `e2e/coach.spec.ts`, `tests/components/Coach.test.tsx`, `tests/domain/coach.test.ts`, `docs/design/DESIGN_SPEC.md` T104 단락, `docs/FACILITATOR_GUIDE.md`.
+- 만들 것:
+  1. **안내 아이콘**: 말풍선이 닫히면(알겠어요·첫 조작) 같은 자리(왼쪽 무대 사진 왼쪽 위)에 작은 둥근 버튼 `coach-icon`(종이색 바탕, 검은 테두리, 44px, 안에 "안내" 글자 — 영문·물음표 아이콘 대신 한글) 이 남는다. 누르면 그 화면의 말풍선이 다시 열리고(머리 "안내 N/6" 그대로), 말풍선의 버튼은 "닫기 ▶"(처음 열릴 때는 "알겠어요 ▶"). 다시 열린 말풍선은 첫 조작으로는 닫히지 않고 "닫기"로만 닫힌다(참가자가 일부러 열었으므로). 아이콘은 코치가 있는 6개 화면에만, 코치가 꺼져 있으면(운영 메뉴·`?coach=off`) 아이콘도 없음.
+  2. **상태**: `domain/coach.ts`에 "처음 자동 표시 여부(dismissed)"와 별개로 UI 로컬 상태 `reopened`를 CoachHost에서 관리(세션에 저장하지 않음). 화면이 바뀌면 초기화.
+  3. 접근성: 아이콘 `aria-label="안내 다시 보기"`, 포커스 가능, Esc로 다시 연 말풍선 닫기. 720에서 아이콘이 무대 사진 밖으로 나가지 않게.
+  4. 테스트·e2e: `Coach.test.tsx`(닫은 뒤 아이콘 렌더·클릭으로 재오픈·닫기 라벨), `e2e/coach.spec.ts`(알겠어요 → 아이콘 → 다시 열기 → 닫기; `?coach=off`면 아이콘 없음), `screenshots.spec.ts`의 `coach-*.png`는 그대로. DESIGN_SPEC T104 단락에 아이콘 추가, FACILITATOR_GUIDE 한 줄.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 코치를 다시 강제형으로 되돌리기, 버튼 잠금 변경, 영문 UI·붉은 박스.
+- 완료 확인: `npm run check`, e2e 1080·720 각각(`--project=` 순차) PASS, 720 `discuss.png`(아이콘 보임)·`coach-discuss.png` Read.
+- 크기: S.
 
 ---
 
