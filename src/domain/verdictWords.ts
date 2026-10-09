@@ -10,10 +10,13 @@
 //  3) 뒤에 명사가 이어지는 수식형("승인 쪽 조건", "찬성 편 임원")은 쪽/편 바로 뒤가 서술격이 아니므로 걸리지 않는다.
 //  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴에는 절 단위 보조 규칙을 쓰고(isInQuestionClause),
 //     종결 판정은 어미 목록이 아니라 글자 종류로 한다: 절 경계는 문장 부호·쉼표뿐이고, 매칭이 끝나는 어절부터
-//     처음 만나는 종결 어절이 의문 어미(까·까요·나요·가요·는지요)이거나 바로 뒤가 "?"이면 질문(제외),
+//     처음 만나는 종결 어절이 의문 종결(ㅂ받침 + 니까(요)·ㄹ받침 + 까(요)·나요·가요·는지요; 연결·강조형 "-으니까·-라니까"는 질문이 아님)이거나
+//     바로 뒤가 "?"이면 질문(제외),
 //     활용 꼴 종결(어요·니다·죠 등, 명사 "필요"는 제외)로 끝나면 선언이다. 연결 어미는 경계가 아니다. "쪽이/편이 + 공백"은 주격 조사라
 //     뒤 어절이 맞·옳·낫·타당·합리·좋·우세·유리·적절로 시작할 때만 선언으로 본다.
-//  5) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
+//  5) 임원이 참가자 발언을 인용하는 문장("승인 쪽이라고 하셨으니까 묻겠습니다")과 임원 자신의 선언은 구분하지 않는다
+//     — 과잉 차단을 허용한다(걸리면 재시도·중립 대체).
+//  6) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
 //     "걸려야 하는 문장"/"중립 문장" 목록에 먼저 추가한 뒤 패턴을 고친다. 찬성·반대 단어 자체를 쓴 문장은
 //     (의문형이라도) 단어 패턴이 걸린다 — 의도된 엄격함.
 
@@ -84,8 +87,25 @@ export function findVerdictWords(text: string): string[] {
 
 const PLAIN_WORD_SOURCE = /^[가-힣|]+$/;
 
-/** 어절이 질문으로 끝나는가(까·까요·나요·가요·는지요). */
-const QUESTION_WORD_END = /(?:까|까요|나요|가요|는지요)$/;
+/** 한글 음절의 받침 번호(0=없음, 8=ㄹ, 17=ㅂ). 한글 음절이 아니면 -1. */
+function finalConsonantIndex(char: string | undefined): number {
+  if (!char) return -1;
+  const code = char.charCodeAt(0);
+  return code >= 0xac00 && code <= 0xd7a3 ? (code - 0xac00) % 28 : -1;
+}
+
+/** 어절이 질문 종결인가. 글자 "까"만 보면 연결·강조형 "-니까"(했으니까·이니까·그러니까·라니까(요))가 걸리므로
+ * 받침으로 가른다: 앞 음절에 ㅂ받침이 있는 "-ㅂ니까(요)"(합니까·입니까·습니까·봅니까), ㄹ받침 음절 + "까(요)"
+ * (할까·될까·일까·있을까요), 그리고 나요·가요(ㄴ가요·는가요 포함)·는지요. "-데요"는 "?"가 바로 붙을 때만 질문이라
+ * 호출부의 "?" 검사가 맡는다. */
+function isQuestionWord(rawWord: string): boolean {
+  if (/(?:나요|가요|는지요)$/.test(rawWord)) return true;
+  const word = rawWord.endsWith('요') ? rawWord.slice(0, -1) : rawWord;
+  if (word.endsWith('니까')) return finalConsonantIndex(word[word.length - 3]) === 17;
+  if (word.endsWith('까')) return finalConsonantIndex(word[word.length - 2]) === 8;
+  return false;
+}
+
 /** 평서 종결 활용 꼴(요·다·네·죠, 뒤에 '만'이 붙어도 됨). 글자 하나만 보면 "필요·중요·주요·수요·개요·소요·강요"
  * 같은 명사가 걸리므로 '요'는 활용 꼴(어요·아요·여요·해요·예요·에요·이요·게요·래요·데요·고요·네요·군요)일 때만,
  * '다'는 니다·는다·ㄴ다(받침 ㄴ + 다)·이다·었다·았다·겠다·했다·있다·없다·같다·않다일 때만 종결로 본다. */
@@ -121,7 +141,7 @@ function isInQuestionClause(text: string, matchStart: number, matchEnd: number):
     while (wordEnd < segEnd && text[wordEnd] !== ' ') wordEnd += 1;
     const word = text.slice(position, wordEnd);
     if (word.length > 0) {
-      if (QUESTION_WORD_END.test(word) || (wordEnd === segEnd && text[wordEnd] === '?')) return true;
+      if (isQuestionWord(word) || (wordEnd === segEnd && text[wordEnd] === '?')) return true;
       if (isDeclarativeWord(word)) return false;
     }
     position = wordEnd;
