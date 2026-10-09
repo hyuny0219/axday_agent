@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T118 | 진행 중 | 첫 의견 전달 뒤(반응 듣기·답하기)에는 임원이 **어느 쪽으로 기울었는지** 보이게('반대 → 찬성 쪽 · 답변하면 확정'), 봉인은 답변 뒤~표결 전(MOTION·VOTE)에만 유지(2026-10-10 사용자 지시). 상세는 아래 T118 카드 |
 | T117 | 완료 | 반응에 답하기(2/2) HUD: 버튼 잘림 재현·수정(여러 뷰포트), 내 발언 조건 칩을 **한 줄**에(2026-10-10 사용자 지시, T116 후속). 상세는 아래 T117 카드 |
 | T116 | 완료 | 내 답변·내 의견 HUD: 조건 칩을 작게, 입력 상자 높이 고정 + 넘치면 안쪽 스크롤 → 아래 버튼 줄이 밀리지 않게(2026-10-09 사용자 지시). 상세는 아래 T116 카드 |
 | T115 | 완료 | AI 비서실장 조건 추천이 임원 찬성/반대와 **정반대 방향**으로 안내되는 경우 수정(2026-10-09 사용자 지시, 원인 조사 선행). 상세는 아래 T115 카드 |
@@ -100,6 +101,23 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T118 첫 의견 뒤 기울어진 방향 표시 — 봉인은 답변 뒤~표결 전에만
+
+- 목표(2026-10-10 사용자 지시): "내 의견을 한번 전달했을 때는 AI 임원들의 찬반이 변경되었는지 알 수 있게 해 주고, 반응에 답하고 마지막 표결 전에만 가리게 해 줘." 지금은 첫 의견 뒤 REACTIONS에서 조건이 맞은 임원이 '반대 → 고민 중'(T110)으로만 보여 방향이 바뀌었는지 알기 어렵다. 이 단계에서는 **기울어진 방향**을 드러내고, 봉인(T114)은 지금처럼 MOTION·VOTE에서만 유지한다. T110의 표결 규칙(답하지 않으면 원래 입장)은 그대로.
+- 읽을 것: `src/domain/stance.ts`(membersAwaitingAnswer·scriptedStances), `src/components/parts/{PersuasionBoard,StageBand,LiveStatementCards}.tsx`, `src/components/screens/ReactionsScreen.tsx`(반응 카드 배지 '반대 → 고민 중'), `src/components/moodLabel.ts`, `src/components/conditionRecommendation.ts`(awaitingLine), `src/app/App.tsx`(sealedStages), `src/styles/screens/{stage,persuasionBoard,reactions}.css`, DESIGN_SPEC T96·T110·T114·T115 단락, `server/prompts/common.ts`(REACTIONS_FIRST_PASS_RULE — **바꾸지 않음**).
+- 만들 것:
+  1. **기울어진 방향 계산(도메인)**: `leaningStances(scenario, session)` — REACTIONS 단계에서 `membersAwaitingAnswer`에 든 임원은 참가자 목표 방향(FOR 참가자→FOR, AGAINST→AGAINST)으로 '기울음'(`leaning: 'FOR' | 'AGAINST'`), 그 외는 현재 stance. live에서는 모델 stance가 UNDECIDED여도 규칙표(`requiredConditionsFor` + 확정 조건)로 조건이 충족된 임원을 같은 방식으로 기울음 처리(프롬프트·서버 교정 로직은 건드리지 않음 — 텍스트는 유보형 그대로).
+  2. **현황판(PersuasionBoard)**: REACTIONS에서 기울음 임원의 입장 열을 '반대 → 찬성 쪽'(짧은 라벨 `찬성 쪽`/`반대 쪽`, 기울음 스타일: 점선 테두리·연한 색)으로, 비고는 '답변하면 확정'(반대 참가자면 '답변하면 반대로 확정'). 집계 '설득한 임원 N/M'은 기울음을 포함하지 않되 '(기울음 K)'를 덧붙임. MOTION·VOTE 봉인은 그대로.
+  3. **무대 표정(StageBand)**: 기울음 임원은 목표 방향 표정의 '기울음' 변형(테두리만 또는 반투명)과 라벨 '찬성 쪽'(기존 '고민 중' 대신). RESULT·봉인 단계는 그대로.
+  4. **반응 카드 배지**(ReactionsScreen 2×2): '반대 → 고민 중' → '반대 → 찬성 쪽'; 카드 안 안내 줄 '답변하면 확정됩니다'.
+  5. **비서실장 안내**(conditionRecommendation awaitingLine): '…는 찬성 쪽으로 기울었습니다 · 추가 질문에 답하면 확정됩니다'로 문구 통일.
+  6. 문서: DESIGN_SPEC "## T118 — 기울어진 방향" 단락(단계별 표시 표: OPINIONS/REACTIONS/MOTION·VOTE/RESULT × 현황판·무대·카드), FACILITATOR_GUIDE 한 줄, TASKS 행.
+  7. 테스트·e2e: 도메인 단위(leaningStances: 찬성·반대 참가자, 조건 미충족은 기울음 없음, live 규칙표 경로), PersuasionBoard·StageBand·ReactionsScreen 단위(기울음 표시·라벨·봉인 단계 불변), 기존 '고민 중' 단언을 쓰는 e2e(stance·reactions·flow-full·live·sealed-reveal) 갱신, 스크린샷 `reactions.png` 두 해상도 갱신 뒤 Read.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 프롬프트·서버 교정 로직 변경, 표결 규칙(T110 게이트) 변경, MOTION·VOTE·RESULT 봉인/공개 연출 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e stance·reactions·flow-full·live·sealed-reveal·screenshots 1080·720 각각 PASS.
+- 크기: M.
 
 ## T117 반응에 답하기 HUD — 버튼 잘림 수정 + 조건 칩 한 줄
 
