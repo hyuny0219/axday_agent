@@ -234,6 +234,13 @@ describe('declaredDirection(T115)', () => {
       ['화면 배치는 지금 반대편을 유지합니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('선택·전환으로 읽힐 수 있는 동사는 공간 화이트리스트에서 제외(Codex 89차)', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 하지만 최종 투표에서는 반대편을 클릭하겠습니다.', null], ['찬성합니다. 하지만 반대편으로 이동하겠습니다.', null],
+      ['찬성합니다. 반대편을 표시하겠습니다.', null], ['찬성합니다. 반대편을 배치했습니다.', 'FOR'],
+      ['찬성합니다. 반대편 의견도 들었습니다.', 'FOR'], ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
