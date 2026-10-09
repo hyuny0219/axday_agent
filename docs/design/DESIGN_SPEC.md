@@ -657,6 +657,8 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 ## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)
 
+> **T109에서 1개 이상으로 완화**: 아래 "세 기능 한 번씩"·"N/3" 표기는 "한 기능 이상"으로 바뀌었다(`assistantDone = assistantUsed.size >= 1`). 입장·문구 잠금은 그대로다.
+
 > **T103에서 코치로 대체**: 버튼 잠금(게이팅)과 팝업 안 소개·체크(`assistant-intro`)는 그대로다. 화면에 눈에 보이던 힌트 문장(`cta-disabled-hint`)과 `data-guide` 맥동은 없어졌고, 잠금 이유는 화면 읽기용 문장(sr-only, `aria-describedby`)으로만 남는다. 다음에 누를 버튼은 코치 5단계가 밝힌다.
 
 
@@ -678,6 +680,15 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 **실패·연결 지연도 사용으로 센다**: 막히는 참가자가 없게, 결과를 렌더했을 때뿐 아니라 오류·시간 초과 안내(`assistant-error`)를 본 경우도 같은 유형을 `failed:true`로 기록한다. 정리한 초안을 화면에 보인 것도 `DRAFT_REFINE`(`applied:false`)로 기록한다. 결과 화면 "AI가 도운 일"은 바뀌지 않는다 — `failed` 기록과 `applied:false`인 정리는 줄을 만들지 않고, "조건 추천 N회" 집계도 `failed`는 세지 않는다.
 
 영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
+
+## T109 — 비서실장 한 가지만 써도 의견 전달 (2026-10-09)
+
+**사용자 지시**: "AI 비서실장에서 하나만 사용해도 의견 전달 버튼이 활성화되도록 변경해 줘."
+
+- 판정: 입장 선택 + 문구 1개 이상 + 비서실장 기능 1개 이상 사용(실패·연결 지연 안내도 사용) → 전달 활성. 비서실장 버튼 잠금(문구 전)은 그대로.
+- 힌트(sr-only `discuss-cta-hint`): 문구 있음·비서실장 0회 → "AI 비서실장을 한 번 써 보세요". (N/3) 표기는 없다.
+- 팝업 소개 제목: "AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)". 체크 3줄은 유지, 완료 문구(`assistant-intro-done`)는 1개 이상 쓰면 표시.
+- 코치 DISCUSS ③: "AI 비서실장을 열어 한 가지 이상 써 봅니다(셋 다 써도 좋아요)."
 
 ## T98 — 진행 단계 안내판 (2026-10-08)
 

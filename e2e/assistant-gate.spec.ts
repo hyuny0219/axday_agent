@@ -1,5 +1,5 @@
-// T97: DISCUSS는 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달 순서다.
-// 세 기능을 다 쓰기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 화면 읽기용 설명(N/3)으로 알려 준다(T103: 눈에 보이는 안내는 진행 도우미가 맡는다).
+// T97: DISCUSS는 추천 문구 선택 → AI 비서실장 한 가지 이상(T109, 셋 다 써도 됨) → 의견 전달 순서다.
+// 한 기능도 쓰기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 화면 읽기용 설명으로 알려 준다(T103: 눈에 보이는 안내는 진행 도우미가 맡는다).
 // 다시 답하기(REACTIONS)는 비서실장 없이도 전달할 수 있다.
 import { test, expect, type Page } from './fixtures';
 
@@ -39,7 +39,7 @@ test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 �
   await expect(page.getByTestId('assistant-toggle-hint')).toHaveCount(0);
 });
 
-test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 (0/3)이며 옛 맥동 강조는 없다', async ({ page }) => {
+test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 비서실장 사용을 권하며 옛 맥동 강조는 없다', async ({ page }) => {
   await reachDiscuss(page);
 
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
@@ -48,11 +48,29 @@ test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 (0/3)이며 �
 
   await page.getByTestId('phrase-card-P1').click();
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
-  await expect(page.getByTestId('discuss-cta-hint')).toContainText('AI 비서실장을 먼저 써 보세요 (0/3)');
+  await expect(page.getByTestId('discuss-cta-hint')).toContainText('AI 비서실장을 한 번 써 보세요');
   await expect(page.locator('[data-guide]')).toHaveCount(0);
 });
 
-test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열린다', async ({ page }) => {
+test('한 기능만 써도 의견 전달이 열린다(T109)', async ({ page }) => {
+  await reachDiscuss(page);
+  await page.getByTestId('phrase-card-P1').click();
+
+  await page.getByTestId('assistant-toggle').click();
+  await expect(page.getByTestId('assistant-intro-done')).toHaveCount(0);
+  await runFeature(page, 'compare');
+  await expect(page.getByTestId('assistant-intro-done')).toContainText('이제 팝업을 닫고 의견을 전달하세요');
+  await page.getByTestId('assistant-close').click();
+
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled();
+  await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
+  await page.getByTestId('submit-opinion').click();
+  await expect(
+    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
+  ).toBeVisible();
+});
+
+test('세 개를 다 써도 의견 전달이 열린다', async ({ page }) => {
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
 
@@ -60,11 +78,7 @@ test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열�
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
   await runFeature(page, 'summary');
   await runFeature(page, 'compare');
-  await expect(page.getByTestId('assistant-intro-done')).toHaveCount(0);
   await page.getByTestId('assistant-close').click();
-
-  await expect(page.getByTestId('discuss-cta-hint')).toContainText('(2/3)');
-  await expect(page.getByTestId('submit-opinion')).toBeDisabled();
 
   await page.getByTestId('assistant-toggle').click();
   await runFeature(page, 'refine');
