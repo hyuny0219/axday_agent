@@ -215,7 +215,7 @@ describe('buildConditionRecommendation 답변 대기 임원(T110)', () => {
       followUpAnswered: false,
     });
     const result = buildConditionRecommendation(scenario, ids, 'FOR', 'scripted', stances, undefined, ['CFO', 'CAIO', 'CISO']);
-    expect(result.openingLine).toBe('CFO·CAIO·CISO는 조건은 맞으니 추가 질문에 답하면 찬성입니다.');
+    expect(result.openingLine).toBe('CFO·CAIO·CISO는 찬성 쪽으로 기울었습니다 · 추가 질문에 답하면 확정됩니다.');
     expect(result.rows).toEqual([]);
     expect(result.openingLine).not.toContain('움직이기 어렵');
   });
@@ -228,7 +228,7 @@ describe('buildConditionRecommendation 답변 대기 임원(T110)', () => {
       followUpAnswered: false,
     });
     const result = buildConditionRecommendation(scenario, ['LOG'], 'FOR', 'scripted', stances, undefined, ['CAIO']);
-    expect(result.openingLine).toContain('CAIO는 조건은 맞으니 추가 질문에 답하면 찬성입니다');
+    expect(result.openingLine).toContain('CAIO는 찬성 쪽으로 기울었습니다 · 추가 질문에 답하면 확정됩니다');
     expect(result.openingLine).toMatch(/^지금 반대인 CFO·CISO를 움직이려면/);
   });
 });

@@ -89,7 +89,8 @@ import {
   oppositionReactionText,
   resolveFollowUpPrompt,
 } from '../reactionsFor';
-import { membersAwaitingAnswer, scriptedStances } from '../../domain/stance';
+import { leaningStances, scriptedStances } from '../../domain/stance';
+import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -140,6 +141,8 @@ export interface ReactionsScreenProps {
    * 카드만 크게 보여주고, 'answer'(다시 답하기)에서만 입장 선택·추천 답변·입력창을
    * 보여준다. 도메인 session.stage는 두 서브스텝 모두 REACTIONS다. */
   step: 'listen' | 'answer';
+  /** T118: 지금 고른 입장·조건 기준 기울음을 위로 알려 무대 표정이 현황판·카드와 같은 기준을 쓰게 한다. */
+  onLeaningChange?: (leaning: LeaningMap | null) => void;
   /** "답하기 ▶"를 눌러 'listen' → 'answer'로 넘어간다(뒤로가기는 없다). */
   onAdvanceStep: () => void;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
@@ -181,6 +184,7 @@ export function ReactionsScreen({
   stances,
   transcriptRevision,
   side,
+  onLeaningChange,
   onChooseSide,
   step,
   onAdvanceStep,
@@ -562,17 +566,25 @@ export function ReactionsScreen({
       ),
     [opinions, side, confirmedConditionIds],
   );
-  const awaitingAnswerIds = useMemo(
+  // T118: 조건이 맞아 답변만 남은 임원은 "고민 중"이 아니라 참가자 쪽으로 "기울었다"고 보인다
+  // (scripted는 membersAwaitingAnswer, live는 모델 stance가 UNDECIDED인 임원 중 규칙표 충족자).
+  const leaning = useMemo(
     () =>
-      mode === 'scripted'
-        ? membersAwaitingAnswer(scenario, {
-            stage: 'REACTIONS',
-            opinions: effectiveOpinions,
-            followUpUsed: false,
-            followUpAnswered: false,
-          })
-        : [],
-    [scenario, effectiveOpinions, mode],
+      leaningStances(
+        scenario,
+        { stage: 'REACTIONS', opinions: effectiveOpinions, followUpUsed: false, followUpAnswered: false, mode },
+        stances,
+      ),
+    [scenario, effectiveOpinions, mode, stances],
+  );
+  const leaningKey = JSON.stringify(leaning);
+  useEffect(() => {
+    onLeaningChange?.(JSON.parse(leaningKey) as LeaningMap);
+  }, [leaningKey, onLeaningChange]);
+  useEffect(() => () => onLeaningChange?.(null), [onLeaningChange]);
+  const awaitingAnswerIds = useMemo(
+    () => EXEC_MEMBER_ORDER.filter((memberId) => leaning[memberId] !== undefined),
+    [leaning],
   );
   const effectiveStances = useMemo(
     () =>
@@ -620,6 +632,7 @@ export function ReactionsScreen({
             mode={mode}
             statements={statements}
             awaitingAnswerIds={awaitingAnswerIds}
+            leaning={leaning}
           />
           <button
             type="button"
@@ -664,6 +677,7 @@ export function ReactionsScreen({
                 roleStatus={roleStatus}
                 statements={statements}
                 stances={stances}
+                leaning={leaning}
                 variant="reaction"
                 onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
                 retryDisabled={retryUsed}
@@ -687,12 +701,17 @@ export function ReactionsScreen({
                   // 원인 한 줄을 보여주지 않는다.
                   // T110: 처음부터 미정이던 임원이 조건은 맞아 고민 중에 머물면 입장은 그대로지만
                   // "유지"만 보이면 반응이 없는 것처럼 읽히므로 "고민 중 유지"로 적는다.
+                  // T118: 조건이 맞아 답변만 남은 임원은 목표 방향으로 "기울었다"고 보인다.
                   const awaiting = awaitingAnswerIds.includes(memberId);
-                  const badgeText = changed
-                    ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
-                    : awaiting
-                      ? '고민 중 유지'
-                      : '유지';
+                  const leanTo = leaning[memberId];
+                  const shownStance: Stance = leanTo ?? stance;
+                  const badgeText = leanTo
+                    ? `${SHORT_STANCE_LABEL[baseline]} → ${STANCE_LABEL[leanTo]}`
+                    : changed
+                      ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
+                      : awaiting
+                        ? '고민 중 유지'
+                        : '유지';
                   const reactionBody =
                     opposition ??
                     (reactions.length > 0
@@ -703,13 +722,13 @@ export function ReactionsScreen({
                   return (
                     <article
                       key={memberId}
-                      className={`reaction-card reaction-card--${STANCE_MODIFIER[stance]}`}
+                      className={`reaction-card reaction-card--${STANCE_MODIFIER[shownStance]}${leanTo ? ' reaction-card--leaning' : ''}`}
                       data-testid={`reaction-card-${memberId}`}
                     >
                       <div className="reaction-card__head">
                         <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
                         <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
-                          {STANCE_LABEL[stance]}
+                          {STANCE_LABEL[shownStance]}
                         </span>
                         <span className="reaction-card__badge" aria-hidden="true" data-testid={`reaction-card-badge-${memberId}`}>
                           {badgeText}
@@ -721,6 +740,11 @@ export function ReactionsScreen({
                           terms={statementHighlightTerms(scenario, reactionBody)}
                         />
                       </p>
+                      {leanTo && (
+                        <p className="reaction-card__leaning-note" data-testid={`reaction-card-leaning-${memberId}`}>
+                          답변하면 확정됩니다
+                        </p>
+                      )}
                       {causeText && (
                         <p
                           className="reaction-card__cause"
@@ -769,6 +793,7 @@ export function ReactionsScreen({
           mode={mode}
           statements={statements}
           awaitingAnswerIds={awaitingAnswerIds}
+          leaning={leaning}
         />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />

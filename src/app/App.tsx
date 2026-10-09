@@ -27,7 +27,8 @@ import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
-import { liveStances, scriptedStances } from '../domain/stance';
+import { leaningStances, liveStances, scriptedStances } from '../domain/stance';
+import type { LeaningMap } from '../domain/stance';
 import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
@@ -99,6 +100,10 @@ interface SessionContextValue {
    * 둔다. REACTIONS를 벗어나면 다음 방문을 위해 'listen'으로 되돌린다. */
   reactionsStep: 'listen' | 'answer';
   setReactionsStep: (step: 'listen' | 'answer') => void;
+  /** T118: ReactionsScreen이 지금 고른 입장·조건 기준으로 계산한 기울음. 무대 표정도 현황판·카드와
+   * 같은 기준을 쓰도록 위로 올린다. null이면 session 기준(leaningFor). */
+  reactionsLeaning: LeaningMap | null;
+  setReactionsLeaning: (leaning: LeaningMap | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -141,9 +146,11 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // REACTIONS 서브스텝(T89) — session.stage는 그대로 REACTIONS다. 다른 단계로
   // 넘어가면(REACTIONS를 벗어나면) 다음 방문을 위해 'listen'으로 되돌린다.
   const [reactionsStep, setReactionsStep] = useState<'listen' | 'answer'>('listen');
+  const [reactionsLeaning, setReactionsLeaning] = useState<LeaningMap | null>(null);
   useEffect(() => {
     if (session.stage !== 'REACTIONS') {
       setReactionsStep('listen');
+      setReactionsLeaning(null);
     }
   }, [session.stage]);
 
@@ -335,8 +342,10 @@ function SessionProvider({ children }: { children: ReactNode }) {
       retryFinalVotes: orchestrator.retryFinalVotes,
       reactionsStep,
       setReactionsStep,
+      reactionsLeaning,
+      setReactionsLeaning,
     }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep],
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsLeaning],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -373,6 +382,7 @@ function StageScreen() {
     retryFinalVotes,
     reactionsStep,
     setReactionsStep,
+    setReactionsLeaning,
   } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
@@ -485,6 +495,7 @@ function StageScreen() {
           onChooseSide={setSidePick}
           step={reactionsStep}
           onAdvanceStep={() => setReactionsStep('answer')}
+          onLeaningChange={setReactionsLeaning}
           onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload, stance: sidePick })}
           onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS', stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
@@ -601,6 +612,18 @@ function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMem
   return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
 }
 
+/** T118: 첫 의견 뒤(REACTIONS)에만 기울어진 방향을 무대에 보인다. MOTION·VOTE 봉인은 그대로다. */
+function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
+  if (!scenario || session.stage !== 'REACTIONS') {
+    return {};
+  }
+  return leaningStances(
+    scenario,
+    session,
+    session.mode === 'live' ? liveStances(session) : undefined,
+  );
+}
+
 /** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
 function StageRouter() {
   const { session, dispatch, reactionsStep } = useSession();
@@ -637,7 +660,7 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { session, dispatch, roundLog } = useSession();
+  const { session, dispatch, roundLog, reactionsLeaning } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
@@ -676,6 +699,7 @@ function AppShell() {
                     opinions={session.opinions}
                     scenario={scenario}
                     stances={sealedStages.has(session.stage) ? ALL_UNDECIDED_STANCES : stancesFor(session, scenario)}
+                    leaning={session.stage === 'REACTIONS' && reactionsLeaning ? reactionsLeaning : leaningFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(
                       session.stage,

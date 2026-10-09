@@ -403,3 +403,20 @@
     padding-top: 6px;
   }
 }
+
+/* T118: 기울음 카드 — 확정이 아니므로 왼쪽 선을 점선으로, 안내 줄은 흐린 글자로. */
+.reaction-card--leaning {
+  border-left-style: dashed;
+}
+
+.reaction-card__leaning-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .reaction-card__leaning-note {
+    font-size: 10.5px;
+  }
+}
