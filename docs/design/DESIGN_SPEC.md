@@ -850,6 +850,7 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 바꾸지 않은 것: 건너뛰기 밑줄 글자, 조건 칩, 안내 아이콘, 운영 버튼, 임원 표 도장.
 - `clip-path`는 `box-shadow`를 잘라내므로 그림자·글로우는 쓰지 않는다. 호버는 `filter: brightness(1.1)`(보조는 연한 주황 바탕)이다.
 - 접근성: 포커스 링은 `outline`을 끄고 안쪽 `box-shadow inset`으로 그린다(`:focus-visible`만). 주 버튼·종이 위 버튼은 먹색 3px, 어두운 바탕 위 보조 버튼은 연한 주황(#f4d79a) 2px로 컷 밖으로 나가지 않는다.
+- 사선 변 테두리: `clip-path`가 좌우 테두리를 잘라내므로 보조·잠긴 버튼은 위아래만 `border-block`으로 두고, 사선 변은 `::before`·`::after`가 2.4px 띠로 덧그린다(색 `--cta-line`). 잠긴 버튼은 위아래 점선, 사선 변은 실선이다.
 
 ## T105 — 근거 자료·임원 발언 카드 핵심 말 강조 (2026-10-09)
 
