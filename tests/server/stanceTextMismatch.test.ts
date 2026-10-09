@@ -109,6 +109,17 @@ describe('declaredDirection(T115)', () => {
       ['자료를 보면 의견이 달라질 수 있습니다.', null], ['화면 설계를 보면 찬성합니다.', null], ['검토되면 찬성하겠습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('-면 음운 규칙과 없다 종결 한정(Codex 73차)', () => {
+    for (const [text, expected] of [
+      ['비대면 회의에서 찬성합니다.', 'FOR'], ['다방면 검토 끝에 반대합니다.', 'AGAINST'], ['전면 찬성합니다.', 'FOR'],
+      ['지면 관계상 반대합니다.', 'AGAINST'], ['서면 의견으로 반대합니다.', 'AGAINST'],
+      ['기록을 남기면 자료를 보고 찬성하겠습니다.', null], ['속도가 느려지면 반대합니다.', null], ['열면 반대합니다.', null],
+      ['앉으면 찬성합니다.', null], ['조건이 붙으면 찬성합니다.', null], ['자료를 보면 의견이 달라질 수 있습니다.', null],
+      ['찬성할 수밖에 없는지는 더 검토해야 합니다.', null], ['찬성하지 않을 수 없는지 보겠습니다.', null],
+      ['찬성할 수밖에 없습니다.', 'FOR'], ['찬성할 수밖에 없겠습니다.', 'FOR'], ['찬성할 수밖에 없다면 조건을 보겠습니다.', null],
+      ['찬성하지 않는지 보겠습니다.', null], ['찬성하지 않습니다.', 'AGAINST'], ['반대하지 않겠습니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

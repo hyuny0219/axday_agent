@@ -212,28 +212,38 @@ const NOUN_SCAN = new RegExp(`(${RESULT_NOUNS.map((n) => n.word).join('|')})`, '
 // "합의·합리"의 '합', "입장"의 '입', "불가피·불가결"의 '불가'는 선언이 아니다. 각 꼬리는 활용 어미까지 적고
 // 끝의 \S*가 그 어절의 남은 글자(만·요 등)를 먹는다. 결과 명사 뒤에 다른 명사가 이어지면 어떤 꼬리와도
 // 맞지 않아 null이다. 부정 서술에서 "찬성 입장은 아직 아닙니다"처럼 중간에 다른 말이 끼면 null로 둔다(교정 안 함).
+// 부정·없다 꼬리는 종결 활용일 때만 센다("없는지·없다면·않는지"는 유보·의문이라 제외).
+const NO_END = '없(?:습니다|습니까|다(?!면)|어요|네요|죠|고요|겠|을 것|을 겁)';
+const NOT_END = '(?:않(?:습|는다|아요|았|겠|네|죠|고요|을 것)|못(?:합|한다|해요|했|하겠|하네|하죠))';
+const HARD_END = '(?:어렵(?:습|다(?!면)|네|죠|겠|어)|힘(?:듭|들(?:겠|다(?!면)|어))|곤란(?:합|하다(?!면)|해))';
+
 const NEGATED_TAIL = new RegExp(
   '^\\s?(?:' +
     // 불가피의 부정 활용: 찬성은 불가피하지 않습니다 / 반대가 불가피한 것은 아닙니다
     '(?:은|는|이|가)? ?불가피(?:하지 (?:않|못)|한 것은 아(?:니|닙)|하다고 보지)' +
     '|' +
     // 명사 + 조사 + 부정 서술: 가결은 어렵습니다 / 승인이 안 됩니다 / 승인 불가입니다
-    '(?:은|는|이|가)?\\s?(?:어렵(?:습|다|네|죠|겠|어|지)|힘(?:듭|들(?:겠|다|어))|불가(?:능|합|하|해|입|이다|라)|곤란(?:합|하|해)|안 ?(?:됩|되겠|된다|돼)|없(?:습|다|어|네|죠|겠)|아(?:닙|니다|니에))' +
+    '(?:은|는|이|가)?\\s?' + HARD_END.slice(0, -1) + '|불가(?:능|합|하|해|입|이다|라)|안 ?(?:됩|되겠|된다|돼)|' + NO_END + '|아(?:닙|니다|니에))' +
     '|' +
     // 쪽/편/입장 + 아니다: 찬성 쪽이 아닙니다
     '(?:쪽|편|입장)(?:은|이|는)? ?(?:아닙|아니다|아니에)' +
     '|' +
     // 동사 부정: 반대하지 않겠습니다 / 찬성하기 어렵습니다 / 승인할 수 없습니다
-    '(?:하|시키|되|해 드리|해 주)?(?:지 (?:않|못)|기 (?:어렵|힘들|곤란)|기는 (?:어렵|힘들)|기가 (?:어렵|힘들)|(?:할|ㄹ) 수 (?:는 )?없)' +
+    '(?:하|시키|되|해 드리|해 주)?(?:지 ' + NOT_END + '|기(?:는|가)? ' + HARD_END + '|(?:할|ㄹ) 수 (?:는 )?' + NO_END + ')' +
     ')\\S*',
 );
 
 // 이중 부정(조사 선택): 찬성하지 않을 수가/는/도 없습니다 · 반대하지 않을 리가 없습니다 · 찬성 안 할 수가 없습니다 ·
 // 찬성하지 않으면 안 됩니다. 단일 부정 검사보다 먼저 본다.
-const DOUBLE_NEGATED_TAIL =
-  /^\s?(?:(?:하|시키|되)?(?:지|치) ?(?:않|아니)(?:을|할) ?(?:(?:수|리)(?:가|는|도|야)?|수 ?밖에|밖에|도리(?:가|는)?|길(?:이|은)?|방법(?:이|은)?) ?없|안 ?할 ?수(?:가|는|도)? ?없|(?:하|시키|되)?지 ?않으면 ?안 ?됩)/;
+const DOUBLE_NEGATED_TAIL = new RegExp(
+  '^\\s?(?:(?:하|시키|되)?(?:지|치) ?(?:않|아니)(?:을|할) ?(?:(?:수|리)(?:가|는|도|야)?|수 ?밖에|밖에|도리(?:가|는)?|길(?:이|은)?|방법(?:이|은)?) ?' +
+    NO_END +
+    '|안 ?할 ?수(?:가|는|도)? ?' +
+    NO_END +
+    '|(?:하|시키|되)?지 ?않으면 ?안 ?됩)',
+);
 // 단일 긍정 "-할 수밖에 없습니다"(찬성할 수밖에 없습니다)도 그 방향의 선언이다.
-const UNAVOIDABLE_TAIL = /^\s?(?:하|시키|되)?(?:ㄹ|할|될) ?수 ?밖에 ?없/;
+const UNAVOIDABLE_TAIL = new RegExp('^\\s?(?:하|시키|되)?(?:ㄹ|할|될) ?수 ?밖에 ?' + NO_END);
 
 const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
@@ -269,7 +279,7 @@ const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
 //      심사·절차·관계·자료·보고·설계)이면 명사("서면 의견으로", "지면 관계상"), 아니면 조건이다.
 const MYEON_NOUN_SYLLABLES = '전측표정평국직당화장단외후양반';
 const MYEON_CONDITIONAL_SYLLABLES = '으다라하되이시려거니';
-const MYEON_VERB_STEMS = '가오보주쓰두내자타사나차피치';
+const MYEON_VERB_STEMS = '가오보주쓰두내자타사나차피치기리키우세해래배재채패매깨';
 const MYEON_NOUN_FOLLOWER = /^(?:으로|의|을|를|에|에서|보고|회의|방식|의견|심사|절차|관계|자료|설계)/;
 
 function hasConditionalMyeon(sentence: string): boolean {
@@ -278,12 +288,16 @@ function hasConditionalMyeon(sentence: string): boolean {
     const word = (words[i] ?? '').replace(/[,、]+$/, '');
     if (word.length < 2 || !word.endsWith('면')) continue;
     const prev = word[word.length - 2] ?? '';
+    const finalConsonant = finalConsonantIndex(prev);
+    // (a) ㄹ이 아닌 자음 받침 + 면은 명사다: 용언은 자음 받침 뒤에 "으면"이 온다(다방면·전면·국면·정면).
+    if (finalConsonant > 0 && finalConsonant !== 8) continue;
     if (MYEON_NOUN_SYLLABLES.includes(prev)) continue;
-    if (MYEON_CONDITIONAL_SYLLABLES.includes(prev) || finalConsonantIndex(prev) === 8) return true;
-    // 뒤 어절 규칙은 2음절 어절(서면·대면·지면 같은 명사 후보)에만 쓴다. 3음절 이상(남기면·검토하면)은 항상 조건이다.
-    if (word.length > 2) return true;
-    // 2음절이라도 흔한 동사 어간(보면·가면)이고 앞 어절이 목적어·부사로 끝나면 조건이다("자료를 보면").
-    if (MYEON_VERB_STEMS.includes(prev) && /[을를에로서]$/.test(words[i - 1] ?? '')) return true;
+    // (b) ㄹ받침(들면·살면·열면)이거나 조건 어미 음절이면 조건이다.
+    if (finalConsonant === 8 || MYEON_CONDITIONAL_SYLLABLES.includes(prev)) return true;
+    // (c) 받침 없는 모음 음절: 앞 어절이 목적어·부사로 끝나면 조건("자료를 보면"),
+    // 동사 어간 음절이고 3음절 이상이면 조건(남기면·느려지면), 나머지(서면·대면·지면·화면·비대면·후면·외면)는 뒤 어절을 본다.
+    if (/[을를에로서게히]$/.test(words[i - 1] ?? '')) return true;
+    if (MYEON_VERB_STEMS.includes(prev) && word.length >= 3) return true;
     if (MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '')) continue;
     return true;
   }
