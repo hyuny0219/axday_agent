@@ -119,7 +119,6 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           evidence={scenario.evidence}
           scenario={scenario}
           caseTag={caseTag}
-          statements={[]}
           onClose={handleCloseEvidence}
         />
       )}

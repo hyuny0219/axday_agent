@@ -46,7 +46,7 @@
 // (2)·(3) 근거 자료 팝업 STATEMENTS의 02(OPINIONS) 행이 04(REACTIONS)와 같은 최신
 // stances를 공유하던 것을 각 발언 자체의 Statement.stance로 바꾸고, 02 발언이 아직
 // 없을 때의 상태를 roundLog(App.tsx, T41)에서 그 역할의 OPINIONS 결과만 찾아 판정하게
-// 했다(자세한 이유는 아래 dialogStatements 바로 위 주석).
+// 했다.
 // PR #12 Codex 3차 검토 2: live뿐 아니라 scripted도 같은 문제가 있었다 — 02·04 행이
 // 둘 다 "현재"(참가자가 확정한 조건까지 반영된) stances를 썼다. scripted의 02(최초
 // 의견 단계)는 아직 아무 조건도 확정되지 않았을 때의 입장이어야 하므로,
@@ -93,7 +93,7 @@ import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
-import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
+import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
 // 그대로 재사용한다(discuss-screen__paper 등) — 사용자 지시 "내 의견과 동일한 구성".
@@ -160,18 +160,6 @@ function uniqueInOrder(ids: string[]): string[] {
     }
   }
   return result;
-}
-
-/** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52). evidenceIds가 여럿이면 가장 마지막 것
- * (DiscussScreen.lastEvidenceLabel과 같은 규칙 — EvidenceDialog 호출부마다 지역
- * 함수로 둔다). */
-function lastEvidenceLabel(scenario: Scenario, evidenceIds: string[]): string | null {
-  const lastId = evidenceIds[evidenceIds.length - 1];
-  if (!lastId) {
-    return null;
-  }
-  const card = scenario.evidence.find((item) => item.id === lastId);
-  return card ? card.title : lastId;
 }
 
 export function ReactionsScreen({
@@ -545,127 +533,11 @@ export function ReactionsScreen({
   const caseTag = scenario.incident.caseLabel;
 
   // scripted 전용 "기준" 입장(아직 아무 조건도 확정되지 않았을 때의 stance) —
-  // 반응 카드 유지/바뀜 배지(아래 .reaction-card)와 근거 자료 팝업 02 행이 함께
-  // 쓴다(PR #12 Codex 5차 검토 P2: dialogStatements의 scripted 02 stance 계산을
-  // 여기로 끌어올려 두 곳이 같은 값을 쓰게 했다).
+  // 반응 카드 유지/바뀜 배지(아래 .reaction-card)가 쓴다.
   const scriptedBaselineStances = useMemo(
     () => scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] }),
     [scenario],
   );
-
-  // 근거 자료 팝업의 STATEMENTS 열(T74): DISCUSS는 02 임원 의견만 보여줬지만 REACTIONS는
-  // 02 의견 + 04 반응을 함께(단계 태그로 구분) 보여준다.
-  // PR #12 Codex 2차 검토 2: 두 행이 같은 stances[memberId](현재·최신 stance)를 쓰면
-  // REACTIONS에서 입장이 바뀐 임원의 02 행까지 덩달아 다시 라벨된다 — 각 발언이 실제로
-  // 실린 Statement.stance(live 응답이 그대로 옮겨 싣는 값, T63)를 먼저 쓰고, 그 발언
-  // 자체가 없을 때만(응답 전·실패) 현재 stances로 근사한다.
-  // PR #12 Codex 2차 검토 3: 02 발언이 없다고 바로 "실패"로 보여주면, 참가자가 OPINIONS
-  // 라운드가 아직 끝나기 전에 다음 단계로 넘어간 경우에도 "응답 지연·확인 필요"로 잘못
-  // 보인다. roleStatus(REACTIONS용)로는 OPINIONS 단계의 실제 결과를 알 수 없으므로,
-  // App.tsx가 SET_ROLE_STATUS(stage 포함)를 가로채 쌓아 둔 roundLog(T41, 회의록 패널과
-  // 같은 근거)에서 그 역할의 OPINIONS 결과만 찾아 실패일 때만 "실패", 그 밖에는(아직
-  // 기록이 없음 포함) "판단 중"으로 둔다.
-  const dialogStatements = useMemo<EvidenceDialogStatementView[]>(() => {
-    if (mode === 'live') {
-      return EXEC_MEMBER_ORDER.flatMap((memberId) => {
-        const stance = stances[memberId];
-        const opinionStatement = statements.find(
-          (item) => item.roleId === memberId && item.stage === 'OPINIONS',
-        );
-        const opinionStance = opinionStatement?.stance ?? stance;
-        const opinionRoundStatus = roundLog.find(
-          (entry) => entry.stage === 'OPINIONS' && entry.roleId === memberId,
-        )?.status;
-        const opinionEntry: EvidenceDialogStatementView = opinionStatement
-          ? {
-              memberId,
-              stance: opinionStance,
-              status: 'answered',
-              text: opinionStatement.text,
-              evidenceLabel: lastEvidenceLabel(scenario, opinionStatement.evidenceIds),
-              testable: true,
-              stage: 'OPINIONS',
-            }
-          : {
-              memberId,
-              stance: opinionStance,
-              status: opinionRoundStatus === 'failed' ? 'failed' : 'pending',
-              text: '',
-              evidenceLabel: null,
-              testable: true,
-              stage: 'OPINIONS',
-            };
-
-        const reactionStatus = roleStatus[memberId];
-        const reactionStatement = statements.find(
-          (item) => item.roleId === memberId && item.stage === 'REACTIONS',
-        );
-        const reactionStance = reactionStatement?.stance ?? stance;
-        const reactionEntry: EvidenceDialogStatementView =
-          reactionStatus === 'answered' && reactionStatement
-            ? {
-                memberId,
-                stance: reactionStance,
-                status: 'answered',
-                text: reactionStatement.text,
-                evidenceLabel: lastEvidenceLabel(scenario, reactionStatement.evidenceIds),
-                testable: true,
-                stage: 'REACTIONS',
-              }
-            : {
-                memberId,
-                stance: reactionStance,
-                status: reactionStatus === 'failed' ? 'failed' : 'pending',
-                text: '',
-                evidenceLabel: null,
-                testable: true,
-                stage: 'REACTIONS',
-              };
-        return [opinionEntry, reactionEntry];
-      });
-    }
-    // scripted 02(최초 의견) 행은 아직 아무 조건도 확정되지 않았을 때의 입장이어야
-    // 한다 — "지금" stances(04, 참가자가 확정한 조건까지 반영)와 분리한다(PR #12
-    // Codex 3차 검토 2, 값 자체는 scriptedBaselineStances로 위에서 미리 계산한다).
-    return EXEC_MEMBER_ORDER.flatMap((memberId) => {
-      const stance = stances[memberId];
-      const initial = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId);
-      const opinionEntry: EvidenceDialogStatementView = {
-        memberId,
-        stance: scriptedBaselineStances[memberId],
-        status: 'answered',
-        text: initial?.text ?? '',
-        evidenceLabel: initial ? lastEvidenceLabel(scenario, initial.evidenceIds) : null,
-        testable: false,
-        stage: 'OPINIONS',
-      };
-      const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
-      const opposition = oppositionReactionText(
-        scenario,
-        memberId,
-        lastOpinion?.stance ?? null,
-        previousConfirmedIds,
-      );
-      // 순수 반대(조건 없음) 전용 문구가 있으면 "none" 기본 반응(모든 입장에 같이
-      // 쓰이던 "말씀은 기록했습니다")보다 우선한다 — 조건이 있으면(조건 기반 반응)
-      // 그대로 조건 반응이 우선이다(opposition은 그 경우 undefined).
-      const reactionText =
-        opposition ??
-        (reactions.length > 0
-          ? reactions.map((reaction) => reaction.text).join(' ')
-          : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
-      const reactionEntry: EvidenceDialogStatementView = {
-        memberId,
-        stance,
-        status: 'answered',
-        text: reactionText,
-        evidenceLabel: null,
-        testable: false,
-        stage: 'REACTIONS',
-      };
-      return [opinionEntry, reactionEntry];
-    });
-  }, [mode, roleStatus, statements, roundLog, stances, scenario, previousConfirmedIds, scriptedBaselineStances, lastOpinion]);
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
   // 않고 넘어가기")뿐이고, 발언 흐름(MinutesPanel)은 App.tsx AppShell이 OPINIONS와
@@ -998,7 +870,7 @@ export function ReactionsScreen({
             >
               근거 자료 보기
             </button>
-            <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
+            <span className="evidence-open-hint">자료 4장</span>
           </div>
         </div>
       </div>
@@ -1007,8 +879,6 @@ export function ReactionsScreen({
           evidence={scenario.evidence}
           scenario={scenario}
           caseTag={caseTag}
-          statements={dialogStatements}
-          statementsColumnLabel="임원이 한 말(의견 + 반응)"
           onClose={() => setEvidenceOpen(false)}
         />
       )}

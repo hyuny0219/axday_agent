@@ -11,7 +11,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { DiscussScreen, type DiscussScreenProps } from '../../src/components/screens/DiscussScreen';
 import { aiApprovalScenario, anonBoardScenario, experienceFirstScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
-import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
+import type { Stance, Transcript } from '../../src/domain/types';
 import { scriptedStances } from '../../src/domain/stance';
 import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
@@ -44,122 +44,29 @@ const stances: Record<ExecMemberId, Stance> = {
 const noop = () => {};
 
 describe('DiscussScreen', () => {
-  it('live 모드는 임원 카드 본문에 transcript의 실제 OPINIONS 발언을 보여주고 각본 문장은 쓰지 않는다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'answered',
-      CFO: 'answered',
-      CAIO: 'pending',
-      CISO: 'failed',
-    };
-    const statements: Statement[] = [
-      {
-        id: 's-ceo',
-        roleId: 'CEO',
-        stage: 'OPINIONS',
-        text: '[live] CEO의 실제 발언입니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        source: 'live',
-        createdAt: 0,
-      },
-      {
-        id: 's-cfo',
-        roleId: 'CFO',
-        stage: 'OPINIONS',
-        text: '[live] CFO의 실제 발언입니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        source: 'live',
-        createdAt: 0,
-      },
-    ];
-    const transcript: Transcript = { revision: 1, statements };
-
+  it('근거 자료 팝업에는 자료 4장만 있고 임원 발언 열이 없다(T105)', () => {
     render(
       <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
-        transcript={transcript}
-        mode="live"
-        roleStatus={roleStatus}
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
       />,
     );
-
-    // T73: 임원 발언은 더 이상 화면에 상시 보이지 않고, "근거 자료 · 임원 발언 보기"
-    // 팝업의 STATEMENTS 열에서 본다.
     fireEvent.click(screen.getByTestId('open-evidence'));
-
-    // 실제 발언이 있고 answered인 임원은 그 발언 텍스트가 그대로 보인다(각본 문장 아님).
-    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent(
-      '[live] CEO의 실제 발언입니다.',
-    );
-    expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent(
-      '[live] CFO의 실제 발언입니다.',
-    );
-
-    // 아직 응답 없는(pending) 임원은 각본 문장 대신 OPINIONS 화면과 같은 "판단 중…" 문구다.
-    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent(
-      '생각을 정리하고 있습니다',
-    );
-
-    // 실패한 임원은 OPINIONS 화면과 같은 "응답 지연·확인 필요" 문구다.
-    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent(
-      '이번에는 답을 받지 못했습니다',
-    );
-
-    // scenario.initialOpinions의 각본 문구는 live 모드에서 화면에 나오면 안 된다.
+    const dialog = screen.getByTestId('evidence-dialog');
+    expect(dialog).toHaveTextContent('근거 자료');
+    expect(dialog).not.toHaveTextContent('임원이 한 말');
+    expect(screen.queryAllByTestId(/^statement-(card|pending|failed)-/)).toHaveLength(0);
     for (const opinion of scenario.initialOpinions) {
       expect(screen.queryByText(opinion.text)).not.toBeInTheDocument();
     }
   });
 
-  it('scripted 모드는 그대로 scenario.initialOpinions 각본 문장을 보여준다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
-    const transcript: Transcript = { revision: 0, statements: [] };
-
-    render(
-      <ControlledDiscuss
-        scenario={scenario}
-        sessionId="s1"
-        transcript={transcript}
-        mode="scripted"
-        roleStatus={roleStatus}
-        stances={stances}
-        onSubmit={noop}
-        onAssistantAction={noop}
-      />,
-    );
-
-    // T73: scripted 각본 문장도 "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS
-    // 열에서 본다(화면에 상시 보이지 않는다).
-    fireEvent.click(screen.getByTestId('open-evidence'));
-    for (const opinion of scenario.initialOpinions) {
-      expect(screen.getByText(opinion.text)).toBeInTheDocument();
-    }
-    // scripted 각본 문장은 live 전용 statement-card- testid를 쓰지 않는다(OpinionsScreen의
-    // scripted .opinion-card와 같은 규칙).
-    expect(screen.queryAllByTestId(/^statement-card-/)).toHaveLength(0);
-  });
-
   it('팝업을 열기 전에는 evidence-card가 없고, "근거 자료 보기" 클릭 시 4장이 나타나며 Esc로 닫으면 포커스가 버튼으로 돌아온다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
     const transcript: Transcript = { revision: 0, statements: [] };
 
     render(
@@ -168,7 +75,6 @@ describe('DiscussScreen', () => {
         sessionId="s1"
         transcript={transcript}
         mode="scripted"
-        roleStatus={roleStatus}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -196,12 +102,6 @@ describe('DiscussScreen', () => {
   });
 
   it('AI 비서실장 드로어가 열린 동안 오른쪽 열은 inert라 숨은 "근거 자료 보기"에 포커스가 가지 않는다(PR #11 Codex 31차)', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
     const transcript: Transcript = { revision: 0, statements: [] };
     render(
       <ControlledDiscuss
@@ -209,7 +109,6 @@ describe('DiscussScreen', () => {
         sessionId="s1"
         transcript={transcript}
         mode="scripted"
-        roleStatus={roleStatus}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -230,12 +129,6 @@ describe('DiscussScreen', () => {
   // T87(사용자 — "찬성/반대를 고르면 추천 문구가 뜨도록"): 입장을 고르기 전에는
   // 추천 문구 대신 안내가 보이고, 입장을 고르면 그 side(+BOTH)만 보인다.
   describe('입장 선택(T87)', () => {
-    const idleRoleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
     const emptyTranscript: Transcript = { revision: 0, statements: [] };
 
     it('입장을 고르기 전에는 추천 문구 그리드 대신 안내가 보인다', () => {
@@ -245,7 +138,6 @@ describe('DiscussScreen', () => {
           sessionId="s1"
           transcript={emptyTranscript}
           mode="scripted"
-          roleStatus={idleRoleStatus}
           stances={stances}
           onSubmit={noop}
           onAssistantAction={noop}
@@ -263,7 +155,6 @@ describe('DiscussScreen', () => {
           sessionId="s1"
           transcript={emptyTranscript}
           mode="scripted"
-          roleStatus={idleRoleStatus}
           stances={stances}
           onSubmit={noop}
           onAssistantAction={noop}
@@ -288,7 +179,6 @@ describe('DiscussScreen', () => {
           sessionId="s1"
           transcript={emptyTranscript}
           mode="scripted"
-          roleStatus={idleRoleStatus}
           stances={stances}
           onSubmit={noop}
           onAssistantAction={noop}
@@ -316,7 +206,6 @@ describe('DiscussScreen', () => {
           sessionId="s1"
           transcript={emptyTranscript}
           mode="scripted"
-          roleStatus={idleRoleStatus}
           stances={stances}
           onSubmit={noop}
           onAssistantAction={noop}
@@ -342,12 +231,6 @@ describe('DiscussScreen', () => {
 
 // T97: 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달.
 describe('비서실장 필수 사용 게이팅(T97)', () => {
-  const idle: Record<ExecMemberId, RoleStatus> = {
-    CEO: 'idle',
-    CFO: 'idle',
-    CAIO: 'idle',
-    CISO: 'idle',
-  };
   const emptyTranscript: Transcript = { revision: 0, statements: [] };
   const entry = (type: AssistantActionType, failed = false) =>
     encodeAssistantLogEntry({ type, mode: 'scripted', evidenceIds: [], failed }, 0);
@@ -359,7 +242,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
         sessionId="s1"
         transcript={emptyTranscript}
         mode="scripted"
-        roleStatus={idle}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -420,7 +302,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
         sessionId="s1"
         transcript={emptyTranscript}
         mode="scripted"
-        roleStatus={idle}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -472,7 +353,6 @@ describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
         sessionId="s1"
         transcript={{ revision: 0, statements: [] }}
         mode="scripted"
-        roleStatus={{ CEO: 'idle', CFO: 'idle', CAIO: 'idle', CISO: 'idle' }}
         stances={scriptedStances(aiApprovalScenario, { stage: 'DISCUSS', opinions: [] })}
         onSubmit={noop}
         onAssistantAction={(event) => actions.push(event)}
@@ -496,7 +376,6 @@ describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
 });
 
 describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 30차 P2)', () => {
-  const idleRoles: Record<ExecMemberId, RoleStatus> = { CEO: 'idle', CFO: 'idle', CAIO: 'idle', CISO: 'idle' };
 
   function renderWith(
     sc: typeof aiApprovalScenario,
@@ -509,7 +388,6 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
         sessionId="s1"
         transcript={{ revision: 0, statements: [] }}
         mode="scripted"
-        roleStatus={idleRoles}
         stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
         onSubmit={noop}
         onAssistantAction={(event) => actions.push(event)}

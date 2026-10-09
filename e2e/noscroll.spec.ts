@@ -307,13 +307,12 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await page.getByTestId('discuss-side-for').click();
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
   await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
-  // "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS의 실제 120자 발언으로
-  // 바뀌었다(Codex 18차 검토 P2, T73에서 이 카드는 팝업 안으로 옮겼다). 줄 클램프를
-  // 걸지 않으므로 카드 높이가 늘어나도 팝업 안에서만 스크롤하고 페이지 스크롤은 없어야
-  // 한다.
+  // 근거 자료 팝업은 자료 4장만 보인다(T105: 임원 발언 열을 없앴다). 120자 발언이
+  // 있어도 팝업 안에 발언이 새지 않고 페이지 스크롤도 없어야 한다.
   const discussOpenEvidence = page.getByTestId('open-evidence');
   await discussOpenEvidence.click();
-  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
+  await expect(page.getByTestId('evidence-card-E1')).toBeVisible();
+  await expect(page.getByTestId('evidence-dialog').locator('[data-testid^="statement-card-"]')).toHaveCount(0);
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언, 팝업 열림)');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);

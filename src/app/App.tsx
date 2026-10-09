@@ -456,7 +456,6 @@ function StageScreen() {
           sessionId={session.sessionId}
           transcript={session.transcript}
           mode={session.mode}
-          roleStatus={session.roleStatus}
           stances={stancesFor(session, scenario)}
           side={sidePick}
           onChooseSide={setSidePick}
