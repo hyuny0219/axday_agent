@@ -36,6 +36,7 @@ import {
   computePersuasion,
   computeResultStamp,
 } from '../resultStamp';
+import { useResultReveal } from '../useResultReveal';
 import { epilogueText } from '../resultEpilogue';
 import { EndSessionConfirm } from '../parts/EndSessionConfirm';
 // 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
@@ -181,6 +182,10 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
       window.removeEventListener('keydown', handleSkip);
     };
   }, [skip]);
+
+  // T114: 공개 전에는 해당 결과 블록을 스크린리더에서도 가린다(연출은 CSS, 이건 aria-hidden).
+  const reveal = useResultReveal(skip);
+  const hiddenUntilAll = reveal.allRevealed ? undefined : true;
 
   if (!finalMotion) {
     return null;
@@ -342,6 +347,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             </p>
             <h2
               className="result-screen__title reveal-anim reveal-fade"
+              aria-hidden={hiddenUntilAll}
               style={finalRevealStyle}
               data-testid="result-conclusion"
             >
@@ -350,6 +356,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             {persuasionSummaryLine && (
               <p
                 className="result-screen__persuasion-summary reveal-anim reveal-fade"
+                aria-hidden={hiddenUntilAll}
                 style={finalRevealStyle}
                 data-testid="result-persuasion-summary"
               >
@@ -454,6 +461,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                 <h3 className="result-screen__section-label">임원별 판단</h3>
                 <p
                   className="result-summary__tally reveal-anim reveal-fade"
+                  aria-hidden={hiddenUntilAll}
                   style={finalRevealStyle}
                   data-testid="result-summary-tally"
                 >
@@ -473,11 +481,16 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                       key={row.memberId}
                       className={`result-seat result-seat--exec result-seat--${row.vote.toLowerCase()}`}
                       style={{ '--reveal-delay': rowDelay } as CSSProperties}
+                      aria-hidden={
+                        reveal.execRevealed > EXEC_MEMBER_ORDER.indexOf(row.memberId) ? undefined : true
+                      }
                       data-testid={`result-seat-${row.memberId}`}
                     >
-                      <span className="result-seat__title">{MEMBER_LABELS[row.memberId]}</span>
-                      <span className="result-seat__sealed reveal-anim" aria-hidden="true">
-                        ? 가림
+                      <span className="result-seat__head">
+                        <span className="result-seat__title">{MEMBER_LABELS[row.memberId]}</span>
+                        <span className="result-seat__sealed reveal-anim" aria-hidden="true">
+                          ? 가림
+                        </span>
                       </span>
                       <span className="result-seat__vote">
                         {VOTE_ICON[row.vote] && (

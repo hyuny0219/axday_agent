@@ -85,6 +85,8 @@ test('답변 뒤 MOTION·VOTE는 임원 방향을 봉인하고, 결과에서 한
   }
   expect(await opacityOf(page, 'result-stamp')).toBe(0);
   expect(await opacityOf(page, 'result-conclusion')).toBe(0);
+  await expect(page.getByTestId('result-seat-CFO')).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.getByTestId('result-conclusion')).toHaveAttribute('aria-hidden', 'true');
 
   // 참가자 표는 처음부터 가리지 않는다(봉인 표시 없음, 0.5초 안에 나타남).
   await seek(600);
@@ -128,7 +130,13 @@ test('운영자가 클릭하면(skip) 임원 표가 지연 없이 모두 공개�
   for (const id of EXECS) {
     expect(await opacityOf(page, `stage-vote-badge-${id}`)).toBe(1);
     expect(await opacityOf(page, `stage-vote-seal-${id}`)).toBe(0);
+    // 우측 판단 행의 이유·집계·결론도 지연 없이 보이고 스크린리더 가림이 풀린다.
+    await expect.poll(() => opacityOf(page, `result-seat-reason-${id}`)).toBe(1);
+    await expect(page.getByTestId(`result-seat-${id}`)).not.toHaveAttribute('aria-hidden', 'true');
   }
+  await expect.poll(() => opacityOf(page, 'result-conclusion')).toBe(1);
+  await expect.poll(() => opacityOf(page, 'result-summary-tally')).toBe(1);
+  await expect(page.getByTestId('result-conclusion')).not.toHaveAttribute('aria-hidden', 'true');
 });
 
 test.describe('동작 줄이기 설정', () => {

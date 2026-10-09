@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
+  findFollowUpVerdictWords,
   findStyleViolations,
   resolveEvalModel,
   toVoteRows,
@@ -152,5 +153,25 @@ describe('resolveEvalModel — mock 실행의 modelId', () => {
   it('실제 제공자는 MODEL_ID(공백 제거), 없으면 DEFAULT_MODEL_ID를 쓴다', () => {
     expect(resolveEvalModel({ MODEL_ID: ' my-model ' })).toEqual({ useMock: false, modelId: 'my-model' });
     expect(resolveEvalModel({})).toEqual({ useMock: false, modelId: DEFAULT_MODEL_ID });
+  });
+});
+
+describe('findFollowUpVerdictWords — FOLLOWUP 발언 방향 단어(T114)', () => {
+  function followUp(message: string, status: 'answered' | 'failed' = 'answered'): EvalRow {
+    return { ...row(message), stage: 'FOLLOWUP', status };
+  }
+
+  it('FOLLOWUP 발언의 찬성·반대·가결·부결을 찾는다', () => {
+    const found = findFollowUpVerdictWords([
+      followUp('답변을 들으니 안심입니다.'),
+      followUp('이 안건에는 찬성합니다.'),
+      followUp('반대로 남겠습니다. 부결이 맞습니다.'),
+    ]);
+    expect(found.map((item) => item.word)).toEqual(['찬성', '반대', '부결']);
+    expect(found[0]?.line).toBe(2);
+  });
+
+  it('다른 단계 발언과 실패한 행은 보지 않는다', () => {
+    expect(findFollowUpVerdictWords([row('찬성합니다.'), followUp('찬성합니다.', 'failed')])).toEqual([]);
   });
 });

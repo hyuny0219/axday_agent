@@ -82,7 +82,7 @@ export interface EvalRow {
   pathId: string;
   pathLabel: string;
   variant: string;
-  stage: 'OPINIONS' | 'REACTIONS' | 'VOTE';
+  stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP' | 'VOTE';
   roleId: ExecRoleId;
   status: 'answered' | 'failed';
   failReason?: string;
@@ -104,7 +104,7 @@ export interface EvalRow {
 function toRoundRows(
   results: RoundRoleResult[],
   evalCase: EvalCase,
-  stage: 'OPINIONS' | 'REACTIONS',
+  stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP',
 ): EvalRow[] {
   return results.map((result) => ({
     caseId: evalCase.id,
@@ -288,6 +288,27 @@ async function runCase(
       message: r.statement!.message,
     }));
 
+  // T114(v13): 추가 질문에 답한 케이스는 FOLLOWUP 라운드도 돌려 "방향을 문장으로 밝히지 말 것"
+  // 규칙을 검사한다(findFollowUpVerdictWords). VOTE 입력(transcript)은 v12 기준선과 비교할 수
+  // 있도록 그대로 두고, 이 라운드의 발언은 VOTE에 넘기지 않는다.
+  let followUpRows: EvalRow[] = [];
+  if (evalCase.followUpAnswered !== false) {
+    const followUpRequest: RoundRequest = {
+      sessionId,
+      requestId: randomUUID(),
+      mode: 'live',
+      stage: 'FOLLOWUP',
+      transcript: { revision: 2, statements: [...opinionsStatements, ...reactionsStatements] },
+      participantOpinion: evalCase.participantOpinion,
+      participantStance: evalCase.participantStance,
+      followUpAnswered: true,
+      scenarioId: evalCase.scenarioId,
+      budgetMs: BUDGET_MS,
+    };
+    const followUpResults = await handleRound(followUpRequest, { provider, clock });
+    followUpRows = toRoundRows(followUpResults, evalCase, 'FOLLOWUP');
+  }
+
   const voteRequest: VoteRequest = {
     sessionId,
     requestId: randomUUID(),
@@ -314,7 +335,7 @@ async function runCase(
   const voteObservedMs = clock.now() - voteStart;
   const voteRows = toVoteRows(voteResults, evalCase, sink, voteFrom, voteObservedMs);
 
-  return [...opinionsRows, ...reactionsRows, ...voteRows];
+  return [...opinionsRows, ...reactionsRows, ...followUpRows, ...voteRows];
 }
 
 function hasAnthropicCredential(): boolean {
@@ -486,6 +507,31 @@ export function findEvidenceIdMentions(rows: EvalRow[]): EvidenceIdMention[] {
     }
   });
   return mentions;
+}
+
+export interface FollowUpVerdictWord {
+  line: number;
+  caseId: string;
+  roleId: string;
+  word: string;
+  text: string;
+}
+
+/** T114: 답변 뒤 방향은 결과 화면에서 공개하므로 FOLLOWUP 발언(message)에 찬성·반대·가결·부결
+ * 같은 방향 단어가 있으면 안 된다. 기준은 0건. 일반 명사로 쓴 문장은 사람이 읽어 판정한다. */
+const FOLLOWUP_VERDICT_WORDS = ['찬성', '반대', '가결', '부결'] as const;
+
+export function findFollowUpVerdictWords(rows: EvalRow[]): FollowUpVerdictWord[] {
+  const found: FollowUpVerdictWord[] = [];
+  rows.forEach((row, index) => {
+    if (row.stage !== 'FOLLOWUP' || row.status !== 'answered' || !row.message) return;
+    for (const word of FOLLOWUP_VERDICT_WORDS) {
+      if (row.message.includes(word)) {
+        found.push({ line: index + 1, caseId: row.caseId, roleId: row.roleId, word, text: row.message });
+      }
+    }
+  });
+  return found;
 }
 
 /** T63: OPINIONS 단계 stance 누락(schema가 필수라 실제로는 0건이어야 정상, answered 행 기준). */
@@ -693,6 +739,7 @@ function runCheck(files: string[]): void {
     const affectedRows = new Set(violations.map((v) => v.line)).size;
     const mentions = findEvidenceIdMentions(rows);
     const missingStance = findMissingStance(rows);
+    const verdictWords = findFollowUpVerdictWords(rows);
     const agreement = stanceVoteAgreement(rows);
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
@@ -704,6 +751,7 @@ function runCheck(files: string[]): void {
         ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
         ` · 문장 속 자료 ID(E\\d) 잔존 ${mentions.length}건` +
         ` · stance 누락 ${missingStance.length}건` +
+        ` · FOLLOWUP 발언 방향 단어 ${verdictWords.length}건` +
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );
@@ -728,6 +776,9 @@ function runCheck(files: string[]): void {
         `    [OPINIONS 출발 성향] ${r.role} · FOR ${r.distribution.FOR} · AGAINST ${r.distribution.AGAINST}` +
           ` · UNDECIDED ${r.distribution.UNDECIDED} · 의도 일치 ${r.match}/${r.total}`,
       );
+    }
+    for (const w of verdictWords) {
+      console.log(`    [FOLLOWUP 방향 단어] ${w.line} ${w.caseId}/${w.roleId} '${w.word}': ${w.text}`);
     }
     for (const row of missingStance) {
       console.log(`    [stance 누락] ${row.caseId}/${row.roleId}/${row.stage}`);

@@ -764,14 +764,33 @@
   position: relative;
 }
 
-.result-seat--exec > :not(.result-seat__title):not(.result-seat__sealed) {
+/* 직함 + 봉인 표시 묶음 — 봉인 표시가 직함 폭을 따라간다(고정 left 없음). */
+.result-seat__head {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 168px;
+}
+
+.result-seat__head > .result-seat__title {
+  min-width: 0;
+}
+
+@media (max-width: 1280px) {
+  .result-seat__head {
+    min-width: 128px;
+  }
+}
+
+.result-seat--exec > :not(.result-seat__head) {
   animation: result-reveal-fade var(--reveal-flip) ease-out both;
   animation-delay: var(--reveal-delay, 0s);
 }
 
 .result-seat__sealed {
   position: absolute;
-  left: calc(168px + var(--space-1));
+  left: 100%;
+  margin-left: var(--space-1);
+  white-space: nowrap;
   font-family: var(--font-label);
   font-size: var(--fs-meta);
   color: var(--ink-muted);

@@ -89,7 +89,9 @@ h1,
 /* T114: 결과 화면 임원 표 순차 공개(.reveal-anim)는 운영자 skip(클릭·키 입력, ResultScreen이
    <html data-result-skip="true">를 켠다)이면 지연·재생 시간 없이 즉시 끝 상태로 간다.
    prefers-reduced-motion은 위 전역 규칙이 같은 효과를 낸다. */
-[data-result-skip='true'] .reveal-anim {
+[data-result-skip='true'] .reveal-anim,
+[data-result-skip='true'] .result-seat--exec > *,
+[data-result-skip='true'] .result-seat__sealed {
   animation-duration: 0.01ms !important;
   animation-delay: 0s !important;
 }
