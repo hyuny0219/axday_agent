@@ -213,7 +213,7 @@
    주황 채움(.cta 공용 색·글꼴·모서리)으로 — 크기만 이 줄에 맞춘다. */
 .discuss-screen__submit-row .assistant-panel__toggle {
   min-height: 60px;
-  width: 225px;
+  width: 270px;
   padding: 0;
   font-size: 21px;
   letter-spacing: 0.04em;
@@ -222,21 +222,21 @@
 @media (max-width: 1280px) {
   .discuss-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
-    width: 180px;
+    width: 205px;
     font-size: 17px;
   }
 }
 
 .discuss-screen__submit-row > .cta {
   min-height: 70px;
-  width: 250px;
+  width: 300px;
   font-size: 25px;
 }
 
 @media (max-width: 1280px) {
   .discuss-screen__submit-row > .cta {
     min-height: 56px;
-    width: 200px;
+    width: 235px;
     font-size: 20px;
   }
 }
