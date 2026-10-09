@@ -53,9 +53,17 @@ test('브리핑 오른쪽 열이 사건·결정 질문 → SITREP/PROPOSAL/UNKNO
     // 카드 안 어디에도 자료 ID가 없다 — 접두("E1 · ")뿐 아니라 원문 속 언급("E1과 다르다")도
     // 참가자에게 ID를 노출한다(PR #10 Codex 29차 검토 P2).
     await expect(card).not.toContainText(/E[1-4]/);
+    // T105: 해석 속 핵심 수치·사실이 굵게 표시되되 카드당 4곳 이하, 제목에는 없다.
+    const markCount = await card.locator('.evidence-card__insight mark.key-term').count();
+    expect(markCount, `${id} 해석에 강조가 없거나 너무 많다`).toBeGreaterThanOrEqual(1);
+    expect(markCount, `${id} 해석 강조가 4곳을 넘는다`).toBeLessThanOrEqual(4);
+    await expect(card.locator('.evidence-card__heading mark')).toHaveCount(0);
     // 해석 한 문장은 줄 클램프 없이 마지막 글자까지 카드 안에 보인다(T99: 원문은 카드에서 뺐다).
     const tail = await card.locator('.evidence-card__insight').evaluate((el) => {
-      const text = el.firstChild as Text;
+      // 핵심 말 강조(T105)로 마지막 조각이 <mark> 안일 수 있어 마지막 텍스트 노드를 찾는다.
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let text = walker.nextNode() as Text;
+      for (let next = walker.nextNode(); next; next = walker.nextNode()) text = next as Text;
       const range = document.createRange();
       range.setStart(text, text.length - 1);
       range.setEnd(text, text.length);
