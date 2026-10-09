@@ -488,13 +488,14 @@ const HUD_VIEWPORTS: Array<[number, number]> = [
   [1280, 720],
 ];
 
-async function expectHudFitsAtAllViewports(
+async function expectHudFits(
   page: Page,
   label: string,
   textareaId: string,
   submitIds: string[],
+  [width, height]: [number, number],
 ) {
-  for (const [width, height] of HUD_VIEWPORTS) {
+  {
     await page.setViewportSize({ width, height });
     const where = `${label} ${width}×${height}`;
     // 리사이즈 직후 레이아웃·맞춤 배율이 반영될 때까지 기다린다(시간 의존 아님: 제출 줄이 안정될 때까지 폴링).
@@ -521,6 +522,10 @@ async function expectHudFitsAtAllViewports(
         const conflicts = document.querySelector('[data-testid="condition-chips-conflicts"]');
         const area = document.querySelector(`[data-testid="${textarea}"]`);
         return {
+          more: document.querySelector('[data-testid="condition-chips-more"]')?.textContent ?? null,
+          listMore: list?.getAttribute('data-more') ?? null,
+          listScrollWidth: list?.scrollWidth ?? 0,
+          listClientWidth: list?.clientWidth ?? 0,
           chipCount: chipEls.length,
           chipHeight: chipEls[0]?.getBoundingClientRect().height ?? 0,
           sameRow: new Set(tops).size === 1,
@@ -561,6 +566,19 @@ async function expectHudFitsAtAllViewports(
       { ids: submitIds, textarea: textareaId },
     );
     expect(hud.chipCount, `${where}: 조건 칩 5개`).toBe(5);
+    // 가려진 칩 표시("+N")와 페이드는 칩 줄이 실제로 넘칠 때만 켜진다(칩이 전부 보이면 둘 다 없음,
+    // 넘치면 +N과 페이드가 있음). 칩 줄 안의 위치가 아니라 화면 좌표로 센 값이어야 한다.
+    if (hud.listScrollWidth <= hud.listClientWidth + 1) {
+      expect(hud.more, `${where}: 칩이 전부 보이는데 +N이 떠 있다`).toBe('');
+      expect(hud.listMore, `${where}: 칩이 전부 보이는데 페이드가 켜져 있다`).toBe('false');
+    } else {
+      expect(hud.more, `${where}: 칩이 넘치는데 +N이 없다`).toMatch(/^\+[1-5]$/);
+      expect(hud.listMore, `${where}: 칩이 넘치는데 페이드가 없다`).toBe('true');
+    }
+    if (width === 1920 && label === 'DISCUSS') {
+      // 1920 DISCUSS는 칩 5개가 전부 보인다(회귀 방지: 목록 왼쪽 오프셋이 +N을 부풀렸었다).
+      expect(hud.listScrollWidth, `${where}: 칩이 전부 보여야 한다`).toBeLessThanOrEqual(hud.listClientWidth + 1);
+    }
     expect(hud.sameRow, `${where}: 조건 칩이 한 줄에 있어야 한다`).toBe(true);
     expect(hud.listHeight, `${where}: 칩 컨테이너 높이가 칩 한 줄(두 줄 미만)`).toBeLessThan(hud.chipHeight * 2);
     expect(hud.conflictTruncated, `${where}: 충돌 안내가 말줄임 없이 읽혀야 한다`).toBe(false);
@@ -601,9 +619,19 @@ async function makeFiveConditionsWithConflict(page: Page, fill: (text: string) =
   }).toPass({ timeout: 10_000 });
 }
 
-test('내 의견·내 답변 HUD: 여섯 뷰포트에서 조건 5개 + 300자 + 충돌 안내에도 제출 줄이 잘리지 않고 조건 칩은 한 줄이다', async ({
+test('내 의견·내 답변 HUD: 일곱 뷰포트에서 조건 5개 + 300자 + 충돌 안내에도 제출 줄이 잘리지 않고 조건 칩은 한 줄이다', async ({
   page,
 }) => {
+  // 크기마다 새로 연다: 설득 현황판 기본 펼침/접힘(높이 ≤800은 접힘)과 무대 열 폭은 첫 렌더 크기로
+  // 정해지므로, 1920에서 연 뒤 크기만 바꾸면 낮은 화면의 시작 상태를 못 본다.
+  test.setTimeout(300_000);
+  for (const viewport of HUD_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport[0], height: viewport[1] });
+    await runHudCheck(page, viewport);
+  }
+});
+
+async function runHudCheck(page: Page, viewport: [number, number]) {
   await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByRole('button', { name: '확인', exact: true }).click();
@@ -616,10 +644,7 @@ test('내 의견·내 답변 HUD: 여섯 뷰포트에서 조건 5개 + 300자 + 
 
   const draft = page.getByTestId('draft-editor-textarea');
   await makeFiveConditionsWithConflict(page, (text) => draft.fill(text));
-  await expectHudFitsAtAllViewports(page, 'DISCUSS', 'draft-editor-textarea', [
-    'assistant-toggle',
-    'submit-opinion',
-  ]);
+  await expectHudFits(page, 'DISCUSS', 'draft-editor-textarea', ['assistant-toggle', 'submit-opinion'], viewport);
 
   await draft.fill('');
   await page.getByTestId('phrase-card-P1').click();
@@ -631,9 +656,11 @@ test('내 의견·내 답변 HUD: 여섯 뷰포트에서 조건 5개 + 300자 + 
 
   const followup = page.getByTestId('followup-textarea');
   await makeFiveConditionsWithConflict(page, (text) => followup.fill(text));
-  await expectHudFitsAtAllViewports(page, 'REACTIONS(다시 답하기)', 'followup-textarea', [
-    'assistant-toggle',
-    'keep-previous-answer',
-    'submit-followup',
-  ]);
-});
+  await expectHudFits(
+    page,
+    'REACTIONS(다시 답하기)',
+    'followup-textarea',
+    ['assistant-toggle', 'keep-previous-answer', 'submit-followup'],
+    viewport,
+  );
+}

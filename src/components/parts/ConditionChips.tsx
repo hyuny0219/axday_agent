@@ -8,6 +8,7 @@
 // newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import { countHiddenChips } from './chipOverflow';
 import type { ConflictPair, Scenario } from '../../content/types';
 
 export interface ConditionChipsProps {
@@ -61,10 +62,10 @@ export function ConditionChips({
       setHiddenCount(0);
       return;
     }
-    const right = el.scrollLeft + el.clientWidth;
-    const hidden = [...el.querySelectorAll<HTMLElement>('.condition-chip')].filter(
-      (chip) => chip.offsetLeft + chip.offsetWidth > right + 1,
-    ).length;
+    const hidden = countHiddenChips(
+      el.getBoundingClientRect(),
+      [...el.querySelectorAll<HTMLElement>('.condition-chip')].map((chip) => chip.getBoundingClientRect()),
+    );
     setHiddenCount(hidden);
   };
   useLayoutEffect(() => {
