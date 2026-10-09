@@ -274,6 +274,13 @@ describe('declaredDirection(T115)', () => {
       ['처음에는 반대했지만 지금은 찬성합니다.', 'FOR'], ['최종적으로는 찬성합니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('2음절 필요조건도 조건 표지(Codex 95차)', () => {
+    for (const [text, expected] of [
+      ['보완을 해야 찬성합니다.', null], ['허가가 나야 반대하겠습니다.', null], ['자료가 와야 찬성할 수 있습니다.', null],
+      ['직접 봐야 찬성하겠습니다.', null], ['찬성해야 합니다.', 'FOR'], ['찬성 해야 합니다.', 'FOR'], ['반대해야만 합니다.', 'AGAINST'],
+      ['이것은 찬성이야.', null], ['조건이 갖춰져야 찬성할 수 있습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

@@ -369,14 +369,18 @@ const CONDITIONAL_CLAUSE_MARKERS =
 const TIME_WHEN = /([가-힣])\s?때(?:에는|에|는|만|라도)?(?=\s|,|$)/g;
 
 /** 필요조건 연결 일반형: 어절이 -아야/-어야/-여야/-해야/-돼야 … (+만·지)로 끝나면 조건 표지다("기록을 남겨야 찬성합니다"). 방향 동사 자체의
- * -해야("찬성해야 합니다")는 선언이라 제외한다. ㅏ·ㅐ·ㅓ·ㅔ·ㅕ·ㅘ·ㅙ·ㅝ·ㅞ 모음 + 야이고 3자 이상인 어절만 센다. */
+ * -해야("찬성해야 합니다")는 선언이라 제외한다. ㅏ·ㅐ·ㅓ·ㅔ·ㅕ·ㅘ·ㅙ·ㅝ·ㅞ 모음 + 야인 어절(2음절 축약 활용 포함)을 센다. */
 const NEEDED_VOWELS = new Set([0, 1, 4, 5, 6, 9, 10, 14, 15]);
 const DIRECTION_SELF_NEEDED = /^(?:찬성|반대|승인|부결|가결|통과|반려|기각|거부)(?:해|시켜|하여)야/;
 
 function hasNeededCondition(sentence: string): boolean {
-  for (const raw of sentence.split(/\s+/)) {
-    const word = raw.replace(/[,、]+$/, '').replace(/(?:만|지)$/, '');
-    if (word.length < 3 || !word.endsWith('야') || DIRECTION_SELF_NEEDED.test(word)) continue;
+  const words = sentence.split(/\s+/);
+  for (let i = 0; i < words.length; i += 1) {
+    const word = (words[i] ?? '').replace(/[,、]+$/, '').replace(/(?:만|지)$/, '');
+    // 2음절 축약 활용(해야·나야·가야·와야·봐야·써야·돼야·내야·사야)도 조건 표지다. 단독 "야"·감탄 "아야"·서술격 "이야"(ㅣ 모음)는 제외한다.
+    if (word.length < 2 || !word.endsWith('야') || word === '아야' || DIRECTION_SELF_NEEDED.test(word)) continue;
+    // 방향 명사 바로 뒤에 띄어 쓴 당위형 "찬성 해야 합니다"는 선언이다.
+    if (word === '해야' && /^(?:찬성|반대|승인|부결|가결|통과|반려|기각|거부)$/.test((words[i - 1] ?? '').replace(/[,、]+$/, ''))) continue;
     const prev = word.charCodeAt(word.length - 2);
     if (prev >= 0xac00 && prev <= 0xd7a3 && NEEDED_VOWELS.has(Math.floor((prev - 0xac00) / 28) % 21)) return true;
   }
