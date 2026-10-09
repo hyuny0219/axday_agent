@@ -268,20 +268,26 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     );
   });
 
-  it('문구만 고르면 힌트가 (0/3)으로 바뀐다', () => {
+  it('문구만 고르면 힌트가 비서실장을 한 번 써 보라고 바뀐다', () => {
     renderDiscuss([]);
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
     expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
-      'AI 비서실장을 먼저 써 보세요 (0/3)',
+      'AI 비서실장을 한 번 써 보세요',
     );
   });
 
-  it('두 개만 써도 (2/3)이고 전달은 계속 막혀 있다', () => {
-    renderDiscuss([entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW')]);
+  it('한 기능만 써도 전달이 열리고 힌트가 사라진다(T109)', () => {
+    renderDiscuss([entry('OPINION_SUMMARY')]);
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
-    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent('(2/3)');
-    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
+    expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
+  });
+
+  it('한 기능만 실패 기록이어도 전달이 열린다(T109)', () => {
+    renderDiscuss([entry('DRAFT_REFINE', true)]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
   });
 
   it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 힌트가 사라진다', () => {

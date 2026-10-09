@@ -144,12 +144,24 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['summary']) }} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     const intro = screen.getByTestId('assistant-intro');
-    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요');
+    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)');
     expect(intro).toHaveTextContent('임원 네 명 말을 한 줄씩 정리합니다');
     expect(intro).toHaveTextContent('지금 쓴 발언을 더 또렷하게 다듬어 줍니다');
     expect(screen.getByTestId('assistant-check-summary')).toHaveTextContent('☑');
     expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☐');
     expect(screen.getByTestId('assistant-done-summary')).toHaveTextContent('완료');
+    expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
+  });
+
+  it('한 기능만 써도 완료 문구가 뜨고, 하나도 안 쓰면 안 뜬다(T109)', () => {
+    const { unmount } = render(
+      <AssistantPanel {...base()} requiredFeatures={{ used: new Set(['compare']) }} />,
+    );
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
+    unmount();
+    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
     expect(screen.queryByTestId('assistant-intro-done')).not.toBeInTheDocument();
   });
 
@@ -176,11 +188,11 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('조건 추천');
   });
 
-  it('세 기능이 채워지는 순간 onAllUsed가 한 번 불린다', () => {
+  it('한 기능이 채워지는 순간 onAllUsed가 한 번 불린다(T109)', () => {
     const onAllUsed = vi.fn();
     const props = base();
     const { rerender } = render(
-      <AssistantPanel {...props} requiredFeatures={{ used: new Set(['summary']), onAllUsed }} />,
+      <AssistantPanel {...props} requiredFeatures={{ used: new Set(), onAllUsed }} />,
     );
     expect(onAllUsed).not.toHaveBeenCalled();
     rerender(

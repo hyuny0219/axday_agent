@@ -34,7 +34,6 @@ import {
 } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import {
-  ASSISTANT_FEATURE_ORDER,
   assistantFeaturesUsed,
   type AssistantActionEvent,
 } from '../../domain/assistantLog';
@@ -70,7 +69,7 @@ export interface DiscussScreenProps {
   side: 'FOR' | 'AGAINST' | null;
   onChooseSide: (next: 'FOR' | 'AGAINST') => void;
   onSubmit: (payload: DiscussSubmitPayload) => void;
-  /** 이번 세션의 AI 비서실장 사용 기록(session.assistantActions). 세 기능을 한 번씩
+  /** 이번 세션의 AI 비서실장 사용 기록(session.assistantActions). 한 기능 이상을
    * 써 봤는지 판정해 '의견 전달'을 여는 데 쓴다(T97). */
   assistantActions?: readonly string[];
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
@@ -169,13 +168,13 @@ export function DiscussScreen({
   );
 
   const showNoMatchHint = draft.draftText.trim() !== '' && proposedConditionIds.length === 0;
-  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견
-  // 전달 순서. 실패·연결 지연 안내를 본 것도 사용으로 센다(assistantFeaturesUsed).
+  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 한 가지 이상(T109에서 세 가지 필수를
+  // 완화) → 의견 전달 순서. 실패·연결 지연 안내를 본 것도 사용으로 센다(assistantFeaturesUsed).
   const assistantUsed = useMemo(
     () => assistantFeaturesUsed(assistantActions, 'DISCUSS'),
     [assistantActions],
   );
-  const assistantDone = assistantUsed.size >= ASSISTANT_FEATURE_ORDER.length;
+  const assistantDone = assistantUsed.size >= 1;
   // PR #20 Codex 35차 P2-1: 입장을 고르지 않고 직접 쓴 글로 순서를 건너뛰지 못하게 입장 선택을
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
@@ -416,7 +415,7 @@ export function DiscussScreen({
               {side === null
                 ? '먼저 입장을 골라 주세요'
                 : draftReady
-                ? `AI 비서실장을 먼저 써 보세요 (${assistantUsed.size}/${ASSISTANT_FEATURE_ORDER.length})`
+                ? 'AI 비서실장을 한 번 써 보세요'
                 : '추천 문구를 고르거나 직접 써 주세요'}
             </span>
           )}
