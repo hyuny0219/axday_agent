@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T109 | 진행 중 | AI 비서실장 세 기능 중 **하나만 써도** 의견 전달이 열리게(T97 완화, 2026-10-09 사용자 지시). 팝업 소개·힌트·코치·가이드 문구 통일. 상세는 아래 T109 카드 |
 | T108 | 진행 중 | 버튼 디자인을 E안(라벨 테이프)에서 **D안 '밀랍 봉인 봉투'**로 변경(2026-10-09 사용자 재선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp D 보드). 상세는 아래 T108 카드 |
 | T107 | 완료(T108에서 D안으로 대체) | 버튼 디자인 E안 '라벨 테이프' 전 화면 적용(주황 유지, 양끝 사선 컷·위아래 가는 검은 선·펀치 구멍; 보조=테두리, 잠김=점선)(2026-10-09 사용자 선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp E 보드). 상세는 아래 T107 카드 |
 | T106 | 완료 | 코치 말풍선을 닫아도 작은 '안내' 아이콘으로 남겨 언제든 다시 볼 수 있게(2026-10-09 사용자 지시). 상세는 아래 T106 카드 |
@@ -89,6 +90,22 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T109 비서실장 한 기능만 써도 의견 전달 활성(T97 완화)
+
+- 목표(2026-10-09 사용자 지시): "AI 비서실장에서 하나만 사용해도 의견 전달 버튼이 활성화되도록 변경해 줘." T97의 "세 기능 한 번씩" 필수를 "**한 가지 이상**"으로 완화한다. 입장 선택·문구 1개 이상·비서실장 1회 이상 → 전달 활성.
+- 읽을 것: `src/components/screens/DiscussScreen.tsx`(assistantDone·canSubmit·힌트 "(N/3)"·toggleLocked), `src/components/parts/AssistantPanel.tsx`(`assistant-intro` 소개·체크·`assistant-intro-done` 완료 문구·`requiredFeatures`), `src/domain/assistantLog.ts`(`assistantFeaturesUsed`), `src/content/coach.ts`(DISCUSS 안내 "③ AI 비서실장을 열어 세 가지 한 번씩"), `docs/design/DESIGN_SPEC.md` T97·T104 단락, `docs/FACILITATOR_GUIDE.md`, `tests/components/{DiscussScreen,AssistantPanel,Coach}.test.tsx`, `tests/domain/assistantLog.test.ts`, `e2e/assistant-gate.spec.ts`·`e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`).
+- 만들 것:
+  1. **판정**: `assistantDone = assistantUsed.size >= 1`(세 개 다 쓸 필요 없음). 전달 버튼 힌트(sr-only·코치 전 힌트 등 남아 있는 문구)는 "AI 비서실장을 한 번 써 보세요"로. 비서실장 버튼 잠금(문구 전)은 그대로.
+  2. **팝업 소개**: 제목 "AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)", 체크리스트 3줄은 유지(쓴 것은 ☑), 완료 문구(`assistant-intro-done`) "이제 팝업을 닫고 의견을 전달하세요"는 **1개 이상** 쓰면 표시. 닫기 하이라이트(`closeGuide`)도 1개 이상 기준.
+  3. **코치·문서**: DISCUSS 안내 ③ "AI 비서실장을 열어 한 가지 이상 써 봅니다(셋 다 써도 좋아요)". DESIGN_SPEC T97 단락에 "T109에서 1개 이상으로 완화" 주석 + 짧은 T109 단락, FACILITATOR_GUIDE 발언 행 갱신, TASKS 행.
+  4. **테스트·e2e**: 단위(1개 사용 → 전달 활성, 0개 → 잠김, 완료 문구 1개 기준), `e2e/assistant-gate.spec.ts`를 새 규칙으로(한 기능만 쓰고 전달 성공 1건 추가, 기존 "세 가지" 단언 수정), 공용 헬퍼 `tryAllAssistantFeatures`는 그대로 두되 새 `tryOneAssistantFeature` 추가 가능. 다른 e2e는 헬퍼 그대로라 영향 없음.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 입장 선택·문구 필수 잠금 완화, 서버 변경, 영문.
+- 완료 확인: `npm run check`, e2e 1080·720 각각(assistant-gate·discuss·coach·screenshots) PASS.
+- 크기: S.
 
 ---
 
