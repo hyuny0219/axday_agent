@@ -8,10 +8,11 @@
 //  2) 대신 서술격·"에 서/속"·"으로" 연결이면 선언으로 보고, 바로 뒤가 의문·조건·유보·열거형
 //     (LEAVE_OPEN: 인지·이라면·일 수도·에서 말씀 …)이면 부정 전방탐색으로 제외한다.
 //  3) 뒤에 명사가 이어지는 수식형("승인 쪽 조건", "찬성 편 임원")은 쪽/편 바로 뒤가 서술격이 아니므로 걸리지 않는다.
-//  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴에는 절 단위 보조 규칙을 쓴다(isInQuestionClause).
-//     절 경계는 문장 부호와 쉼표뿐(연결 어미는 질문 술어 안에도 있어 경계가 아니다). 매칭된 서술 꼴이 평서
-//     종결 어미로 끝나고 바로 뒤가 "?"가 아니면 뒤에 질문이 이어져도 선언으로 확정하고, 종결 어미가 아니면
-//     가장 가까운 경계까지의 절이 질문(?·까·까요·는지요)일 때만 제외한다.
+//  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴에는 절 단위 보조 규칙을 쓰고(isInQuestionClause),
+//     종결 판정은 어미 목록이 아니라 글자 종류로 한다: 절 경계는 문장 부호·쉼표뿐이고, 매칭이 끝나는 어절부터
+//     처음 만나는 종결 어절이 의문 어미(까·까요·나요·가요·는지요)이거나 바로 뒤가 "?"이면 질문(제외),
+//     [다요죠네](만)로 끝나면 선언이다. 연결 어미는 경계가 아니다. "쪽이/편이 + 공백"은 주격 조사라
+//     뒤 어절이 맞·옳·낫·타당·합리·좋·우세·유리·적절로 시작할 때만 선언으로 본다.
 //  5) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
 //     "걸려야 하는 문장"/"중립 문장" 목록에 먼저 추가한 뒤 패턴을 고친다. 찬성·반대 단어 자체를 쓴 문장은
 //     (의문형이라도) 단어 패턴이 걸린다 — 의도된 엄격함.
@@ -49,8 +50,8 @@ export const VERDICT_PATTERNS: ReadonlyArray<{ pattern: RegExp; why: string }> =
   { pattern: /손을 들/, why: '"손을 들다"는 표 행사 표현' },
   { pattern: /승인(으로|을)? ?(결정|정)했/, why: '"승인으로 정했다" 꼴의 결론 선언(찬성·반대·부결은 단어 패턴이 잡는다)' },
   {
-    pattern: new RegExp(`(?:승인|찬성|반대|가결|부결|통과|반려|기각|이사님|참가자|그) ?(?:쪽|편)(?!${LEAVE_OPEN})(?:이|입|일|인|임|에 가깝|에 서|에 섭|에 속|으로)`),
-    why: '"○○ 쪽입니다·쪽이라고 하겠습니다·편으로 답하겠습니다·쪽임을 밝힙니다" 꼴의 명사형 입장 선언. 쪽·편 바로 뒤가 서술격(이·입·일·인·임)·"에 서/속"·"으로"이면 선언으로 보고, 의문·조건·유보형(LEAVE_OPEN)이나 뒤에 명사가 이어지는 수식형("쪽 조건")은 제외한다',
+    pattern: new RegExp(`(?:승인|찬성|반대|가결|부결|통과|반려|기각|이사님|참가자|그) ?(?:쪽|편)(?!${LEAVE_OPEN})(?:이(?! )|이 (?=맞|옳|낫|타당|합리|좋|우세|유리|적절)|입|일|인|임|에 가깝|에 서|에 섭|에 속|으로)`),
+    why: '"○○ 쪽입니다·쪽이라고 하겠습니다·편으로 답하겠습니다·쪽임을 밝힙니다" 꼴의 명사형 입장 선언. 쪽·편 바로 뒤가 서술격(이·입·일·인·임; "쪽이 "+공백은 주격 조사라 뒤 어절이 맞·옳·낫·타당·합리·좋·우세·유리·적절로 시작할 때만)·"에 서/속"·"으로"이면 선언으로 보고, 의문·조건·유보형(LEAVE_OPEN)이나 뒤에 명사가 이어지는 수식형("쪽 조건")은 제외한다',
   },
   {
     pattern: new RegExp('(?:승인|찬성|반대|가결|부결)에 가깝(?!다면|은지|운지|지는|다고 보기|다고 하기|기는|지 않|습니까)|(?:승인|찬성|반대|가결|부결)에 가까운 (?:입장|쪽|편)'),
@@ -73,7 +74,7 @@ export function findVerdictWords(text: string): string[] {
     const isPlainWord = PLAIN_WORD_SOURCE.test(pattern.source);
     const scan = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
     for (const match of text.matchAll(scan)) {
-      if (!isPlainWord && isInQuestionClause(text, match.index ?? 0, match[0].length)) continue;
+      if (!isPlainWord && isInQuestionClause(text, match.index ?? 0, (match.index ?? 0) + match[0].length)) continue;
       found.push(match[0]);
       break;
     }
@@ -83,30 +84,34 @@ export function findVerdictWords(text: string): string[] {
 
 const PLAIN_WORD_SOURCE = /^[가-힣|]+$/;
 
-/** 평서 종결 어미 — 매칭된 서술 꼴이 이 어미로 끝나고 바로 뒤가 "?"가 아니면 뒤에 무엇이 오든 선언이다. */
-const DECLARATIVE_ENDING =
-  /입니다만|습니다만|입니다|습니다|이다|이죠|이네요|이에요|이고요|이군요|이겠습니다|하겠습니다|드리겠습니다|밝힙니다/g;
+/** 어절이 질문으로 끝나는가(까·까요·나요·가요·는지요). */
+const QUESTION_WORD_END = /(?:까|까요|나요|가요|는지요)$/;
+/** 어절이 평서 종결 글자(다·요·죠·네, 뒤에 '만'이 붙어도 됨)로 끝나는가. 어미를 하나씩 열거하지 않는다. */
+const DECLARATIVE_WORD_END = /[다요죠네](?:만)?$/;
 
-/** 질문 절 보조 규칙(어미 열거 LEAVE_OPEN만으로는 의문형이 계속 샌다).
- *  1) 절 경계는 문장 부호(. ! ? … 줄바꿈)와 쉼표(, 、)뿐이다. 연결 어미(-고·-는데…)는 경계가 아니다 —
- *     질문 술어 안에도 흔하다("승인 쪽이라고 생각하고 계십니까?").
- *  2) 종결 확정: 매칭된 서술 꼴 바로 뒤(12자 안)에 평서 종결 어미가 있고 그 다음 글자가 "?"가 아니면
- *     뒤에 질문이 이어져도 선언이다("승인 쪽입니다만 …하실 겁니까?", "승인 쪽이라고 하겠습니다 괜찮으시겠습니까?").
- *     어미 바로 뒤에 "?"가 붙으면("승인 쪽이죠?") 질문이다.
- *  3) 종결 어미로 끝나지 않는 매칭("승인 쪽이라고", "승인 쪽인")은 가장 가까운 경계까지의 절이 "?"로
- *     끝나거나 까·까요·는지요로 끝나면 질문으로 보고 제외한다. */
-function isInQuestionClause(text: string, from: number, matchLength: number): boolean {
+/** 질문 절 보조 규칙(어미 열거 LEAVE_OPEN만으로는 의문형이 계속 샌다) — 종결 판정은 글자 종류로 한다.
+ *  절 경계는 문장 부호(. ! ? … 줄바꿈)와 쉼표(, 、)뿐이다. 매칭이 끝나는 어절부터 공백 단위로 읽으며
+ *  처음 만나는 "종결 어절"로 판단한다: 의문 어절(까·까요·나요·가요·는지요)이거나 바로 뒤가 "?"이면 질문(제외),
+ *  평서 종결 글자([다요죠네](만))이면 뒤에 무엇이 오든 선언(걸림). 종결 어절 없이 절이 "?"로 끝나면 질문,
+ *  아니면 선언이다. 연결 어미(-고·-는데…)는 경계가 아니라 그냥 비종결 어절이다. */
+function isInQuestionClause(text: string, matchStart: number, matchEnd: number): boolean {
   const boundary = /[.!?…,、\n]/g;
-  boundary.lastIndex = from;
+  boundary.lastIndex = matchStart;
   const end = boundary.exec(text);
-  const segment = text.slice(from, end ? end.index : text.length);
-  for (const ending of segment.matchAll(DECLARATIVE_ENDING)) {
-    const at = ending.index ?? 0;
-    if (at > matchLength + 12) break;
-    if (segment[at + ending[0].length] !== '?') return false;
+  const segEnd = end ? end.index : text.length;
+  let position = Math.max(text.lastIndexOf(' ', matchEnd - 1) + 1, matchStart);
+  while (position < segEnd) {
+    while (position < segEnd && text[position] === ' ') position += 1;
+    let wordEnd = position;
+    while (wordEnd < segEnd && text[wordEnd] !== ' ') wordEnd += 1;
+    const word = text.slice(position, wordEnd);
+    if (word.length > 0) {
+      if (QUESTION_WORD_END.test(word) || (wordEnd === segEnd && text[wordEnd] === '?')) return true;
+      if (DECLARATIVE_WORD_END.test(word)) return false;
+    }
+    position = wordEnd;
   }
-  if (end && text[end.index] === '?') return true;
-  return /(까|까요|는지요)$/.test(segment.trim());
+  return text[segEnd] === '?';
 }
 
 /** 서버가 방향 단어가 든 FOLLOWUP 발언을 대체할 때 쓰는 역할별 한 문장(영문 없음). */
