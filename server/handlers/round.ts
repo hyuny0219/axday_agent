@@ -18,6 +18,7 @@ import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
 import {
   FOLLOWUP_ANSWERED_RULE,
+  FOLLOWUP_NO_VERDICT_RULE,
   REACTIONS_FIRST_PASS_RULE,
   buildCommonGuardrails,
   buildMeetingRecordBlock,
@@ -133,7 +134,9 @@ function stageInstruction(stage: RoundRequest['stage']): string {
       return (
         '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
         ' 보완하십시오. ' +
-        FOLLOWUP_ANSWERED_RULE
+        FOLLOWUP_ANSWERED_RULE +
+        ' ' +
+        FOLLOWUP_NO_VERDICT_RULE
       );
   }
 }

@@ -112,8 +112,9 @@ export function MotionScreen({
           stances={stances}
           mode={mode ?? 'scripted'}
           statements={statements}
+          sealed
         />
-        <ExecStanceList stances={stances} />
+        <ExecStanceList stances={stances} sealed />
         {onRetryFailedRoles && failedRoleIds.length > 0 && (
           <button
             type="button"

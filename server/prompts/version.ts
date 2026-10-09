@@ -69,4 +69,10 @@
 // 더했다(VOTE_UNANSWERED_RULE, followUpAnswered가 false일 때만 붙는다). 요청 스키마에
 // followUpAnswered(round·vote 모두 선택 필드, 생략 시 기존 동작)를 추가했다. 응답 스키마는
 // 바뀌지 않았다. 전후 비교는 docs/eval/tuning-v12.md(mock 기준 요약, live 실측은 승인 후).
-export const PROMPT_VERSION = 'v12';
+// v13(2026-10-09, T114): 사용자 지시 "답하기 후 AI 임원들의 찬반 방향을 몰라야 결과가
+// 더 극적". 추가 질문에 답한 뒤(MOTION·VOTE)에는 화면이 임원 방향을 봉인하고 결과에서
+// 한 장씩 공개하므로, FOLLOWUP 지시에 "답변에 대한 평가·소회만 말하고 최종 찬반·표결
+// 방향을 문장으로 밝히지 말 것"(common.ts의 FOLLOWUP_NO_VERDICT_RULE)을 더했다. 응답
+// 스키마(stance 포함)는 그대로 — 화면에서만 가린다. 이 규칙 외 변경 없음.
+// 전후 비교 계획은 docs/eval/tuning-v13.md(live 실측은 사용자 승인 뒤).
+export const PROMPT_VERSION = 'v13';

@@ -12,7 +12,7 @@
 // 안내를 띄운다. live 호출 여부는 describeAdditionalHelp가 "(실제 AI 호출)" 접미어로
 // 구분한다(T31).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Ballot, MemberId, Session, Stance } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
@@ -29,8 +29,10 @@ import {
 import { buildMinutes, type RoundLogEntry } from '../minutes';
 import { MinutesPanel } from '../parts/MinutesPanel';
 import {
+  ALL_EXEC_REVEALED_SECONDS,
   PERSUASION_STAMP_DELAY_SECONDS,
   STAMP_DELAY_SECONDS,
+  execRevealDelay,
   computePersuasion,
   computeResultStamp,
 } from '../resultStamp';
@@ -68,6 +70,9 @@ const VOTE_ICON: Partial<Record<Ballot['vote'], string>> = {
   NO: '✕',
   UNCAST: '–',
 };
+
+/** 집계 숫자·결론 문구는 임원 네 장이 다 뒤집힌 뒤에 나온다(T114). */
+const finalRevealStyle: CSSProperties = { animationDelay: `${ALL_EXEC_REVEALED_SECONDS}s` };
 
 export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScreenProps) {
   const finalMotion = session.finalMotion;
@@ -146,6 +151,16 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 클릭·키 입력으로 도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
   // 뒤에는 리스너를 더 둘 이유가 없어 정리한다.
   const [skip, setSkip] = useState(false);
+  // T114: 임원 표 순차 공개는 무대(StageBand)에도 있어 이 화면 밖 DOM까지 닿아야 한다 —
+  // skip이면 <html data-result-skip>을 켜고(base.css가 지연을 0으로) 떠날 때 지운다.
+  useEffect(() => {
+    if (skip) {
+      document.documentElement.dataset.resultSkip = 'true';
+    }
+    return () => {
+      delete document.documentElement.dataset.resultSkip;
+    };
+  }, [skip]);
   useEffect(() => {
     if (skip) {
       return;
@@ -231,15 +246,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         <section className="result-tally" data-testid="result-tally" aria-hidden="true">
           <div className="result-tally__head">
             <span>표 세기 · 5석 중 3석</span>
-            <span>찬성 {tallyResult.counts.YES} / 반대 {tallyResult.counts.NO}</span>
+            <span className="reveal-anim reveal-fade" style={finalRevealStyle}>
+              찬성 {tallyResult.counts.YES} / 반대 {tallyResult.counts.NO}
+            </span>
           </div>
           <div className="result-tally__bars">
             {SEAT_ORDER.map((memberId) => {
               const vote = session.ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
+              const execIndex = EXEC_MEMBER_ORDER.indexOf(memberId as ExecMemberId);
               return (
                 <span
                   key={memberId}
-                  className={`result-tally__bar result-tally__bar--${vote.toLowerCase()}`}
+                  className={`result-tally__bar result-tally__bar--${vote.toLowerCase()}${
+                    execIndex >= 0 ? ' result-tally__bar--reveal reveal-anim' : ''
+                  }`}
+                  style={execIndex >= 0 ? { animationDelay: `${execRevealDelay(execIndex)}s` } : undefined}
                 />
               );
             })}
@@ -249,7 +270,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             // 같은 내용을 되풀이하던 VERDICTS 쪽 문단(아래 result-summary__persuasion)은
             // 빼고 이 한 곳에만 남긴다(설득 도장 자체·"BONUS" 연출은 오른쪽 도장 칸에
             // 그대로 있다).
-            <p className="result-tally__caption" data-testid="result-tally-caption">
+            <p
+              className="result-tally__caption reveal-anim reveal-fade"
+              style={finalRevealStyle}
+              data-testid="result-tally-caption"
+            >
               이사님 표 {VOTE_TEXT[persuasion.participantVote]} · 나를 포함해 같은 표 {persuasion.sameVoteSeats}석
               {persuasionTally ? ` · ${persuadedCountLabel(persuasionTally)}` : ''}
               {persuasionTally && persuasionTally.total > 0 && persuasionTally.alreadySame.length > 0
@@ -309,11 +334,19 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
               <span className="result-report__eyebrow-tag">결과 보고 · {caseTag}</span>
               <span>이사회 한 장 요약</span>
             </p>
-            <h2 className="result-screen__title" data-testid="result-conclusion">
+            <h2
+              className="result-screen__title reveal-anim reveal-fade"
+              style={finalRevealStyle}
+              data-testid="result-conclusion"
+            >
               {conclusion}
             </h2>
             {persuasionSummaryLine && (
-              <p className="result-screen__persuasion-summary" data-testid="result-persuasion-summary">
+              <p
+                className="result-screen__persuasion-summary reveal-anim reveal-fade"
+                style={finalRevealStyle}
+                data-testid="result-persuasion-summary"
+              >
                 {persuasionSummaryLine}
               </p>
             )}
@@ -413,7 +446,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             <section className="result-verdicts" data-testid="result-summary">
               <div className="result-verdicts__head">
                 <h3 className="result-screen__section-label">임원별 판단</h3>
-                <p className="result-summary__tally" data-testid="result-summary-tally">
+                <p
+                  className="result-summary__tally reveal-anim reveal-fade"
+                  style={finalRevealStyle}
+                  data-testid="result-summary-tally"
+                >
                   찬성 {resultSummary.tally.counts.YES} · 반대 {resultSummary.tally.counts.NO}
                   {resultSummary.tally.counts.UNCAST > 0 &&
                     ` · 미표결 ${resultSummary.tally.counts.UNCAST}`}
@@ -422,13 +459,20 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
               <ul className="result-verdicts__rows">
                 {resultSummary.execRows.map((row) => {
                   const isUncast = row.vote === 'UNCAST';
+                  // T114: 이 행의 표·이유·태그는 무대 표 배지와 같은 시각에 뒤집힌다(그 전엔
+                  // 직함 옆에 봉인 표시만 보인다).
+                  const rowDelay = `${execRevealDelay(EXEC_MEMBER_ORDER.indexOf(row.memberId))}s`;
                   return (
                     <li
                       key={row.memberId}
-                      className={`result-seat result-seat--${row.vote.toLowerCase()}`}
+                      className={`result-seat result-seat--exec result-seat--${row.vote.toLowerCase()}`}
+                      style={{ '--reveal-delay': rowDelay } as CSSProperties}
                       data-testid={`result-seat-${row.memberId}`}
                     >
                       <span className="result-seat__title">{MEMBER_LABELS[row.memberId]}</span>
+                      <span className="result-seat__sealed reveal-anim" aria-hidden="true">
+                        ? 가림
+                      </span>
                       <span className="result-seat__vote">
                         {VOTE_ICON[row.vote] && (
                           <span className="result-seat__vote-icon" aria-hidden="true">

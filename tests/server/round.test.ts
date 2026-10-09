@@ -509,8 +509,8 @@ describe('두 단계 설득 프롬프트(T110, v12)', () => {
     return { systems, provider };
   }
 
-  it('프롬프트 버전이 v12다', () => {
-    expect(PROMPT_VERSION).toBe('v12');
+  it('프롬프트 버전이 v13이다', () => {
+    expect(PROMPT_VERSION).toBe('v13');
   });
 
   it('요청 스키마가 followUpAnswered(불리언, 선택)를 받고 다른 타입은 거절한다', () => {
@@ -546,6 +546,40 @@ describe('두 단계 설득 프롬프트(T110, v12)', () => {
       expect(system).toContain('참가자가 추가 질문에 답했습니다');
       expect(system).toContain('추가 질문 답변: 있음');
       expect(system).not.toContain('UNDECIDED(고민 중)까지만');
+    }
+  });
+
+  it('FOLLOWUP 지시에는 최종 찬반·표결 방향을 문장으로 밝히지 말라는 규칙이 들어가고 다른 단계에는 없다(T114, v13)', async () => {
+    const followUp = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t114-f', stage: 'FOLLOWUP', followUpAnswered: true }), {
+      provider: followUp.provider,
+    });
+    expect(followUp.systems.length).toBeGreaterThan(0);
+    for (const system of followUp.systems) {
+      expect(system).toContain('최종 찬반이나 표결 방향을 문장으로 밝히지 마십시오');
+      expect(system).toContain('"찬성합니다"');
+    }
+    for (const stage of ['OPINIONS', 'REACTIONS'] as const) {
+      const other = captureSystems();
+      await handleRound(baseRoundInput({ requestId: `req-t114-${stage}`, stage }), { provider: other.provider });
+      for (const system of other.systems) {
+        expect(system).not.toContain('최종 찬반이나 표결 방향을 문장으로 밝히지 마십시오');
+      }
+    }
+  });
+
+  it('mock 제공자의 FOLLOWUP 발언 문장에는 찬성·반대 단어가 없다(T114)', async () => {
+    const provider = createMockProvider('mock-model');
+    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      const result = await provider.complete({
+        system: 's',
+        user: JSON.stringify({ kind: 'statement', roleId, stage: 'FOLLOWUP' }),
+        schema: {},
+        maxTokens: 200,
+        timeoutMs: 100,
+      });
+      const message = (result.json as { message: string }).message;
+      expect(message).not.toMatch(/찬성|반대/);
     }
   });
 

@@ -42,6 +42,31 @@ export interface PersuasionBoardProps {
    * domain/stance.ts membersAwaitingAnswer). 행에 "답변 뒤 찬성"(반대 참가자면 "답변 뒤
    * 반대")을 적는다. 생략하면 비어 있는 것과 같다. */
   awaitingAnswerIds?: readonly ExecMemberId[];
+  /** T114: 추가 질문에 답한 뒤(MOTION·VOTE)에는 임원이 어느 쪽으로 기울었는지 알려주지
+   * 않는다. true면 입장 열은 봉인 배지, 비고는 "답변을 들었습니다 · 결과에서 공개"(처음부터
+   * 같은 편은 이미 아는 사실이라 그대로), 집계("설득 N/4"·"○○ 남음")는 가린다. 이때
+   * stances는 읽지 않는다 — 처음부터 같은 편 판정은 첫 의견 입장만 쓴다. */
+  sealed?: boolean;
+}
+
+/** 봉인된 현황판의 임원 행 비고(T114). 처음부터 같은 편 임원만 방향을 이미 알고 있다. */
+export const SEALED_NOTE = '답변을 들었습니다 · 결과에서 공개';
+
+const SEALED_STANCES: Record<ExecMemberId, Stance> = {
+  CEO: 'UNDECIDED',
+  CFO: 'UNDECIDED',
+  CAIO: 'UNDECIDED',
+  CISO: 'UNDECIDED',
+};
+
+function buildSealedRow(memberId: ExecMemberId, alreadySame: boolean): Row {
+  return {
+    memberId,
+    stanceText: '',
+    stanceChanged: false,
+    conditionNote: alreadySame ? '처음부터 같은 편' : SEALED_NOTE,
+    sealed: true,
+  };
 }
 
 function conditionLabel(scenario: Scenario, id: string): string {
@@ -61,6 +86,8 @@ interface Row {
   stanceText: string;
   stanceChanged: boolean;
   conditionNote: string;
+  /** T114: 입장 열을 봉인 배지로 그린다. */
+  sealed?: boolean;
 }
 
 function buildRow(
@@ -162,6 +189,7 @@ export function PersuasionBoard({
   liveSuggestedConditionIds,
   statements,
   awaitingAnswerIds,
+  sealed = false,
 }: PersuasionBoardProps) {
   // 설득 현황판 접기/펼치기(2026-10-08 팀리드 지시 — 1280×720 DISCUSS 왼쪽 열이 4행
   // 전부를 펼친 채로는 세로로 넘쳐 하단 CTA가 잘렸다). 좁은 화면(≤1280px)에서만 기본
@@ -171,11 +199,23 @@ export function PersuasionBoard({
   // matchMedia가 없어 접힘으로 시작한다).
   const [expanded, setExpanded] = useState(() => isWideViewport());
   const targetVote: 'FOR' | 'AGAINST' = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
-  const tally = computePersuasionTally(scenario, mode, statements ?? [], targetVote, stances);
+  // 봉인이면 현재 입장을 쓰지 않는다: 모두 '고민 중'으로 넣어 alreadySame(첫 의견 입장 기준)만 뽑는다.
+  const tally = computePersuasionTally(
+    scenario,
+    mode,
+    statements ?? [],
+    targetVote,
+    sealed ? SEALED_STANCES : stances,
+  );
+  const alreadySameIds = sealed
+    ? EXEC_MEMBER_ORDER.filter((id) => openingStanceOf(scenario, id, mode, statements ?? []) === targetVote)
+    : tally.alreadySame;
   const liveHints =
     mode === 'live' ? (liveSuggestedConditionIds ?? latestSuggestedConditionIds(statements ?? [])) : undefined;
   const rows = EXEC_MEMBER_ORDER.map((memberId) =>
-    buildRow(
+    sealed
+      ? buildSealedRow(memberId, alreadySameIds.includes(memberId))
+      : buildRow(
       scenario,
       memberId,
       confirmedConditionIds,
@@ -210,11 +250,15 @@ export function PersuasionBoard({
     <div className="persuasion-board" data-testid="persuasion-board" aria-label="설득 현황판">
       <div className="persuasion-board__head">
         <span className="persuasion-board__count" data-testid="persuasion-board-count">
-          {persuadedCountLabel(tally)}
+          {sealed ? '임원 방향 봉인' : persuadedCountLabel(tally)}
         </span>
         {!expanded && (
           <span className="persuasion-board__summary" data-testid="persuasion-board-summary">
-            {tally.remaining.length === 0 ? '모두 같은 편' : `${tally.remaining.join('·')} 남음`}
+            {sealed
+              ? '결과에서 공개'
+              : tally.remaining.length === 0
+                ? '모두 같은 편'
+                : `${tally.remaining.join('·')} 남음`}
           </span>
         )}
         <button
@@ -238,12 +282,24 @@ export function PersuasionBoard({
               <span className="persuasion-board__member" title={MEMBER_LABELS[row.memberId]}>
                 {row.memberId}
               </span>
-              <span
-                className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}`}
-                data-testid={`persuasion-board-stance-${row.memberId}`}
-              >
-                {row.stanceText}
-              </span>
+              {row.sealed ? (
+                <span
+                  className="persuasion-board__stance persuasion-board__stance--sealed"
+                  data-testid={`persuasion-board-stance-${row.memberId}`}
+                >
+                  <span className="persuasion-board__seal" aria-hidden="true">
+                    ?
+                  </span>
+                  가림
+                </span>
+              ) : (
+                <span
+                  className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}`}
+                  data-testid={`persuasion-board-stance-${row.memberId}`}
+                >
+                  {row.stanceText}
+                </span>
+              )}
               <span className="persuasion-board__note" data-testid={`persuasion-board-note-${row.memberId}`}>
                 {row.conditionNote}
               </span>

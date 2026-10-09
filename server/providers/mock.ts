@@ -160,7 +160,11 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
   const stage = env.stage ?? 'OPINIONS';
   return {
     roleId,
-    message: `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
+    // T114: 후속(FOLLOWUP) 발언은 답변 뒤 방향을 밝히지 않는 문장만 쓴다(찬성·반대 단어 없음).
+    message:
+      stage === 'FOLLOWUP'
+        ? `[모의] ${roleId}가 답변을 듣고 소회를 남깁니다.`
+        : `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     referencedStatementIds: [],
     concerns: [`[모의] ${roleId} 우려사항`],

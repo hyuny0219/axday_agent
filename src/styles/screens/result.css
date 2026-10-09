@@ -723,3 +723,69 @@
     font-size: 12px;
   }
 }
+
+/* T114 — 임원 표 순차 공개. 임원 네 장은 봉인으로 시작해 resultStamp.ts의 execRevealDelay
+   시각에 한 장씩 뒤집히고(좌측 막대·무대 배지·우측 판단 행이 같은 시각), 집계 숫자·결론
+   문구는 마지막 장 뒤(ALL_EXEC_REVEALED_SECONDS)에 나온다. 지연은 inline animation-delay
+   (또는 --reveal-delay)로 꽂고 setTimeout은 쓰지 않는다. prefers-reduced-motion·운영자
+   skip은 base.css가 지연을 0으로 만들어 즉시 공개한다. */
+:root {
+  --reveal-flip: 500ms;
+}
+
+.reveal-fade {
+  animation: result-reveal-fade 300ms ease-out both;
+}
+
+@keyframes result-reveal-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.result-tally__bar--reveal {
+  animation: result-bar-reveal var(--reveal-flip) ease-out both;
+}
+
+/* 봉인 막대: 뒤집히기 전에는 표 색 대신 회색 점선 느낌의 어두운 막대. */
+@keyframes result-bar-reveal {
+  0%,
+  50% {
+    background-color: rgba(143, 138, 128, 0.35);
+    box-shadow: none;
+  }
+}
+
+.result-seat--exec {
+  position: relative;
+}
+
+.result-seat--exec > :not(.result-seat__title):not(.result-seat__sealed) {
+  animation: result-reveal-fade var(--reveal-flip) ease-out both;
+  animation-delay: var(--reveal-delay, 0s);
+}
+
+.result-seat__sealed {
+  position: absolute;
+  left: calc(168px + var(--space-1));
+  font-family: var(--font-label);
+  font-size: var(--fs-meta);
+  color: var(--ink-muted);
+  animation: result-reveal-out var(--reveal-flip) ease-in both;
+  animation-delay: var(--reveal-delay, 0s);
+}
+
+@keyframes result-reveal-out {
+  0% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}

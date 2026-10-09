@@ -581,6 +581,9 @@ function chairLineFor(
   return undefined;
 }
 
+/** T114: 추가 질문에 답한 뒤(MOTION·VOTE)에는 무대 표정으로도 임원 방향을 알리지 않는다. */
+const sealedStages: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']);
+
 const ALL_UNDECIDED_STANCES: Record<ExecMemberId, Stance> = {
   CEO: 'UNDECIDED',
   CFO: 'UNDECIDED',
@@ -672,7 +675,7 @@ function AppShell() {
                     statements={session.transcript.statements}
                     opinions={session.opinions}
                     scenario={scenario}
-                    stances={stancesFor(session, scenario)}
+                    stances={sealedStages.has(session.stage) ? ALL_UNDECIDED_STANCES : stancesFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(
                       session.stage,

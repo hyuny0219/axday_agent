@@ -130,3 +130,24 @@
     font-size: 10px;
   }
 }
+
+/* T114: 답변 뒤 봉인 — 입장 열을 VOTE 임원 표와 같은 '?' 점선 원 + "가림"으로 가린다. */
+.persuasion-board__stance--sealed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.persuasion-board__seal {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1.5px dashed #4a4d55;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-size: 9px;
+  color: #8f8a80;
+}

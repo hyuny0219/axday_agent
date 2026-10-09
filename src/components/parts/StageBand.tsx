@@ -26,6 +26,7 @@ import type {
   Statement,
 } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { execRevealDelay } from '../resultStamp';
 import { firstSentenceClipped } from '../stageText';
 import { bubbleLineOf } from '../bubbleText';
 import { reactionBubble } from '../reactionsFor';
@@ -226,21 +227,34 @@ function MoodBadge({ memberId, stance }: { memberId: ExecMemberId; stance: Stanc
   );
 }
 
-const RESULT_SEAT_ORDER: readonly MemberId[] = [...EXEC_MEMBER_ORDER, 'PARTICIPANT'];
-
-/** RESULT 단계에서만 쓰는 표결 배지. memberId의 등장 순서(CEO→CFO→CAIO→CISO→나)
- * 인덱스만큼 0.2초씩 늦춰 CSS animation-delay로 순차 공개한다(4장 규칙 — setTimeout
- * 대신 CSS로 구현해 Clock 규칙과 충돌하지 않는다). */
+/** RESULT 단계에서만 쓰는 표결 배지. 임원 4명은 봉인('?')으로 시작해 resultStamp.ts의
+ * execRevealDelay 시각에 한 장씩 뒤집힌다(T114, 순서 CEO→CFO→CAIO→CISO). 참가자 표는
+ * 이미 아는 값이라 가리지 않는다. setTimeout 대신 CSS animation-delay로 구현해 Clock
+ * 규칙과 충돌하지 않는다. 봉인 표시는 aria-hidden이고 표 배지의 testid는 그대로다. */
 function VoteBadge({ memberId, ballots }: { memberId: MemberId; ballots: Ballot[] }) {
-  const index = RESULT_SEAT_ORDER.indexOf(memberId);
+  const execIndex = EXEC_MEMBER_ORDER.indexOf(memberId as ExecMemberId);
+  const isExec = execIndex >= 0;
+  const delay = isExec ? execRevealDelay(execIndex) : 0;
   const vote = ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
   return (
-    <span
-      className={`stage-band__vote-badge stage-band__vote-badge--${vote.toLowerCase()}`}
-      style={{ animationDelay: `${Math.max(index, 0) * 0.2}s` }}
-      data-testid={`stage-vote-badge-${memberId}`}
-    >
-      {VOTE_BADGE_ICON[vote]}
+    <span className="stage-band__vote-slot">
+      {isExec && (
+        <span
+          className="stage-band__vote-seal reveal-anim"
+          style={{ animationDelay: `${delay}s` }}
+          data-testid={`stage-vote-seal-${memberId}`}
+          aria-hidden="true"
+        >
+          ?
+        </span>
+      )}
+      <span
+        className={`stage-band__vote-badge reveal-anim stage-band__vote-badge--${vote.toLowerCase()}`}
+        style={{ animationDelay: `${delay}s` }}
+        data-testid={`stage-vote-badge-${memberId}`}
+      >
+        {VOTE_BADGE_ICON[vote]}
+      </span>
     </span>
   );
 }

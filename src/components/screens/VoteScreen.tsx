@@ -122,8 +122,9 @@ export function VoteScreen({
           stances={stances}
           mode={mode}
           statements={statements}
+          sealed
         />
-        <ExecStanceList stances={stances} />
+        <ExecStanceList stances={stances} sealed />
         <div className="vote-screen__ballots" data-testid="vote-ballots">
           <div className="vote-screen__ballots-head">
             <span>임원 표</span>
