@@ -7,7 +7,6 @@
 // 테두리 + "✓", 새로 제안된 칩은 확정돼도 앰버 테두리 + "+ 새 조건"이다. 선택적
 // newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
-import { useLayoutEffect, useRef, useState } from 'react';
 import type { ConflictPair, Scenario } from '../../content/types';
 
 export interface ConditionChipsProps {
@@ -51,21 +50,6 @@ export function ConditionChips({
   onToggle,
   newlyProposedIds = [],
 }: ConditionChipsProps) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const [scrollable, setScrollable] = useState(false);
-  // T116: 칩이 넘쳐 가로 스크롤이 생겼을 때만 스크롤바 여백을 둔다.
-  useLayoutEffect(() => {
-    const el = listRef.current;
-    if (!el) {
-      setScrollable(false);
-      return undefined;
-    }
-    const measure = () => setScrollable(el.scrollWidth > el.clientWidth + 1);
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
-
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
       return null;
@@ -87,7 +71,7 @@ export function ConditionChips({
           체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
       <div className="condition-chips__row">
         <p className="condition-chips__label">조건</p>
-        <div className="condition-chips__list" ref={listRef} data-scrollable={scrollable}>
+        <div className="condition-chips__list">
           {proposedIds.map((id) => {
             const accepted = acceptedIds.includes(id);
             const isNew = newlyProposedIds.includes(id);
@@ -99,17 +83,25 @@ export function ConditionChips({
                 className={`condition-chip${modifier}`}
                 aria-pressed={accepted}
                 data-testid={`condition-chip-${id}`}
+                title={conditionLabel(scenario, id)}
                 onClick={() => onToggle(id)}
               >
-                {conditionLabel(scenario, id)}
-                {accepted ? (isNew ? ' + 새 조건' : ' ✓') : ''}
+                <span className="condition-chip__label">{conditionLabel(scenario, id)}</span>
+                {accepted && (
+                  <span className="condition-chip__tail">{isNew ? '+ 새 조건' : '✓'}</span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
       {conflictPairs.length > 0 && (
-        <ul className="condition-chips__conflicts" role="alert" data-testid="condition-chips-conflicts">
+        <ul
+          className="condition-chips__conflicts"
+          role="alert"
+          data-testid="condition-chips-conflicts"
+          title={conflictPairs.map((pair) => conflictMessage(scenario, pair)).join(' ')}
+        >
           {conflictPairs.map(([a, b]) => (
             <li key={`${a}-${b}`}>{conflictMessage(scenario, [a, b])}</li>
           ))}

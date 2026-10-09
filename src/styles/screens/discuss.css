@@ -11,28 +11,31 @@
    줄을 하나의 패널로 묶는다 — transcript-bg·transcript-border는 이미 TRANSCRIPT
    패널(minutes.css)이 쓰는 같은 HUD 어두운 판 톤이지만 테두리는 시안색(hud-line)으로
    강조한다. */
-/* T116: 입력 상자·조건 칩 자리는 고정 높이(내용이 늘어도 아래 버튼 줄이 밀리지 않는다).
+/* T117: 입력 상자는 고정 px가 아니라 열의 남는 높이를 채운다(--hud-textarea-h는 여유가 있을
+   때의 최대 높이일 뿐, 모자라면 44px까지 줄고 글은 안쪽 스크롤). 조건 칩은 한 줄(가로 스크롤)
+   + 아래 충돌 안내 한 줄을 늘 예약해(--hud-chips-h) 칩·안내가 생겨도 제출 줄이 움직이지 않는다.
    두 HUD(.discuss-screen__hud·.reactions-screen__hud)가 같은 변수를 쓴다. */
 .discuss-screen__hud,
 .reactions-screen__hud {
   --hud-textarea-h: 116px;
-  --hud-chip-h: 28px;
-  --hud-chip-gap: 6px;
-  --hud-chips-h: 88px;
+  --hud-chip-h: 24px;
+  --hud-chip-scroll: 8px;
+  --hud-conflict-h: 16px;
+  --hud-chips-h: calc(var(--hud-chip-h) + var(--hud-chip-scroll) + 3px + var(--hud-conflict-h));
 }
 
 @media (max-width: 1280px) {
   .discuss-screen__hud,
   .reactions-screen__hud {
     --hud-textarea-h: 96px;
-    --hud-chip-h: 24px;
-    --hud-chip-gap: 4px;
-    --hud-chips-h: 70px;
+    --hud-chip-h: 22px;
   }
 }
 
 .discuss-screen__hud {
   box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -49,8 +52,11 @@
 }
 
 .draft-editor {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 머리줄 / 입력 상자(남는 높이, 최소 44px ~ 여유 시 --hud-textarea-h) */
+  grid-template-rows: auto minmax(44px, var(--hud-textarea-h));
   gap: 10px;
 }
 
@@ -94,7 +100,8 @@
 /* 3줄 높이(시안 64px/720) — resize는 시안대로 막는다(HUD 입력 상자가 고정 높이다). */
 .draft-editor__textarea {
   width: 100%;
-  height: var(--hud-textarea-h);
+  height: auto;
+  min-height: 44px;
   box-sizing: border-box;
   resize: none;
   overflow-y: auto;
@@ -184,11 +191,13 @@
   }
 }
 
-/* T116: 칩 줄은 최대 2줄 높이로 고정하고, 6개가 모자라면 가로로 스크롤한다(세로 방향
-   배치 + 줄바꿈이라 넘치는 칩은 오른쪽 열로 이어진다). 칸 높이가 변하지 않아 버튼 줄이
-   움직이지 않는다. */
+/* T117: 조건 칩은 한 줄(nowrap)이다. 5개가 폭에 안 들어가면 칩 줄만 가로로 스크롤하고
+   (포커스가 가면 브라우저가 칩을 보이는 곳으로 자동 스크롤한다), 라벨이 길면 말줄임
+   (전체 이름은 title). 슬롯 높이는 칩 줄 + 충돌 안내 한 줄로 고정이라 칩·안내가 생겨도
+   아래 제출 줄이 움직이지 않는다. */
 .hud-conditions-slot {
   box-sizing: border-box;
+  flex: 0 0 auto;
   height: var(--hud-chips-h);
   min-height: 0;
   overflow: hidden;
@@ -197,7 +206,7 @@
 .condition-chips {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   height: 100%;
   min-height: 0;
 }
@@ -206,7 +215,7 @@
   display: flex;
   flex: 0 0 auto;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 
 .condition-chips__row .condition-chips__label {
@@ -217,41 +226,33 @@
 .condition-chips__list {
   display: flex;
   flex: 1;
-  flex-flow: column wrap;
-  align-content: flex-start;
-  gap: var(--hud-chip-gap);
+  flex-flow: row nowrap;
+  align-items: flex-start;
+  gap: 4px;
   min-width: 0;
-  height: calc(
-    var(--hud-chip-h) * var(--hud-chip-rows, 2) + var(--hud-chip-gap) * (var(--hud-chip-rows, 2) - 1)
-  );
+  height: calc(var(--hud-chip-h) + var(--hud-chip-scroll));
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
 }
 
-/* 가로 스크롤이 실제로 생겼을 때만 스크롤바 자리를 칩 아래에 둔다(ConditionChips가 표시). */
-.condition-chips__list[data-scrollable='true'] {
-  box-sizing: content-box;
-  padding-bottom: 8px;
-}
-
-/* 충돌 안내가 떠 있으면 칩 줄을 1줄로 줄여 안내(제출이 막힌 이유)가 잘리지 않게 한다. */
-.condition-chips--conflict {
-  --hud-chip-rows: 1;
-}
-
 .condition-chip {
   box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  max-width: 14em;
   height: var(--hud-chip-h);
   min-height: 0;
-  padding: 0 11px;
-  border-radius: 14px;
+  padding: 0 9px;
+  border-radius: 12px;
   border: 1px solid #4a4d55;
   background: transparent;
   color: #8f8a80;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   white-space: nowrap;
   transition:
@@ -262,9 +263,20 @@
 @media (max-width: 1280px) {
   .condition-chip {
     padding: 0 8px;
-    border-radius: 12px;
+    border-radius: 11px;
     font-size: 11px;
   }
+}
+
+/* 라벨만 말줄임 — "✓"·"+ 새 조건" 꼬리는 항상 보인다. */
+.condition-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.condition-chip__tail {
+  flex: 0 0 auto;
 }
 
 .condition-chip--accepted {
@@ -280,15 +292,24 @@
   color: var(--hud-warn);
 }
 
+/* 충돌 안내는 칩 줄 아래 한 줄 고정(길면 말줄임, 전체 문장은 title). */
 .condition-chips__conflicts {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  height: var(--hud-conflict-h);
   margin: 0;
-  padding-left: var(--space-2);
-  overflow-y: auto;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
   color: var(--vote-no);
-  font-size: 13px;
-  line-height: 1.3;
+  font-size: 12px;
+  line-height: var(--hud-conflict-h);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.condition-chips__conflicts li {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 1280px) {
@@ -314,6 +335,7 @@
    줄바꿈된다. 두 버튼 모두 이 화면에서만 쓰는 크기라 .assistant-panel__toggle·.cta의
    공용 규칙(다른 화면이 함께 쓴다)을 덮어쓰지 않고 이 행 안에서만 덮어쓴다. */
 .discuss-screen__submit-row {
+  flex: none;
   align-items: center;
 }
 
@@ -327,7 +349,8 @@
   letter-spacing: 0.04em;
 }
 
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .discuss-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
     width: 180px;
@@ -341,7 +364,8 @@
   font-size: 25px;
 }
 
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .discuss-screen__submit-row > .cta {
     min-height: 56px;
     width: 200px;
