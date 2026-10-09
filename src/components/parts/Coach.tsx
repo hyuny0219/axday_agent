@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { COACH_ACK_LABEL } from '../../content/coach';
+import { COACH_ACK_LABEL, COACH_ICON_ARIA, COACH_ICON_TEXT } from '../../content/coach';
 import '../../styles/screens/coach.css';
 
 export interface CoachProps {
@@ -44,15 +44,7 @@ function sameBox(a: Box, b: Box): boolean {
   return a.left === b.left && a.top === b.top && a.width === b.width;
 }
 
-export function Coach({
-  step,
-  total,
-  title,
-  lines,
-  anchorSelector = '[data-testid="stage-band"]',
-  onAck,
-  ackLabel = COACH_ACK_LABEL,
-}: CoachProps) {
+function useAnchorBox(anchorSelector: string | undefined): Box {
   const [box, setBox] = useState<Box>(() => readAnchor(anchorSelector));
 
   // 화면 배치가 바뀌는 어떤 이유(크기 조절·늦게 나타나는 무대)에도 따라가도록 프레임마다 읽고,
@@ -73,6 +65,43 @@ export function Coach({
       window.clearTimeout(timer);
     };
   }, [anchorSelector]);
+  return box;
+}
+
+/** 말풍선이 닫힌 뒤 같은 자리에 남는 작은 둥근 "안내" 버튼. 누르면 그 화면 안내를 다시 연다. */
+export function CoachIcon({
+  anchorSelector = '[data-testid="stage-band"]',
+  onOpen,
+}: {
+  anchorSelector?: string;
+  onOpen: () => void;
+}) {
+  const box = useAnchorBox(anchorSelector);
+  return createPortal(
+    <button
+      type="button"
+      className="coach-icon"
+      data-testid="coach-icon"
+      aria-label={COACH_ICON_ARIA}
+      style={{ left: box.left + INSET, top: box.top + INSET }}
+      onClick={onOpen}
+    >
+      {COACH_ICON_TEXT}
+    </button>,
+    document.body,
+  );
+}
+
+export function Coach({
+  step,
+  total,
+  title,
+  lines,
+  anchorSelector = '[data-testid="stage-band"]',
+  onAck,
+  ackLabel = COACH_ACK_LABEL,
+}: CoachProps) {
+  const box = useAnchorBox(anchorSelector);
 
   const style: CSSProperties = {
     left: box.left + INSET,

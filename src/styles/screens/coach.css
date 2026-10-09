@@ -102,3 +102,34 @@
     margin-top: 8px;
   }
 }
+
+/* 말풍선이 닫힌 뒤 같은 자리에 남는 "안내" 둥근 버튼(T106). 무대 사진 왼쪽 위. */
+.coach-icon {
+  position: fixed;
+  z-index: 900;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: #fbf7ee;
+  color: #1b1a17;
+  border: 2px solid #000;
+  border-radius: 50%;
+  box-shadow: 3px 3px 0 #000;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.coach-icon:hover {
+  background: #f1e6cc;
+}
+
+.coach-icon:focus-visible {
+  outline: 3px solid #1b1a17;
+  outline-offset: 2px;
+}
