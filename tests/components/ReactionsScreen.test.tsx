@@ -757,5 +757,7 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     fireEvent.click(screen.getByTestId('condition-chip-LOG'));
     expect(screen.getByTestId('persuasion-board-note-CAIO')).not.toHaveTextContent('답변 뒤');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('움직일 조건');
+    // 해제한 조건 이름이 아니라 다시 필요한 조건 이름이 나온다(빈 "움직일 조건 ·"이 아니다).
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent(/움직일 조건 · \S+/);
   });
 });

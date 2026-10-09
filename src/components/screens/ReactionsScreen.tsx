@@ -747,7 +747,8 @@ export function ReactionsScreen({
       <div className="app-body__actions screen reactions-screen">
         <PersuasionBoard
           scenario={scenario}
-          confirmedConditionIds={previousConfirmedIds}
+          // 답변 화면은 지금 고른 조건 기준(대기 임원·표시 입장과 같은 기준, Codex 51차 P2). 반응 듣기(1/2)는 아직 고른 조건이 없어 전달받은 확정 조건을 쓴다.
+          confirmedConditionIds={confirmedConditionIds}
           participantStance={boardParticipantStance}
           stances={effectiveStances}
           mode={mode}
