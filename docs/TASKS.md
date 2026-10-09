@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T117 | 진행 중 | 반응에 답하기(2/2) HUD: 버튼 잘림 재현·수정(여러 뷰포트), 내 발언 조건 칩을 **한 줄**에(2026-10-10 사용자 지시, T116 후속). 상세는 아래 T117 카드 |
 | T116 | 완료 | 내 답변·내 의견 HUD: 조건 칩을 작게, 입력 상자 높이 고정 + 넘치면 안쪽 스크롤 → 아래 버튼 줄이 밀리지 않게(2026-10-09 사용자 지시). 상세는 아래 T116 카드 |
 | T115 | 완료 | AI 비서실장 조건 추천이 임원 찬성/반대와 **정반대 방향**으로 안내되는 경우 수정(2026-10-09 사용자 지시, 원인 조사 선행). 상세는 아래 T115 카드 |
 | T114 | 완료 | 답변 뒤에는 임원 찬반 방향을 **봉인**(현황판 입장 열·설득 문구·무대 표정·2차 발언 입장) → 결과 화면에서 임원 표를 **한 장씩 순차 공개**(2026-10-09 사용자 지시: "답하기 후 AI 임원들의 찬반 방향을 몰라야 결과가 더 극적"). 상세는 아래 T114 카드 **구현 결과(2026-10-09)**: `PersuasionBoard`·`ExecStanceList`에 `sealed`(입장 열 `?` 가림 배지·비고 "답변을 들었습니다 · 결과에서 공개"·집계 가림, 처음부터 같은 편은 유지), `App`이 MOTION·VOTE 무대에 중립 표정, 프롬프트 v13(`FOLLOWUP_NO_VERDICT_RULE`)·mock FOLLOWUP 문장 방향 없음, 결과 임원 표 4장을 0.9초 간격 CSS 지연으로 순차 공개(무대 배지·좌측 막대·우측 행 동기, 집계·결론은 4.1초, 도장 4.2초·성공/실패 4.6초, reduced-motion·skip 즉시). 부수 수정: 표결 확정 클릭이 결과 화면의 skip 리스너에 같은 이벤트로 잡혀 연출이 항상 즉시 건너뛰어지던 문제를 `event.timeStamp` 가드로 해결. 비고 문구는 표가 결과에서 공개되므로 카드의 "표결에서 공개" 대신 "결과에서 공개". 문서 `DESIGN_SPEC` T114·`tuning-v13.md`(live 실측은 승인 뒤) |
@@ -99,6 +100,22 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T117 반응에 답하기 HUD — 버튼 잘림 수정 + 조건 칩 한 줄
+
+- 목표(2026-10-10 사용자 지시): "여전히 반응에 답하기에서는 버튼이 잘려서 보여. 내 발언의 조건들이 한 줄 안에 나올 수 있도록 수정 검토해 줘." T116(입력 상자 1080 116px·720 96px 고정, 칩 칸 고정) 뒤에도 사용자 환경에서 제출 줄([AI 비서실장][답하지 않고 넘어가기][답변 전달])이 잘린다. 사용자 뷰포트는 미확정 — 1920×1080과 1280×720뿐 아니라 **1680×1050·1536×864·1440×900·1366×768**(브라우저 UI를 뺀 실제 높이)에서 재현한다.
+- 읽을 것: T116 카드·DESIGN_SPEC T116 단락, `src/components/parts/{DraftEditor,ConditionChips}.tsx`, `src/components/screens/ReactionsScreen.tsx`(2/2 answer 단계), `src/styles/screens/{reactions,discuss}.css`, 화면 맞춤 축소(scale) 로직(`src/app/App.tsx` 또는 `src/styles/base.css`의 transform/scale 규칙), `e2e/noscroll.spec.ts`.
+- 만들 것:
+  1. **재현**: 위 6개 뷰포트에서 REACTIONS 2/2에 조건 5개 + 300자 입력 + 충돌 안내 상태로 들어가 제출 줄 boundingBox가 뷰포트(또는 축소된 캔버스) 안에 완전히 들어오는지 측정 → 잘리는 조합을 표로 기록(DESIGN_SPEC). 축소(scale) 모드가 있으면 축소 뒤 좌표 기준.
+  2. **조건 칩 한 줄**: `ConditionChips`를 한 줄(nowrap) 고정 — 칩을 더 작게(글자 11px, 높이 22~24px, 안쪽 여백 축소), 라벨이 길면 말줄임(ellipsis, title 속성으로 전체 이름), 5개가 한 줄에 안 들어가면 가로 스크롤(스크롤바 얇게, 포커스 시 자동 스크롤). 충돌 안내는 칩 줄 아래 한 줄 고정(또는 칩 줄 끝 아이콘 + 툴팁 — 세로 예산이 부족하면 후자).
+  3. **버튼 절대 잘림 금지**: 왼쪽 열을 `grid-template-rows: auto minmax(0,1fr) auto auto`(머리줄 / 입력 상자(남는 공간 전부, min-height 44px) / 칩 한 줄 / 제출 줄)로 바꿔 입력 상자가 **남는 높이를 채우되** 제출 줄은 항상 열 바닥에 고정. 고정 px 높이(T116의 116/96)는 제거하거나 max-height로만. 텍스트가 넘치면 입력 상자 안쪽 스크롤(유지).
+  4. DISCUSS(내 의견) HUD도 같은 구조로 통일.
+  5. 문서: DESIGN_SPEC "## T117" 단락(뷰포트별 측정 표 before/after, 치수), TASKS 행.
+  6. 테스트·e2e: `noscroll` 스펙에 6개 뷰포트 × (조건 5개+300자+충돌) 조합으로 "제출 줄 boundingBox.bottom ≤ viewport.height(또는 캔버스 bottom)"와 "칩 컨테이너 높이 = 칩 1줄 높이" 단언 추가(프로젝트 설정에 뷰포트를 추가하지 말고 테스트 안에서 `page.setViewportSize`), 스크린샷 `reactions-answer.png`·`discuss.png` 두 해상도 갱신 뒤 Read.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 조건 제안·확정 규칙 변경, 버튼 모양(T111) 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e noscroll·reactions·discuss·flow-full·screenshots 1080·720 각각 PASS.
+- 크기: M.
 
 ## T116 내 답변 HUD — 조건 칩 축소 + 입력 상자 고정 높이·안쪽 스크롤
 
