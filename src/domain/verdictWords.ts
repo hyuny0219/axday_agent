@@ -272,6 +272,9 @@ const AFFIRMED_TAIL = new RegExp(
     '|' +
     '입장(?:입니다|이에요|이다|이라고?)' +
     '|' +
+    // 입장 고수 꼬리: 반대 입장을 고수합니다 / 승인 노선을 유지하겠습니다 / 찬성 입장을 굽히지 않겠습니다
+    '(?:입장|태도|노선|쪽|편)(?:을|를)? ?(?:(?:고수|유지|견지)' + HADA_END + '|굽히지 않(?:겠습니다|습니다|겠다|는다|아요))' +
+    '|' +
     // 불가피("찬성은 불가피합니다")는 그 방향이 피할 수 없다는 긍정 선언이다. 불가결·불가역은 해당 없음.
     '(?:은|는|이|가)? ?불가피(?:합니다|하다|해 보입니다|할 것입니다|하겠습니다)' +
     '|' +
@@ -395,6 +398,8 @@ function hasDirectionWord(sentence: string, participantStance?: 'FOR' | 'AGAINST
 /** 방향 명사 중 "찬성·반대·가결·부결·반려·기각·거부"는 강한 방향어다. "승인·통과"는 안건 용어("자동 승인")로 흔히 쓰여, 선언 꼬리가 없으면
  * 방향 없는 언급으로 본다(꼬리가 맞으면 여전히 선언이다). */
 const STRONG_DIRECTION_NOUNS = new Set(['찬성', '반대', '가결', '부결', '반려', '기각', '거부']);
+/** 약한 방향어(승인·통과) 뒤에 입장 구문이 붙은 꼴. */
+const WEAK_STANCE_TAIL = /^\s?(?:입장|쪽|편|태도|노선|의견|결론|방향)/;
 /** 방향 명사 + 결정 관용구("찬성하기로 결정했습니다")가 한 꼬리로 붙은 경우 — 과거형 종결이어도 현재 결정으로 인정한다. */
 const DECISION_TAIL = /^\s?(?:시키기로|하기로|하는 것으로|하는 쪽으로)\s?(?:결정|정)?(?:했|하였)/;
 /** 문장 안에서 현재 표지 뒤의 말이 현재 결론이다. */
@@ -432,9 +437,13 @@ function classifySentence(
     if (direction) {
       found.add(direction);
       if (!DECISION_TAIL.test(tail)) onlyDecisionTails = false;
-    } else if (!EXPLANATORY_TAIL.test(tail) && STRONG_DIRECTION_NOUNS.has(noun.word)) {
+    } else if (STRONG_DIRECTION_NOUNS.has(noun.word)) {
+      if (!EXPLANATORY_TAIL.test(tail)) unresolved = true;
+    } else if (WEAK_STANCE_TAIL.test(tail)) {
+      // 약한 방향어(승인·통과)라도 입장 구문("승인 입장·쪽·태도 …")이면 강한 방향어와 같이 미해소 방향이다.
       unresolved = true;
     }
+    // 그 밖의 약한 방향어(안건 용어 결합 "승인 방식·한도·여부 …", 꼬리 없는 단독 언급)는 방향 없는 언급이라 무시한다.
   }
   if (!IDIOM_NEGATION.test(target)) {
     if (AGAINST_IDIOMS.some((pattern) => pattern.test(target))) { found.add('AGAINST'); onlyDecisionTails = false; }
