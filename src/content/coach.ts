@@ -69,7 +69,7 @@ export const COACH_ACK_LABEL = '알겠어요 ▶';
 /** 아이콘으로 다시 연 말풍선의 버튼. */
 export const COACH_CLOSE_LABEL = '닫기 ▶';
 export const COACH_ICON_TEXT = '안내';
-export const COACH_ICON_ARIA = '안내 다시 보기';
+export const COACH_ICON_ARIA = '안내 다시 보기, 끌어서 옮길 수 있음';
 
 export function coachCopy(step: number, mode: 'scripted' | 'live' = 'scripted'): CoachScreenCopy {
   const found = COACH_SCREENS.find((item) => item.step === step);

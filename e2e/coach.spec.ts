@@ -167,7 +167,7 @@ test('알겠어요로 닫으면 안내 아이콘이 남고, 누르면 다시 열
 
   const icon = page.getByTestId('coach-icon');
   await expect(icon).toBeVisible();
-  await expect(icon).toHaveAccessibleName('안내 다시 보기');
+  await expect(icon).toHaveAccessibleName('안내 다시 보기, 끌어서 옮길 수 있음');
   // 아이콘은 무대 사진 안쪽에 있다(720에서도 밖으로 나가지 않는다).
   const band = (await page.getByTestId('stage-band').boundingBox())!;
   const box = (await icon.boundingBox())!;
@@ -212,4 +212,45 @@ test('?coach=off면 안내 아이콘도 없다', async ({ page }) => {
   await page.getByTestId('scenario-card-ai-approval').click();
   await expect(page.getByTestId('open-evidence')).toBeVisible();
   await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+});
+
+test('안내 아이콘을 끌어 옮기면 화면이 바뀌어도 그 자리에 있고, 더블클릭하면 돌아온다', async ({ page }) => {
+  await startWithCoach(page);
+  await expectCoach(page, 1);
+  await page.getByTestId('coach-ack').click();
+  const icon = page.getByTestId('coach-icon');
+  const home = (await icon.boundingBox())!;
+
+  // 끌기: 마우스로 아이콘 가운데를 잡고 오른쪽 아래로 옮긴다. 열리지 않고 자리만 바뀐다.
+  const cx = home.x + home.width / 2;
+  const cy = home.y + home.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 60, cy + 40, { steps: 5 });
+  await page.mouse.move(cx + 120, cy + 80, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  const moved = (await icon.boundingBox())!;
+  expect(Math.round(moved.x - home.x)).toBe(120);
+  expect(Math.round(moved.y - home.y)).toBe(80);
+
+  // 화면이 바뀌어도(의견 듣기 → 2번 안내) 말풍선이 옮긴 자리에서 열린다.
+  await page.getByTestId('open-evidence').click();
+  await page.getByTestId('evidence-dialog-close').click();
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await expectCoach(page, 2);
+  const card = (await page.getByTestId('coach').boundingBox())!;
+  expect(Math.abs(card.x - moved.x)).toBeLessThanOrEqual(1);
+  // 말풍선이 아이콘보다 커서 아래가 모자라면 화면 안으로 위로 밀린다(clamp).
+  expect(card.y).toBeLessThanOrEqual(moved.y + 6); // 나타날 때 4px 올라오는 효과 허용
+  expect(card.y + card.height).toBeLessThanOrEqual(page.viewportSize()!.height + 4);
+
+  // 알겠어요 뒤 아이콘도 같은 자리에 남고, 더블클릭하면 기본 자리로 돌아온다.
+  await page.getByTestId('coach-ack').click();
+  const again = (await icon.boundingBox())!;
+  expect(Math.abs(again.x - moved.x)).toBeLessThanOrEqual(1);
+  await icon.dblclick();
+  // 더블클릭의 첫 클릭이 말풍선을 열 수 있으므로 떠 있는 쪽(말풍선 또는 아이콘)의 자리를 본다.
+  const floating = page.locator('[data-testid="coach"], [data-testid="coach-icon"]').first();
+  await expect.poll(async () => Math.abs((await floating.boundingBox())!.x - home.x)).toBeLessThanOrEqual(1);
 });

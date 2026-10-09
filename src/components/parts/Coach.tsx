@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { COACH_ACK_LABEL, COACH_ICON_ARIA, COACH_ICON_TEXT } from '../../content/coach';
+import { useCoachPosition } from './coachPosition';
 import '../../styles/screens/coach.css';
 
 export interface CoachProps {
@@ -77,14 +78,24 @@ export function CoachIcon({
   onOpen: () => void;
 }) {
   const box = useAnchorBox(anchorSelector);
+  const pos = useCoachPosition({ left: box.left + INSET, top: box.top + INSET });
   return createPortal(
     <button
       type="button"
+      ref={(el) => {
+        pos.ref.current = el;
+      }}
       className="coach-icon"
       data-testid="coach-icon"
+      data-dragging={pos.dragging || undefined}
       aria-label={COACH_ICON_ARIA}
-      style={{ left: box.left + INSET, top: box.top + INSET }}
-      onClick={onOpen}
+      style={{ left: pos.point.left, top: pos.point.top }}
+      onClick={() => {
+        if (!pos.consumedByDrag()) onOpen();
+      }}
+      onDoubleClick={pos.reset}
+      onKeyDown={pos.onKeyDown}
+      {...pos.dragProps}
     >
       {COACH_ICON_TEXT}
     </button>,
@@ -102,16 +113,28 @@ export function Coach({
   ackLabel = COACH_ACK_LABEL,
 }: CoachProps) {
   const box = useAnchorBox(anchorSelector);
+  const pos = useCoachPosition({ left: box.left + INSET, top: box.top + INSET });
 
   const style: CSSProperties = {
-    left: box.left + INSET,
-    top: box.top + INSET,
+    left: pos.point.left,
+    top: pos.point.top,
     width: Math.min(MAX_WIDTH, Math.max(240, box.width - INSET * 2)),
   };
 
   return createPortal(
-    <div className="coach" data-testid="coach" data-step={step} style={style} role="group" aria-label="진행 도우미">
-      <div className="coach__head">
+    <div
+      className="coach"
+      data-testid="coach"
+      data-step={step}
+      data-dragging={pos.dragging || undefined}
+      style={style}
+      role="group"
+      aria-label="진행 도우미"
+      ref={(el) => {
+        pos.ref.current = el;
+      }}
+    >
+      <div className="coach__head" data-testid="coach-head" onDoubleClick={pos.reset} {...pos.dragProps}>
         <span className="coach__progress" data-testid="coach-progress">
           안내 {step}/{total}
         </span>
