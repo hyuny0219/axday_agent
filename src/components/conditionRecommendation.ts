@@ -70,6 +70,9 @@ export function buildConditionRecommendation(
   mode: SessionMode,
   stances: Record<ExecMemberId, Stance>,
   liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>,
+  /** 조건은 이미 맞았고 추가 질문의 답만 남은 임원(T110). "더 필요한 조건" 계산에서 빼고
+   * 안내 줄에 "답하면 찬성(또는 반대)"으로 따로 말한다. */
+  awaitingAnswerIds: readonly ExecMemberId[] = [],
 ): ConditionRecommendation {
   // (4) "아직 찬성이 아닌 임원"은 항상 실제 표정으로 가른다 — scripted는 stances 자체가
   // voteRules로 계산된 값이라 requiredConditionsFor(...).persuaded와 결과가 같고, live는
@@ -98,8 +101,10 @@ export function buildConditionRecommendation(
       executionMode: 'DEFAULT',
       participantStance,
     }) === 'NO';
+  const awaitingMembers = EXEC_MEMBER_ORDER.filter((memberId) => awaitingAnswerIds.includes(memberId));
   const notYetForMembers = EXEC_MEMBER_ORDER.filter(
-    (memberId) => stances[memberId] !== targetStance && !alreadyNoByRules(memberId),
+    (memberId) =>
+      stances[memberId] !== targetStance && !alreadyNoByRules(memberId) && !awaitingMembers.includes(memberId),
   );
   const candidates = scenario.conditions.filter((condition) => !confirmedConditionIds.includes(condition.id));
 
@@ -208,6 +213,12 @@ export function buildConditionRecommendation(
         : neededLabels.length > 0
           ? `${currentWord} ${notYetText}를 움직이려면 '${neededLabels.join("'·'")}'이 필요합니다`
           : `${currentWord} ${notYetText}는 조건만으로는 움직이기 어렵습니다`;
+  }
+
+  // T110: 조건은 맞고 답만 남은 임원은 조건이 아니라 "추가 질문 답변"이 필요하다고 따로 말한다.
+  if (awaitingMembers.length > 0) {
+    const awaitingLine = `${awaitingMembers.join('·')}는 조건은 맞으니 추가 질문에 답하면 ${targetStance === 'AGAINST' ? '반대' : '찬성'}입니다`;
+    openingLine = notYetForMembers.length === 0 ? `${awaitingLine}.` : `${openingLine}. ${awaitingLine}`;
   }
 
   return { openingLine, rows, bundles, usedRuleFallback: mode === 'live' && usedRuleFallback };

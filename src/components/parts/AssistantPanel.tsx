@@ -79,6 +79,9 @@ export interface AssistantPanelProps {
   mode: SessionMode;
   /** 무대 표정과 같은 기준의 "지금" 입장(PersuasionBoard와 같은 입력). */
   stances: Record<ExecMemberId, Stance>;
+  /** 조건은 맞았지만 추가 질문의 답을 기다리는 임원(T110, REACTIONS 2/2에서만 넘긴다).
+   * 조건 추천이 이 임원을 "더 필요한 조건"에 세지 않고 "답하면 찬성"으로 따로 말한다. */
+  awaitingAnswerIds?: readonly ExecMemberId[];
   /** live 전용 참고 자료 — 임원별 가장 최근 발언에 실린 제안 조건(있으면,
    * PersuasionBoard와 같은 입력). 아직 화면이 넘기지 않으면 규칙표 값을 "참고"로
    * 대신 쓴다. */
@@ -139,6 +142,7 @@ export function AssistantPanel({
   participantStance = null,
   mode,
   stances,
+  awaitingAnswerIds,
   liveSuggestedConditionIds,
   onRecommendCondition,
   onRecommendConditions,
@@ -361,8 +365,9 @@ export function AssistantPanel({
         mode,
         stances,
         effectiveLiveSuggestions,
+        awaitingAnswerIds,
       ),
-    [scenario, selectedConditionIds, participantStance, mode, stances, effectiveLiveSuggestions],
+    [scenario, selectedConditionIds, participantStance, mode, stances, effectiveLiveSuggestions, awaitingAnswerIds],
   );
 
   // Codex 27차 검토 P2-3: "적용"을 눌러도 매칭되는 추천 문구가 없거나(예: REACTIONS

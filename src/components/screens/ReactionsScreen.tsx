@@ -574,6 +574,7 @@ export function ReactionsScreen({
             stances={stances}
             mode={mode}
             statements={statements}
+            awaitingAnswerIds={awaitingAnswerIds}
           />
           <button
             type="button"
@@ -638,13 +639,18 @@ export function ReactionsScreen({
                   // (사용자 지시 "내 발언에 따라 임원 입장이 변하는 것이 잘 보이게"). 조건
                   // 없이 입장이 바뀐 경우(opposition 응답)는 조건을 원인으로 쓰면 안 되므로
                   // 원인 한 줄을 보여주지 않는다.
+                  // T110: 처음부터 미정이던 임원이 조건은 맞아 고민 중에 머물면 입장은 그대로지만
+                  // "유지"만 보이면 반응이 없는 것처럼 읽히므로 "고민 중 유지"로 적는다.
+                  const awaiting = awaitingAnswerIds.includes(memberId);
                   const badgeText = changed
                     ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
-                    : '유지';
+                    : awaiting
+                      ? '고민 중 유지'
+                      : '유지';
                   const reactionBody =
                     opposition ??
                     (reactions.length > 0
-                      ? reactionBodyText(reactions, awaitingAnswerIds.includes(memberId))
+                      ? reactionBodyText(reactions, awaiting)
                       : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
                   const causeText =
                     changed && !opposition ? changeCauseLabel(scenario, reactions) : null;
@@ -715,6 +721,7 @@ export function ReactionsScreen({
           stances={stances}
           mode={mode}
           statements={statements}
+          awaitingAnswerIds={awaitingAnswerIds}
         />
         {pendingOptionIndex !== null && (
           <RebuildConfirm onKeep={handleKeepCustomText} onRebuild={handleRebuildFromOptions} />
@@ -760,6 +767,7 @@ export function ReactionsScreen({
             participantStance={boardParticipantStance}
             mode={mode}
             stances={stances}
+            awaitingAnswerIds={awaitingAnswerIds}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
             canApplyCondition={canApplyRecommendation}

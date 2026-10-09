@@ -576,3 +576,90 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     expect(screen.getByTestId('assistant-recommend-manual-LOG')).toHaveTextContent('직접 써 주세요');
   });
 });
+
+// T110(두 단계 설득): 1차 반응(listen)에서 조건이 맞은 임원은 "고민 중"으로 보이고, 문구는
+// "하나만 더 묻겠습니다" 톤이며, 현황판에는 "답변 뒤 찬성"이 적힌다.
+describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', () => {
+  const ai = aiApprovalScenario;
+  const opinions: Opinion[] = [
+    {
+      id: 'op1',
+      originalText: '조건을 모두 붙입니다.',
+      selectedPhraseIds: [],
+      confirmedConditionIds: ['LIMIT', 'REVIEW', 'LOG', 'OWNER'],
+      stance: 'FOR',
+      createdAt: 0,
+    },
+  ];
+
+  function renderListen() {
+    const session = { stage: 'REACTIONS' as const, opinions, followUpUsed: false, followUpAnswered: false };
+    return render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={opinions}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(ai, session)}
+        step="listen"
+      />,
+    );
+  }
+
+  it('조건이 맞은 CFO·CAIO·CISO는 "반대 → 고민 중" 배지와 "하나만 더 묻겠습니다" 문구, CEO는 "유지"다', () => {
+    renderListen();
+    for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
+      const card = screen.getByTestId(`reaction-card-${memberId}`);
+      // CAIO는 처음부터 미정이라 입장은 그대로(고민 중 유지), CFO·CISO는 반대에서 고민 중으로 움직인다.
+      expect(card.querySelector('.reaction-card__badge')).toHaveTextContent(
+        memberId === 'CAIO' ? '고민 중 유지' : '반대 → 고민 중',
+      );
+      expect(card).toHaveTextContent('하나만 더 묻겠습니다');
+      expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('고민 중');
+    }
+    expect(screen.getByTestId('reaction-card-CEO').querySelector('.reaction-card__badge')).toHaveTextContent('유지');
+    expect(screen.getByTestId('reaction-card-CEO')).not.toHaveTextContent('하나만 더 묻겠습니다');
+  });
+
+  it('현황판 행이 "조건은 충분 · 답변 뒤 찬성"을 보여 준다', () => {
+    renderListen();
+    fireEvent.click(screen.getByTestId('persuasion-board-toggle'));
+    for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
+      expect(screen.getByTestId(`persuasion-board-note-${memberId}`)).toHaveTextContent('조건은 충분 · 답변 뒤 찬성');
+      expect(screen.getByTestId(`persuasion-board-stance-${memberId}`)).toHaveTextContent(
+        memberId === 'CAIO' ? '고민 중' : '반대 → 고민 중',
+      );
+    }
+  });
+
+  it('조건이 모자라 움직이지 않은 임원은 pendingText를 쓰지 않는다(LOG만 확정 → CAIO만 고민 중)', () => {
+    const only: Opinion[] = [{ ...opinions[0]!, confirmedConditionIds: ['LOG'] }];
+    const session = { stage: 'REACTIONS' as const, opinions: only, followUpUsed: false, followUpAnswered: false };
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={only}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(ai, session)}
+        step="listen"
+      />,
+    );
+    expect(screen.getByTestId('reaction-card-CAIO')).toHaveTextContent('하나만 더 묻겠습니다');
+    expect(screen.getByTestId('reaction-card-CISO')).not.toHaveTextContent('하나만 더 묻겠습니다');
+    expect(screen.getByTestId('reaction-card-CFO')).not.toHaveTextContent('하나만 더 묻겠습니다');
+  });
+
+  it('"답하러 가기"가 주 버튼이고 "넘어가기"는 보조 버튼이다', () => {
+    renderListen();
+    expect(screen.getByTestId('reactions-advance')).toHaveClass('cta');
+    expect(screen.getByTestId('reactions-advance')).not.toHaveClass('cta--secondary');
+    expect(screen.getByTestId('keep-previous-answer')).toHaveClass('cta--secondary');
+  });
+});

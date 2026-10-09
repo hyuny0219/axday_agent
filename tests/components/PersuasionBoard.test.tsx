@@ -115,3 +115,33 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.queryByTestId('persuasion-board-toggle')).toBeNull();
   });
 });
+
+describe('PersuasionBoard 답변 대기 표기(T110)', () => {
+  it('awaitingAnswerIds에 든 임원 행은 찬성 참가자면 "답변 뒤 찬성", 반대 참가자면 "답변 뒤 반대"다', () => {
+    const stances = { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'AGAINST', CISO: 'AGAINST' } as const;
+    const { rerender } = render(
+      <PersuasionBoard
+        scenario={aiApprovalScenario}
+        confirmedConditionIds={['LIMIT', 'REVIEW']}
+        participantStance="FOR"
+        stances={stances}
+        mode="scripted"
+        awaitingAnswerIds={['CFO']}
+      />,
+    );
+    expand();
+    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('조건은 충분 · 답변 뒤 찬성');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).not.toHaveTextContent('답변 뒤');
+    rerender(
+      <PersuasionBoard
+        scenario={aiApprovalScenario}
+        confirmedConditionIds={['FULL_AUTO']}
+        participantStance="AGAINST"
+        stances={{ CEO: 'UNDECIDED', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' }}
+        mode="scripted"
+        awaitingAnswerIds={['CEO']}
+      />,
+    );
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('조건은 충분 · 답변 뒤 반대');
+  });
+});

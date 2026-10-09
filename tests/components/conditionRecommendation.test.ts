@@ -204,3 +204,31 @@ describe('buildConditionRecommendation(반대 입장 보강)', () => {
     expect(result.usedRuleFallback).toBe(true);
   });
 });
+
+describe('buildConditionRecommendation 답변 대기 임원(T110)', () => {
+  it('조건은 맞고 답만 남은 임원은 "더 필요한 조건"에 세지 않고 "답하면 찬성"으로 따로 말한다', () => {
+    const ids = ['LIMIT', 'REVIEW', 'LOG', 'OWNER'];
+    const stances = scriptedStances(scenario, {
+      stage: 'REACTIONS',
+      opinions: [{ id: 'o', originalText: '', selectedPhraseIds: [], confirmedConditionIds: ids, stance: 'FOR', createdAt: 0 }],
+      followUpUsed: false,
+      followUpAnswered: false,
+    });
+    const result = buildConditionRecommendation(scenario, ids, 'FOR', 'scripted', stances, undefined, ['CFO', 'CAIO', 'CISO']);
+    expect(result.openingLine).toBe('CFO·CAIO·CISO는 조건은 맞으니 추가 질문에 답하면 찬성입니다.');
+    expect(result.rows).toEqual([]);
+    expect(result.openingLine).not.toContain('움직이기 어렵');
+  });
+
+  it('남은 조건이 필요한 임원이 섞이면 두 문장으로 나뉜다', () => {
+    const stances = scriptedStances(scenario, {
+      stage: 'REACTIONS',
+      opinions: [{ id: 'o', originalText: '', selectedPhraseIds: [], confirmedConditionIds: ['LOG'], stance: 'FOR', createdAt: 0 }],
+      followUpUsed: false,
+      followUpAnswered: false,
+    });
+    const result = buildConditionRecommendation(scenario, ['LOG'], 'FOR', 'scripted', stances, undefined, ['CAIO']);
+    expect(result.openingLine).toContain('CAIO는 조건은 맞으니 추가 질문에 답하면 찬성입니다');
+    expect(result.openingLine).toMatch(/^지금 반대인 CFO·CISO를 움직이려면/);
+  });
+});

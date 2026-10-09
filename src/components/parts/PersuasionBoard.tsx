@@ -38,6 +38,10 @@ export interface PersuasionBoardProps {
    * stance)과, liveSuggestedConditionIds를 따로 안 넘겼을 때의 제안 조건(역할별 최신
    * 발언)을 여기서 뽑는다(PR #20 Codex 28차 P2-3·P2-4). scripted는 쓰지 않는다. */
   statements?: readonly Statement[];
+  /** 조건은 맞았지만 추가 질문의 답을 기다리느라 "고민 중"에 머문 임원(T110, scripted의
+   * domain/stance.ts membersAwaitingAnswer). 행에 "답변 뒤 찬성"(반대 참가자면 "답변 뒤
+   * 반대")을 적는다. 생략하면 비어 있는 것과 같다. */
+  awaitingAnswerIds?: readonly ExecMemberId[];
 }
 
 function conditionLabel(scenario: Scenario, id: string): string {
@@ -69,6 +73,7 @@ function buildRow(
   liveSuggestedConditionIds?: Partial<Record<ExecMemberId, readonly string[]>>,
   statements: readonly Statement[] = [],
   alreadySame = false,
+  awaitingAnswer = false,
 ): Row {
   const opening = openingStanceOf(scenario, memberId, mode, statements);
   const current = stances[memberId];
@@ -94,6 +99,16 @@ function buildRow(
   // T101: 처음부터 참가자와 같은 편인 임원은 설득 대상이 아니다.
   if (alreadySame) {
     return { memberId, stanceText, stanceChanged, conditionNote: '처음부터 같은 편' };
+  }
+
+  // T110: 조건은 이미 맞았고 추가 질문의 답만 남은 임원.
+  if (awaitingAnswer) {
+    return {
+      memberId,
+      stanceText,
+      stanceChanged,
+      conditionNote: targetVote === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '조건은 충분 · 답변 뒤 반대',
+    };
   }
 
   if (targetVote === 'FOR') {
@@ -146,6 +161,7 @@ export function PersuasionBoard({
   mode,
   liveSuggestedConditionIds,
   statements,
+  awaitingAnswerIds,
 }: PersuasionBoardProps) {
   // 설득 현황판 접기/펼치기(2026-10-08 팀리드 지시 — 1280×720 DISCUSS 왼쪽 열이 4행
   // 전부를 펼친 채로는 세로로 넘쳐 하단 CTA가 잘렸다). 좁은 화면(≤1280px)에서만 기본
@@ -169,6 +185,7 @@ export function PersuasionBoard({
       liveHints,
       statements,
       tally.alreadySame.includes(memberId),
+      awaitingAnswerIds?.includes(memberId) ?? false,
     ),
   );
 

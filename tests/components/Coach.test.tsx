@@ -202,6 +202,11 @@ describe('안내 아이콘(T106)', () => {
 });
 
 describe('코치 문구', () => {
+  it('반응 화면(4)은 고민 중인 임원이 답해야 찬성으로 바뀐다고 한 줄 알려 준다(T110)', () => {
+    expect(COACH_SCREENS.find((item) => item.step === 4)?.lines).toContain('고민 중인 임원은 답해야 찬성으로 바뀝니다.');
+    expect(COACH_SCREENS.find((item) => item.step === 4)?.linesLive?.join(' ')).toContain('답해야');
+  });
+
   it('6화면이 모두 있고 쉬운 말만 쓴다(2~4줄)', () => {
     expect(COACH_SCREENS.map((item) => item.step)).toEqual([1, 2, 3, 4, 5, 6]);
     for (const item of COACH_SCREENS) {

@@ -326,3 +326,59 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     );
   });
 });
+
+describe('두 단계 설득의 결과 문구(T110)', () => {
+  const ALL = ['LIMIT', 'REVIEW', 'LOG', 'OWNER'];
+
+  it('oneStepAwayNote: 조건은 맞는데 답하지 않아 반대인 임원은 "추가 질문에 답했다면 찬성"', () => {
+    expect(oneStepAwayNote(scenario, 'CAIO', ['LOG'], 'FOR', false)).toBe('조건은 맞았으니 추가 질문에 답했다면 찬성');
+    expect(oneStepAwayNote(scenario, 'CAIO', ['LOG'], 'FOR', true)).toBeNull();
+  });
+
+  it('oneStepAwayNote: 조건이 모자라고 답도 없으면 조건과 답변을 함께 안내한다', () => {
+    expect(oneStepAwayNote(scenario, 'CFO', ['LIMIT'], 'FOR', false)).toBe(
+      "'사람이 일부 다시 보기'와 추가 질문 답변이 있었으면 찬성",
+    );
+    expect(oneStepAwayNote(scenario, 'CFO', [], 'FOR', false)).toBe(
+      "'결재 금액 한도·사람이 일부 다시 보기'와 추가 질문 답변이 있었으면 찬성",
+    );
+  });
+
+  it('buildPersuasionResult: 조건은 모두 맞았지만 답하지 않아 아무도 못 움직이면 그 이유를 제목에 말한다', () => {
+    const motion = buildMotion(ALL);
+    const finalStances = {} as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+    for (const ballot of decideBoard(scenario, motion, 'FOR', false)) {
+      const id = ballot.memberId as 'CEO' | 'CFO' | 'CAIO' | 'CISO';
+      finalStances[id] = ballot.vote === 'YES' ? 'FOR' : 'AGAINST';
+    }
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: false, mode: 'scripted' as const };
+    const result = buildPersuasionResult(scenario, session, finalStances, {
+      participantVote: 'YES',
+      participantStance: 'FOR',
+      conditionCount: 4,
+      finalConditionIds: ALL,
+      finalMotion: motion,
+    });
+    expect(result.tally.persuaded).toEqual([]);
+    expect(result.headline).toContain('추가 질문에 답하지 않아');
+  });
+
+  it('buildPersuasionResult: 같은 조건에서 답했다면 세 임원을 설득한 것으로 나온다', () => {
+    const motion = buildMotion(ALL);
+    const finalStances = {} as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+    for (const ballot of decideBoard(scenario, motion, 'FOR', true)) {
+      const id = ballot.memberId as 'CEO' | 'CFO' | 'CAIO' | 'CISO';
+      finalStances[id] = ballot.vote === 'YES' ? 'FOR' : 'AGAINST';
+    }
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
+    const result = buildPersuasionResult(scenario, session, finalStances, {
+      participantVote: 'YES',
+      participantStance: 'FOR',
+      conditionCount: 4,
+      finalConditionIds: ALL,
+      finalMotion: motion,
+    });
+    expect(result.tally.persuaded).toEqual(['CFO', 'CAIO', 'CISO']);
+    expect(result.headline).toBe('이사님의 발언과 조건 4개로 임원 3명이 이사님 편이 됐습니다');
+  });
+});
