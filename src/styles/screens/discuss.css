@@ -20,6 +20,8 @@
   --hud-textarea-h: 116px;
   --hud-chip-h: 24px;
   --hud-chip-scroll: 8px;
+  --hud-head-h: 20px;
+  --hud-input-min: 44px;
   --hud-conflict-h: 16px;
   --hud-chips-h: calc(var(--hud-chip-h) + var(--hud-chip-scroll) + 3px + var(--hud-conflict-h));
 }
@@ -29,6 +31,7 @@
   .reactions-screen__hud {
     --hud-textarea-h: 96px;
     --hud-chip-h: 22px;
+    --hud-head-h: 16px;
   }
 }
 
@@ -54,9 +57,10 @@
 .draft-editor {
   display: grid;
   flex: 1 1 auto;
-  min-height: 0;
-  /* 머리줄 / 입력 상자(남는 높이, 최소 44px ~ 여유 시 --hud-textarea-h) */
-  grid-template-rows: auto minmax(44px, var(--hud-textarea-h));
+  /* 머리줄 / 입력 상자(남는 높이, 여유 시 최대 --hud-textarea-h). T117: 상자 최소 44px와 머리줄이
+     들어갈 높이는 항상 확보해(min-height) 입력 상자가 아래 칩 줄 위로 겹치지 않는다. */
+  min-height: calc(var(--hud-head-h) + 10px + var(--hud-input-min));
+  grid-template-rows: auto minmax(0, var(--hud-textarea-h));
   gap: 10px;
 }
 
@@ -69,8 +73,10 @@
 /* 머리줄 "MY STATEMENT · 내 발언" + "n / 300자"(시안). */
 .draft-editor__head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+  height: var(--hud-head-h);
   font-family: var(--font-hud);
   font-size: 14px;
   letter-spacing: 0.18em;
@@ -101,7 +107,7 @@
 .draft-editor__textarea {
   width: 100%;
   height: auto;
-  min-height: 44px;
+  min-height: var(--hud-input-min);
   box-sizing: border-box;
   resize: none;
   overflow-y: auto;
@@ -268,6 +274,22 @@
   }
 }
 
+/* 가려진 칩이 있으면 오른쪽 끝을 페이드하고 옆에 "+N"을 둔다(스크롤바가 안 보이는 환경 대비). */
+.condition-chips__list[data-more='true'] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.condition-chips__more {
+  flex: 0 0 auto;
+  min-width: 26px;
+  line-height: var(--hud-chip-h);
+  color: var(--hud-warn);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* 라벨만 말줄임 — "✓"·"+ 새 조건" 꼬리는 항상 보인다. */
 .condition-chip__label {
   min-width: 0;
@@ -308,8 +330,12 @@
 }
 
 .condition-chips__conflicts li {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline;
+}
+
+/* 충돌쌍이 둘 이상이면 한 줄에 이어 붙인다(말줄임이면 전체는 title). */
+.condition-chips__conflicts li + li::before {
+  content: ' · ';
 }
 
 @media (max-width: 1280px) {

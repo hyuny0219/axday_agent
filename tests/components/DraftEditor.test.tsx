@@ -47,12 +47,14 @@ describe('DraftEditor', () => {
   it('CSS 규칙 문자열 점검: 입력 상자는 남는 높이(최소 44px)·안쪽 스크롤이고 글 길이로 늘어나지 않는다', () => {
     const css = readFileSync('src/styles/screens/discuss.css', 'utf8');
     const rule = /\.draft-editor__textarea \{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(rule).toContain('min-height: 44px');
+    expect(rule).toContain('min-height: var(--hud-input-min)');
+    expect(css).toContain('--hud-input-min: 44px');
     expect(rule).toContain('overflow-y: auto');
     expect(rule).toContain('resize: none');
     expect(rule).not.toMatch(/field-sizing/);
     const editorRule = /\.draft-editor \{([^}]*)\}/.exec(css)?.[1] ?? '';
-    expect(editorRule).toContain('minmax(44px, var(--hud-textarea-h))');
+    expect(editorRule).toContain('minmax(0, var(--hud-textarea-h))');
+    expect(editorRule).toContain('--hud-input-min');
 
     render(<DraftEditor value={'가'.repeat(600)} onChange={vi.fn()} />);
     const textarea = screen.getByTestId('draft-editor-textarea');

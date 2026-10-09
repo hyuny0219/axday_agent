@@ -151,3 +151,12 @@
   font-size: 9px;
   color: #8f8a80;
 }
+
+/* T117: 낮은 화면(높이 ≤800)에서 사용자가 직접 펼쳐도 입력 상자(최소 44px) 자리를 뺏지 않게
+   임원별 행 목록은 안쪽 스크롤로 제한한다. */
+@media (max-height: 800px) {
+  .persuasion-board__list {
+    max-height: 52px;
+    overflow-y: auto;
+  }
+}

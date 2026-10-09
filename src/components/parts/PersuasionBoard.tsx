@@ -179,10 +179,11 @@ function buildRow(
   return { memberId, stanceText, stanceChanged, conditionNote: '아직 의견을 내지 않았습니다' };
 }
 
-/** 1280px보다 넓은 화면인지 — 현황판 기본 펼침/접힘 판단(persuasionBoard.css의 1280 분기점과 같다). */
+/** 1280px보다 넓고 800px보다 높은 화면인지 — 현황판 기본 펼침/접힘 판단(persuasionBoard.css의
+ * 1280 분기점과 같다). T117: 1366×768처럼 폭만 넓고 낮은 화면은 펼치면 입력 상자 자리가 없어 접는다. */
 function isWideViewport(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(min-width: 1281px)').matches
+    ? window.matchMedia('(min-width: 1281px) and (min-height: 801px)').matches
     : false;
 }
 

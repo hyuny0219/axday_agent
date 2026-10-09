@@ -7,6 +7,7 @@
 // 테두리 + "✓", 새로 제안된 칩은 확정돼도 앰버 테두리 + "+ 새 조건"이다. 선택적
 // newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ConflictPair, Scenario } from '../../content/types';
 
 export interface ConditionChipsProps {
@@ -50,6 +51,28 @@ export function ConditionChips({
   onToggle,
   newlyProposedIds = [],
 }: ConditionChipsProps) {
+  // T117: 칩은 한 줄 가로 스크롤이다. macOS 오버레이 스크롤바는 스크롤 힌트를 주지 못해 오른쪽에
+  // 가려진 칩이 있으면 오른쪽 끝을 페이드하고 "+N"(가려진 칩 수)을 보여 준다.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hiddenCount, setHiddenCount] = useState(0);
+  const measure = () => {
+    const el = listRef.current;
+    if (!el) {
+      setHiddenCount(0);
+      return;
+    }
+    const right = el.scrollLeft + el.clientWidth;
+    const hidden = [...el.querySelectorAll<HTMLElement>('.condition-chip')].filter(
+      (chip) => chip.offsetLeft + chip.offsetWidth > right + 1,
+    ).length;
+    setHiddenCount(hidden);
+  };
+  useLayoutEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
+
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
       return null;
@@ -71,7 +94,12 @@ export function ConditionChips({
           체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
       <div className="condition-chips__row">
         <p className="condition-chips__label">조건</p>
-        <div className="condition-chips__list">
+        <div
+          className="condition-chips__list"
+          ref={listRef}
+          data-more={hiddenCount > 0}
+          onScroll={measure}
+        >
           {proposedIds.map((id) => {
             const accepted = acceptedIds.includes(id);
             const isNew = newlyProposedIds.includes(id);
@@ -88,12 +116,20 @@ export function ConditionChips({
               >
                 <span className="condition-chip__label">{conditionLabel(scenario, id)}</span>
                 {accepted && (
-                  <span className="condition-chip__tail">{isNew ? '+ 새 조건' : '✓'}</span>
+                  <span className="condition-chip__tail" aria-hidden="true">{isNew ? '+ 새 조건' : '✓'}</span>
                 )}
               </button>
             );
           })}
         </div>
+        <span
+          className="condition-chips__more"
+          aria-hidden="true"
+          title={hiddenCount > 0 ? `오른쪽에 가려진 조건 ${hiddenCount}개 — 옆으로 밀어 보세요` : undefined}
+          data-testid="condition-chips-more"
+        >
+          {hiddenCount > 0 ? `+${hiddenCount}` : ''}
+        </span>
       </div>
       {conflictPairs.length > 0 && (
         <ul

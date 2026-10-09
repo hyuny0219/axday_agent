@@ -484,6 +484,7 @@ const HUD_VIEWPORTS: Array<[number, number]> = [
   [1536, 864],
   [1440, 900],
   [1366, 768],
+  [1600, 900],
   [1280, 720],
 ];
 
@@ -526,6 +527,34 @@ async function expectHudFitsAtAllViewports(
           listHeight: list?.getBoundingClientRect().height ?? 0,
           conflictTruncated: conflicts ? conflicts.scrollWidth > conflicts.clientWidth + 1 : true,
           textareaHeight: area?.getBoundingClientRect().height ?? 0,
+          geometry: (() => {
+            const hudEl = area?.closest('.discuss-screen__hud, .reactions-screen__hud');
+            const editor = area?.closest('.draft-editor');
+            const head = editor?.querySelector('.draft-editor__head');
+            const slot = hudEl?.querySelector('.hud-conditions-slot');
+            if (!area || !hudEl || !editor || !head || !slot) {
+              return null;
+            }
+            const r = (el: Element) => el.getBoundingClientRect();
+            const submitTops = ids.map((id) => {
+              const el = document.querySelector(`[data-testid="${id}"]`);
+              return el ? r(el).top : Number.NEGATIVE_INFINITY;
+            });
+            return {
+              textareaBottom: r(area).bottom,
+              textareaTop: r(area).top,
+              headBottom: r(head).bottom,
+              editorHeight: r(editor).height,
+              headHeight: r(head).height,
+              slotTop: r(slot).top,
+              slotBottom: r(slot).bottom,
+              hudTop: r(hudEl).top,
+              hudBottom: r(hudEl).bottom,
+              chipTop: chipEls[0] ? r(chipEls[0]).top : 0,
+              chipBottom: chipEls[0] ? r(chipEls[0]).bottom : 0,
+              minSubmitTop: Math.min(...submitTops),
+            };
+          })(),
           submitCount: ids.filter((id) => document.querySelector(`[data-testid="${id}"]`)).length,
         };
       },
@@ -537,10 +566,26 @@ async function expectHudFitsAtAllViewports(
     expect(hud.conflictTruncated, `${where}: 충돌 안내가 말줄임 없이 읽혀야 한다`).toBe(false);
     expect(hud.textareaHeight, `${where}: 입력 상자 최소 44px`).toBeGreaterThanOrEqual(43);
     expect(hud.submitCount, `${where}: 제출 줄 버튼`).toBe(submitIds.length);
+    // T117 검토: 입력 상자가 조건 칩 줄 위로 겹치거나 HUD 박스 밖으로 나가지 않아야 한다.
+    const g = hud.geometry;
+    expect(g, `${where}: HUD 구조를 찾지 못했다`).not.toBeNull();
+    if (g) {
+      expect(g.textareaBottom, `${where}: 입력 상자 아래 끝이 조건 칸 위 끝 이하`).toBeLessThanOrEqual(g.slotTop + 1);
+      expect(g.textareaTop, `${where}: 입력 상자가 머리줄 아래에서 시작`).toBeGreaterThanOrEqual(g.headBottom - 1);
+      expect(g.editorHeight, `${where}: 편집기 높이 ≥ 머리줄 + 입력 상자`).toBeGreaterThanOrEqual(
+        g.headHeight + hud.textareaHeight - 1,
+      );
+      expect(g.slotBottom, `${where}: 조건 칸이 HUD 박스 안`).toBeLessThanOrEqual(g.hudBottom + 1);
+      expect(g.chipTop, `${where}: 칩이 조건 칸 안`).toBeGreaterThanOrEqual(g.slotTop - 1);
+      expect(g.chipBottom, `${where}: 칩이 조건 칸 안`).toBeLessThanOrEqual(g.slotBottom + 1);
+      expect(g.minSubmitTop, `${where}: 제출 줄이 HUD 박스 아래`).toBeGreaterThanOrEqual(g.hudBottom - 1);
+    }
     await expectNoPageScroll(page, where);
   }
 }
 
+// 글을 쓴 직후에는 "새로 제안된 조건 자동 확정" 효과가 한 번 더 돌아 곧바로 누른 칩의 선택을
+// 되돌리는 경합이 있다(제품 쪽 별도 사안) — 충돌 안내가 보일 때까지 눌러 보는 재시도로 우회한다.
 async function makeFiveConditionsWithConflict(page: Page, fill: (text: string) => Promise<void>) {
   await fill(longDraft().slice(0, 300));
   await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
