@@ -81,7 +81,7 @@
    주황 채움(.cta 공용 색·글꼴·모서리)으로 — 크기만 이 줄에 맞춘다. */
 .reactions-screen__submit-row .assistant-panel__toggle {
   min-height: 60px;
-  width: 270px;
+  width: 225px;
   padding: 0;
   font-size: 21px;
   letter-spacing: 0.04em;
@@ -93,7 +93,7 @@
     /* T96(2026-10-08 팀리드 지시): 설득 현황판이 더해지며 왼쪽 열 세로 예산이
        빠듯해졌다 — 버튼 세 개(비서실장·답하지 않고 넘어가기·답변 전달)가 한 줄에
        들어가게 너비를 더 줄여 두 줄 줄바꿈 자체를 없앤다(최소 터치 높이는 그대로). */
-    width: 190px;
+    width: 150px;
     font-size: 15px;
   }
 }

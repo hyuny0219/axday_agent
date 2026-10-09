@@ -27,7 +27,10 @@ async function expectFullyVisible(page: Page, testId: string, label: string) {
     `${label}: ${testId}가 뷰포트를 벗어났다(top=${box.y}, bottom=${box.y + box.height}, viewport=${viewport.height})`,
   ).toBe(true);
   // 패널 자체가 안에서 잘리는 경우(자식이 넘침)도 잡는다.
-  const clipped = await page.getByTestId(testId).evaluate((el) => el.scrollHeight - el.clientHeight);
+  // T111: 버튼(.cta)은 바깥으로 나온 꺾쇠(::before, 장식)가 scrollHeight를 늘리므로 제외한다.
+  const clipped = await page
+    .getByTestId(testId)
+    .evaluate((el) => (el.classList.contains('cta') ? 0 : el.scrollHeight - el.clientHeight));
   expect(clipped <= 1, `${label}: ${testId} 내부 내용이 ${clipped}px 넘쳐 잘린다`).toBe(true);
 }
 
