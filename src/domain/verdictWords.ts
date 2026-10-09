@@ -262,7 +262,7 @@ const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
     // 동사 선언: 찬성합니다 / 가결하겠습니다 / 부결시키겠습니다 / 부결해야 합니다
     '(?:합니다|합니까|하겠습니다|하겠어요|하겠다|하겠네요|한다|드립니다|됩니다|드리겠습니다|시키겠습니다|시키겠다|되겠습니다|되겠다' +
-    '|(?:시키기로|하기로|하는 것으로|하는 쪽으로|해야) ' + HADA_END + '|(?:시키기로|하기로|하는 것으로|하는 쪽으로) (?:결정|정)(?:했습니다|했다|합니다|하겠습니다)' + '|하기로 하였다|시킬 (?:것입니다|겁니다|예정입니다))' +
+    '|(?:시키기로|하기로|하는 것으로|하는 쪽으로|해야만?) ' + HADA_END + '|(?:시키기로|하기로|하는 것으로|하는 쪽으로) (?:결정|정)(?:했습니다|했다|합니다|하겠습니다)' + '|하기로 하였다|시킬 (?:것입니다|겁니다|예정입니다))' +
     '|' +
     // 서술격 선언: 찬성입니다 / 찬성이에요 / 찬성이라고 하겠습니다
     '(?:입니다|이에요|이죠|이다|이라고|이라서)' +
@@ -365,11 +365,26 @@ function hasConditionalMyeon(sentence: string): boolean {
 // 는 한, 이후·뒤에·후에·다음에·나서, 전에는·까지는 ② 전제·조건 명사 — 전제(로·하에), 조건(으로·이라면 …), 선에서·범위에서·한도에서, 이상이면, 기준으로,
 // 보장·확보·충족·이행(되면·된다면·될 때·시·되어야) ③ 필요조건 연결 — 되어야·돼야·있어야·넣어야·지켜야·갖춰야·맞아야·따라야·-져야(찬성해야 합니다 같은 방향 동사 자체의 -해야는 제외), 거든·을수록·는 대로.
 const CONDITIONAL_CLAUSE_MARKERS =
-  /(?:(?:^|\s)시(?:에는|에)?(?=\s|,|$)|는 한(?:에서|에서는)?(?=\s|,|$)|(?:이후|뒤|후|다음)에(?:는|야)?(?=\s|,|$)|나서(?:야)?(?=\s|,|$)|전에는|까지는|전제(?:로|하에|라면)|조건(?:으로|이라면|이면|하에|이 붙으면|을 걸고)|선에서|범위에서|한도에서|이상(?:이면|일 때)|기준(?:으로|에 맞으면)|(?:보장|확보|충족|이행)(?:되면|된다면|된다는|될 때|시|되어야)|(?:되어야|돼야|있어야|넣어야|지켜야|갖춰야|맞아야|따라야|[가-힣]져야)|거든(?=\s|,|$)|을수록|할수록|는 대로)/;
+  /(?:(?:^|\s)시(?:에는|에)?(?=\s|,|$)|는 한(?:에서|에서는)?(?=\s|,|$)|(?<![가-힣])(?:이후|뒤|후)(?:에|에는|에야|엔|부터)?(?=\s|,|$)|다음에(?:는|야)?(?=\s|,|$)|끝난 뒤|끝나고|끝나면|마치고|마친 뒤|지난 후|향후|나서(?:야)?(?=\s|,|$)|전에는|까지는|전제(?:로|하에|라면)|조건(?:으로|이라면|이면|하에|이 붙으면|을 걸고)|선에서|범위에서|한도에서|이상(?:이면|일 때)|기준(?:으로|에 맞으면)|(?:보장|확보|충족|이행)(?:되면|된다면|된다는|될 때|시|되어야)|(?:되어야|돼야|있어야|넣어야|지켜야|갖춰야|맞아야|따라야|[가-힣]져야)|거든(?=\s|,|$)|을수록|할수록|는 대로)/;
 const TIME_WHEN = /([가-힣])\s?때(?:에는|에|는|만|라도)?(?=\s|,|$)/g;
 
+/** 필요조건 연결 일반형: 어절이 -아야/-어야/-여야/-해야/-돼야 … (+만·지)로 끝나면 조건 표지다("기록을 남겨야 찬성합니다"). 방향 동사 자체의
+ * -해야("찬성해야 합니다")는 선언이라 제외한다. ㅏ·ㅐ·ㅓ·ㅔ·ㅕ·ㅘ·ㅙ·ㅝ·ㅞ 모음 + 야이고 3자 이상인 어절만 센다. */
+const NEEDED_VOWELS = new Set([0, 1, 4, 5, 6, 9, 10, 14, 15]);
+const DIRECTION_SELF_NEEDED = /^(?:찬성|반대|승인|부결|가결|통과|반려|기각|거부)(?:해|시켜|하여)야/;
+
+function hasNeededCondition(sentence: string): boolean {
+  for (const raw of sentence.split(/\s+/)) {
+    const word = raw.replace(/[,、]+$/, '').replace(/(?:만|지)$/, '');
+    if (word.length < 3 || !word.endsWith('야') || DIRECTION_SELF_NEEDED.test(word)) continue;
+    const prev = word.charCodeAt(word.length - 2);
+    if (prev >= 0xac00 && prev <= 0xd7a3 && NEEDED_VOWELS.has(Math.floor((prev - 0xac00) / 28) % 21)) return true;
+  }
+  return false;
+}
+
 function hasConditionalClause(sentence: string): boolean {
-  if (CONDITIONAL_CLAUSE_MARKERS.test(sentence)) return true;
+  if (CONDITIONAL_CLAUSE_MARKERS.test(sentence) || hasNeededCondition(sentence)) return true;
   for (const match of sentence.matchAll(TIME_WHEN)) {
     // ㄹ받침 음절 + 때(될 때·할 때·충족될 때)만 시점 조건이다("그때"는 과거 표지가 따로 처리한다).
     if (finalConsonantIndex(match[1]) === 8) return true;
@@ -473,8 +488,13 @@ function classifySentence(
     return hasDirectionWord(sentence, participantStance) ? 'AMBIGUOUS' : null;
   }
   if (!hasDirectionWord(target, participantStance)) return null;
+  // 현재 표지 앞에 조건 표지가 있으면 조건부 선언이다("사람이 검토하는 한 현재는 찬성합니다"). 과거 서술 표지는 여기서 보지 않는다.
+  if (present) {
+    const pre = sentence.slice(0, present.index);
+    if (pre && (HEDGED_SENTENCE.test(pre) || hasConditionalMyeon(pre) || hasConditionalClause(pre))) return 'AMBIGUOUS';
+  }
   // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
-  const forHedge = target.replace(/않으면 ?안 ?됩/g, '않아야 합');
+  const forHedge = target.replace(/않으면 ?안 ?됩/g, '않음 합');
   if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge) || hasConditionalClause(forHedge) || QUOTE_FORM.test(target)) return 'AMBIGUOUS';
   const found = new Set<DeclaredDirection>();
   // 문장 안의 모든 방향 명사 출현을 훑는다: 선언 꼬리로 해소됐거나, 설명문이거나, 약한 방향어(승인·통과)가 아니면 미해소 → AMBIGUOUS.

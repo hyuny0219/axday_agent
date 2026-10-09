@@ -265,6 +265,15 @@ describe('declaredDirection(T115)', () => {
       ['지금 찬성합니다.', 'FOR'], ['그때 찬성했습니다.', null], ['경우에 따라 다르지만 저는 찬성합니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('필요조건 일반형·조사 없는 이후·현재 표지 앞 조건절(Codex 93차). "향후 찬성합니다"는 조건 표지로 보아 null', () => {
+    for (const [text, expected] of [
+      ['기록을 남겨야 찬성합니다.', null], ['검토를 마쳐야 찬성하겠습니다.', null], ['사람이 확인해야 승인하겠습니다.', null],
+      ['찬성해야 합니다.', 'FOR'], ['반대해야만 합니다.', 'AGAINST'], ['조건이 갖춰져야 찬성할 수 있습니다.', null],
+      ['검토 이후 찬성하겠습니다.', null], ['검토 후 찬성하겠습니다.', null], ['향후 찬성합니다.', null], ['오후에 찬성합니다.', 'FOR'],
+      ['사람이 검토하는 한 현재는 찬성합니다.', null], ['조건이 붙으면 지금은 찬성합니다.', null],
+      ['처음에는 반대했지만 지금은 찬성합니다.', 'FOR'], ['최종적으로는 찬성합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
