@@ -8,9 +8,10 @@
 //  2) 대신 서술격·"에 서/속"·"으로" 연결이면 선언으로 보고, 바로 뒤가 의문·조건·유보·열거형
 //     (LEAVE_OPEN: 인지·이라면·일 수도·에서 말씀 …)이면 부정 전방탐색으로 제외한다.
 //  3) 뒤에 명사가 이어지는 수식형("승인 쪽 조건", "찬성 편 임원")은 쪽/편 바로 뒤가 서술격이 아니므로 걸리지 않는다.
-//  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴은 매칭 위치부터 가장 가까운 절 경계(문장 부호·
-//     쉼표·연결 어미 뒤 공백)까지의 절이 "?"로 끝나거나 까·까요·는지요로 끝나면 질문으로 보고 제외한다
-//     (isInQuestionClause). 선언 뒤에 마침표·쉼표·"-입니다만"으로 이어진 질문은 선언 절이 먼저 끝나므로 걸린다.
+//  4) 어미 열거만으로는 의문형이 계속 샌다 — 서술 꼴 패턴에는 절 단위 보조 규칙을 쓴다(isInQuestionClause).
+//     절 경계는 문장 부호와 쉼표뿐(연결 어미는 질문 술어 안에도 있어 경계가 아니다). 매칭된 서술 꼴이 평서
+//     종결 어미로 끝나고 바로 뒤가 "?"가 아니면 뒤에 질문이 이어져도 선언으로 확정하고, 종결 어미가 아니면
+//     가장 가까운 경계까지의 절이 질문(?·까·까요·는지요)일 때만 제외한다.
 //  5) 새 오탐·누락 지적이 오면 위 기준으로 판단하고, 문장을 tests/server/followUpVerdict.test.ts의
 //     "걸려야 하는 문장"/"중립 문장" 목록에 먼저 추가한 뒤 패턴을 고친다. 찬성·반대 단어 자체를 쓴 문장은
 //     (의문형이라도) 단어 패턴이 걸린다 — 의도된 엄격함.
@@ -72,7 +73,7 @@ export function findVerdictWords(text: string): string[] {
     const isPlainWord = PLAIN_WORD_SOURCE.test(pattern.source);
     const scan = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
     for (const match of text.matchAll(scan)) {
-      if (!isPlainWord && isInQuestionClause(text, match.index ?? 0)) continue;
+      if (!isPlainWord && isInQuestionClause(text, match.index ?? 0, match[0].length)) continue;
       found.push(match[0]);
       break;
     }
@@ -82,19 +83,30 @@ export function findVerdictWords(text: string): string[] {
 
 const PLAIN_WORD_SOURCE = /^[가-힣|]+$/;
 
-/** 매칭 위치부터 가장 가까운 절 경계까지를 한 절로 보고, 그 절이 질문인지 판단한다(?로 끝나거나 까·까요·
- * 는지요로 끝남). 어미 열거(LEAVE_OPEN)만으로는 의문형이 계속 새므로 한 번 더 거르는 보조 규칙이다.
- * 절 경계 = 문장 부호(. ! ? … 줄바꿈), 쉼표(, 、), 연결 어미 뒤 공백(-고 -며 -지만 -는데 -면서 -입니다만).
- * "-라고 ·-다고 "는 인용이라 경계가 아니다("승인 쪽이라고 보시는 겁니까?"는 한 절의 질문).
- * 그래서 선언 뒤에 쉼표로 이어진 질문("승인 쪽입니다, 조건을 더 확인할까요?")은 첫 절이 "입니다"로 끝나
- * 선언으로 남고, "승인 쪽이죠?"처럼 선언 꼴 바로 뒤가 "?"이면 질문이다. */
-function isInQuestionClause(text: string, from: number): boolean {
-  const boundary = /[.!?…,、\n]|(?<![라다])(?:고|며|지만|는데|면서) |(?<=니다)만 /g;
+/** 평서 종결 어미 — 매칭된 서술 꼴이 이 어미로 끝나고 바로 뒤가 "?"가 아니면 뒤에 무엇이 오든 선언이다. */
+const DECLARATIVE_ENDING =
+  /입니다만|습니다만|입니다|습니다|이다|이죠|이네요|이에요|이고요|이군요|이겠습니다|하겠습니다|드리겠습니다|밝힙니다/g;
+
+/** 질문 절 보조 규칙(어미 열거 LEAVE_OPEN만으로는 의문형이 계속 샌다).
+ *  1) 절 경계는 문장 부호(. ! ? … 줄바꿈)와 쉼표(, 、)뿐이다. 연결 어미(-고·-는데…)는 경계가 아니다 —
+ *     질문 술어 안에도 흔하다("승인 쪽이라고 생각하고 계십니까?").
+ *  2) 종결 확정: 매칭된 서술 꼴 바로 뒤(12자 안)에 평서 종결 어미가 있고 그 다음 글자가 "?"가 아니면
+ *     뒤에 질문이 이어져도 선언이다("승인 쪽입니다만 …하실 겁니까?", "승인 쪽이라고 하겠습니다 괜찮으시겠습니까?").
+ *     어미 바로 뒤에 "?"가 붙으면("승인 쪽이죠?") 질문이다.
+ *  3) 종결 어미로 끝나지 않는 매칭("승인 쪽이라고", "승인 쪽인")은 가장 가까운 경계까지의 절이 "?"로
+ *     끝나거나 까·까요·는지요로 끝나면 질문으로 보고 제외한다. */
+function isInQuestionClause(text: string, from: number, matchLength: number): boolean {
+  const boundary = /[.!?…,、\n]/g;
   boundary.lastIndex = from;
   const end = boundary.exec(text);
-  const clause = text.slice(from, end ? end.index : text.length).trim();
+  const segment = text.slice(from, end ? end.index : text.length);
+  for (const ending of segment.matchAll(DECLARATIVE_ENDING)) {
+    const at = ending.index ?? 0;
+    if (at > matchLength + 12) break;
+    if (segment[at + ending[0].length] !== '?') return false;
+  }
   if (end && text[end.index] === '?') return true;
-  return /(까|까요|는지요)$/.test(clause);
+  return /(까|까요|는지요)$/.test(segment.trim());
 }
 
 /** 서버가 방향 단어가 든 FOLLOWUP 발언을 대체할 때 쓰는 역할별 한 문장(영문 없음). */
