@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T112 | 진행 중 | 코치 '안내' 아이콘·말풍선을 마우스로 끌어 옮길 수 있게(무대 사진을 가릴 때 치워 두기), 위치는 세션 동안 기억(2026-10-09 사용자 지시). 상세는 아래 T112 카드 |
 | T110 | 진행 중 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게: 1차 반응에서는 조건이 맞아도 '고민 중'까지만, 추가 질문에 답해야(답하지 않고 넘어가면 아님) 찬성으로 바뀜(scripted·live 모두)(2026-10-09 사용자 지시). 상세는 아래 T110 카드 |
 | T111 | 완료 | 버튼을 **B안(요원 장비 패널) 모양 + E안 색(주황)**으로 변경(D안 대체)(2026-10-09 사용자 지시). 상세는 아래 T111 카드 |
 | T109 | 진행 중 | AI 비서실장 세 기능 중 **하나만 써도** 의견 전달이 열리게(T97 완화, 2026-10-09 사용자 지시). 팝업 소개·힌트·코치·가이드 문구 통일. 상세는 아래 T109 카드 |
@@ -92,6 +93,23 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T112 코치 안내 아이콘·말풍선 드래그 이동
+
+- 목표(2026-10-09 사용자 지시): "안내 버튼이 이미지를 가려서 마우스 드래그로 이동시키게끔 해 줘." 무대 사진 위에 놓인 "안내" 아이콘(T106)과 말풍선(T104)을 참가자가 마우스로 끌어 다른 곳에 둘 수 있게 한다.
+- 읽을 것: `src/components/parts/{Coach,CoachHost}.tsx`(아이콘·말풍선 위치 계산, 앵커=무대 사진), `src/styles/screens/coach.css`, `tests/components/Coach.test.tsx`, `e2e/coach.spec.ts`, `docs/design/DESIGN_SPEC.md` T104·T106 단락, `docs/FACILITATOR_GUIDE.md`.
+- 만들 것:
+  1. **드래그**: 아이콘과 말풍선 머리(제목 줄 "안내 N/6" 영역, 커서 `grab`) 를 Pointer Events(`pointerdown/move/up`, `setPointerCapture`)로 끌어 옮긴다. 클릭과 구분: 이동 거리 4px 미만이면 클릭(아이콘 열기)으로 처리. 터치도 같은 코드로 동작. 뷰포트 밖으로 못 나가게 clamp(여백 8px). 끄는 동안 `user-select: none`, 텍스트 선택·버튼 클릭 오동작 없음. `prefers-reduced-motion`과 무관(전환 효과 없음).
+  2. **위치 기억**: 옮긴 위치(뷰포트 기준 비율 x/y)를 `sessionStorage`(`coach-pos`)에 저장해 화면이 바뀌어도, 말풍선↔아이콘이 바뀌어도 같은 자리에 둔다. 새 체험(리셋)이면 기본 위치로. 창 크기가 바뀌면 비율로 다시 clamp. try/catch로 저장 실패 무시.
+  3. **되돌리기**: 말풍선 머리 오른쪽 "건너뛰기" 옆에 작은 "자리 되돌리기"는 두지 않는다(복잡) — 대신 아이콘을 두 번 빠르게 누르면(더블클릭) 기본 자리로 돌아감 + `aria-label`에 "끌어서 옮길 수 있음" 안내. 키보드: 아이콘 포커스 뒤 화살표로 16px씩 이동(접근성).
+  4. 문서: DESIGN_SPEC "## T112 — 안내 드래그" 단락, FACILITATOR_GUIDE 한 줄("안내가 가리면 끌어서 치워 두세요"), TASKS 행.
+  5. 테스트·e2e: `Coach.test.tsx`(pointer 이벤트로 이동·4px 미만은 클릭·clamp·sessionStorage 저장/복원·더블클릭 초기화·화살표 이동), `e2e/coach.spec.ts`에 드래그 1건(mouse.down/move/up 뒤 boundingBox 이동·화면 전환 뒤 위치 유지), `?coach=off`면 아무것도 없음 유지.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 코치 문구·표시 규칙 변경, 팝업 중 숨김(Codex 44차) 깨기, 영문 UI.
+- 완료 확인: `npm run check`, e2e coach·screenshots 1080·720 각각 PASS, 720 coach-discuss.png Read.
+- 크기: S~M.
 
 ---
 
