@@ -66,18 +66,17 @@
 .coach__ack {
   display: block;
   min-height: 44px;
-  margin: 12px 0 0 auto;
+  margin: 14px 5px 5px auto;
   padding: 0 22px;
-  /* T108: 종이 위 봉투(봉인 없음, shell.css .cta--solid와 같은 바탕·실선·점선). */
-  background: #fbf7ee;
-  color: #1b1a17;
+  /* T111: 종이 위 주 버튼(shell.css .cta--solid와 같은 먹색 바탕 + 이중 테두리). */
+  background: #1b1a17;
+  color: #ece7dc;
   border: 2px solid #1b1a17;
-  outline: 2px dashed #a8a194;
-  outline-offset: -6px;
+  box-shadow: 0 0 0 3px #ece7dc, 0 0 0 5px #1b1a17;
   font: inherit;
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
   cursor: pointer;
 }
 
@@ -86,7 +85,8 @@
 }
 
 .coach__ack:focus-visible {
-  box-shadow: 0 0 0 3px #e0a34a;
+  outline: 3px solid #e0a34a;
+  outline-offset: 7px;
 }
 
 @media (max-width: 1280px) {
