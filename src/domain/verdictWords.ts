@@ -14,6 +14,7 @@
 //     바로 뒤가 "?"이면 질문(제외),
 //     활용 꼴 종결(어요·니다·죠 등, 명사 "필요"는 제외)로 끝나면 선언이다. 연결 어미는 경계가 아니다. "쪽이/편이 + 공백"은 주격 조사라
 //     뒤 어절이 맞·옳·낫·타당·합리·좋·우세·유리·적절로 시작할 때만 선언으로 본다.
+//     부호 묶음("…?"·"...?"·"… ?")은 하나로 보고 그 안에 "?"가 있으면 질문 부호로 본다.
 //     단정형(-라니까(요)·-다니까(요)·-잖아요·-잖습니까)은 "?"가 붙어도 선언이라 "?" 검사보다 먼저 적용한다.
 //     되묻는 -라니(요)·-라고요는 단정형이 아니다 — "?"가 붙으면 질문, 없으면 일반 종결 규칙을 따른다.
 //  5) 임원이 참가자 발언을 인용하는 문장("승인 쪽이라고 하셨으니까 묻겠습니다")과 임원 자신의 선언은 구분하지 않는다
@@ -140,6 +141,10 @@ function isInQuestionClause(text: string, matchStart: number, matchEnd: number):
   boundary.lastIndex = matchStart;
   const end = boundary.exec(text);
   const segEnd = end ? end.index : text.length;
+  // 문장 부호 묶음(…?·...?·"… ?")은 하나로 본다 — 묶음 안에 "?"가 있으면 질문 부호다.
+  const marks = /[.…!?]+(?:\s+[.…!?]+)*/y;
+  marks.lastIndex = segEnd;
+  const questionMark = (marks.exec(text)?.[0] ?? '').includes('?');
   let position = Math.max(text.lastIndexOf(' ', matchEnd - 1) + 1, matchStart);
   while (position < segEnd) {
     while (position < segEnd && text[position] === ' ') position += 1;
@@ -148,12 +153,12 @@ function isInQuestionClause(text: string, matchStart: number, matchEnd: number):
     const word = text.slice(position, wordEnd);
     if (word.length > 0) {
       if (EMPHATIC_WORD_END.test(word)) return false;
-      if (isQuestionWord(word) || (wordEnd === segEnd && text[wordEnd] === '?')) return true;
+      if (isQuestionWord(word) || (wordEnd === segEnd && questionMark)) return true;
       if (isDeclarativeWord(word)) return false;
     }
     position = wordEnd;
   }
-  return text[segEnd] === '?';
+  return questionMark;
 }
 
 /** 서버가 방향 단어가 든 FOLLOWUP 발언을 대체할 때 쓰는 역할별 한 문장(영문 없음). */
