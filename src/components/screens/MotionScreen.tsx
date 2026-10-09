@@ -17,6 +17,8 @@ import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
 import type { RoleStatus, SessionMode, Stance, Statement } from '../../domain/types';
 import { useMemo, useState } from 'react';
+import { motionNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -65,6 +67,7 @@ export function MotionScreen({
   // 소진), 이미 다른 단계에서 재요청을 썼으면 이 버튼을 눌러도 서버가 call_limit으로
   // 거절해 실패로 남는다(자동 재시도는 없다).
   const [retryUsed, setRetryUsed] = useState(false);
+  const gate = useFocusGate('motion');
 
   // FOLLOWUP은 opinions가 2건이 될 때만 돈다(App.tsx의 트리거 조건과 같다, T46). 그 전에는
   // roleStatus가 REACTIONS 결과를 그대로 들고 있을 뿐이라 재요청 대상으로 보지 않는다.
@@ -198,6 +201,7 @@ export function MotionScreen({
               aria-describedby={freezeDisabled ? 'motion-freeze-why' : undefined}
               onClick={() => onFreeze(confirmedConditionIds)}
               data-testid="freeze-motion"
+              {...nextStepAttr(gate.visible && motionNextStep({ locked: freezeDisabled }) === 'freeze')}
             >
               이 안건으로 표결 ▶
             </button>

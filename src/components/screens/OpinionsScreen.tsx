@@ -9,6 +9,8 @@
 // 상태만 그린다.
 
 import { useEffect, useState } from 'react';
+import { opinionsNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -111,6 +113,8 @@ export function OpinionsScreen({
     (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
   );
   const locked = mode === 'live' ? !allExecsSettled : !allCardsRevealed;
+  const gate = useFocusGate('opinions');
+  const nextStep = opinionsNextStep({ locked });
 
   const actions = (
     <div className="app-body__actions screen opinions-screen">
@@ -120,6 +124,7 @@ export function OpinionsScreen({
         onClick={onNext}
         disabled={locked}
         data-testid="opinions-next"
+        {...nextStepAttr(gate.visible && nextStep === 'next')}
         aria-describedby={locked ? 'opinions-next-why' : undefined}
       >
         {locked ? '임원 의견을 듣는 중…' : '내 의견 쓰러 가기 ▶'}

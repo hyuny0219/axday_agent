@@ -24,6 +24,8 @@ import type { AssistantActionEvent, AssistantFeatureKey } from '../../domain/ass
 import { ASSISTANT_FEATURE_ORDER } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
 import { DialogShell } from './DialogShell';
+import { nextStepAttr } from './focusRing';
+import { useDialogOpen } from './useDialogOpen';
 import '../../styles/screens/assistant.css';
 
 type FeatureKey = AssistantFeatureKey;
@@ -61,6 +63,8 @@ export interface RequiredFeatures {
 
 export interface AssistantPanelProps {
   requiredFeatures?: RequiredFeatures;
+  /** T113: 비서실장이 지금 해야 할 다음 할 일이면 true. 닫혀 있으면 여는 버튼, 열려 있으면 아직 안 쓴 첫 기능 버튼에 점선을 붙인다. */
+  focusNext?: boolean;
   /** PR #20 Codex 29차 P2: true면 열기 버튼을 잠그고 "먼저 추천 문구를 골라 주세요"를 보인다
    * (DISCUSS에서 문구 선택 전에 세 기능을 써 순서를 우회하지 못하게). 창이 열려 있는 동안은
    * 영향이 없다. */
@@ -134,6 +138,7 @@ function evidenceLabel(scenario: Scenario, id: string): string {
 
 export function AssistantPanel({
   requiredFeatures,
+  focusNext = false,
   toggleLocked = false,
   toggleLockedHint,
   scenario,
@@ -157,6 +162,7 @@ export function AssistantPanel({
   adapter = scriptedAssistantAdapter,
 }: AssistantPanelProps) {
   const [open, setOpen] = useState(false);
+  const dialogOpen = useDialogOpen();
   const closePopupRef = useRef<() => void>(() => {});
   useEffect(() => {
     if (closeRequest > 0) {
@@ -171,6 +177,9 @@ export function AssistantPanel({
     ? ASSISTANT_FEATURE_ORDER.filter((feature) => requiredFeatures.used.has(feature)).length
     : 0;
   // T109: 한 가지 이상 쓰면 완료(옛 이름 allUsed·onAllUsed는 그대로 둔다).
+  const firstUnusedFeature = (Object.keys(FEATURE_LABELS) as FeatureKey[]).find(
+    (feature) => !(requiredFeatures?.used.has(feature) ?? false),
+  );
   const allUsed = requiredFeatures !== undefined && usedCount >= 1;
   const onAllUsed = requiredFeatures?.onAllUsed;
   const allUsedNotifiedRef = useRef(false);
@@ -446,6 +455,7 @@ export function AssistantPanel({
         disabled={toggleLocked}
         aria-describedby={toggleLocked ? 'assistant-toggle-why' : undefined}
         data-testid="assistant-toggle"
+        {...nextStepAttr(focusNext && !dialogOpen && !toggleLocked)}
       >
         AI 비서실장에게 맡기기
       </button>
@@ -537,6 +547,7 @@ export function AssistantPanel({
                     disabled={status === 'loading'}
                     aria-busy={status === 'loading' && activeFeature === feature ? true : undefined}
                     data-testid={`assistant-action-${feature}`}
+                    {...nextStepAttr(focusNext && status !== 'loading' && feature === firstUnusedFeature)}
                   >
                     {status === 'loading' && activeFeature === feature ? `${FEATURE_LABELS[feature]} · 정리 중…` : FEATURE_LABELS[feature]}
                     {used && (

@@ -5,6 +5,8 @@
 // 스캔라인·브래킷)을 그대로 재사용하고, 그 위에 가운데 종이 한 장을 올린다. 문구는
 // 전부 쉬운 말(T93 규칙, server/prompts/plainLanguage.ts FORBIDDEN_WORDS 0건)로 쓴다.
 import stageRender from '../../assets/stage-render-01.jpg';
+import { introNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { HighlightText } from '../parts/HighlightText';
 import '../../styles/screens/select.css';
 import '../../styles/screens/intro.css';
@@ -33,6 +35,8 @@ const SUCCESS_TEXT =
   '특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것입니다. 이사님을 포함해 같은 표가 3석 이상이면 ‘성공 도장’을, 아니면 ‘실패 도장’을 받습니다.';
 
 export function IntroScreen({ onStart }: IntroScreenProps) {
+  const gate = useFocusGate('intro');
+  const nextStep = introNextStep();
   return (
     <section className="screen intro-screen">
       {/* 배경은 SelectScreen과 같은 "기밀 작전실" 장식(select.css 클래스 재사용,
@@ -83,6 +87,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
             className="cta cta--solid intro-screen__cta"
             onClick={onStart}
             data-testid="intro-start"
+            {...nextStepAttr(gate.visible && nextStep === 'start')}
           >
             확인
           </button>

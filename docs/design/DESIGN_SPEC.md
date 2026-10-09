@@ -681,6 +681,27 @@ Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안
 
 영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
 
+## T113 — 다음 할 일 점선 (2026-10-09)
+
+화면마다 "지금 눌러야 할 것" **하나**에 요소 바깥 7px, 2px 점선 테두리를 그리고 1.6초 주기로 밝아졌다 어두워지게(opacity 1↔0.25, 시안 A안 "숨쉬는 점선") 시선을 이끈다. 코치(T104)와 같은 원칙으로 안내만 하며, 버튼 활성/비활성 규칙(T97·T109)과 코치 문구는 바꾸지 않는다. 덮개·스포트라이트·클릭 막음이 없다.
+
+- **구현**: 규칙은 `src/domain/nextStep.ts`(화면별 매핑·시작 지연), 연결은 `src/components/parts/focusRing.ts`(`useFocusGate`·`nextStepAttr`), 그림은 `src/styles/screens/focus.css`. 고른 요소에만 `data-next-step` 속성이 붙고, 점선은 `::after`(pointer-events none, 레이아웃 불변)다. z-index 1로 코치(35)·팝업(40)보다 낮다.
+- **시작 지연**: 화면(또는 단계)에 들어온 뒤 6초 동안 아무것도 누르지 않으면 점선이 시작한다. 클릭이나 키 입력이 한 번이라도 있으면 지연 없이 바로 다음 할 일로 옮겨 간다. `prefers-reduced-motion`이면 깜빡이지 않고 점선만 보인다.
+- **끄기**: `?focus=off`(`?coach=off`와 독립). 운영 메뉴 토글은 없다.
+- **숨김 규칙**: 화면에 동시에 1개 이하. 팝업(`role="dialog"`)이 열려 있으면 화면 본문의 점선은 0개다. 예외로 AI 비서실장 팝업 안에서는 아직 안 쓴 첫 기능 버튼 하나에 붙는다(로딩 중에는 없음). 잠긴(disabled) 버튼에는 붙이지 않는다. RESULT·ATTRACT·SELECT에는 없다.
+- **색**: 네이비 바탕은 `--accent`, 종이 바탕은 진한 호박색(버튼은 잉크색 `#1b1a17`).
+
+| 화면 | 다음 할 일 순서 (한 번 한 것은 빠짐) |
+| --- | --- |
+| INTRO | 확인 버튼 |
+| BRIEFING | 근거 자료 보기 → 의견 듣기(자료를 본 뒤) |
+| OPINIONS | 내 의견 쓰러 가기(의견이 다 나와 열린 뒤) |
+| DISCUSS | 입장 선택 묶음(미선택 시) → 추천 문구 첫 카드(글이 아직 없을 때) → AI 비서실장 열기 → 팝업 안 첫 기능 버튼(한 가지도 안 썼을 때) → 의견 전달(열린 뒤) |
+| REACTIONS 1/2 | 답하러 가기(열린 뒤) |
+| REACTIONS 2/2 | 입장 선택 묶음(미선택 시) → 추천 답변 첫 카드(글이 아직 없을 때) → 답변 전달(열린 뒤) |
+| MOTION | 이 안건으로 표결(열린 뒤) |
+| VOTE | 찬성·반대 도장 묶음(미선택 시) → 표결 확정 |
+
 ## T109 — 비서실장 한 가지만 써도 의견 전달 (2026-10-09)
 
 **사용자 지시**: "AI 비서실장에서 하나만 사용해도 의견 전달 버튼이 활성화되도록 변경해 줘."
