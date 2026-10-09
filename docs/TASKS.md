@@ -88,24 +88,24 @@
 
 ---
 
-## T104 코치 순서(상황판 → 근거 자료)·INTRO 버튼 하나·팝업 확대
+## T104 코치를 화면 사용법 안내형으로 개정 · INTRO "확인" 버튼 하나 · 팝업 확대
 
-- 목표(2026-10-09 사용자 지시): "상황 파악 시 근거 자료를 무조건 먼저 보게 되어 있어서 상황판 확인 후 근거 자료를 볼 수 있도록. 체험 전 안내에서는 무조건 안내 받을 수 있도록 버튼을 하나만, 팝업 크기를 여유 있게 키워."
-- 읽을 것: `src/content/coach.ts`(COACH_STEPS), `src/domain/coach.ts`(coachStep·coachStepsOf·단계 번호), `src/components/parts/{Coach,CoachHost}.tsx`(coachTarget·placement), `src/components/screens/{Briefing,Intro}Screen.tsx`, `src/styles/screens/{intro,briefing,coach}.css`, `src/app/App.tsx`(INTRO 시작 액션·`?mode=` 쿼리 처리 위치), `src/domain/{types,session}.ts`(coachEnabled), `src/components/parts/OperatorMenu.tsx`(안내 끄기), `e2e/{coach,screenshots,briefing,noscroll,a11y}.spec.ts`, `tests/components/{Coach,IntroScreen,BriefingScreen}.test.tsx`, `tests/domain/coach.test.ts`, `docs/design/DESIGN_SPEC.md` T103 단락, `docs/FACILITATOR_GUIDE.md`.
-- 만들 것:
-  1. **코치 10단계**: 1단계를 둘로 나눈다 — **1/10 BRIEFING 상황판**: 스포트라이트는 상황·제안·미정 블록(`briefing-status`), 말풍선 "먼저 **상황**을 읽어 보세요 / 무슨 일이 생겼고, 무엇을 제안했고, 무엇이 아직 정해지지 않았는지 세 줄입니다", 읽기 단계라 "알겠어요 ▶"로 넘어감. **2/10 BRIEFING 근거 자료**: 기존 1단계 그대로(자료 버튼 스포트라이트, 팝업 닫으면 완료). 이후 단계는 번호만 +1(총 10, 머리 "진행 도우미 · N/10"). `domain/coach.ts`의 전이·`coachStepsOf`(BRIEFING = [1,2])·테스트, `content/coach.ts`·`CoachHost`의 coachTarget 갱신. 게이팅(자료를 봐야 "의견 듣기" 열림)은 그대로.
-  2. **INTRO 버튼 하나**: "안내 없이 시작" 제거, "안내 받으며 시작 ▶" 하나만(라벨은 "시작하기 ▶"가 아니라 그대로 — 안내가 기본임을 알린다). `coachEnabled`는 항상 true로 시작. 코치를 끄는 길은 운영 메뉴 "안내 끄기"와 **URL `?coach=off`**(운영·테스트용, `?mode=` 처리와 같은 곳에서 읽어 초기 세션의 coachEnabled=false) 두 가지. `e2e/screenshots.spec.ts`와 "안내 없이 시작"을 쓰던 e2e는 `?coach=off`로 바꾼다(기본 화면 스크린샷은 코치 없이 유지).
-  3. **INTRO 팝업 확대**: 종이 카드를 1080에서 폭 940→1180px, 높이 여유(패딩 36→48px), 제목 28→34px, 본문 20→22px(720은 비례: 폭 760→880, 본문 16→18) — 글자가 종이 안에서 답답하지 않게. 720에서 CTA·강조 줄이 잘리지 않는지 확인(viewport-fit·noscroll e2e).
-  4. 문서: DESIGN_SPEC T103 단락의 9단계 표를 10단계로, T104 단락 추가(순서 이유·`?coach=off`), FACILITATOR_GUIDE(INTRO 버튼 하나·코치 끄는 법), TASKS 행.
-  5. 테스트·e2e: `tests/domain/coach.test.ts`(10단계·BRIEFING 2단계 전이), `tests/components/Coach.test.tsx`(문구·N/10), `tests/components/IntroScreen.test.tsx`(버튼 하나), `e2e/coach.spec.ts`(1~10 완주, 1단계 알겠어요 → 2단계 자료), `e2e/screenshots.spec.ts`(`?coach=off`, `coach-briefing.png`는 1단계 상황판 스포트라이트로, `coach-evidence.png` 2단계 추가 가능), 기존 "안내 없이 시작" 참조 전부 정리.
-- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
-- 하지 말 것: 게이팅 완화, 서버·시나리오 문장 변경, 영문 UI·붉은 박스.
-- 완료 확인: `npm run check`, e2e 1080·720 각각(`--project=` 순차) PASS, 720 `intro.png`·`coach-briefing.png` Read 확인.
-- 크기: S~M.
+- 목표(2026-10-09 사용자 지시, 순서대로): "상황판 확인 후 근거 자료를 볼 수 있도록" → "체험 전 안내는 버튼 하나, 팝업 크기 여유 있게" → "버튼 문구는 '확인'" → "추천 문구를 다 고르기 전에 비서실장로 안내해서 불편" → **"튜토리얼은 어떻게 사용하는지만 가이드하고 강제로 흐름을 끌고 가지 않았으면"**. 마지막 지시가 앞의 단계 추적형 설계(처음 카드의 10단계·스포트라이트)를 대체했다.
+- 최종 설계(구현됨):
+  - 코치는 **화면당 말풍선 하나**("안내 N/6": BRIEFING·OPINIONS·DISCUSS·REACTIONS 1/2·VOTE·RESULT) — 그 화면을 어떻게 쓰는지 번호 목록 2~4줄. 왼쪽 무대 사진 위에 얹히며 오른쪽 종이·CTA를 가리지 않는다. BRIEFING 문구는 "상황·제안·미정 세 줄을 읽고 → 근거 자료 4장 → 의견 듣기" 순서로 안내(상황판 먼저).
+  - **강제 없음**: 어두운 덮개·스포트라이트·클릭 막음·단계 이동 없음. "알겠어요 ▶" 또는 그 화면에서 첫 조작(버튼·카드·입력, 운영 메뉴·빈 곳 제외; 클릭이 끝난 뒤 기록)으로 닫히고 화면당 한 번만. 팝업 안 코치 없음(비서실장 팝업의 `assistant-intro` 소개·체크가 사용법을 맡는다). REACTIONS live 문구는 전환 배지를 말하지 않는다.
+  - 기존 버튼 잠금(T95 자료 먼저, T97 입장→문구→비서실장 세 가지→전달)은 코치와 무관하게 유지.
+  - INTRO: 버튼 **"확인"** 하나(코치는 항상 켜진 채 시작). 종이 카드 확대(1080 폭 1180·제목 34·본문 22, 720 폭 880·본문 18). 코치 끄기는 운영 메뉴 "안내 끄기"와 `?coach=off`(운영·테스트용, 새 체험 리셋 뒤에도 유지).
+  - 제거: 스포트라이트·clip-path·대상 좌표·`data-coach`·`coachUi`·`useCoachReport`, 10단계 전이, "다 골랐어요" 버튼(만들지 않음).
+- 커밋: 43d9ab9·1c9322c·dabb606(첫 10단계 안, 대체됨) → 3e38afb(최종 개정) → 핫픽스 0115fd0·d331053은 night에서 선반영(덮개 클릭 차단 해제·비서실장 정리 중 버튼 비활성).
+- 완료 확인: `npm run check`(764), e2e 1080 91·720 91, 720 `intro.png`·`coach-briefing.png`·`coach-discuss.png` 확인.
+- 크기: M.
 
 ---
 
 ## T103 게임 튜토리얼식 코치(A안 스포트라이트) + 기존 가이드 통합·제거
+
+> **T104(2026-10-09)에서 개정됨 — 아래는 폐기된 초안.** 스포트라이트·9단계 추적·"안내 없이 시작"은 사용자 지시("가이드만 하고 흐름을 강제하지 않기")로 화면당 말풍선 하나(안내 N/6)로 바뀌었다. 기존 가이드 제거(GuideHint·StepGuide·비활성 힌트·data-guide)와 운영 메뉴 "안내 끄기"는 그대로 유효.
 
 - 목표(2026-10-09 사용자 지시): "참석자가 프로그램을 처음 접하므로 게임 튜토리얼처럼 가이드. 기존에 추가했던 가이드 기능 중 중복되거나 쓸모없으면 제거. A안으로." 시안(사용자 승인): https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4 — 개요 보드의 9단계 표·제거 목록·원칙 3개를 그대로 따른다.
 - 읽을 것: 시안 개요 보드 내용(아래 "코치 순서"에 옮김), `src/components/parts/{GuideHint,StepGuide,DialogShell,AssistantPanel,OperatorMenu}.tsx`, `src/domain/stepGuide.ts`, `src/styles/screens/shell.css`([data-guide]·.guide-hint·.cta-disabled-hint·.cta--outline)·`stepGuide.css`, 모든 `src/components/screens/*Screen.tsx`의 `data-guide`·`GuideHint`·`cta-disabled-hint`·`StepGuide` 사용처, `src/app/App.tsx`(화면 라우팅·운영 메뉴), `src/domain/{types,session}.ts`(세션 상태에 코치 진행 저장), `src/components/screens/IntroScreen.tsx`(T102 강조 반영본), `docs/design/DESIGN_SPEC.md` T95·T97·T98 단락, `docs/FACILITATOR_GUIDE.md`, e2e 전체(가이드 testid 단언 다수).
