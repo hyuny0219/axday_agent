@@ -262,7 +262,7 @@ const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
     // 동사 선언: 찬성합니다 / 가결하겠습니다 / 부결시키겠습니다 / 부결해야 합니다
     '(?:합니다|합니까|하겠습니다|하겠어요|하겠다|하겠네요|한다|드립니다|됩니다|드리겠습니다|시키겠습니다|시키겠다|되겠습니다|되겠다' +
-    '|(?:시키기로|하기로|하는 것으로|하는 쪽으로|해야) ' + HADA_END + '|하기로 하였다|시킬 (?:것입니다|겁니다|예정입니다))' +
+    '|(?:시키기로|하기로|하는 것으로|하는 쪽으로|해야) ' + HADA_END + '|(?:시키기로|하기로|하는 것으로|하는 쪽으로) (?:결정|정)(?:했습니다|했다|합니다|하겠습니다)' + '|하기로 하였다|시킬 (?:것입니다|겁니다|예정입니다))' +
     '|' +
     // 서술격 선언: 찬성입니다 / 찬성이에요 / 찬성이라고 하겠습니다
     '(?:입니다|이에요|이죠|이다|이라고|이라서)' +
@@ -375,7 +375,13 @@ function flip(direction: DeclaredDirection): DeclaredDirection {
 type SentenceKind = DeclaredDirection | 'AMBIGUOUS' | null;
 
 /** 과거·이전 상태를 말하는 표지. 현재 결론이 아니므로 방향을 확정하지 않는다. 한 문장 안에 "지금은·현재는·이제는"이 있으면 그 뒤만 본다. */
-const PAST_MARKER = /(?:처음에는|처음엔|원래|당초|애초에|지금까지는|예전에는|이전에는)/;
+const PAST_MARKER = /(?:과거|예전|이전|지난|작년|어제|그때|당시|초기|처음|원래|당초|애초|한때|전에는|까지는|까지만 해도|그동안|지금까지|이제까지|여태)/;
+// 현재 표지가 없는 과거형 종결(-았다·-었다·-했습니다 …)은 현재 결론이 아니다. 결정 관용구("하기로 했다·결정했습니다")는 현재 결정이라 예외다.
+const PAST_ENDING = /(?:았|었|였|했었|않았|못했|했)(?:다|습니다|어요|죠)(?:만)?$/;
+const PRESENT_MARKER = /(?:지금은|현재는|이제는|이번에는|오늘은|최종적으로|결론은)/;
+const DECISION_IDIOM = /(?:기로|쪽으로|것으로|결정|정)\s?했/;
+// 방향 명사 바로 뒤가 설명문("반대 이유는", "찬성 사유를")이면 방향 선언이 아니라 설명이라 무시한다.
+const EXPLANATORY_TAIL = /^\s?(?:사유|이유|근거|배경|조건|기준|여부|의견|논거|자료|목소리)/;
 const NOW_MARKER = /(?:지금은|현재는|이제는)\s?(.*)$/;
 /** 인용·전언 꼴: "…다고 했습니다·들었습니다·합니다". 화자 자신의 선언이 아니다. */
 const QUOTE_FORM = /(?:다고|라고|다는|라는)\s?(?:했|하였|들었|말씀|전하|봅니다|보고|생각)/;
@@ -401,6 +407,7 @@ function classifySentence(
     target = now[1] ?? '';
   }
   if (!hasDirectionWord(target, participantStance)) return null;
+  if (!PRESENT_MARKER.test(sentence) && PAST_ENDING.test(target.trim()) && !DECISION_IDIOM.test(target)) return 'AMBIGUOUS';
   // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
   const forHedge = target.replace(/않으면 ?안 ?됩/g, '않아야 합');
   if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge) || QUOTE_FORM.test(target)) return 'AMBIGUOUS';
@@ -420,7 +427,12 @@ function classifySentence(
     if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(target))) found.add(participantStance);
   }
   if (found.size > 1) return 'AMBIGUOUS';
-  return [...found][0] ?? null;
+  if (found.size === 1) return [...found][0] ?? null;
+  // 방향 단어는 있는데 어떤 꼬리로도 확정하지 못했다. 방향 명사가 모두 설명문("반대 이유는 …")이면 방향과 무관하니 null,
+  // 아니면 확정 못 한 방향 문장이므로 AMBIGUOUS다(합성기가 무시하면 나머지 문장의 방향만 내보내 오교정이 된다).
+  const nouns = [...target.matchAll(NOUN_SCAN)];
+  const allExplanatory = nouns.length > 0 && nouns.every((m) => EXPLANATORY_TAIL.test(target.slice((m.index ?? 0) + m[0].length)));
+  return allExplanatory ? null : 'AMBIGUOUS';
 }
 
 export function declaredDirection(

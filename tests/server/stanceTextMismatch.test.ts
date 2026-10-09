@@ -123,7 +123,7 @@ describe('declaredDirection(T115)', () => {
   it('평서형 부정과 -면 규칙 순서(Codex 74차)', () => {
     for (const [text, expected] of [
       ['찬성하지 않다.', 'AGAINST'], ['반대하지 않다.', 'FOR'], ['찬성할 수 없다.', 'AGAINST'], ['찬성하기 어렵다.', 'AGAINST'],
-      ['찬성하지 않았다.', 'AGAINST'], ['찬성하지 않는지 보겠다.', null], ['찬성하기 어려워요.', 'AGAINST'],
+      ['찬성하지 않았다.', null], ['찬성하지 않는지 보겠다.', null], ['찬성하기 어려워요.', 'AGAINST'],
       ['전적으로 비대면 회의에 찬성합니다.', 'FOR'], ['원칙적으로 서면 의견으로 반대합니다.', null],
       ['자료를 보면 의견이 달라질 수 있습니다.', null], ['기록을 남기면 자료를 보고 찬성하겠습니다.', null],
       ['비대면 회의에서 찬성합니다.', 'FOR'], ['지면 관계상 반대합니다.', 'AGAINST'],
@@ -179,6 +179,14 @@ describe('declaredDirection(T115)', () => {
       ['처음에는 반대했지만 지금은 찬성합니다.', 'FOR'], ['찬성합니다. 조건은 세 가지입니다.', 'FOR'],
       ['반대합니다. 반대 이유는 비용입니다.', 'AGAINST'], ['찬성합니다. 반대합니다.', null],
       ['처음에는 반대했습니다. 지금은 반대합니다.', null], ['원래 찬성이었습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
+  it('미확정 방향 문장은 AMBIGUOUS, 과거 표지 일반화(Codex 82차). 과거형 종결은 현재 표지가 없으면 null이라 "찬성하지 않았다"도 null(허용된 놓침)', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 반대 입장을 고수합니다.', null], ['반대 입장을 고수합니다.', null], ['찬성합니다. 찬성 사유는 비용입니다.', 'FOR'],
+      ['과거에는 찬성하지 않았다.', null], ['어제까지만 해도 찬성하지 않았다.', null], ['지난번에는 반대했습니다.', null],
+      ['찬성하지 않았다.', null], ['지금은 찬성합니다.', 'FOR'], ['처음에는 반대했지만 지금은 찬성합니다.', 'FOR'],
+      ['찬성하기로 했습니다.', 'FOR'], ['부결시키기로 했습니다.', 'AGAINST'], ['반대하기로 결정했습니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
