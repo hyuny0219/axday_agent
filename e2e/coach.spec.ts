@@ -182,7 +182,10 @@ test('알겠어요로 닫으면 안내 아이콘이 남고, 누르면 다시 열
   // 다시 연 안내는 다른 조작으로는 닫히지 않는다.
   await page.getByTestId('open-evidence').click();
   await expect(page.getByTestId('evidence-dialog')).toBeVisible();
-  // 팝업이 열려 있는 동안 Esc는 팝업만 닫고 안내는 남는다.
+  // 팝업이 열려 있는 동안 코치(말풍선·아이콘)는 그리지 않는다(Codex 44차 — 축소 모드에서는 z-index로 못 막음).
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+  // 팝업을 닫으면 다시 연 안내가 돌아온다(Esc는 팝업이 쓴다).
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
   await expect(page.getByTestId('coach')).toHaveCount(1);

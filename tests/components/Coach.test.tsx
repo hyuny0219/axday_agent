@@ -163,17 +163,24 @@ describe('안내 아이콘(T106)', () => {
     expect(screen.getByTestId('coach-icon')).toBeInTheDocument();
   });
 
-  it('팝업(role=dialog)이 열려 있는 동안 Esc는 다시 연 안내를 닫지 않는다', async () => {
-    render(
-      <>
-        <div role="dialog" aria-label="팝업" />
-        <CoachHost session={sessionAt('DISCUSS', { coachDismissed: [3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />
-      </>,
+  it('팝업(role=dialog)이 열려 있는 동안은 말풍선·아이콘을 그리지 않고, 닫히면 다시 연 안내가 돌아온다(Codex 44차)', async () => {
+    const { rerender } = render(
+      <CoachHost session={sessionAt('DISCUSS', { coachDismissed: [3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />,
     );
     fireEvent.click(screen.getByTestId('coach-icon'));
-    fireEvent.keyDown(document, { key: 'Escape' });
-    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByTestId('coach')).toBeInTheDocument();
+    // 팝업이 열리면(role=dialog가 DOM에 생기면) 코치는 통째로 사라진다 — 축소 모드의 transform
+    // stacking context 때문에 z-index로는 팝업 위 노출을 막을 수 없다.
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    document.body.appendChild(dialog);
+    await waitFor(() => expect(screen.queryByTestId('coach')).toBeNull());
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    dialog.remove();
+    // 팝업이 닫히면 다시 연 상태가 그대로라 말풍선이 돌아온다(Esc는 팝업이 썼다).
+    await waitFor(() => expect(screen.getByTestId('coach')).toBeInTheDocument());
+    rerender(<CoachHost session={sessionAt('DISCUSS', { coachDismissed: [3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
   });
 
   it('화면이 바뀌면 다시 연 상태가 초기화되고, 코치가 꺼져 있거나 안내 없는 화면에는 아이콘이 없다', () => {

@@ -32,6 +32,20 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
     setReopenedScreen(null);
   }, [screen]);
 
+  // 팝업(role=dialog)이 열려 있는 동안은 말풍선·아이콘을 아예 그리지 않는다 — z-index로는
+  // 축소 모드(.app-scale-wrapper의 transform이 만드는 stacking context) 안의 팝업과 body로
+  // portal된 코치를 비교할 수 없다(PR #20 Codex 44차 검토 P2).
+  const [dialogOpen, setDialogOpen] = useState(false);
+  useEffect(() => {
+    function check() {
+      setDialogOpen(document.querySelector('[role="dialog"]') !== null);
+    }
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['role'] });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!reopened) {
       return;
@@ -66,7 +80,7 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
     return () => document.removeEventListener('click', handleClick, true);
   }, [step, dispatch]);
 
-  if (screen === null) {
+  if (screen === null || dialogOpen) {
     return null;
   }
   if (step === null) {
