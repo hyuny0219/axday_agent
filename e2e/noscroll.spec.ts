@@ -472,3 +472,123 @@ test('내 의견·내 답변 HUD: 조건 칩 5개와 600자 입력에도 제출 
     (text) => followup.fill(text),
   );
 });
+
+// T117: 사용자가 "반응에 답하기에서 버튼이 여전히 잘린다"고 보고했다(뷰포트 미확정). 화면 맞춤
+// 축소는 1200×700 이상이면 'natural'이라 켜지지 않으므로, 1366×768·1440×900·1536×864처럼
+// 1080/720 사이 크기는 1080용 치수 그대로 세로가 모자랐다. 여섯 크기 모두에서 조건 5개 + 300자 +
+// 충돌 안내 상태의 제출 줄이 캔버스(축소 모드면 축소된 wrapper) 안에 들어오고, 조건 칩은 한 줄
+// (모든 칩의 top이 같고 칩 줄 높이가 칩 두 줄 미만)이며 충돌 안내가 말줄임 없이 읽혀야 한다.
+const HUD_VIEWPORTS: Array<[number, number]> = [
+  [1920, 1080],
+  [1680, 1050],
+  [1536, 864],
+  [1440, 900],
+  [1366, 768],
+  [1280, 720],
+];
+
+async function expectHudFitsAtAllViewports(
+  page: Page,
+  label: string,
+  textareaId: string,
+  submitIds: string[],
+) {
+  for (const [width, height] of HUD_VIEWPORTS) {
+    await page.setViewportSize({ width, height });
+    const where = `${label} ${width}×${height}`;
+    // 리사이즈 직후 레이아웃·맞춤 배율이 반영될 때까지 기다린다(시간 의존 아님: 제출 줄이 안정될 때까지 폴링).
+    await expect
+      .poll(async () => {
+        const data = await page.evaluate((ids) => {
+          const wrapper = document.querySelector('.app-scale-wrapper');
+          const canvasBottom = wrapper ? wrapper.getBoundingClientRect().bottom : innerHeight;
+          const limit = Math.min(canvasBottom, innerHeight);
+          return ids.map((id) => {
+            const el = document.querySelector(`[data-testid="${id}"]`);
+            return el ? el.getBoundingClientRect().bottom - limit : Number.POSITIVE_INFINITY;
+          });
+        }, submitIds);
+        return Math.max(...data) <= 1;
+      }, { message: `${where}: 제출 줄이 캔버스(뷰포트) 안에 들어와야 한다` })
+      .toBe(true);
+    const hud = await page.evaluate(
+      ({ ids, textarea }) => {
+        const chips = document.querySelector('[data-testid="condition-chips"]');
+        const list = chips?.querySelector('.condition-chips__list');
+        const chipEls = [...(chips?.querySelectorAll('.condition-chip') ?? [])];
+        const tops = chipEls.map((chip) => Math.round(chip.getBoundingClientRect().top));
+        const conflicts = document.querySelector('[data-testid="condition-chips-conflicts"]');
+        const area = document.querySelector(`[data-testid="${textarea}"]`);
+        return {
+          chipCount: chipEls.length,
+          chipHeight: chipEls[0]?.getBoundingClientRect().height ?? 0,
+          sameRow: new Set(tops).size === 1,
+          listHeight: list?.getBoundingClientRect().height ?? 0,
+          conflictTruncated: conflicts ? conflicts.scrollWidth > conflicts.clientWidth + 1 : true,
+          textareaHeight: area?.getBoundingClientRect().height ?? 0,
+          submitCount: ids.filter((id) => document.querySelector(`[data-testid="${id}"]`)).length,
+        };
+      },
+      { ids: submitIds, textarea: textareaId },
+    );
+    expect(hud.chipCount, `${where}: 조건 칩 5개`).toBe(5);
+    expect(hud.sameRow, `${where}: 조건 칩이 한 줄에 있어야 한다`).toBe(true);
+    expect(hud.listHeight, `${where}: 칩 컨테이너 높이가 칩 한 줄(두 줄 미만)`).toBeLessThan(hud.chipHeight * 2);
+    expect(hud.conflictTruncated, `${where}: 충돌 안내가 말줄임 없이 읽혀야 한다`).toBe(false);
+    expect(hud.textareaHeight, `${where}: 입력 상자 최소 44px`).toBeGreaterThanOrEqual(43);
+    expect(hud.submitCount, `${where}: 제출 줄 버튼`).toBe(submitIds.length);
+    await expectNoPageScroll(page, where);
+  }
+}
+
+async function makeFiveConditionsWithConflict(page: Page, fill: (text: string) => Promise<void>) {
+  await fill(longDraft().slice(0, 300));
+  await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
+  // 글을 쓴 직후에는 자동 확정 효과가 한 번 더 돌 수 있어 충돌이 보일 때까지 눌러 본다.
+  await expect(async () => {
+    for (const id of ['REVIEW', 'FULL_AUTO']) {
+      const chip = page.getByTestId(`condition-chip-${id}`);
+      if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+        await chip.click();
+      }
+    }
+    await expect(page.getByTestId('condition-chips-conflicts')).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 10_000 });
+}
+
+test('내 의견·내 답변 HUD: 여섯 뷰포트에서 조건 5개 + 300자 + 충돌 안내에도 제출 줄이 잘리지 않고 조건 칩은 한 줄이다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted&coach=off');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  const draft = page.getByTestId('draft-editor-textarea');
+  await makeFiveConditionsWithConflict(page, (text) => draft.fill(text));
+  await expectHudFitsAtAllViewports(page, 'DISCUSS', 'draft-editor-textarea', [
+    'assistant-toggle',
+    'submit-opinion',
+  ]);
+
+  await draft.fill('');
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByRole('button', { name: '선택 문구로 다시 구성' }).click();
+  await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+
+  const followup = page.getByTestId('followup-textarea');
+  await makeFiveConditionsWithConflict(page, (text) => followup.fill(text));
+  await expectHudFitsAtAllViewports(page, 'REACTIONS(다시 답하기)', 'followup-textarea', [
+    'assistant-toggle',
+    'keep-previous-answer',
+    'submit-followup',
+  ]);
+});

@@ -43,6 +43,8 @@
    재사용, T74). */
 .reactions-screen__hud {
   box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -59,10 +61,11 @@
   }
 }
 
-/* 조건 칩 자리는 공용 .hud-conditions-slot(discuss.css, T116 고정 높이)이 예약한다. */
+/* 조건 칩 자리는 공용 .hud-conditions-slot(discuss.css, T117 한 줄 + 충돌 안내 한 줄)이 예약한다. */
 
 /* [AI 비서실장 열기][답변 전달 ▶](시안 — discuss-screen__submit-row과 같은 크기). */
 .reactions-screen__submit-row {
+  flex: none;
   align-items: center;
 }
 
@@ -76,7 +79,8 @@
   letter-spacing: 0.04em;
 }
 
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .reactions-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
     /* T96(2026-10-08 팀리드 지시): 설득 현황판이 더해지며 왼쪽 열 세로 예산이
@@ -93,7 +97,8 @@
   font-size: 25px;
 }
 
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .reactions-screen__submit-row > .cta {
     min-height: 56px;
     width: 170px;
@@ -109,7 +114,8 @@
   font-size: 16px;
 }
 
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .reactions-screen__submit-row > .reactions-screen__keep-previous {
     padding: 0 12px;
     font-size: 15px;
