@@ -3,7 +3,7 @@
 // DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열 무대 아래에 공통으로 둔다. 임원 4명의
 // "첫 의견 → 지금" 입장과, 아직 설득되지 않았으면 "움직일 조건"(domain/voting.ts의
 // requiredConditionsFor, scripted voteRules에서 YES로 가는 가장 작은 조건 조합)을 한
-// 줄씩 보여준다. 참가자가 반대 입장이면 같은 데이터를 "이 조건이 빠지면 반대로
+// 줄씩 보여준다. 참가자가 반대 입장이면 같은 데이터를 "이 조건을 넣지 않아야 반대로
 // 남습니다"로 뒤집어 보여준다 — 반대 참가자의 목표는 임원을 NO에 묶어 두는 것이지
 // YES로 보내는 것이 아니다. live 모드는 scripted 규칙표가 실제 결정권이 없으므로(LLM이
 // 자유롭게 답한다) 임원의 가장 최근 발언에 실린 suggestedConditionIds를 함께 모아
@@ -114,7 +114,11 @@ function buildRow(
   const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
   const required = requiredConditionsFor(scenario, memberId, confirmedConditionIds, participantStance ?? null);
 
-  const liveHints = mode === 'live' ? liveSuggestedConditionIds?.[memberId] ?? [] : [];
+  // T115: 임원이 앞서 제안한 조건을 참가자가 이미 확정했다면 "움직일 조건"이 아니다.
+  const liveHints =
+    mode === 'live'
+      ? (liveSuggestedConditionIds?.[memberId] ?? []).filter((id) => !confirmedConditionIds.includes(id))
+      : [];
   const refSuffix = mode === 'live' ? ' · 참고' : '';
 
   function labelsOf(ids: readonly string[]): string {
@@ -143,7 +147,9 @@ function buildRow(
       return { memberId, stanceText, stanceChanged, conditionNote: '설득 완료' };
     }
     const ids = uniqueInOrder([...(required.conditionIds ?? []), ...liveHints]);
-    if (required.conditionIds === null && ids.length === 0) {
+    // T115: 보여줄 조건이 하나도 없으면(live에서 규칙표는 이미 찬성인데 발언은 아직 반대인 경우 등)
+    // 빈 "움직일 조건 · "을 적지 않는다.
+    if (ids.length === 0) {
       return { memberId, stanceText, stanceChanged, conditionNote: '조건으로는 설득이 어렵습니다' };
     }
     return {
@@ -157,14 +163,14 @@ function buildRow(
   // targetVote === 'AGAINST'(참가자가 반대 쪽)
   if (current === 'AGAINST') {
     const ids = uniqueInOrder([...(required.conditionIds ?? []), ...liveHints]);
-    if (required.conditionIds === null && ids.length === 0) {
+    if (ids.length === 0) {
       return { memberId, stanceText, stanceChanged, conditionNote: '조건과 무관하게 반대를 유지합니다' };
     }
     return {
       memberId,
       stanceText,
       stanceChanged,
-      conditionNote: `'${labelsOf(ids)}' 조건이 빠지면 반대로 남습니다${refSuffix}`,
+      conditionNote: `'${labelsOf(ids)}' 조건을 넣지 않아야 반대로 남습니다${refSuffix}`,
     };
   }
   if (current === 'FOR') {

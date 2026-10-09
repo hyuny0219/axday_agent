@@ -19,7 +19,7 @@ import type {
   RefineDraftResult,
   SummarizeOpinionsResult,
 } from '../../services/assistant/types';
-import { scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
+import { buildCompare, scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
 import type { AssistantActionEvent, AssistantFeatureKey } from '../../domain/assistantLog';
 import { ASSISTANT_FEATURE_ORDER } from '../../domain/assistantLog';
 import { MEMBER_LABELS } from '../memberLabels';
@@ -195,6 +195,9 @@ export function AssistantPanel({
   const [compareResult, setCompareResult] = useState<CompareConditionsResult | null>(null);
   const [refineResult, setRefineResult] = useState<RefineDraftResult | null>(null);
   const [refineResultRevision, setRefineResultRevision] = useState<number | null>(null);
+  // T115: 요약은 요청 시점의 회의 기록(transcript.revision)에 대한 결과다. 새 발언이 도착해 기록이
+  // 바뀌면 옛 요약을 비워 지금 임원 입장과 어긋난 내용이 남지 않게 한다.
+  const [summaryRevision, setSummaryRevision] = useState<number | null>(null);
 
   // 리셋·재요청 뒤 도착한 응답을 무시하기 위해 "지금 유효한 요청"만 기록한다.
   // sessionId가 바뀌면(리셋으로 새 세션이 되면) 이전 요청은 더 이상 유효하지 않다.
@@ -237,6 +240,19 @@ export function AssistantPanel({
       }
     }
   }, [draftRevision, refineResultRevision, activeFeature]);
+
+  useEffect(() => {
+    if (summaryRevision !== null && summaryRevision !== transcript.revision) {
+      setSummaryResult(null);
+      setSummaryRevision(null);
+      if (activeFeature === 'summary') {
+        currentRequestRef.current?.controller.abort();
+        currentRequestRef.current = null;
+        setStatus('idle');
+        setActiveFeature(null);
+      }
+    }
+  }, [transcript.revision, summaryRevision, activeFeature]);
 
   // PR #20 Codex 32차 P2-2: 로딩 중에 팝업을 닫으면 진행 중 요청을 무효화하고 idle로
   // 되돌린다 — 닫힌 뒤 도착한 응답·오류가 화면에 보인 적 없이 사용으로 집계되지 않게
@@ -282,6 +298,7 @@ export function AssistantPanel({
         );
         if (!isStillCurrent(requestId)) return;
         setSummaryResult(result);
+        setSummaryRevision(transcript.revision);
         setStatus('done');
         onAssistantAction({
           type: 'OPINION_SUMMARY',
@@ -360,6 +377,9 @@ export function AssistantPanel({
   // 움직이는 데 필요한 조건만 골라 "이 조건이 움직이는 임원 · 푸는 걱정"으로 보여준다.
   // live 발언의 제안 조건은 따로 안 넘기면 transcript의 역할별 최신 발언에서 뽑는다
   // (PR #20 Codex 28차 P2-3).
+  // T115: "처음 안과의 차이"·"남은 확인 사항"은 요청 시점의 스냅샷이 아니라 지금 확정한 조건으로 그린다
+  // ("적용"으로 조건이 바뀐 뒤에도 옛 목록이 남아 추천과 어긋나지 않게).
+  const compareView = useMemo(() => buildCompare(scenario, selectedConditionIds), [scenario, selectedConditionIds]);
   const transcriptStatements = transcript.statements;
   const effectiveLiveSuggestions = useMemo(
     () => liveSuggestedConditionIds ?? latestSuggestedConditionIds(transcriptStatements),
@@ -700,9 +720,9 @@ export function AssistantPanel({
                     </ul>
                   )}
                   <h4>처음 안과의 차이</h4>
-                  {compareResult.addedConditionIds.length > 0 ? (
+                  {compareView.addedConditionIds.length > 0 ? (
                     <ul>
-                      {compareResult.addedConditionIds.map((id) => (
+                      {compareView.addedConditionIds.map((id) => (
                         <li key={id}>{conditionLabel(scenario, id)}</li>
                       ))}
                     </ul>
@@ -710,9 +730,9 @@ export function AssistantPanel({
                     <p>지금까지 확정한 조건이 없습니다.</p>
                   )}
                   <h4>남은 확인 사항</h4>
-                  {compareResult.remainingConditionIds.length > 0 ? (
+                  {compareView.remainingConditionIds.length > 0 ? (
                     <ul>
-                      {compareResult.remainingConditionIds.map((id) => (
+                      {compareView.remainingConditionIds.map((id) => (
                         <li key={id}>{conditionLabel(scenario, id)}</li>
                       ))}
                     </ul>

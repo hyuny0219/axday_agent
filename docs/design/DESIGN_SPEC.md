@@ -775,7 +775,7 @@ Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설
 
 **사용자 지시**: "내가 의견을 내고 어떤 조건을 붙여야 AI 임원을 설득할 수 있는지 표현되고, 내 발언에 따라 임원 입장이 변하는 것이 잘 보이게. 이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 따라 하고 느끼게. AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을 고르는 데 큰 도움이 된다고 느끼게."
 
-**설득 현황판(`PersuasionBoard`)**: DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열(`app-body__actions`) 맨 위에 공통으로 두는 작은 상자다. 임원 4명을 1줄씩 보여준다 — 이름(역할 코드) · "첫 의견 → 지금" 입장(바뀌었으면 `찬성 → 반대`처럼 화살표, `moodLabel.ts`의 `SHORT_STANCE_LABEL`) · 아직 설득되지 않았으면 "움직일 조건"(`domain/voting.ts`의 `requiredConditionsFor` — scripted voteRules에서 YES가 되는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) · 위쪽 "설득한 임원 N/4"(참가자 입장이 AGAINST면 목표를 AGAINST로 바꿔 센다, `persuasionStamp`의 "참가자 표와 같은 쪽" 전제와 같다). 참가자가 반대 쪽이면 같은 데이터를 "이 조건이 빠지면 반대로 남습니다"로 뒤집어 보여준다 — 반대 참가자의 목표는 임원을 NO에 묶어 두는 것이지 YES로 보내는 것이 아니기 때문이다. live 모드는 scripted 규칙표가 실제 결정권이 없으므로(LLM이 자유롭게 답한다) 문구 끝에 "· 참고"를 붙인다. "첫 의견" 입장은 `scenario.initialOpinions[].openingStance`를 그대로 쓰며(`src/components/openingStance.ts` 신규, PersuasionBoard·persuasionSummary 공유), voteRules의 `always` 분기(판단 기준)와는 다른 개념이라는 기존 전제(T63 stance.ts 주석)를 그대로 따른다.
+**설득 현황판(`PersuasionBoard`)**: DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열(`app-body__actions`) 맨 위에 공통으로 두는 작은 상자다. 임원 4명을 1줄씩 보여준다 — 이름(역할 코드) · "첫 의견 → 지금" 입장(바뀌었으면 `찬성 → 반대`처럼 화살표, `moodLabel.ts`의 `SHORT_STANCE_LABEL`) · 아직 설득되지 않았으면 "움직일 조건"(`domain/voting.ts`의 `requiredConditionsFor` — scripted voteRules에서 YES가 되는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) · 위쪽 "설득한 임원 N/4"(참가자 입장이 AGAINST면 목표를 AGAINST로 바꿔 센다, `persuasionStamp`의 "참가자 표와 같은 쪽" 전제와 같다). 참가자가 반대 쪽이면 같은 데이터를 "이 조건을 넣지 않아야 반대로 남습니다"로 뒤집어 보여준다 — 반대 참가자의 목표는 임원을 NO에 묶어 두는 것이지 YES로 보내는 것이 아니기 때문이다. live 모드는 scripted 규칙표가 실제 결정권이 없으므로(LLM이 자유롭게 답한다) 문구 끝에 "· 참고"를 붙인다. "첫 의견" 입장은 `scenario.initialOpinions[].openingStance`를 그대로 쓰며(`src/components/openingStance.ts` 신규, PersuasionBoard·persuasionSummary 공유), voteRules의 `always` 분기(판단 기준)와는 다른 개념이라는 기존 전제(T63 stance.ts 주석)를 그대로 따른다.
 
 **REACTIONS 반응 카드 "바뀜 → 왜 바뀌었는지"**: 기존 "유지"/"바뀜" 배지를 `SHORT_STANCE_LABEL` 전후 비교("반대 → 찬성")로 바꾸고, 그 아래 원인 조건 한 줄을 더했다(`src/components/reactionsFor.ts`의 `changeCauseLabel` — `reactionsFor`가 고른 반응 문구들의 `conditionId`를 라벨로 바꿔 "이사님의 '라벨' 조건으로"를 만든다. 일치하는 조건이 없으면(순수 반대 응답 등) "이사님 의견을 듣고"). "유지" 카드의 빈 대사("앞서 말씀드린 입장 그대로입니다")는 새 시나리오 필드 `Scenario.holdReasons?: Record<ExecMemberId,string>`(두 안건 각 4문장씩)로 대체한다 — 조건별이 아니라 역할별 1문장이며, `tests/content/{aiApproval,experienceFirst}.test.ts`의 "쉬운 말(T93)" 검사에 함께 포함했다(금지 어휘 0건).
 
@@ -1014,3 +1014,24 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - **오류 줄**("300자를 넘었습니다")은 입력 상자 아래가 아니라 머리줄 가운데로 옮겼다. 아래에 끼면 버튼 줄이 밀린다.
 - 칩 선택/해제·제안 표시·키보드 접근성·조건 규칙(`domain/conditions`)과 버튼 모양(T111)은 그대로다.
 - 검증: `e2e/noscroll.spec.ts`의 HUD 단언(조건 5개 + 600자 입력에서 제출 줄 y·입력 상자 높이가 빈 상태와 같고 페이지 스크롤 없음, 1080·720). 스크린샷은 `discuss.png`·`reactions.png` 두 해상도.
+
+## T115 — 추천 방향 일치 규칙 (2026-10-09)
+
+사용자 보고: "AI 비서실장의 조건 추천이 AI 임원들의 찬성/반대와 정반대로 알려주는 경우가 있어." 화면·입장이 특정되지 않아 원인 가설 6개를 단위 테스트로 먼저 재현했다.
+
+**조사 결과.** scripted(사전 구성)에서는 추천이 뒤집히는 경로를 재현하지 못했다. `tests/components/recommendDirection.test.ts`와 `persuasionBoardDirection.test.tsx`가 안건 2개 × 참가자 입장 2개 × 확정 조건 부분집합 전수 × 답변 전·후를 돌려, 비서실장이 추천한 조건(행·묶음)을 적용하면 규칙표상 그 임원이 참가자 목표 표로 움직이고, 이미 목표 쪽이거나 답을 기다리는 임원에게는 추천이 없고, 현황판 비고(설득 완료·움직일 조건·답변 뒤 찬성/반대·반대로 남습니다)가 입장과 목표 방향에 맞음을 확인했다.
+
+**고친 것(live 전용 2건).** `PersuasionBoard`의 `buildRow`:
+1. 임원이 앞서 제안한 조건을 참가자가 이미 확정했는데도 "움직일 조건"에 다시 나왔다. 확정된 조건은 제안 목록에서 뺀다(AssistantPanel의 조건 추천은 이미 빼고 있었다).
+2. live에서 규칙표는 이미 찬성인데 발언 입장은 아직 반대일 때 "움직일 조건 · "(찬성 목표)·"'' 조건이 빠지면 반대로 남습니다"(반대 목표)처럼 조건 이름이 빈 문장이 나왔다. 보여줄 조건이 없으면 각각 "조건으로는 설득이 어렵습니다"·"조건과 무관하게 반대를 유지합니다"로 돌린다.
+
+**불변식.** (1) 추천 조건은 적용하면 규칙표상 참가자 목표 쪽으로 움직이는 조건만이다. (2) 목표 쪽 임원·답을 기다리는 임원에게는 조건을 추천하지 않는다. (3) 찬성 목표에서 반대 방향 안내, 반대 목표에서 "움직일 조건"·"설득 완료"가 나오지 않는다. (4) 조건 이름이 빈 비고는 없다. 표결 규칙표와 프롬프트는 바꾸지 않았다.
+
+**검토 뒤 추가(원인 후보 3건).** 사용자가 본 "정반대"를 scripted에서 재현하지 못해, 가능성이 높은 경로를 더 막았다.
+1. **live 발언 문장↔stance 불일치(가능성 높음).** 임원 발언 문장은 "반대합니다"인데 구조화된 stance는 찬성이면, 표정·현황판·비서실장 추천은 stance를 쓰고 참가자는 문장을 읽으므로 서로 정반대로 보인다. `src/domain/verdictWords.ts`의 `declaredDirection(text, participantStance)`가 문장이 선언한 방향을 뽑는다(찬성·가결·승인하겠·통과시키 등은 FOR, 반대·부결·반려·기각·거부 등은 AGAINST; 같은 편·동의·지지는 참가자 입장에 상대적이라 입장을 알 때만; 조건·의문·부정·유보 문장과 양쪽이 함께 있으면 null). `server/handlers/round.ts`는 OPINIONS·REACTIONS 응답에서 문장 방향과 stance가 명백히 반대이거나 고민 중(UNDECIDED)인데 방향을 선언하면 `invalid_response`로 보고 기존 재시도를 1회 탄다. 재시도에서도 어긋나면 참가자가 읽는 문장을 기준으로 stance를 문장 방향에 맞춰 내려보내고 로그 note에 `stance_text_mismatch_corrected`를 남긴다. 방향이 불분명하면 검사하지 않고, FOLLOWUP은 기존 방향 단어 검사가 맡는다. mock 제공자와 두 안건의 시나리오 문장은 방향을 선언하지 않아 영향이 없다.
+2. **비서실장 결과가 옛 내용으로 남음.** "처음 안과의 차이·남은 확인 사항"이 조건 추천을 연 시점의 스냅샷이라 "적용"으로 조건이 바뀐 뒤에도 "지금까지 확정한 조건이 없습니다"가 남았다. 지금 확정한 조건으로 다시 계산해 그린다. live 요약은 요청 시점의 `transcript.revision`을 기억해 기록이 바뀌면 비운다. 화면 전환 시에는 패널이 새로 만들어져 실제 앱에서 드물게 드러나지만 컴포넌트 단위로는 재현됐다.
+3. **반대 참가자 현황판 문구.** "'X' 조건이 빠지면 반대로 남습니다"는 X가 이미 빠진 듯 읽혀 "'X' 조건을 넣지 않아야 반대로 남습니다"로 바꿨다.
+
+**검증(2026-10-09).** `npm run check` 통과(84개 파일). e2e discuss·reactions·stance·flow-full·live: desktop-1080 33/33 통과, desktop-720 33/33 통과(두 번 모두 러너가 종료 때 멈춰 요약 줄 대신 실패 표시 0과 마지막 인덱스 33/33으로 확인).
+
+**Codex 68차 보완(declaredDirection).** (1) 명사와 서술 결합 사이 공백은 있어도 없어도 같은 방향이다("찬성 쪽입니다"). (2) 결과 명사(찬성·반대·가결·부결·승인·통과·반려·기각·거부)는 뒤가 실제 서술 꼴일 때만 방향으로 센다. 부정어(않·못·없·어렵·힘들·불가·곤란·아니·안 됩)가 이어지면 방향을 뒤집고("가결은 어렵습니다"는 반대, "반대하지 않겠습니다"는 찬성), 단순 언급("가결 여부를 보겠습니다")은 null이다. 교정은 명백한 경우만 한다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
