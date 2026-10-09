@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleRound, type FollowUpAuditEntry, type RoundRequest } from '../../server/handlers/round';
 import type { ModelProvider } from '../../server/providers/types';
-import { findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
+import { VERDICT_PATTERNS, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -70,6 +70,11 @@ const NEUTRAL = [
   '자동 승인 사유를 기록하는 방식이 마음에 듭니다.',
   '그 방향으로 점검 주기를 더 구체화해 주십시오.',
   '결론은 표결에서 밝히겠습니다.',
+  '승인 쪽인지 아직 판단하려면 자료가 더 필요합니다.',
+  '승인 편이라면 어떤 조건이 더 필요할지 보겠습니다.',
+  '이사님 쪽일지 지금은 말하기 어렵습니다.',
+  '승인에 가까운지는 더 따져 봐야 합니다.',
+  '제 입장이 승인인지는 아직 정하지 않았습니다.',
   '승인 사유를 기록하는 점은 좋습니다.',
   '저는 승인 사유가 더 구체적이면 좋겠습니다.',
   '최종적으로 승인이 필요한 범위는 더 확인해야 합니다.',
@@ -122,6 +127,20 @@ const DECLARATIONS = [
   '제 결론은 부결이라고 봅니다.',
   '제 입장은 승인이라고 봅니다.',
   '저는 승인이죠.',
+  '승인 쪽이네요.',
+  '반대 쪽이지요.',
+  '승인 쪽이고요.',
+  '승인 쪽이라고 봅니다.',
+  '승인 쪽이라고 생각합니다.',
+  '승인 쪽일 것입니다.',
+  '승인 쪽이겠습니다.',
+  '승인 쪽이겠죠.',
+  '승인 쪽임이 분명합니다.',
+  '승인 쪽인 셈입니다.',
+  '승인 쪽인 것 같습니다.',
+  '승인 편이라 봅니다.',
+  '승인에 가깝습니다.',
+  '승인에 가까운 입장입니다.',
 ];
 
 describe('findVerdictWords — 임원 FOLLOWUP 발언 전용 방향 표현 검사', () => {
@@ -142,6 +161,30 @@ describe('findVerdictWords — 임원 FOLLOWUP 발언 전용 방향 표현 검�
   it('서버가 쓰는 역할별 중립 대체 문장은 어떤 패턴에도 걸리지 않는다', () => {
     for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO', '알 수 없는 역할']) {
       expect(findVerdictWords(maskedFollowUpMessage(roleId))).toEqual([]);
+    }
+  });
+});
+
+describe('쪽·편 패턴의 의문·유보형 제외(Codex 57차)', () => {
+  // "찬성 쪽일지 반대 쪽일지"처럼 찬성·반대 단어 자체를 쓰면 단어 패턴이 걸린다(의도된 엄격함). 여기서는
+  // 쪽·편·가깝 서술 패턴만 따로 꺼내, 의문·조건·유보형이 선언으로 오인되지 않는지 확인한다.
+  const phrasePatterns = VERDICT_PATTERNS.filter(({ pattern }) => /쪽|편|가깝/.test(pattern.source) && !/^\/?[가-힣|]+$/.test(pattern.source));
+  const matchesPhrase = (text: string) => phrasePatterns.some(({ pattern }) => pattern.test(text));
+
+  it.each([
+    '승인 쪽인지 아직 판단하려면 자료가 더 필요합니다.',
+    '찬성 쪽일지 반대 쪽일지 지금은 말하기 어렵습니다.',
+    '승인 편이라면 어떤 조건이 더 필요할지 보겠습니다.',
+    '반대 쪽인가요? 저는 아직 결정하지 않았습니다.',
+    '승인에 가까운지는 더 따져 봐야 합니다.',
+    '제 입장이 승인인지는 아직 정하지 않았습니다.',
+  ])('의문·유보형은 쪽/편/가깝 패턴에 걸리지 않는다: %s', (sentence) => {
+    expect(matchesPhrase(sentence)).toBe(false);
+  });
+
+  it('종결형 선언은 같은 패턴에 걸린다', () => {
+    for (const sentence of ['승인 쪽이죠.', '찬성 쪽이네요.', '반대 편일 겁니다.', '승인에 가깝습니다.']) {
+      expect(matchesPhrase(sentence)).toBe(true);
     }
   });
 });
