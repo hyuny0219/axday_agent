@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T105 | 진행 중 | 근거 자료 카드·임원 의견/반응 카드의 중요한 말 강조(브리핑과 같은 `.key-term`): 안건별 강조어 + 조건 이름 + 숫자·단위 자동 강조, live 발언도 적용(2026-10-09 사용자 지시). 상세는 아래 T105 카드 |
 | T104 | 완료 | 코치를 화면 사용법 안내형으로 개정(화면당 말풍선 하나·6화면 "안내 N/6"·덮개·강제 없음·첫 조작/알겠어요로 닫힘), INTRO 버튼은 "확인" 하나·팝업 확대, 코치 끄기는 운영 메뉴·`?coach=off`로만(2026-10-09 사용자 지시, 초기 10단계 안은 폐기). 상세는 아래 T104 카드와 DESIGN_SPEC T103·T104 단락 |
 | T103 | 완료 | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
 | T102 | 완료 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS·DISCUSS에서 숨기고 MOTION·VOTE에서만, 제목 "지금까지 발언")(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
@@ -85,6 +86,23 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T105 근거 자료·임원 발언 카드 핵심 말 강조
+
+- 목표(2026-10-09 사용자 지시): "근거 자료와 임원 의견들에 중요한 단어는 강조 표시해." 브리핑(T99)과 같은 `HighlightText`/`.key-term`(굵은 잉크+연한 종이색, 붉은 박스 없음)을 자료 카드와 임원 발언 카드(OPINIONS 첫 의견·REACTIONS 반응·추가 질문)에 적용한다. scripted·live 모두.
+- 읽을 것: `src/components/parts/HighlightText.tsx`(`splitByTerms`), `src/components/parts/EvidenceGrid.tsx`(자료 카드: 제목·insight), `src/components/screens/OpinionsScreen.tsx`·`ReactionsScreen.tsx`·`src/components/parts/LiveStatementCards.tsx`(발언 카드 본문 렌더 위치), `src/content/types.ts`(Scenario.highlightTerms, EvidenceCard, Condition.label), `src/content/scenarios/{aiApproval,experienceFirst}.ts`, `tests/components/HighlightText.test.tsx`, `tests/content/*.test.ts`.
+- 만들 것:
+  1. `src/components/highlightTerms.ts`(신규): `statementHighlightTerms(scenario, text)` — ① `scenario.highlightTerms`(브리핑용, 그대로 재사용) ② `scenario.evidenceHighlightTerms`·`scenario.statementHighlightTerms`(신규 선택 필드, 안건당 각 6~10개: 자료의 핵심 수치·사실, 임원 발언의 핵심 주장. 예 ①: "천 건", "사흘", "310건 중 4건", "왜 승인했는지", "열에 넷", "돈 한도", "이유를 남기는", "책임질 사람") ③ `scenario.conditions[].label`(조건 이름, 예 "결재 금액 한도") ④ **숫자+단위 자동 추출**(정규식: `\d[\d,.]*\s?(건|명|원|%|배|석|번|년|개월|일|시간)` 및 "열에 넷"류 한국어 수 표현은 ②로) — text에 실제로 나오는 것만 반환, 긴 말 우선·중복 제거. 순수 함수·단위 테스트(겹침·숫자·조건 이름·빈 텍스트).
+  2. 적용: EvidenceGrid의 insight(와 제목은 제외), OPINIONS·REACTIONS·LiveStatementCards의 발언 본문, REACTIONS 추가 질문 문장, 반응 카드의 "이사님의 '…' 조건으로" 줄은 이미 라벨이라 제외. 무대 말풍선(18자)과 회의 기록(MinutesPanel·RESULT 전체 보기)은 적용하지 않는다(가독·중복 방지).
+  3. 강조 밀도 규칙: 카드 한 장에 강조가 **4곳을 넘지 않게**(긴 말·조건 이름·숫자 우선 순으로 자르기) — 과하면 강조가 아니다. 테스트로 고정.
+  4. 데이터: 두 안건에 `evidenceHighlightTerms`·`statementHighlightTerms` 채우기(쉬운 말, 실제 문장에 등장하는 것만 — 등장하지 않는 term은 테스트로 걸러냄). server/scenario-data.ts는 건드리지 않음(프롬프트 무관).
+  5. 테스트·문서: 단위(함수·카드 렌더 mark 개수 ≤4·live 텍스트 적용), e2e no-stray-english·opinions·reactions·screenshots 회귀, DESIGN_SPEC "## T105" 단락, TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 발언·자료 문장 변경, 서버 변경, 붉은 박스·영문.
+- 완료 확인: `npm run check`, e2e 1080·720 각각 PASS, 720 `opinions.png`·`reactions.png`·`briefing-evidence.png` Read 확인.
+- 크기: S~M.
 
 ---
 
