@@ -548,12 +548,17 @@ export function ReactionsScreen({
   // REACTIONS에서만 그려지고 그때는 아직 답하지도 넘기지도 않은 상태다.
   // 답변 화면에서 입장을 바꾸면 제출 뒤 규칙표는 바뀐 입장 기준이다 — 마지막 의견의 입장을
   // 지금 고른 입장으로 바꿔 대기 임원과 표시 입장을 함께 다시 계산한다(Codex 48·49차 P2).
+  // 제출하면 SUBMIT_FOLLOWUP이 이 화면의 confirmedConditionIds를 새 의견의 조건으로 싣고 규칙표는
+  // 마지막 의견의 조건만 본다(domain/stance.ts latestConfirmedConditionIds) — 같은 기준으로
+  // 마지막 의견의 조건도 지금 고른 조건으로 바꾼다(Codex 50차 P2, 답변에서 해제한 조건 반영).
   const effectiveOpinions = useMemo(
     () =>
       opinions.map((opinion, index) =>
-        index === opinions.length - 1 && side ? { ...opinion, stance: side } : opinion,
+        index === opinions.length - 1
+          ? { ...opinion, confirmedConditionIds, ...(side ? { stance: side } : {}) }
+          : opinion,
       ),
-    [opinions, side],
+    [opinions, side, confirmedConditionIds],
   );
   const awaitingAnswerIds = useMemo(
     () =>

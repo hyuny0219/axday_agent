@@ -731,4 +731,31 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('고민 중');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변 뒤 찬성');
   });
+
+  // Codex 50차 P2: 답변에서 해제한 조건은 현황판·대기 목록에서도 빠진다.
+  it('LOG를 확정한 뒤 답변 화면에서 칩을 해제하면 CAIO가 더는 "조건은 충분"이 아니다', () => {
+    const logOnly: Opinion[] = [{ ...opinions[0]!, confirmedConditionIds: ['LOG'] }];
+    const saved = scriptedStances(ai, { stage: 'REACTIONS', opinions: logOnly, followUpUsed: false, followUpAnswered: false });
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={logOnly}
+        side="FOR"
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={saved}
+        step="answer"
+      />,
+    );
+    const toggle = screen.getByTestId('persuasion-board-toggle');
+    if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변 뒤 찬성');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '더 논의가 필요합니다.' } });
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).not.toHaveTextContent('답변 뒤');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('움직일 조건');
+  });
 });
