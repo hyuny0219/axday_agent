@@ -114,7 +114,11 @@ function buildRow(
   const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
   const required = requiredConditionsFor(scenario, memberId, confirmedConditionIds, participantStance ?? null);
 
-  const liveHints = mode === 'live' ? liveSuggestedConditionIds?.[memberId] ?? [] : [];
+  // T115: 임원이 앞서 제안한 조건을 참가자가 이미 확정했다면 "움직일 조건"이 아니다.
+  const liveHints =
+    mode === 'live'
+      ? (liveSuggestedConditionIds?.[memberId] ?? []).filter((id) => !confirmedConditionIds.includes(id))
+      : [];
   const refSuffix = mode === 'live' ? ' · 참고' : '';
 
   function labelsOf(ids: readonly string[]): string {
@@ -143,7 +147,9 @@ function buildRow(
       return { memberId, stanceText, stanceChanged, conditionNote: '설득 완료' };
     }
     const ids = uniqueInOrder([...(required.conditionIds ?? []), ...liveHints]);
-    if (required.conditionIds === null && ids.length === 0) {
+    // T115: 보여줄 조건이 하나도 없으면(live에서 규칙표는 이미 찬성인데 발언은 아직 반대인 경우 등)
+    // 빈 "움직일 조건 · "을 적지 않는다.
+    if (ids.length === 0) {
       return { memberId, stanceText, stanceChanged, conditionNote: '조건으로는 설득이 어렵습니다' };
     }
     return {
@@ -157,7 +163,7 @@ function buildRow(
   // targetVote === 'AGAINST'(참가자가 반대 쪽)
   if (current === 'AGAINST') {
     const ids = uniqueInOrder([...(required.conditionIds ?? []), ...liveHints]);
-    if (required.conditionIds === null && ids.length === 0) {
+    if (ids.length === 0) {
       return { memberId, stanceText, stanceChanged, conditionNote: '조건과 무관하게 반대를 유지합니다' };
     }
     return {
