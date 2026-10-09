@@ -546,21 +546,38 @@ export function ReactionsScreen({
   );
   // T110: 조건은 맞았지만 추가 질문의 답을 기다리느라 "고민 중"에 머문 임원. 이 화면은
   // REACTIONS에서만 그려지고 그때는 아직 답하지도 넘기지도 않은 상태다.
+  // 답변 화면에서 입장을 바꾸면 제출 뒤 규칙표는 바뀐 입장 기준이다 — 마지막 의견의 입장을
+  // 지금 고른 입장으로 바꿔 대기 임원과 표시 입장을 함께 다시 계산한다(Codex 48·49차 P2).
+  const effectiveOpinions = useMemo(
+    () =>
+      opinions.map((opinion, index) =>
+        index === opinions.length - 1 && side ? { ...opinion, stance: side } : opinion,
+      ),
+    [opinions, side],
+  );
   const awaitingAnswerIds = useMemo(
     () =>
       mode === 'scripted'
         ? membersAwaitingAnswer(scenario, {
             stage: 'REACTIONS',
-            // 답변 화면에서 입장을 바꾸면 제출 뒤 규칙표는 바뀐 입장 기준이다 — 마지막 의견의
-            // 입장을 지금 고른 입장으로 바꿔 계산한다(Codex 48차 P2).
-            opinions: opinions.map((opinion, index) =>
-              index === opinions.length - 1 && side ? { ...opinion, stance: side } : opinion,
-            ),
+            opinions: effectiveOpinions,
             followUpUsed: false,
             followUpAnswered: false,
           })
         : [],
-    [scenario, opinions, mode, side],
+    [scenario, effectiveOpinions, mode],
+  );
+  const effectiveStances = useMemo(
+    () =>
+      mode === 'scripted' && opinions.length > 0
+        ? scriptedStances(scenario, {
+            stage: 'REACTIONS',
+            opinions: effectiveOpinions,
+            followUpUsed: false,
+            followUpAnswered: false,
+          })
+        : stances,
+    [scenario, effectiveOpinions, mode, opinions.length, stances],
   );
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
@@ -580,7 +597,7 @@ export function ReactionsScreen({
             scenario={scenario}
             confirmedConditionIds={previousConfirmedIds}
             participantStance={boardParticipantStance}
-            stances={stances}
+            stances={effectiveStances}
             mode={mode}
             statements={statements}
             awaitingAnswerIds={awaitingAnswerIds}
@@ -727,7 +744,7 @@ export function ReactionsScreen({
           scenario={scenario}
           confirmedConditionIds={previousConfirmedIds}
           participantStance={boardParticipantStance}
-          stances={stances}
+          stances={effectiveStances}
           mode={mode}
           statements={statements}
           awaitingAnswerIds={awaitingAnswerIds}
@@ -775,7 +792,7 @@ export function ReactionsScreen({
             selectedConditionIds={confirmedConditionIds}
             participantStance={boardParticipantStance}
             mode={mode}
-            stances={stances}
+            stances={effectiveStances}
             awaitingAnswerIds={awaitingAnswerIds}
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}

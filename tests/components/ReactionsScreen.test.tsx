@@ -706,4 +706,29 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     renderAnswer('AGAINST');
     expect(screen.getByTestId('persuasion-board-note-CFO')).not.toHaveTextContent('답변 뒤');
   });
+
+  // Codex 49차 P2: 입장 전환 뒤 현황판 표시도 바뀐 입장 기준이다.
+  it('반대 의견에서 LOG를 확정해 CAIO가 찬성으로 저장돼 있어도, 찬성 쪽으로 바꾸면 현황판이 고민 중으로 보인다', () => {
+    const against: Opinion[] = [{ ...opinions[0]!, confirmedConditionIds: ['LOG'], stance: 'AGAINST' }];
+    const saved = scriptedStances(ai, { stage: 'REACTIONS', opinions: against, followUpUsed: false, followUpAnswered: false });
+    expect(saved.CAIO).toBe('FOR');
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={against}
+        side="FOR"
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={saved}
+        step="answer"
+      />,
+    );
+    const toggle = screen.getByTestId('persuasion-board-toggle');
+    if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('고민 중');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변 뒤 찬성');
+  });
 });
