@@ -120,6 +120,15 @@ describe('declaredDirection(T115)', () => {
       ['찬성하지 않는지 보겠습니다.', null], ['찬성하지 않습니다.', 'AGAINST'], ['반대하지 않겠습니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('평서형 부정과 -면 규칙 순서(Codex 74차)', () => {
+    for (const [text, expected] of [
+      ['찬성하지 않다.', 'AGAINST'], ['반대하지 않다.', 'FOR'], ['찬성할 수 없다.', 'AGAINST'], ['찬성하기 어렵다.', 'AGAINST'],
+      ['찬성하지 않았다.', 'AGAINST'], ['찬성하지 않는지 보겠다.', null], ['찬성하기 어려워요.', 'AGAINST'],
+      ['전적으로 비대면 회의에 찬성합니다.', 'FOR'], ['원칙적으로 서면 의견으로 반대합니다.', 'AGAINST'],
+      ['자료를 보면 의견이 달라질 수 있습니다.', null], ['기록을 남기면 자료를 보고 찬성하겠습니다.', null],
+      ['비대면 회의에서 찬성합니다.', 'FOR'], ['지면 관계상 반대합니다.', 'AGAINST'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

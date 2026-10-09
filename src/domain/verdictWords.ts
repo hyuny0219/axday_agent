@@ -212,10 +212,12 @@ const NOUN_SCAN = new RegExp(`(${RESULT_NOUNS.map((n) => n.word).join('|')})`, '
 // "합의·합리"의 '합', "입장"의 '입', "불가피·불가결"의 '불가'는 선언이 아니다. 각 꼬리는 활용 어미까지 적고
 // 끝의 \S*가 그 어절의 남은 글자(만·요 등)를 먹는다. 결과 명사 뒤에 다른 명사가 이어지면 어떤 꼬리와도
 // 맞지 않아 null이다. 부정 서술에서 "찬성 입장은 아직 아닙니다"처럼 중간에 다른 말이 끼면 null로 둔다(교정 안 함).
-// 부정·없다 꼬리는 종결 활용일 때만 센다("없는지·없다면·않는지"는 유보·의문이라 제외).
-const NO_END = '없(?:습니다|습니까|다(?!면)|어요|네요|죠|고요|겠|을 것|을 겁)';
-const NOT_END = '(?:않(?:습|는다|아요|았|겠|네|죠|고요|을 것)|못(?:합|한다|해요|했|하겠|하네|하죠))';
-const HARD_END = '(?:어렵(?:습|다(?!면)|네|죠|겠|어)|힘(?:듭|들(?:겠|다(?!면)|어))|곤란(?:합|하다(?!면)|해))';
+// 부정·없다 꼬리는 종결 활용일 때만 센다. 기본형(-다)·평서형·존대형을 모두 받고, 유보·의문형("없는지·없다면·않는지·없으면")은
+// 어미가 맞지 않아 자연히 빠진다. 아래 TERMINAL이 종결 어미 집합이다.
+const TERMINAL = '(?:다(?!면)|는다|습니다|습니까|어요|아요|네요|죠|고요|군요|겠(?:다|습|어)|았다|었다|겁니다|것입니다|을 것|을 겁)';
+const NO_END = '없' + TERMINAL;
+const NOT_END = '(?:않' + TERMINAL + '|못(?:합니다|합니까|해요|하' + TERMINAL + '))';
+const HARD_END = '(?:어렵' + TERMINAL + '|어려(?:워요|웠다)|힘(?:듭니다|듭니까|들' + TERMINAL + ')|곤란(?:합니다|해요|하' + TERMINAL + '))';
 
 const NEGATED_TAIL = new RegExp(
   '^\\s?(?:' +
@@ -279,6 +281,7 @@ const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
 //      심사·절차·관계·자료·보고·설계)이면 명사("서면 의견으로", "지면 관계상"), 아니면 조건이다.
 const MYEON_NOUN_SYLLABLES = '전측표정평국직당화장단외후양반';
 const MYEON_CONDITIONAL_SYLLABLES = '으다라하되이시려거니';
+const MYEON_SHORT_VERB_STEMS = '가오보주쓰두내자타사나차피치';
 const MYEON_VERB_STEMS = '가오보주쓰두내자타사나차피치기리키우세해래배재채패매깨';
 const MYEON_NOUN_FOLLOWER = /^(?:으로|의|을|를|에|에서|보고|회의|방식|의견|심사|절차|관계|자료|설계)/;
 
@@ -294,10 +297,13 @@ function hasConditionalMyeon(sentence: string): boolean {
     if (MYEON_NOUN_SYLLABLES.includes(prev)) continue;
     // (b) ㄹ받침(들면·살면·열면)이거나 조건 어미 음절이면 조건이다.
     if (finalConsonant === 8 || MYEON_CONDITIONAL_SYLLABLES.includes(prev)) return true;
-    // (c) 받침 없는 모음 음절: 앞 어절이 목적어·부사로 끝나면 조건("자료를 보면"),
-    // 동사 어간 음절이고 3음절 이상이면 조건(남기면·느려지면), 나머지(서면·대면·지면·화면·비대면·후면·외면)는 뒤 어절을 본다.
-    if (/[을를에로서게히]$/.test(words[i - 1] ?? '')) return true;
-    if (MYEON_VERB_STEMS.includes(prev) && word.length >= 3) return true;
+    // (c) 받침 없는 모음 음절 — 규칙 순서(앞 어절 단서는 현재 어절이 2음절 동사 어간일 때만 쓴다):
+    //   1) 2음절 동사 어간(가·오·보·주·쓰·두·내·자·타·사·나·차·피·치) + 앞 어절이 을·를·에·로·서·게·히로 끝남 → 조건("자료를 보면")
+    //   2) 3음절 이상 + 동사 어간 음절(남기면·느려지면) → 조건
+    //   3) 뒤 어절이 명사·조사 결합(으로·의·회의·의견·관계 …) → 명사(비대면 회의에, 서면 의견으로, 지면 관계상). 앞 어절과 무관
+    //   4) 그 밖 → 조건(기본값)
+    if (word.length === 2 && MYEON_SHORT_VERB_STEMS.includes(prev) && /[을를에로서게히]$/.test(words[i - 1] ?? '')) return true;
+    if (word.length >= 3 && MYEON_VERB_STEMS.includes(prev)) return true;
     if (MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '')) continue;
     return true;
   }
