@@ -28,7 +28,7 @@ import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
-import { findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
+import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 import { withTimeout } from './timeout';
 import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
@@ -193,6 +193,21 @@ interface RoleAttemptResult extends RoundRoleResult {
   /** T114: FOLLOWUP 응답이 스키마는 통과했지만 문장에 방향 단어가 있어 거절된 시도의 원본.
    * callRole이 재시도 뒤에도 이 값이 남아 있으면 그 임원 발언을 중립 문장으로 대체한다. */
   verdictStatement?: StatementResponse;
+  /** T115: OPINIONS·REACTIONS 응답의 문장 방향이 구조화된 stance와 명백히 어긋나 거절된 시도의 원본과 문장 방향. */
+  directionMismatch?: { statement: StatementResponse; direction: 'FOR' | 'AGAINST' };
+}
+
+/** T115: 문장이 선언한 방향과 stance가 명백히 반대(또는 고민 중인데 방향 선언)이면 그 방향을 돌려준다. */
+function mismatchedDirection(
+  stage: RoundRequest['stage'],
+  message: string,
+  stance: string,
+  participantStance: RoundRequest['participantStance'],
+): 'FOR' | 'AGAINST' | null {
+  if (stage !== 'OPINIONS' && stage !== 'REACTIONS') return null;
+  const direction = declaredDirection(message, participantStance ?? null);
+  if (!direction) return null;
+  return stance === direction ? null : direction;
 }
 
 /** 제공자 호출 1회(파싱·조건 ID 검증 포함). 로그를 남기지 않는다 — callRole이 재시도
@@ -283,6 +298,21 @@ async function attemptRole(
         verdictStatement: parsed.data,
       };
     }
+    const mismatch = mismatchedDirection(input.stage, parsed.data.message, parsed.data.stance, input.participantStance);
+    if (mismatch) {
+      return {
+        roleId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        modelId: result.modelId,
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+        promptVersion: PROMPT_VERSION,
+        directionMismatch: { statement: parsed.data, direction: mismatch },
+      };
+    }
     return {
       roleId,
       status: 'answered',
@@ -371,6 +401,20 @@ async function callRole(
     };
     masked = true;
   }
+  // T115: 재시도에서도 문장과 stance가 어긋나면 참가자가 읽는 것은 문장이므로 stance를 문장 방향에 맞춘다.
+  let corrected = false;
+  if (outcome.status === 'failed' && outcome.directionMismatch) {
+    const { statement, direction } = outcome.directionMismatch;
+    outcome = {
+      ...outcome,
+      status: 'answered',
+      failReason: undefined,
+      providerErrorClass: undefined,
+      statement: { ...statement, stance: direction },
+      directionMismatch: undefined,
+    };
+    corrected = true;
+  }
   if (audit && input.stage === 'FOLLOWUP') {
     audit.push({ roleId, attempts: rawAttempts, masked });
   }
@@ -392,7 +436,7 @@ async function callRole(
     cacheWriteTokens: outcome.cacheWriteTokens,
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
-    note: masked ? 'followup_verdict_masked' : undefined,
+    note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : undefined,
   });
   return {
     roleId,

@@ -175,3 +175,58 @@ export function maskedFollowUpMessage(roleId: string): string {
 
 /** 봉인 단계 회의록에서 방향 단어가 든 FOLLOWUP 행 대신 보여 주는 문구. */
 export const SEALED_FOLLOWUP_TEXT = '(답변을 들었습니다 · 결과에서 공개)';
+
+// ---------------------------------------------------------------------------------------------
+// T115: 임원 발언 문장이 선언하는 방향(찬성/반대)을 뽑는다. 서버가 OPINIONS·REACTIONS 응답의 구조화된
+// stance와 문장이 명백히 반대인지 가르는 데 쓴다. 참가자는 문장을 읽으므로 문장과 stance가 어긋나면
+// 화면(표정·현황판·비서실장 추천)이 문장과 정반대로 보인다. 확신이 없으면 null(검사하지 않음)이다.
+
+export type DeclaredDirection = 'FOR' | 'AGAINST';
+
+/** 문장 방향이 참가자 입장에 상대적인 말(같은 편·동의·지지). 참가자 입장을 모르면 쓰지 않는다. */
+const RELATIVE_PATTERNS: readonly RegExp[] = [/같은 편(?:입|이에|이라|이죠|에 서|으로)/, /(?:동의|지지)(?:합니다|하겠|한다|해 드)/, /뜻을 같이/];
+
+const FOR_PATTERNS: readonly RegExp[] = [
+  /찬성(?:합|하겠|하기로|하는 쪽|입니다|이에요|이라|이죠|쪽|표|드립|으로)/,
+  /가결/,
+  /통과(?:시키|시킬|하겠)/,
+  /승인(?:하겠|합니다|해 드리)/,
+  /표를 (?:보태|드리)|힘을 보태/,
+];
+
+const AGAINST_PATTERNS: readonly RegExp[] = [
+  /반대(?:합|하겠|하기로|하는 쪽|입니다|이에요|이라|이죠|쪽|표|편에 (?:서|있))/,
+  /반대로 (?:남|서겠|가겠)/,
+  /부결/,
+  /반려(?:합|하겠|드립)/,
+  /기각/,
+  /거부(?:합|하겠)/,
+];
+
+/** 조건·의문·부정·유보가 섞인 문장은 선언으로 보지 않는다("한도를 정하면 찬성하겠습니다", "반대하지 않습니다"). */
+const HEDGED_SENTENCE =
+  /(?:[가-힣]면(?=[ ,]|$)|다면|라면|경우|한다면|수도|ㄹ지|지 모르|지 않|지는 않|지 못|기 어렵|할 수 없|인지|일까|을까|\?)/;
+
+function sentencesOf(text: string): string[] {
+  return text.split(/[.!?…\n]+/).map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+/** 발언 문장에서 임원이 선언한 방향을 돌려준다. 찬성·반대가 함께 있거나, 조건·유보형이거나, 선언이 없으면 null.
+ * participantStance를 주면 "같은 편·동의·지지"처럼 참가자에게 상대적인 표현도 방향으로 바꾼다. */
+export function declaredDirection(
+  text: string,
+  participantStance?: 'FOR' | 'AGAINST' | null,
+): DeclaredDirection | null {
+  const found = new Set<DeclaredDirection>();
+  for (const sentence of sentencesOf(text)) {
+    // "?"는 문장 분리에서 지워지므로 원문에서 그 문장 뒤에 "?"가 오는지도 본다.
+    const index = text.indexOf(sentence);
+    const asked = text.slice(index + sentence.length).trimStart().startsWith('?');
+    if (asked || HEDGED_SENTENCE.test(sentence)) continue;
+    if (FOR_PATTERNS.some((pattern) => pattern.test(sentence))) found.add('FOR');
+    if (AGAINST_PATTERNS.some((pattern) => pattern.test(sentence))) found.add('AGAINST');
+    if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(sentence))) found.add(participantStance);
+  }
+  if (found.size !== 1) return null;
+  return [...found][0] ?? null;
+}
