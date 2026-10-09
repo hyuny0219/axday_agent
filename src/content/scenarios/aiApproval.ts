@@ -133,12 +133,9 @@ export const aiApprovalScenario: Scenario = {
       conditionId: 'OWNER',
       side: 'FOR',
     },
-    {
-      id: 'P5',
-      text: '사람 확인을 빼고 전부 자동 승인합시다.',
-      conditionId: 'FULL_AUTO',
-      side: 'FOR',
-    },
+    // T119: 사람 확인 없이 전부 맡기기(FULL_AUTO)는 첫 단계 추천 문구에서 일부러 뺐다 —
+    // 추가 답변(followUp.options)에서 고를 수 있다. 첫 단계에서 빠지는 조건이 1~2개여야
+    // 한다는 불변식은 tests/content/conditionCoverage.test.ts.
     {
       id: 'P6',
       text: '맡겨도 될지 판단할 근거를 더 제시해 주십시오.',
@@ -381,6 +378,12 @@ export const aiApprovalScenario: Scenario = {
         side: 'FOR',
       },
       {
+        // T119: 첫 단계 추천 문구에서 뺀 FULL_AUTO를 추가 답변에서 고를 수 있게 한다.
+        text: '사람 확인을 빼고 전부 자동 승인하고, 문제가 생기면 이사회가 책임집시다.',
+        proposeConditionId: 'FULL_AUTO',
+        side: 'FOR',
+      },
+      {
         text: '사람을 더 투입하거나 순서를 바꿔 풀어야지, AI에게 맡기면 안 된다고 생각합니다.',
         proposeConditionId: null,
         side: 'AGAINST',
@@ -393,6 +396,11 @@ export const aiApprovalScenario: Scenario = {
       {
         text: '그래도 급하다면, 사람이 일부를 다시 보도록 하는 선에서는 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 급하다면, 사람 확인을 빼고 전부 자동 승인하는 것도 다시 생각해 보겠습니다.',
+        proposeConditionId: 'FULL_AUTO',
         side: 'AGAINST',
       },
       {

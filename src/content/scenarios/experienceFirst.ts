@@ -142,12 +142,8 @@ export const experienceFirstScenario: Scenario = {
       conditionId: 'REVIEW',
       side: 'FOR',
     },
-    {
-      id: 'P5',
-      text: '최종 결정은 언제나 경험 판단을 따르도록 합시다.',
-      conditionId: 'EXP_ONLY',
-      side: 'FOR',
-    },
+    // T119: 언제나 경험 먼저(EXP_ONLY)는 첫 단계 추천 문구에서 일부러 뺐다 — 추가
+    // 답변(followUp.options)에서 고를 수 있다.
     {
       id: 'P6',
       text: '경험을 먼저 믿어야 할 이유를 더 설명해 주십시오.',
@@ -388,6 +384,17 @@ export const experienceFirstScenario: Scenario = {
       {
         text: '그래도 어렵다면, 결정 결과를 돌아보고 다음에 반영한다면 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
+        side: 'AGAINST',
+      },
+      {
+        // T119: 반대 입장도 첫 단계에서 빠진 SCOPE·EXP_ONLY를 추가 답변에서 고를 수 있다.
+        text: '그래도 어렵다면, 처음 겪는 상황에서만 경험을 우선한다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'SCOPE',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 어렵다면, 최종 결정은 언제나 경험 판단을 따르도록 하는 것도 다시 생각해 보겠습니다.',
+        proposeConditionId: 'EXP_ONLY',
         side: 'AGAINST',
       },
       {
