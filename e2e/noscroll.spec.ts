@@ -404,6 +404,25 @@ async function expectSubmitRowFixed(
   await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
   await expectNoPageScroll(page, `${label}(칩 5개 + 600자)`);
   expect(await readYs(), `${label}: 제출 줄 y가 빈 상태와 같아야 한다`).toEqual(emptyYs);
+  // 충돌하는 두 조건(검토·전부 자동)을 모두 확정하면 충돌 안내가 뜬다 — 안내가 잘리지 않고
+  // 읽히며(칸 안에 다 들어온다) 제출 줄도 움직이지 않는다.
+  for (const id of ['REVIEW', 'FULL_AUTO']) {
+    const chip = page.getByTestId(`condition-chip-${id}`);
+    if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+      await chip.click();
+    }
+  }
+  const conflicts = page.getByTestId('condition-chips-conflicts');
+  await expect(conflicts).toBeVisible();
+  const conflictFit = await conflicts.evaluate((el) => ({
+    clientHeight: el.clientHeight,
+    scrollHeight: el.scrollHeight,
+  }));
+  expect(conflictFit.clientHeight, `${label}: 충돌 안내가 최소 한 줄 높이를 가져야 한다`).toBeGreaterThanOrEqual(15);
+  expect(conflictFit.scrollHeight, `${label}: 충돌 안내가 잘리지 않아야 한다`).toBeLessThanOrEqual(
+    conflictFit.clientHeight + 1,
+  );
+  expect(await readYs(), `${label}: 충돌 안내가 떠도 제출 줄 y가 같아야 한다`).toEqual(emptyYs);
   expect(await textareaHeight(), `${label}: 입력 상자 높이가 고정이어야 한다`).toBe(emptyHeight);
   // 600자는 입력 상자 안에서 스크롤된다(상자가 늘어나지 않는다).
   const scrolls = await page

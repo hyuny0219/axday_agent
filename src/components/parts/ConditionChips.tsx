@@ -7,6 +7,7 @@
 // 테두리 + "✓", 새로 제안된 칩은 확정돼도 앰버 테두리 + "+ 새 조건"이다. 선택적
 // newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ConflictPair, Scenario } from '../../content/types';
 
 export interface ConditionChipsProps {
@@ -50,6 +51,21 @@ export function ConditionChips({
   onToggle,
   newlyProposedIds = [],
 }: ConditionChipsProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = useState(false);
+  // T116: 칩이 넘쳐 가로 스크롤이 생겼을 때만 스크롤바 여백을 둔다.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) {
+      setScrollable(false);
+      return undefined;
+    }
+    const measure = () => setScrollable(el.scrollWidth > el.clientWidth + 1);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
+
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
       return null;
@@ -62,32 +78,35 @@ export function ConditionChips({
   }
 
   return (
-    <div className="condition-chips" data-testid="condition-chips">
+    <div
+      className={`condition-chips${conflictPairs.length > 0 ? ' condition-chips--conflict' : ''}`}
+      data-testid="condition-chips"
+    >
       {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안의 장식
           라벨이었으나(STEP·EXHIBIT 등과 같은 규칙) T83에서 한국어로 바꿨다. 확정 칩의
           체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
       <div className="condition-chips__row">
-      <p className="condition-chips__label">조건</p>
-      <div className="condition-chips__list">
-        {proposedIds.map((id) => {
-          const accepted = acceptedIds.includes(id);
-          const isNew = newlyProposedIds.includes(id);
-          const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
-          return (
-            <button
-              key={id}
-              type="button"
-              className={`condition-chip${modifier}`}
-              aria-pressed={accepted}
-              data-testid={`condition-chip-${id}`}
-              onClick={() => onToggle(id)}
-            >
-              {conditionLabel(scenario, id)}
-              {accepted ? (isNew ? ' + 새 조건' : ' ✓') : ''}
-            </button>
-          );
-        })}
-      </div>
+        <p className="condition-chips__label">조건</p>
+        <div className="condition-chips__list" ref={listRef} data-scrollable={scrollable}>
+          {proposedIds.map((id) => {
+            const accepted = acceptedIds.includes(id);
+            const isNew = newlyProposedIds.includes(id);
+            const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`condition-chip${modifier}`}
+                aria-pressed={accepted}
+                data-testid={`condition-chip-${id}`}
+                onClick={() => onToggle(id)}
+              >
+                {conditionLabel(scenario, id)}
+                {accepted ? (isNew ? ' + 새 조건' : ' ✓') : ''}
+              </button>
+            );
+          })}
+        </div>
       </div>
       {conflictPairs.length > 0 && (
         <ul className="condition-chips__conflicts" role="alert" data-testid="condition-chips-conflicts">

@@ -43,7 +43,7 @@ describe('DraftEditor', () => {
 
   // T116: 입력 상자는 고정 높이 + 안쪽 스크롤이다. jsdom은 레이아웃을 계산하지 않으므로
   // 스타일시트 규칙과 컴포넌트가 높이를 직접 건드리지 않는 것을 확인한다(실제 위치는 e2e noscroll).
-  it('입력 상자는 CSS 고정 높이·안쪽 스크롤이고 자동 늘어나기가 없다', () => {
+  it('CSS 규칙 문자열 점검: 입력 상자는 고정 높이·안쪽 스크롤이고 자동 늘어나기가 없다', () => {
     const css = readFileSync('src/styles/screens/discuss.css', 'utf8');
     const rule = /\.draft-editor__textarea \{([^}]*)\}/.exec(css)?.[1] ?? '';
     expect(rule).toContain('height: var(--hud-textarea-h)');

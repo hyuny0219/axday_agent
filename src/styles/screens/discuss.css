@@ -15,7 +15,7 @@
    두 HUD(.discuss-screen__hud·.reactions-screen__hud)가 같은 변수를 쓴다. */
 .discuss-screen__hud,
 .reactions-screen__hud {
-  --hud-textarea-h: 70px;
+  --hud-textarea-h: 116px;
   --hud-chip-h: 28px;
   --hud-chip-gap: 6px;
   --hud-chips-h: 88px;
@@ -24,7 +24,7 @@
 @media (max-width: 1280px) {
   .discuss-screen__hud,
   .reactions-screen__hud {
-    --hud-textarea-h: 44px;
+    --hud-textarea-h: 96px;
     --hud-chip-h: 24px;
     --hud-chip-gap: 4px;
     --hud-chips-h: 70px;
@@ -221,10 +221,23 @@
   align-content: flex-start;
   gap: var(--hud-chip-gap);
   min-width: 0;
-  height: calc(var(--hud-chip-h) * 2 + var(--hud-chip-gap) + 8px);
+  height: calc(
+    var(--hud-chip-h) * var(--hud-chip-rows, 2) + var(--hud-chip-gap) * (var(--hud-chip-rows, 2) - 1)
+  );
   overflow-x: auto;
   overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+/* 가로 스크롤이 실제로 생겼을 때만 스크롤바 자리를 칩 아래에 둔다(ConditionChips가 표시). */
+.condition-chips__list[data-scrollable='true'] {
+  box-sizing: content-box;
   padding-bottom: 8px;
+}
+
+/* 충돌 안내가 떠 있으면 칩 줄을 1줄로 줄여 안내(제출이 막힌 이유)가 잘리지 않게 한다. */
+.condition-chips--conflict {
+  --hud-chip-rows: 1;
 }
 
 .condition-chip {
