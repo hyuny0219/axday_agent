@@ -47,6 +47,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
+import { conditionSourceHint, isConditionOffered } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -400,6 +401,10 @@ export function DiscussScreen({
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
             canApplyCondition={canApplyRecommendation}
+            conditionGuide={{
+              hint: (id) => conditionSourceHint(scenario, id, side, 'DISCUSS'),
+              offered: (id) => isConditionOffered(scenario, id, side),
+            }}
             closeRequest={assistantCloseRequest}
             draftText={draft.draftText}
             draftRevision={draftRevision}

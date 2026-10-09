@@ -104,6 +104,13 @@ export interface AssistantPanelProps {
    * P2-1). false면 "적용" 대신 "직접 써 주세요" 안내를 보인다. 없으면 모두 적용 가능으로
    * 본다. 묶음은 구성 조건이 전부 가능할 때만 "모두 적용"을 보인다. */
   canApplyCondition?: (conditionId: string) => boolean;
+  /** T119: 아직 안 붙은 조건을 어디서 붙일 수 있는지 안내한다. hint는 "추천 문구 N번에서…"/
+   * "추가 답변에서…" 문구(없으면 null), offered는 추천 문구·추가 답변 어디에도 없는
+   * 조건을 거르는 데 쓴다(false면 안내하지 않는다). 없으면 안내 없이 모두 보인다. */
+  conditionGuide?: {
+    hint: (conditionId: string) => string | null;
+    offered: (conditionId: string) => boolean;
+  };
   /** 값이 바뀌면(0 제외) 열려 있는 팝업을 닫는다(PR #20 Codex 31차 P2-1). 화면이 확인 창을
    * 띄울 때 팝업의 포커스 트랩이 확인 창을 가리지 않게 한다. 자동으로 다시 열지는 않는다. */
   closeRequest?: number;
@@ -152,6 +159,7 @@ export function AssistantPanel({
   onRecommendCondition,
   onRecommendConditions,
   canApplyCondition,
+  conditionGuide,
   closeRequest = 0,
   draftText,
   draftRevision,
@@ -380,6 +388,11 @@ export function AssistantPanel({
   // T115: "처음 안과의 차이"·"남은 확인 사항"은 요청 시점의 스냅샷이 아니라 지금 확정한 조건으로 그린다
   // ("적용"으로 조건이 바뀐 뒤에도 옛 목록이 남아 추천과 어긋나지 않게).
   const compareView = useMemo(() => buildCompare(scenario, selectedConditionIds), [scenario, selectedConditionIds]);
+  // T119: 추천 문구·추가 답변 어디에도 없는 조건은 "남은 확인 사항"에서도 안내하지 않는다.
+  const remainingShown = useMemo(
+    () => compareView.remainingConditionIds.filter((id) => conditionGuide?.offered(id) !== false),
+    [compareView, conditionGuide],
+  );
   const transcriptStatements = transcript.statements;
   const effectiveLiveSuggestions = useMemo(
     () => liveSuggestedConditionIds ?? latestSuggestedConditionIds(transcriptStatements),
@@ -395,8 +408,18 @@ export function AssistantPanel({
         stances,
         effectiveLiveSuggestions,
         awaitingAnswerIds,
+        conditionGuide?.offered,
       ),
-    [scenario, selectedConditionIds, participantStance, mode, stances, effectiveLiveSuggestions, awaitingAnswerIds],
+    [
+      scenario,
+      selectedConditionIds,
+      participantStance,
+      mode,
+      stances,
+      effectiveLiveSuggestions,
+      awaitingAnswerIds,
+      conditionGuide,
+    ],
   );
 
   // Codex 27차 검토 P2-3: "적용"을 눌러도 매칭되는 추천 문구가 없거나(예: REACTIONS
@@ -658,6 +681,14 @@ export function AssistantPanel({
                               푸는 걱정 · {row.worry}
                             </span>
                           )}
+                          {conditionGuide?.hint(row.conditionId) && (
+                            <span
+                              className="assistant-panel__recommend-where"
+                              data-testid={`assistant-recommend-where-${row.conditionId}`}
+                            >
+                              붙이는 곳 · {conditionGuide.hint(row.conditionId)}
+                            </span>
+                          )}
                           {canApplyCondition && !canApplyCondition(row.conditionId) ? (
                             <span
                               className="assistant-panel__recommend-manual"
@@ -730,10 +761,18 @@ export function AssistantPanel({
                     <p>지금까지 확정한 조건이 없습니다.</p>
                   )}
                   <h4>남은 확인 사항</h4>
-                  {compareView.remainingConditionIds.length > 0 ? (
+                  {remainingShown.length > 0 ? (
                     <ul>
-                      {compareView.remainingConditionIds.map((id) => (
-                        <li key={id}>{conditionLabel(scenario, id)}</li>
+                      {remainingShown.map((id) => (
+                          <li key={id} data-testid={`assistant-remaining-${id}`}>
+                            {conditionLabel(scenario, id)}
+                            {conditionGuide?.hint(id) && (
+                              <span className="assistant-panel__remaining-where">
+                                {' '}
+                                · {conditionGuide.hint(id)}
+                              </span>
+                            )}
+                          </li>
                       ))}
                     </ul>
                   ) : (
