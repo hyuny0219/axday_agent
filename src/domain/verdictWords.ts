@@ -231,7 +231,9 @@ const NEGATED_TAIL = new RegExp(
 // 이중 부정(조사 선택): 찬성하지 않을 수가/는/도 없습니다 · 반대하지 않을 리가 없습니다 · 찬성 안 할 수가 없습니다 ·
 // 찬성하지 않으면 안 됩니다. 단일 부정 검사보다 먼저 본다.
 const DOUBLE_NEGATED_TAIL =
-  /^\s?(?:(?:하|시키|되)?(?:지|치) ?(?:않|아니)(?:을|할) ?(?:수|리)(?:가|는|도|야)? ?없|안 ?할 ?수(?:가|는|도)? ?없|(?:하|시키|되)?지 ?않으면 ?안 ?됩)/;
+  /^\s?(?:(?:하|시키|되)?(?:지|치) ?(?:않|아니)(?:을|할) ?(?:(?:수|리)(?:가|는|도|야)?|수 ?밖에|밖에|도리(?:가|는)?|길(?:이|은)?|방법(?:이|은)?) ?없|안 ?할 ?수(?:가|는|도)? ?없|(?:하|시키|되)?지 ?않으면 ?안 ?됩)/;
+// 단일 긍정 "-할 수밖에 없습니다"(찬성할 수밖에 없습니다)도 그 방향의 선언이다.
+const UNAVOIDABLE_TAIL = /^\s?(?:하|시키|되)?(?:ㄹ|할|될) ?수 ?밖에 ?없/;
 
 const AFFIRMED_TAIL = new RegExp(
   '^\\s?(?:' +
@@ -267,6 +269,7 @@ const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
 //      심사·절차·관계·자료·보고·설계)이면 명사("서면 의견으로", "지면 관계상"), 아니면 조건이다.
 const MYEON_NOUN_SYLLABLES = '전측표정평국직당화장단외후양반';
 const MYEON_CONDITIONAL_SYLLABLES = '으다라하되이시려거니';
+const MYEON_VERB_STEMS = '가오보주쓰두내자타사나차피치';
 const MYEON_NOUN_FOLLOWER = /^(?:으로|의|을|를|에|에서|보고|회의|방식|의견|심사|절차|관계|자료|설계)/;
 
 function hasConditionalMyeon(sentence: string): boolean {
@@ -277,6 +280,10 @@ function hasConditionalMyeon(sentence: string): boolean {
     const prev = word[word.length - 2] ?? '';
     if (MYEON_NOUN_SYLLABLES.includes(prev)) continue;
     if (MYEON_CONDITIONAL_SYLLABLES.includes(prev) || finalConsonantIndex(prev) === 8) return true;
+    // 뒤 어절 규칙은 2음절 어절(서면·대면·지면 같은 명사 후보)에만 쓴다. 3음절 이상(남기면·검토하면)은 항상 조건이다.
+    if (word.length > 2) return true;
+    // 2음절이라도 흔한 동사 어간(보면·가면)이고 앞 어절이 목적어·부사로 끝나면 조건이다("자료를 보면").
+    if (MYEON_VERB_STEMS.includes(prev) && /[을를에로서]$/.test(words[i - 1] ?? '')) return true;
     if (MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '')) continue;
     return true;
   }
@@ -312,7 +319,7 @@ export function declaredDirection(
       if (!noun) continue;
       const tail = sentence.slice((match.index ?? 0) + match[0].length);
       // 이중 부정("찬성하지 않을 수 없습니다")은 그 방향의 긍정이다 — 단일 부정 판정보다 먼저 본다.
-      if (DOUBLE_NEGATED_TAIL.test(tail)) found.add(noun.direction);
+      if (DOUBLE_NEGATED_TAIL.test(tail) || UNAVOIDABLE_TAIL.test(tail)) found.add(noun.direction);
       else if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
       else if (AFFIRMED_TAIL.test(tail)) found.add(noun.direction);
     }

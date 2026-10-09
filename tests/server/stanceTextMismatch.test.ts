@@ -99,6 +99,16 @@ describe('declaredDirection(T115)', () => {
       ['그렇다면 찬성합니다.', null], ['검토되면 찬성하겠습니다.', null], ['열면 반대합니다.', null], ['전면 찬성합니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('수밖에 없다 이중 부정·단일 긍정과 -면 2음절 한정(Codex 72차)', () => {
+    for (const [text, expected] of [
+      ['찬성하지 않을 수밖에 없습니다.', 'FOR'], ['반대하지 않을 수밖에 없습니다.', 'AGAINST'],
+      ['찬성할 수밖에 없습니다.', 'FOR'], ['반대할 수밖에 없습니다.', 'AGAINST'],
+      ['찬성하지 않을 도리가 없습니다.', 'FOR'], ['반대하지 않을 방법이 없습니다.', 'AGAINST'],
+      ['기록을 남기면 자료를 보고 찬성하겠습니다.', null], ['조건을 확인하면 의견을 내겠습니다.', null],
+      ['서면 의견으로 반대합니다.', 'AGAINST'], ['대면 회의에서 찬성합니다.', 'FOR'],
+      ['자료를 보면 의견이 달라질 수 있습니다.', null], ['화면 설계를 보면 찬성합니다.', null], ['검토되면 찬성하겠습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
