@@ -73,6 +73,14 @@ describe('declaredDirection(T115)', () => {
       ['승인 사유를 남기는 점은 좋습니다.', null], ['반대 의견도 있습니다.', null], ['찬성하지 않습니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('불가피·합의·합리·입장처럼 선언이 아닌 어절은 방향으로 세지 않는다(Codex 69차)', () => {
+    for (const [text, expected] of [
+      ['찬성은 불가피합니다.', 'FOR'], ['찬성은 불가합니다.', 'AGAINST'], ['반대는 불가피합니다.', 'AGAINST'], ['승인 불가입니다.', 'AGAINST'],
+      ['찬성하기 어렵습니다.', 'AGAINST'], ['아직 찬성 합의가 이뤄지지 않았습니다.', null], ['찬성 합니다.', 'FOR'],
+      ['찬성 입장은 아직 아닙니다.', null], ['반대 합리성이 있습니다.', null], ['찬성합니다.', 'FOR'],
+      ['가결은 불가결한 절차입니다.', null], ['찬성 쪽 의견이 많습니다.', null], ['찬성 입장입니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('같은 편·동의는 참가자 입장을 알 때만 방향이 된다', () => {
     expect(declaredDirection('이사님과 같은 편입니다.')).toBeNull();
     expect(declaredDirection('이사님과 같은 편입니다.', 'AGAINST')).toBe('AGAINST');
