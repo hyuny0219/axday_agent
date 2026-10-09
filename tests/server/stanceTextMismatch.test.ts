@@ -148,6 +148,15 @@ describe('declaredDirection(T115)', () => {
       ['원칙적으로 서면 의견으로 반대합니다.', 'AGAINST'], ['자료를 보면 의견이 달라질 수 있습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('명사 목록은 명사 문맥에서만, 하다 활용군(Codex 77차)', () => {
+    for (const [text, expected] of [
+      ['협상에서 지면 반대하겠습니다.', null], ['그 편에 서면 찬성하겠습니다.', null],
+      ['이 안건을 서면 결의로 승인합니다.', 'FOR'], ['서면 의견으로 반대합니다.', 'AGAINST'], ['지면 관계상 반대합니다.', 'AGAINST'],
+      ['비대면 회의에서 찬성합니다.', 'FOR'], ['로그를 켜면 자료를 확인해 찬성하겠습니다.', null],
+      ['부결시키기로 하겠습니다.', 'AGAINST'], ['가결시키기로 했습니다.', 'FOR'], ['찬성하기로 하겠습니다.', 'FOR'],
+      ['반대하는 쪽으로 하겠습니다.', 'AGAINST'], ['찬성하기로 했다고 들었습니다.', null], ['부결시키기로 했다는 소식입니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
