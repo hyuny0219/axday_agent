@@ -556,205 +556,155 @@
   }
 }
 
-/* 버튼 "라벨 테이프"(T107, 시안 E 보드): 서류 가방에 붙인 라벨 테이프 모양. 주 버튼은
-   주황 채움 + 위아래 2px 먹색 선 + 양끝 사선 컷 + 끝 펀치 구멍 두 개. clip-path가
-   box-shadow를 잘라내므로 그림자는 쓰지 않는다. 컷 크기는 --cta-cut, 구멍 크기·위치는
-   --cta-hole·--cta-hole-x로 줄인다(1280 분기). 포커스 링은 사선 컷 밖으로 나가지 않게
-   안쪽 inset 그림자로 그린다. 색 체계(주황·먹색·종이)와 버튼 높이는 T86 그대로. */
+/* 버튼 "밀랍 봉인 봉투"(T108, 시안 D 보드): 검은 봉투 + 2px 종이색 실선 테두리 + 안쪽
+   2px 점선 + 왼쪽 붉은 밀랍 봉인(글자 없음, ::before). 안쪽 점선은 outline(offset 음수)으로
+   그리고, 포커스 링은 box-shadow 주황 글로우로 따로 그린다. 붉은색은 봉인 장식에만 쓴다.
+   봉인은 주 버튼(.cta, 보조 아님)과 종이 위 주 버튼(.cta--solid)에만 있다. 버튼 높이는
+   T86 그대로(--cta-height). 치수는 변수로 두고 1280 분기에서 줄인다. */
 .cta {
-  --cta-cut: 12px;
-  --cta-hole: 7px;
-  --cta-hole-x: 14px;
-  --cta-pad: 36px;
+  --cta-seal: 30px;
+  --cta-pad-l: 16px;
+  --cta-pad-r: 26px;
+  --cta-gap: 14px;
+  --cta-dash: -8px;
   position: relative;
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cta-gap);
   min-height: var(--cta-height);
   min-width: var(--touch-min);
-  padding: 0 var(--cta-pad);
-  border: none;
-  border-top: 2px solid #0b0d10;
-  border-bottom: 2px solid #0b0d10;
+  padding: 0 var(--cta-pad-r) 0 var(--cta-pad-l);
+  border: 2px solid #ece7dc;
   border-radius: 0;
-  background-color: var(--amber);
+  background-color: #141413;
   background-image: none;
-  color: #0b0d10;
+  color: #ece7dc;
+  outline: 2px dashed #7a766d;
+  outline-offset: var(--cta-dash);
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 18px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   /* 버튼 라벨은 짧은 한 줄 — 720 높이에서 '▶'만 둘째 줄로 떨어지지 않게(Opus 최종 검토 should 4). */
   white-space: nowrap;
   cursor: pointer;
   box-shadow: none;
-  clip-path: polygon(var(--cta-cut) 0, 100% 0, calc(100% - var(--cta-cut)) 100%, 0 100%);
   transition: filter var(--transition-fast) ease;
 }
 
-/* 양끝 펀치 구멍: 글자와 겹치지 않게 좌우 패딩(36px)이 구멍 바깥쪽을 비워 둔다.
-   보조·잠긴·종이 위 주 버튼은 구멍이 없다. */
-.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::before,
-.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::after {
+/* 밀랍 봉인: 붉은 원 + 안쪽 두 겹 링. 글자는 넣지 않는다. */
+.cta:not(.cta--secondary)::before {
   content: '';
-  position: absolute;
-  top: 50%;
-  width: var(--cta-hole);
-  height: var(--cta-hole);
-  margin-top: calc(var(--cta-hole) / -2);
+  flex: none;
+  width: var(--cta-seal);
+  height: var(--cta-seal);
   border-radius: 50%;
-  background: #0b0d10;
-  pointer-events: none;
-}
-
-.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::before {
-  left: var(--cta-hole-x);
-}
-
-.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::after {
-  right: var(--cta-hole-x);
+  background: #b23b3b;
+  box-shadow: inset 0 0 0 4px #8f2d2d, inset 0 0 0 6px #b23b3b, 0 1px 0 #5a1d1d;
+  transition: transform var(--transition-fast) ease;
 }
 
 .cta:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.12);
 }
 
-.cta:active:not(:disabled) {
-  transform: translateY(1px);
+/* 누르면 밀랍이 살짝 눌린다. */
+.cta:active:not(:disabled)::before {
+  transform: scale(0.9);
 }
 
 .cta:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 3px #0b0d10;
+  box-shadow: 0 0 0 3px #e0a34a;
 }
 
-/* 보조 버튼: 투명 바탕 + 2px 주황 테두리 + 주황 글자, 같은 사선 컷(구멍 없음). */
+/* 보조 버튼: 봉인 없는 봉투 — 같은 바탕·테두리·점선, 패딩 0 20px. */
 .cta.cta--secondary {
-  --cta-cut: 10px;
-  --cta-pad: 28px;
+  --cta-dash: -7px;
+  padding: 0 20px;
   min-height: var(--touch-min);
-  --cta-line: var(--amber);
-  border: 0;
-  border-block: 2px solid var(--cta-line);
-  background-color: transparent;
-  color: var(--amber);
   font-size: 15px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
-.cta.cta--secondary:hover:not(:disabled) {
-  background-color: rgba(224, 163, 74, 0.14);
-  filter: none;
-}
-
-.cta.cta--secondary:focus-visible {
-  box-shadow: inset 0 0 0 2px #f4d79a;
+/* 종이 위 주 버튼(근거 자료 보기·INTRO 확인·ATTRACT 체험 시작)과 팝업 안 보조 버튼
+   (닫기·비서실장 기능 버튼): 종이색 바탕 + 2px 먹색 실선 + 안쪽 회갈색 점선. 팝업 안
+   보조 버튼은 폭을 아끼려고 봉인 없이 쓴다. */
+.cta.cta--solid,
+.dialog-shell .cta.cta--secondary:not(:disabled) {
+  --cta-seal: 24px;
+  --cta-pad-l: 14px;
+  --cta-pad-r: 22px;
+  --cta-gap: 12px;
+  --cta-dash: -7px;
+  background-color: #fbf7ee;
+  color: #1b1a17;
+  border-color: #1b1a17;
+  outline-color: #a8a194;
 }
 
 .cta.cta--solid {
-  --cta-cut: 10px;
-  --cta-pad: 28px;
   min-height: var(--touch-min);
   font-size: 15px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
-/* 종이 위·팝업 안 주 버튼(근거 자료 보기, 팝업 닫기·비서실장 기능 버튼, 선택된 입장 탭):
-   주황 바탕 + 위아래 1~2px 먹색 선 + 사선 컷(구멍 없음). 팝업 안 보조 버튼은 모두 이 모양. */
-.cta.cta--solid:not(:disabled),
-.dialog-shell .cta.cta--secondary:not(:disabled),
-.side-select__btn[aria-pressed='true']:not(:disabled) {
-  --cta-cut: 10px;
-  border: none;
-  border-top: 2px solid #1b1a17;
-  border-bottom: 2px solid #1b1a17;
-  background-color: var(--amber);
-  color: #0b0d10;
+.cta.cta--solid::before {
+  box-shadow: inset 0 0 0 3px #8f2d2d, inset 0 0 0 5px #b23b3b;
 }
 
-.cta.cta--solid:hover:not(:disabled),
-.dialog-shell .cta.cta--secondary:hover:not(:disabled),
-.side-select__btn[aria-pressed='true']:hover:not(:disabled) {
-  background-color: var(--amber);
-  filter: brightness(1.1);
-}
-
-.cta.cta--solid:focus-visible,
-.dialog-shell .cta.cta--secondary:focus-visible,
-.side-select__btn[aria-pressed='true']:focus-visible {
-  box-shadow: inset 0 0 0 3px #0b0d10;
-}
-
-/* 잠긴 버튼: 투명 바탕 + 2px 점선 회색(#7a766d) 테두리·글자, 사선 컷 유지. 못 누르는
-   버튼임을 점선으로 분명히 한다. 구멍은 없다. */
-.cta:disabled {
-  --cta-line: #7a766d;
+/* 입장 탭(DISCUSS·REACTIONS): 선택됨 = 먹색 바탕 + 종이색 글자(점선·봉인 없음),
+   미선택 = 투명 바탕 + 2px 먹색 테두리 + 안쪽 회갈색 점선 + 먹색 글자. */
+.side-select__btn:not(:disabled) {
   background-color: transparent;
-  border: 0;
-  border-block: 2px dashed var(--cta-line);
+  color: #1b1a17;
+  border-color: #1b1a17;
+  outline-color: #a8a194;
+}
+
+.side-select__btn[aria-pressed='true']:not(:disabled) {
+  background-color: #1b1a17;
+  color: #ece7dc;
+  outline: none;
+}
+
+.side-select__btn:not([aria-pressed='true']):not(:disabled):hover {
+  background-color: rgba(27, 26, 23, 0.08);
+  filter: none;
+}
+
+/* 잠긴 버튼(:disabled, .cta--outline): 회색 봉투 테두리·점선·글자, 봉인은 회색 원(그림자 없음). */
+.cta:disabled {
+  background-color: #141413;
+  border-color: #4a4540;
+  outline-color: #3a3631;
   color: #7a766d;
   opacity: 1;
-  box-shadow: none;
   cursor: not-allowed;
 }
 
-/* 비활성이어도 "있는 버튼"으로 보이는 빈 버튼(T98, REACTIONS 답변 전달 전용). T107부터
-   일반 잠긴 버튼과 같은 점선 라벨 테이프 모양으로 통일했다(클래스는 호출처 구분용). */
-.cta.cta--outline:disabled {
-  border: 0;
-  border-block: 2px dashed var(--cta-line);
-  color: #7a766d;
-}
-
-/* 사선 변의 테두리: clip-path가 좌우 테두리를 잘라내 위아래 선만 남으므로, 보조·잠긴
-   버튼은 사선 변을 따라 2.4px 띠를 ::before(왼쪽)·::after(오른쪽)로 덧그린다. 색은
-   --cta-line(위아래 테두리와 같은 색). 채움 모양(종이 위 주 버튼)은 띠가 없다. */
-.cta.cta--secondary::before,
-.cta.cta--secondary::after,
-.cta:disabled::before,
-.cta:disabled::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  right: 0;
-  bottom: -2px;
-  left: 0;
-  background: var(--cta-line);
-  pointer-events: none;
-}
-
-.cta.cta--secondary::before,
 .cta:disabled::before {
-  clip-path: polygon(var(--cta-cut) 0, calc(var(--cta-cut) + 2.4px) 0, 2.4px 100%, 0 100%);
-}
-
-.cta.cta--secondary::after,
-.cta:disabled::after {
-  clip-path: polygon(100% 0, calc(100% - 2.4px) 0, calc(100% - var(--cta-cut) - 2.4px) 100%, calc(100% - var(--cta-cut)) 100%);
-}
-
-.cta.cta--solid:not(:disabled)::before,
-.cta.cta--solid:not(:disabled)::after,
-.dialog-shell .cta.cta--secondary:not(:disabled)::before,
-.dialog-shell .cta.cta--secondary:not(:disabled)::after,
-.side-select__btn[aria-pressed='true']:not(:disabled)::before,
-.side-select__btn[aria-pressed='true']:not(:disabled)::after {
-  display: none;
+  background: #4a4540;
+  box-shadow: none;
 }
 
 @media (max-width: 1280px) {
-  /* 1280×720: 높이·글자 크기는 그대로 두고 컷·구멍 비율만 줄인다(컷 8px, 구멍 5px). */
-  .cta {
-    --cta-cut: 8px;
-    --cta-hole: 5px;
-    --cta-hole-x: 10px;
-    --cta-pad: 24px;
+  /* 1280×720: 높이·글자 크기는 그대로, 봉인 24px·점선 offset -6px, 좌우 패딩 12/18px로
+     줄여 REACTIONS 세 버튼이 한 줄에 들어가게 한다. */
+  .cta,
+  .cta.cta--solid,
+  .dialog-shell .cta.cta--secondary:not(:disabled) {
+    --cta-seal: 24px;
+    --cta-pad-l: 12px;
+    --cta-pad-r: 18px;
+    --cta-gap: 10px;
+    --cta-dash: -6px;
   }
 
-  .cta.cta--secondary,
-  .cta.cta--solid,
-  .dialog-shell .cta.cta--secondary:not(:disabled),
-  .side-select__btn[aria-pressed='true']:not(:disabled) {
-    --cta-cut: 8px;
-    --cta-pad: 18px;
+  .cta.cta--secondary {
+    --cta-dash: -6px;
+    padding: 0 14px;
   }
 }
 
@@ -840,31 +790,14 @@
 
 /* 입장 선택 두 버튼(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중" — DISCUSS에서
    처음 만들었고, T89에서 REACTIONS도 같은 모양을 쓰게 되며 공용으로 옮겼다). 고른
-   쪽만 그 아래 추천 문구·추천 답변 그리드에 보인다. 선택된 쪽은 공용
-   .cta.cta--secondary 앰버 채움 그대로 두고, 아직 고르지 않은 쪽만 "비활성 CTA"와
-   같은 점선 테두리로 눌린 상태를 구분한다(T85 #2 ghost 모양 재사용, 실제로는
-   비활성이 아니라 그대로 클릭된다). */
+   쪽만 그 아래 추천 문구·추천 답변 그리드에 보인다. 선택됨·미선택 모양은 위
+   T108 입장 탭 규칙(먹색 채움 / 먹색 테두리+점선)이 정한다. */
 .side-select {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-}
-
-.side-select__btn:not([aria-pressed='true']):not(:disabled) {
-  /* 미선택 쪽은 "아직 안 고른 선택지"다 — 잠긴 버튼의 점선·회색과 겹쳐 보이면
-     못 누르는 버튼으로 오해하므로(T87 리드 확인), 주황 실선 테두리로 둔다. 종이 위라
-     글자는 진한 주황(#8a5f12, T107 시안 E). */
-  background-color: transparent;
-  border: 0;
-  border-block: 2px solid var(--amber);
-  color: #8a5f12;
-}
-
-.side-select__btn:not([aria-pressed='true']):not(:disabled):hover {
-  background-color: rgba(224, 163, 74, 0.14);
-  filter: none;
 }
 
 .side-select__hint {

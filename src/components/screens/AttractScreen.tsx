@@ -45,7 +45,7 @@ export function AttractScreen({ onStart, startDisabled = false }: AttractScreenP
 
         <button
           type="button"
-          className="cta attract-screen__cta"
+          className="cta cta--solid attract-screen__cta"
           onClick={onStart}
           disabled={startDisabled}
           aria-busy={startDisabled || undefined}

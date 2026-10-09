@@ -80,7 +80,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         <div className="intro-screen__actions">
           <button
             type="button"
-            className="cta intro-screen__cta"
+            className="cta cta--solid intro-screen__cta"
             onClick={onStart}
             data-testid="intro-start"
           >
