@@ -179,36 +179,57 @@ export const SEALED_FOLLOWUP_TEXT = '(답변을 들었습니다 · 결과에서 
 // ---------------------------------------------------------------------------------------------
 // T115: 임원 발언 문장이 선언하는 방향(찬성/반대)을 뽑는다. 서버가 OPINIONS·REACTIONS 응답의 구조화된
 // stance와 문장이 명백히 반대인지 가르는 데 쓴다. 참가자는 문장을 읽으므로 문장과 stance가 어긋나면
-// 화면(표정·현황판·비서실장 추천)이 문장과 정반대로 보인다. 확신이 없으면 null(검사하지 않음)이다.
+// 화면(표정·현황판·비서실장 추천)이 문장과 정반대로 보인다.
+//
+// 원칙: 교정은 명백한 경우만. 금지어 검사(findVerdictWords)와 달리 단어가 있다는 이유만으로 방향을 정하지
+// 않고, 결과 명사 바로 뒤가 실제 선언 꼴일 때만 센다. 확신이 없으면 null(교정하지 않음)이다.
+//  (a) 긍정 선언: 결과 명사 + 서술 결합("찬성합니다·찬성입니다·가결하겠·부결시키겠·찬성 쪽입니다·승인 쪽으로 가겠").
+//      명사와 결합 사이의 공백은 있어도 없어도 같다.
+//  (b) 부정 서술은 반대 방향: 뒤에 부정어(않·못·없·어렵·힘들·불가·곤란·아니·안 됩)가 오면 방향을 뒤집는다
+//      ("가결은 어렵습니다·찬성하기 어렵습니다·승인이 안 됩니다"는 AGAINST, "반대하지 않겠습니다·반대는 어렵습니다"는 FOR).
+//  (c) 단순 언급("가결 여부를 보겠습니다", "가결 기준은…", "승인 사유를 남기면")은 null이다.
+//  조건·의문 문장은 건너뛰고, 서로 다른 방향이 함께 나오면 null이다.
 
 export type DeclaredDirection = 'FOR' | 'AGAINST';
 
 /** 문장 방향이 참가자 입장에 상대적인 말(같은 편·동의·지지). 참가자 입장을 모르면 쓰지 않는다. */
 const RELATIVE_PATTERNS: readonly RegExp[] = [/같은 편(?:입|이에|이라|이죠|에 서|으로)/, /(?:동의|지지)(?:합니다|하겠|한다|해 드)/, /뜻을 같이/];
 
-const FOR_PATTERNS: readonly RegExp[] = [
-  /찬성(?:합|하겠|하기로|하는 쪽|입니다|이에요|이라|이죠|쪽|표|드립|으로)/,
-  /가결/,
-  /통과(?:시키|시킬|하겠)/,
-  /승인(?:하겠|합니다|해 드리)/,
-  /표를 (?:보태|드리)|힘을 보태/,
+const RESULT_NOUNS: ReadonlyArray<{ word: string; direction: DeclaredDirection }> = [
+  { word: '찬성', direction: 'FOR' },
+  { word: '가결', direction: 'FOR' },
+  { word: '통과', direction: 'FOR' },
+  { word: '승인', direction: 'FOR' },
+  { word: '반대', direction: 'AGAINST' },
+  { word: '부결', direction: 'AGAINST' },
+  { word: '반려', direction: 'AGAINST' },
+  { word: '기각', direction: 'AGAINST' },
+  { word: '거부', direction: 'AGAINST' },
 ];
+const NOUN_SCAN = new RegExp(`(${RESULT_NOUNS.map((n) => n.word).join('|')})`, 'g');
 
-const AGAINST_PATTERNS: readonly RegExp[] = [
-  /반대(?:합|하겠|하기로|하는 쪽|입니다|이에요|이라|이죠|쪽|표|편에 (?:서|있))/,
-  /반대로 (?:남|서겠|가겠)/,
-  /부결/,
-  /반려(?:합|하겠|드립)/,
-  /기각/,
-  /거부(?:합|하겠)/,
-];
+/** 결과 명사 바로 뒤(공백 하나 허용)가 부정 서술인 꼴. */
+const NEGATED_TAIL =
+  /^\s?(?:(?:쪽|편|입장)\s?)?(?:은|는|이|가)?\s?(?:어렵|힘들|불가|안 ?됩|안 ?됐|안 ?되|없|아닙|아니|곤란)|^\s?(?:하|시키|되|해 드리|해 주)?\s?(?:지 않|지 못|기 어렵|기 힘들|기 곤란|기는 어렵|기는 힘들|기가 어렵|할 수 없|할 수는 없)/;
 
-/** 조건·의문·부정·유보가 섞인 문장은 선언으로 보지 않는다("한도를 정하면 찬성하겠습니다", "반대하지 않습니다"). */
-const HEDGED_SENTENCE =
-  /(?:[가-힣]면(?=[ ,]|$)|다면|라면|경우|한다면|수도|ㄹ지|지 모르|지 않|지는 않|지 못|기 어렵|할 수 없|인지|일까|을까|\?)/;
+/** 결과 명사 바로 뒤(공백 하나 허용)가 긍정 선언 서술인 꼴. */
+const AFFIRMED_TAIL =
+  /^\s?(?:합니다|합|해야 (?:합|한)|하겠|하기로|하는 쪽|하는 입장|드립|드리|시키|시킬|되겠|에 찬성|에 표|표(?:를|입)|이에요|입니다|이라|이죠|임을|입장\s?(?:입|이에|이라)|(?:쪽|편)\s?(?:입|이에|이라|이죠|임|으로|에 (?:서|표))|으로 (?:가|보|하|정)|로 (?:가|보|정))/;
+
+/** 반대 방향 관용 선언과 표를 보태는 표현(부정어가 섞이면 건너뛴다). */
+const AGAINST_IDIOMS: readonly RegExp[] = [/반대로 (?:남|서겠|가겠)/];
+const FOR_IDIOMS: readonly RegExp[] = [/표를 (?:보태|드리)|힘을 보태/];
+const IDIOM_NEGATION = /지 않|지 못|없|어렵|힘들|불가|아니/;
+
+/** 조건·의문 문장은 선언으로 보지 않는다("한도를 정하면 찬성하겠습니다", "찬성할까요?"). 부정은 위에서 따로 처리한다. */
+const HEDGED_SENTENCE = /(?:[가-힣]면(?=[ ,]|$)|다면|라면|경우|한다면|수도|을지|일지|할지|인지|일까|을까|할까|\?)/;
 
 function sentencesOf(text: string): string[] {
   return text.split(/[.!?…\n]+/).map((part) => part.trim()).filter((part) => part.length > 0);
+}
+
+function flip(direction: DeclaredDirection): DeclaredDirection {
+  return direction === 'FOR' ? 'AGAINST' : 'FOR';
 }
 
 /** 발언 문장에서 임원이 선언한 방향을 돌려준다. 찬성·반대가 함께 있거나, 조건·유보형이거나, 선언이 없으면 null.
@@ -223,9 +244,19 @@ export function declaredDirection(
     const index = text.indexOf(sentence);
     const asked = text.slice(index + sentence.length).trimStart().startsWith('?');
     if (asked || HEDGED_SENTENCE.test(sentence)) continue;
-    if (FOR_PATTERNS.some((pattern) => pattern.test(sentence))) found.add('FOR');
-    if (AGAINST_PATTERNS.some((pattern) => pattern.test(sentence))) found.add('AGAINST');
-    if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(sentence))) found.add(participantStance);
+    for (const match of sentence.matchAll(NOUN_SCAN)) {
+      const noun = RESULT_NOUNS.find((n) => n.word === match[0]);
+      if (!noun) continue;
+      const tail = sentence.slice((match.index ?? 0) + match[0].length);
+      if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
+      else if (AFFIRMED_TAIL.test(tail)) found.add(noun.direction);
+    }
+    const negated = IDIOM_NEGATION.test(sentence);
+    if (!negated) {
+      if (AGAINST_IDIOMS.some((pattern) => pattern.test(sentence))) found.add('AGAINST');
+      if (FOR_IDIOMS.some((pattern) => pattern.test(sentence))) found.add('FOR');
+      if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(sentence))) found.add(participantStance);
+    }
   }
   if (found.size !== 1) return null;
   return [...found][0] ?? null;

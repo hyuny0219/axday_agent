@@ -54,11 +54,24 @@ describe('declaredDirection(T115)', () => {
     expect(declaredDirection('이대로는 반대합니다.')).toBe('AGAINST');
     expect(declaredDirection('이 안건은 부결해야 합니다.')).toBe('AGAINST');
     expect(declaredDirection('한도를 정하면 찬성하겠습니다.')).toBeNull();
-    expect(declaredDirection('찬성하지 않습니다.')).toBeNull();
     expect(declaredDirection('찬성할까요?')).toBeNull();
     expect(declaredDirection('이대로는 반대합니다. 조건이 맞으면 찬성합니다.')).toBe('AGAINST');
     expect(declaredDirection('이번에는 찬성합니다. 다음에는 반대합니다.')).toBeNull();
     expect(declaredDirection('우려가 남습니다.')).toBeNull();
+  });
+  it('명사와 서술 사이 공백이 있어도 없어도 같은 방향이다', () => {
+    for (const [text, expected] of [
+      ['찬성 쪽입니다.', 'FOR'], ['찬성쪽입니다.', 'FOR'], ['반대 편입니다.', 'AGAINST'], ['반대편입니다.', 'AGAINST'],
+      ['승인 쪽으로 가겠습니다.', 'FOR'], ['승인쪽으로 가겠습니다.', 'FOR'], ['찬성 입니다.', 'FOR'], ['부결 시키겠습니다.', 'AGAINST'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
+  it('부정 서술은 방향을 뒤집고, 단순 언급은 null이다', () => {
+    for (const [text, expected] of [
+      ['가결은 어렵습니다.', 'AGAINST'], ['찬성하기 어렵습니다.', 'AGAINST'], ['반대하지 않겠습니다.', 'FOR'],
+      ['가결 여부는 조건을 보고 정하겠습니다.', null], ['찬성 쪽입니다.', 'FOR'], ['승인이 안 됩니다.', 'AGAINST'],
+      ['부결시키겠습니다.', 'AGAINST'], ['반대는 어렵습니다.', 'FOR'], ['가결 기준은 아직 모릅니다.', null],
+      ['승인 사유를 남기는 점은 좋습니다.', null], ['반대 의견도 있습니다.', null], ['찬성하지 않습니다.', 'AGAINST'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
   it('같은 편·동의는 참가자 입장을 알 때만 방향이 된다', () => {
     expect(declaredDirection('이사님과 같은 편입니다.')).toBeNull();
