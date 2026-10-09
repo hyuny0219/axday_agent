@@ -249,6 +249,13 @@ describe('declaredDirection(T115)', () => {
       ['찬성합니다. 반대편 의견을 듣고 지지하겠습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('입장 정리는 수용 동사가 아니다(Codex 91차). "반대편 의견을 정리했습니다"는 허용된 놓침', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 하지만 최종적으로 반대편 의견으로 제 입장을 정리하겠습니다.', null], ['찬성합니다. 반대편 의견을 정리했습니다.', null],
+      ['찬성합니다. 반대편 의견도 들었습니다.', 'FOR'], ['찬성합니다. 반대편 주장을 검토했습니다.', 'FOR'],
+      ['찬성합니다. 반대편 의견을 듣고 제 생각을 바꿨습니다.', null], ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

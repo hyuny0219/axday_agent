@@ -411,7 +411,7 @@ const SPATIAL_COMPOUNDS = /반대편|반대쪽|찬성쪽|찬성편|맞은편|건
 
 /** 방향 합성어(Codex 87차: 기본값 반전). 반대편·반대쪽·찬성쪽·찬성편·상대편은 **기본 AMBIGUOUS**(방향이 있을 수 있으나 미해소)로 보고, 바로 뒤가
  * 명시적인 공간·대상 문맥(화이트리스트)일 때만 방향 없음으로 지운다. 입장 표현을 열거하는 방식은 계속 구멍이 나기 때문이다.
- *  - 공간·대상: "반대편을 배치·정렬·배열·회전·확대·축소·스크롤"(입장과 절대 겹치지 않는 순수 공간 동사만; 선택·전환으로 읽힐 수 있는 동사는 제외 — 유지·확인·두·놓·고수·택·선택·고르·따르·지지·클릭·이동·표시), "반대쪽은 … 말합니다" 류 상대 진영 지칭, "반대편 의견·주장·논거·진영·사람·임원·이사·말·목소리"는 마지막 어절이 순수 수용·참고 동사(들었·검토·참고·정리·기록·요약·확인했·읽·살펴)일 때만.
+ *  - 공간·대상: "반대편을 배치·정렬·배열·회전·확대·축소·스크롤"(입장과 절대 겹치지 않는 순수 공간 동사만; 선택·전환으로 읽힐 수 있는 동사는 제외 — 유지·확인·두·놓·고수·택·선택·고르·따르·지지·클릭·이동·표시), "반대쪽은 … 말합니다" 류 상대 진영 지칭, "반대편 의견·주장·논거·진영·사람·임원·이사·말·목소리"는 마지막 어절이 순수 수용·참고 동사(들었·듣·경청·검토·참고·읽·살펴; 입장 확정으로도 읽히는 정리·기록·요약·확인했는 제외)이고 문장에 입장 명사(입장·결론·태도·노선·방향·생각·마음)가 없을 때만.
  *  - 그 밖("반대쪽을 택하겠습니다", "반대쪽 자료도 보겠습니다", "제 입장은 반대쪽입니다")은 AMBIGUOUS — 해소하지 않으며 허용된 놓침이다.
  * 맞은편·건너편·오른편·왼편·한편·저편·이편·그편은 항상 방향 없음이다(SPATIAL_COMPOUNDS). */
 const DIRECTIONAL_COMPOUNDS = /(반대편|반대쪽|찬성쪽|찬성편|상대편)/g;
@@ -421,20 +421,22 @@ const COMPOUND_SPATIAL_VERB = /^(?:을|를)? ?(?:배치|정렬|배열|회전|확
 const COMPOUND_REFERENT = /^(?:은|는) [^.]*(?:말합니다|말씀|주장합니다|설명합니다|지적합니다|이야기합니다)/;
 const COMPOUND_TARGET_NOUN = /^(?:의|에서의)? ?(?:의견|주장|논거|진영|사람|임원|이사|말|목소리)/;
 /** 마지막 어절이 순수 수용·참고 동사여야 한다("의견을 듣고 지지하겠습니다"는 마지막 어절이 입장 서술이라 해당 없음). */
-const RECEPTION_LAST_WORD = /(?:^|\s)\S*(?:들었|듣|경청|검토|참고|정리|기록|요약|확인했|읽|살펴)\S*$/;
+const RECEPTION_LAST_WORD = /(?:^|\s)\S*(?:들었|듣|경청|검토|참고|읽|살펴)\S*$/;
+/** 문장에 입장 명사가 있으면 합성어와 함께 방향이 있는 문장이라 수용·참고 예외를 적용하지 않는다("반대편 의견으로 제 입장을 정리하겠습니다"). */
+const STANCE_NOUN = /(?:입장|결론|태도|노선|방향|생각|마음)/;
 
-function isSpatialCompoundContext(after: string): boolean {
+function isSpatialCompoundContext(after: string, sentence: string): boolean {
   return (
     COMPOUND_SPATIAL_VERB.test(after) ||
     COMPOUND_REFERENT.test(after) ||
-    (COMPOUND_TARGET_NOUN.test(after) && RECEPTION_LAST_WORD.test(after))
+    (COMPOUND_TARGET_NOUN.test(after) && RECEPTION_LAST_WORD.test(after) && !STANCE_NOUN.test(sentence))
   );
 }
 
 function hasUnresolvedDirectionalCompound(sentence: string): boolean {
   for (const match of sentence.matchAll(DIRECTIONAL_COMPOUNDS)) {
     const after = sentence.slice((match.index ?? 0) + match[0].length);
-    if (!isSpatialCompoundContext(after)) return true;
+    if (!isSpatialCompoundContext(after, sentence)) return true;
   }
   return false;
 }
