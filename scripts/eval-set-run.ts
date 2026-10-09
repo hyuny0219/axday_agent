@@ -97,6 +97,9 @@ export interface EvalRow {
   stance?: string;
   /** T92: 이 케이스의 참가자 입장(EvalCase.participantStance 그대로). --check 집계용. */
   participantStance?: string;
+  /** T114(Codex 56차): FOLLOWUP 행만. 시도별 원문·위반 표현·형식 오류 사유(invalidReason: schema·role_mismatch·
+   * foreign_condition). 아래 두 필드는 이 배열에서 파생한 호환용 요약이다. */
+  followUpAttempts?: Array<{ text: string; violations: string[]; invalidReason?: string }>;
   /** T114(Codex 54차): FOLLOWUP 행만. 시도별 원시 응답 문장(재시도·중립 대체 전 원문). */
   followUpRawAttempts?: string[];
   /** 시도별 방향 표현 건수(followUpRawAttempts와 같은 순서). */
@@ -108,7 +111,7 @@ export interface EvalRow {
   promptVersion: string;
 }
 
-function toRoundRows(
+export function toRoundRows(
   results: RoundRoleResult[],
   evalCase: EvalCase,
   stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP',
@@ -134,6 +137,7 @@ function toRoundRows(
     participantStance: evalCase.participantStance,
     ...(entry
       ? {
+          followUpAttempts: entry.attempts,
           followUpRawAttempts: entry.attempts.map((attempt) => attempt.text),
           followUpViolations: entry.attempts.map((attempt) => attempt.violations.length),
           followUpMasked: entry.masked,
@@ -540,7 +544,7 @@ export interface FollowUpVerdictWord {
  * 같은 방향 단어가 있으면 안 된다(기준은 0건, 서버가 실제로 막는 검사와 같은 함수). 일반 명사로
  * 쓴 문장은 사람이 읽어 판정한다. */
 export interface FollowUpVerdictStats {
-  /** 시도별 원문(audit)이 남은 FOLLOWUP 행 수(최종 failed 포함). */
+  /** 원문 시도가 1개 이상 남은 FOLLOWUP 행 수(최종 failed 포함, 원시 위반율·대체율의 분모). */
   rows: number;
   /** 첫 시도 원문에 방향 표현이 있던 행(프롬프트가 규칙을 못 지킨 비율의 분자). */
   rawViolationRows: number;
@@ -550,21 +554,41 @@ export interface FollowUpVerdictStats {
   /** 재시도 뒤에도 남아 중립 문장으로 대체된 행. */
   maskedRows: number;
   maskedRate: number;
+  /** audit은 있지만 원문 시도가 하나도 없는 행(타임아웃·연결 오류 등 장애) — 분모에서 뺀다. */
+  noRawRows: number;
+  /** 형식 오류 시도의 사유별 건수. */
+  invalidReasons: Record<string, number>;
 }
 
 /** T114(Codex 54차): 서버가 재시도·중립 대체로 가린 뒤의 문장만 보면 위반이 0건으로 보이므로, 서버가
  * 남긴 시도별 원문(followUpRawAttempts·followUpViolations)으로 "원시 위반율"과 "대체율"을 따로 센다. */
 export function followUpVerdictStats(rows: EvalRow[]): FollowUpVerdictStats {
-  // 최종 성공 여부와 무관하게 서버 audit(시도별 원문)가 남은 FOLLOWUP 행은 모두 포함한다 — 첫 시도에
-  // 위반이 있고 재시도가 연결 오류로 끝난 failed 행도 원시 위반율에 들어가야 한다(Codex 55차).
-  const followUps = rows.filter((row) => row.stage === 'FOLLOWUP' && row.followUpViolations !== undefined);
-  const rawViolationRows = followUps.filter((row) => (row.followUpViolations?.[0] ?? 0) > 0).length;
-  const rawViolationCount = followUps.reduce(
-    (sum, row) => sum + (row.followUpViolations ?? []).reduce((a, b) => a + b, 0),
+  // 최종 성공 여부와 무관하게 서버 audit(시도별 원문)이 남은 FOLLOWUP 행을 센다(Codex 55차). 다만 실제
+  // 원문(text가 비어 있지 않은 시도)이 하나라도 있는 행만 분모에 넣는다 — 타임아웃·연결 오류로 원문이
+  // 없는 행이 "위반 0건 정상 원문"으로 비율을 낮추지 않게 별도 건수(noRawRows)로 뺀다(Codex 56차).
+  const audited = rows.filter((row) => row.stage === 'FOLLOWUP' && row.followUpViolations !== undefined);
+  const attemptsOf = (row: EvalRow) =>
+    row.followUpAttempts ??
+    (row.followUpRawAttempts ?? []).map((text, i) => ({
+      text,
+      violations: new Array<string>(row.followUpViolations?.[i] ?? 0).fill(''),
+    }));
+  const withRaw = audited.filter((row) => attemptsOf(row).some((attempt) => attempt.text.length > 0));
+  const rawViolationRows = withRaw.filter((row) => (attemptsOf(row)[0]?.violations.length ?? 0) > 0).length;
+  const rawViolationCount = withRaw.reduce(
+    (sum, row) => sum + attemptsOf(row).reduce((a, attempt) => a + attempt.violations.length, 0),
     0,
   );
-  const maskedRows = followUps.filter((row) => row.followUpMasked === true).length;
-  const total = followUps.length;
+  const maskedRows = withRaw.filter((row) => row.followUpMasked === true).length;
+  const invalidReasons: Record<string, number> = {};
+  for (const row of audited) {
+    for (const attempt of row.followUpAttempts ?? []) {
+      if (attempt.invalidReason) {
+        invalidReasons[attempt.invalidReason] = (invalidReasons[attempt.invalidReason] ?? 0) + 1;
+      }
+    }
+  }
+  const total = withRaw.length;
   return {
     rows: total,
     rawViolationRows,
@@ -572,6 +596,8 @@ export function followUpVerdictStats(rows: EvalRow[]): FollowUpVerdictStats {
     rawViolationCount,
     maskedRows,
     maskedRate: total === 0 ? 0 : maskedRows / total,
+    noRawRows: audited.length - withRaw.length,
+    invalidReasons,
   };
 }
 
@@ -807,6 +833,8 @@ function runCheck(files: string[]): void {
         ` · FOLLOWUP 최종 발언 방향 표현 ${verdictWords.length}건` +
         ` · 원시 위반율 ${verdictStats.rawViolationRows}/${verdictStats.rows}(${(verdictStats.rawViolationRate * 100).toFixed(1)}%)` +
         ` · 대체율 ${verdictStats.maskedRows}/${verdictStats.rows}(${(verdictStats.maskedRate * 100).toFixed(1)}%)` +
+        ` · 원문 없음(장애) ${verdictStats.noRawRows}행` +
+        ` · 형식 오류 시도 ${Object.entries(verdictStats.invalidReasons).map(([k, v]) => `${k} ${v}`).join(', ') || '0'}` +
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );

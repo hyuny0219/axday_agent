@@ -9,6 +9,7 @@ import {
   followUpVerdictStats,
   findStyleViolations,
   resolveEvalModel,
+  toRoundRows,
   toVoteRows,
   type CallRecord,
   type EvalCase,
@@ -195,8 +196,8 @@ describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차
 
   it('중립 대체된 행은 대체율에 따로 잡힌다', () => {
     const stats = followUpVerdictStats([
-      followUp({ followUpViolations: [1, 2], followUpMasked: true }),
-      followUp({ followUpViolations: [0], followUpMasked: false }),
+      followUp({ followUpRawAttempts: ['찬성합니다.', '반대표를 던지겠습니다.'], followUpViolations: [1, 2], followUpMasked: true }),
+      followUp({ followUpRawAttempts: ['들었습니다.'], followUpViolations: [0], followUpMasked: false }),
       followUp({ status: 'failed' }),
     ]);
     expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 3, maskedRows: 1 });
@@ -212,5 +213,53 @@ describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차
     // audit이 없는 행(구버전 기록)은 제외한다.
     expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 1 });
     expect(stats.rawViolationRate).toBeCloseTo(0.5);
+  });
+
+  it('원문이 하나도 없는 audit 행(장애)은 분모에서 빼고 따로 센다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ status: 'failed', message: undefined, followUpAttempts: [], followUpRawAttempts: [], followUpViolations: [], followUpMasked: false }),
+      followUp({ followUpAttempts: [{ text: '찬성합니다.', violations: ['찬성'] }], followUpViolations: [1], followUpMasked: false }),
+      followUp({ followUpAttempts: [{ text: '들었습니다.', violations: [] }], followUpViolations: [0], followUpMasked: false }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, noRawRows: 1, rawViolationRows: 1 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+  });
+
+  it('형식 오류 첫 시도의 invalidReason이 행에 보존되고 사유별로 집계된다', () => {
+    const stats = followUpVerdictStats([
+      followUp({
+        followUpAttempts: [
+          { text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' },
+          { text: '들었습니다.', violations: [] },
+        ],
+        followUpViolations: [1, 0],
+        followUpMasked: false,
+      }),
+    ]);
+    expect(stats.invalidReasons).toEqual({ schema: 1 });
+    expect(stats.rawViolationRows).toBe(1);
+  });
+
+  it('toRoundRows가 audit의 invalidReason을 JSONL 행에 그대로 싣는다', () => {
+    const evalCase = { id: 'c', scenarioId: 'ai-approval', pathId: 'p', pathLabel: 'p', variant: 'v' } as unknown as EvalCase;
+    const rows = toRoundRows(
+      [{ roleId: 'CFO', status: 'answered', latencyMs: 1, modelId: 'm', promptVersion: 'v13' } as never],
+      evalCase,
+      'FOLLOWUP',
+      [
+        {
+          roleId: 'CFO',
+          attempts: [
+            { text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' },
+            { text: '들었습니다.', violations: [] },
+          ],
+          masked: false,
+        },
+      ],
+    );
+    const serialized = JSON.parse(JSON.stringify(rows[0])) as EvalRow;
+    expect(serialized.followUpAttempts?.[0]).toEqual({ text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' });
+    expect(serialized.followUpViolations).toEqual([1, 0]);
+    expect(serialized.followUpMasked).toBe(false);
   });
 });
