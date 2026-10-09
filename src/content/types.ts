@@ -214,6 +214,12 @@ export interface Scenario {
   /** BRIEFING 상황·제안·미정 줄에서 굵게 표시할 핵심 말(T99, 안건당 4~6개). 문장 속 글자와
    * 그대로 일치할 때만 표시되고, 일치하지 않으면 조용히 건너뛴다. 겹치면 긴 말이 우선. */
   highlightTerms?: string[];
+  /** 근거 자료 카드 해석(insight)에서 굵게 표시할 핵심 수치·사실(T105, 안건당 6~10개).
+   * 자료 문장에 그대로 들어 있는 글자만 쓴다. */
+  evidenceHighlightTerms?: string[];
+  /** 임원 발언 카드(OPINIONS·REACTIONS·추가 질문)에서 굵게 표시할 핵심 주장(T105, 안건당
+   * 6~10개). 카드 한 장에 강조는 4곳을 넘지 않는다. */
+  statementHighlightTerms?: string[];
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;
