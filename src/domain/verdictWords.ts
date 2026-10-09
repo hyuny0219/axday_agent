@@ -369,6 +369,60 @@ function flip(direction: DeclaredDirection): DeclaredDirection {
 
 /** 발언 문장에서 임원이 선언한 방향을 돌려준다. 찬성·반대가 함께 있거나, 조건·유보형이거나, 선언이 없으면 null.
  * participantStance를 주면 "같은 편·동의·지지"처럼 참가자에게 상대적인 표현도 방향으로 바꾼다. */
+// 응답 단위 합성(Codex 81차): 문장마다 null | FOR | AGAINST | AMBIGUOUS를 매긴다. 방향 단어가 있는데 조건·의문·유보·인용·과거 서술·동형어
+// 보류 등으로 확정하지 못한 문장은 AMBIGUOUS, 방향 단어 자체가 없으면 null이다. 응답 전체는 AMBIGUOUS가 하나라도 있으면 null, FOR와
+// AGAINST가 섞여도 null, 모두 같은 방향일 때만 그 방향이다 — 확정 못 한 문장을 버리고 나머지 문장의 방향만 내보내면 오교정이 된다.
+type SentenceKind = DeclaredDirection | 'AMBIGUOUS' | null;
+
+/** 과거·이전 상태를 말하는 표지. 현재 결론이 아니므로 방향을 확정하지 않는다. 한 문장 안에 "지금은·현재는·이제는"이 있으면 그 뒤만 본다. */
+const PAST_MARKER = /(?:처음에는|처음엔|원래|당초|애초에|지금까지는|예전에는|이전에는)/;
+const NOW_MARKER = /(?:지금은|현재는|이제는)\s?(.*)$/;
+/** 인용·전언 꼴: "…다고 했습니다·들었습니다·합니다". 화자 자신의 선언이 아니다. */
+const QUOTE_FORM = /(?:다고|라고|다는|라는)\s?(?:했|하였|들었|말씀|전하|봅니다|보고|생각)/;
+
+function hasDirectionWord(sentence: string, participantStance?: 'FOR' | 'AGAINST' | null): boolean {
+  return (
+    new RegExp(NOUN_SCAN.source).test(sentence) ||
+    AGAINST_IDIOMS.some((pattern) => pattern.test(sentence)) ||
+    FOR_IDIOMS.some((pattern) => pattern.test(sentence)) ||
+    (participantStance != null && RELATIVE_PATTERNS.some((pattern) => pattern.test(sentence)))
+  );
+}
+
+function classifySentence(
+  sentence: string,
+  asked: boolean,
+  participantStance?: 'FOR' | 'AGAINST' | null,
+): SentenceKind {
+  let target = sentence;
+  if (PAST_MARKER.test(target)) {
+    const now = NOW_MARKER.exec(target);
+    if (!now) return hasDirectionWord(sentence, participantStance) ? 'AMBIGUOUS' : null;
+    target = now[1] ?? '';
+  }
+  if (!hasDirectionWord(target, participantStance)) return null;
+  // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
+  const forHedge = target.replace(/않으면 ?안 ?됩/g, '않아야 합');
+  if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge) || QUOTE_FORM.test(target)) return 'AMBIGUOUS';
+  const found = new Set<DeclaredDirection>();
+  for (const match of target.matchAll(NOUN_SCAN)) {
+    const noun = RESULT_NOUNS.find((n) => n.word === match[0]);
+    if (!noun) continue;
+    const tail = target.slice((match.index ?? 0) + match[0].length);
+    // 이중 부정("찬성하지 않을 수 없습니다")은 그 방향의 긍정이다 — 단일 부정 판정보다 먼저 본다.
+    if (DOUBLE_NEGATED_TAIL.test(tail) || UNAVOIDABLE_TAIL.test(tail)) found.add(noun.direction);
+    else if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
+    else if (AFFIRMED_TAIL.test(tail)) found.add(noun.direction);
+  }
+  if (!IDIOM_NEGATION.test(target)) {
+    if (AGAINST_IDIOMS.some((pattern) => pattern.test(target))) found.add('AGAINST');
+    if (FOR_IDIOMS.some((pattern) => pattern.test(target))) found.add('FOR');
+    if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(target))) found.add(participantStance);
+  }
+  if (found.size > 1) return 'AMBIGUOUS';
+  return [...found][0] ?? null;
+}
+
 export function declaredDirection(
   text: string,
   participantStance?: 'FOR' | 'AGAINST' | null,
@@ -378,24 +432,9 @@ export function declaredDirection(
     // "?"는 문장 분리에서 지워지므로 원문에서 그 문장 뒤에 "?"가 오는지도 본다.
     const index = text.indexOf(sentence);
     const asked = /^[\s.…!?]*\?/.test(text.slice(index + sentence.length));
-    // "-하지 않으면 안 됩니다"는 조건절이 아니라 이중 부정 관용구라 조건 판정에서 뺀다.
-    const forHedge = sentence.replace(/않으면 ?안 ?됩/g, '않아야 합');
-    if (asked || HEDGED_SENTENCE.test(forHedge) || hasConditionalMyeon(forHedge)) continue;
-    for (const match of sentence.matchAll(NOUN_SCAN)) {
-      const noun = RESULT_NOUNS.find((n) => n.word === match[0]);
-      if (!noun) continue;
-      const tail = sentence.slice((match.index ?? 0) + match[0].length);
-      // 이중 부정("찬성하지 않을 수 없습니다")은 그 방향의 긍정이다 — 단일 부정 판정보다 먼저 본다.
-      if (DOUBLE_NEGATED_TAIL.test(tail) || UNAVOIDABLE_TAIL.test(tail)) found.add(noun.direction);
-      else if (NEGATED_TAIL.test(tail)) found.add(flip(noun.direction));
-      else if (AFFIRMED_TAIL.test(tail)) found.add(noun.direction);
-    }
-    const negated = IDIOM_NEGATION.test(sentence);
-    if (!negated) {
-      if (AGAINST_IDIOMS.some((pattern) => pattern.test(sentence))) found.add('AGAINST');
-      if (FOR_IDIOMS.some((pattern) => pattern.test(sentence))) found.add('FOR');
-      if (participantStance && RELATIVE_PATTERNS.some((pattern) => pattern.test(sentence))) found.add(participantStance);
-    }
+    const kind = classifySentence(sentence, asked, participantStance);
+    if (kind === 'AMBIGUOUS') return null;
+    if (kind) found.add(kind);
   }
   if (found.size !== 1) return null;
   return [...found][0] ?? null;

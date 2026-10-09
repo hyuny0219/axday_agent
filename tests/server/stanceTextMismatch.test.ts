@@ -55,7 +55,7 @@ describe('declaredDirection(T115)', () => {
     expect(declaredDirection('이 안건은 부결해야 합니다.')).toBe('AGAINST');
     expect(declaredDirection('한도를 정하면 찬성하겠습니다.')).toBeNull();
     expect(declaredDirection('찬성할까요?')).toBeNull();
-    expect(declaredDirection('이대로는 반대합니다. 조건이 맞으면 찬성합니다.')).toBe('AGAINST');
+    expect(declaredDirection('이대로는 반대합니다. 조건이 맞으면 찬성합니다.')).toBeNull();
     expect(declaredDirection('이번에는 찬성합니다. 다음에는 반대합니다.')).toBeNull();
     expect(declaredDirection('우려가 남습니다.')).toBeNull();
   });
@@ -171,6 +171,14 @@ describe('declaredDirection(T115)', () => {
       ['그 편에 서면 결정을 내리고 찬성하겠습니다.', null], ['이 안건을 서면 결의로 승인합니다.', null],
       ['서면 의견으로 반대합니다.', 'AGAINST'], ['지면 관계상 반대합니다.', 'AGAINST'], ['협상에서 지면 반대하겠습니다.', null],
       ['화면 설계를 보면 찬성합니다.', null], ['협상에서 지면 관계를 재검토하고 반대하겠습니다.', null], ['회의에서 비대면 방식으로 찬성합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
+  it('혼합 발언은 모든 문장이 일치해야 방향이다(Codex 81차)', () => {
+    for (const [text, expected] of [
+      ['처음에는 반대했습니다. 이 안건을 서면 결의로 승인합니다.', null], ['반대합니다. 다만 조건이 붙으면 찬성할 수 있습니다.', null],
+      ['처음에는 반대했지만 지금은 찬성합니다.', 'FOR'], ['찬성합니다. 조건은 세 가지입니다.', 'FOR'],
+      ['반대합니다. 반대 이유는 비용입니다.', 'AGAINST'], ['찬성합니다. 반대합니다.', null],
+      ['처음에는 반대했습니다. 지금은 반대합니다.', null], ['원래 찬성이었습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
