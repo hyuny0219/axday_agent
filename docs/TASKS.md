@@ -11,6 +11,8 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T114 | 진행 중 | 답변 뒤에는 임원 찬반 방향을 **봉인**(현황판 입장 열·설득 문구·무대 표정·2차 발언 입장) → 결과 화면에서 임원 표를 **한 장씩 순차 공개**(2026-10-09 사용자 지시: "답하기 후 AI 임원들의 찬반 방향을 몰라야 결과가 더 극적"). 상세는 아래 T114 카드 |
+| T113 | 진행 중 | 화면마다 "다음 할 일" 하나에 **숨쉬는 점선 테두리**(A안)로 시선 유도(2026-10-09 사용자 지시, 시안 https://claude.ai/artifact/6vsQwSsu43MobLEUgvd98i). 상세는 아래 T113 카드 |
 | T112 | 완료 | 코치 안내 아이콘·말풍선을 마우스로 끌어 옮김(위치 기억·더블클릭 되돌리기·화살표 키)(2026-10-09 사용자 지시). 상세는 아래 T112 카드 |
 | T111 | 완료 | 버튼을 **B안(요원 장비 패널) 모양 + E안 색(주황)**으로 변경(D안 대체)(2026-10-09 사용자 지시). 상세는 아래 T111 카드 |
 | T109 | 완료 | AI 비서실장 세 기능 중 **하나만 써도** 의견 전달이 열리게(T97 완화, 2026-10-09 사용자 지시). 팝업 소개·힌트·코치·가이드 문구 통일. 상세는 아래 T109 카드 |
@@ -95,6 +97,38 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T114 답변 뒤 임원 방향 봉인 + 결과 순차 공개
+
+- 목표(2026-10-09 사용자 지시): "마지막에 반응에 답하기 후 AI 임원들의 찬반 방향이 어떻게 될지 몰라야 투표하고 나서 결과가 더 극적일 것 같아." 추가 질문에 답한 뒤(MOTION·VOTE)에는 임원 네 명이 어느 쪽으로 기울었는지 어떤 경로로도 알 수 없게 하고, RESULT에서 임원 표를 한 장씩 뒤집어 공개한다. **답변 전까지의 안내(T110 "조건은 충분 · 답변 뒤 찬성", REACTIONS 1/2의 '고민 중')는 그대로 둔다** — 사용자가 "가림 + 결과 순차 공개" 범위를 골랐다(답변 전 힌트 중립화는 선택하지 않음).
+- 읽을 것: `src/components/screens/{MotionScreen,VoteScreen,ResultScreen}.tsx`, `src/components/parts/{PersuasionBoard,StageBand,ExecStanceList,MinutesPanel,LiveStatementCards}.tsx`, `src/components/moodLabel.ts`, `src/domain/stance.ts`, `src/styles/screens/{motion,vote,result,stage}.css`, `server/prompts/common.ts`·`server/handlers/round.ts`(FOLLOWUP 지시), `server/providers/mock.ts`, `docs/design/DESIGN_SPEC.md` T75·T76·T110 단락, `docs/eval/tuning-v12.md`.
+- 지금 새는 경로(모두 막는다): ① MOTION·VOTE의 `PersuasionBoard` 입장 열("반대 → 찬성")과 비고("설득 완료"/"움직일 조건") ② `StageBand` 표정 배지(stances 기반) + `ExecStanceList`(스크린리더 텍스트) ③ live FOLLOWUP 2차 발언 — TRANSCRIPT(MinutesPanel)·무대 말풍선에 입장 라벨·"찬성합니다" 류 문장 ④ 비서실장/안내 문구 중 답변 뒤 방향을 말하는 것이 있으면 함께.
+- 만들 것:
+  1. **봉인 상태**: `followUpAnswered`가 결정된 뒤(SUBMIT_FOLLOWUP 또는 KEEP_PREVIOUS 이후, 즉 MOTION·VOTE 단계)에는 화면이 받는 `stances`를 쓰지 않고 "봉인" 표시를 그린다. PersuasionBoard: 입장 열은 봉인 배지(VOTE 임원 표의 `?`·"가림"과 같은 모양), 비고는 "답변을 들었습니다 · 표결에서 공개"(처음부터 같은 편 임원은 "처음부터 같은 편" 유지 — 이건 이미 아는 사실). 무대 표정은 네 명 모두 중립(고민 중) 표정, `ExecStanceList`는 "입장 봉인"으로. 추가 질문 전 단계(OPINIONS·REACTIONS·DISCUSS)는 변경 없음.
+  2. **2차 발언(live FOLLOWUP)**: 화면에서는 발언 텍스트는 보여도 입장 라벨·표정은 봉인. 프롬프트 v13: FOLLOWUP 지시에 "답변에 대한 평가·소회만 말하고 최종 찬반·표결 방향을 문장으로 밝히지 말 것(예: '찬성합니다', '반대로 남겠습니다' 금지)" 규칙 추가, 스키마의 stance는 그대로 받되 화면에서 숨긴다. mock provider의 FOLLOWUP 발언도 방향 없는 문장으로. 평가 세트에 "FOLLOWUP 발언에 찬반 단어 없음" 검사 추가(`docs/eval/tuning-v13.md` 초안, live 실측은 사용자 승인 뒤 — 크레딧).
+  3. **결과 순차 공개**: RESULT 진입 시 임원 표 네 장이 봉인 상태(`?`)로 시작해 0.9초 간격으로 한 장씩 뒤집히고(CSS transform, `prefers-reduced-motion`이면 즉시 전부 공개), 마지막 장 뒤에 기존 도장(`result-stamp`, STAMP_DELAY) 애니메이션이 이어진다. 운영자 `skip`(기존 스킵 규칙)이면 전부 즉시. 공개 순서는 EXEC_MEMBER_ORDER. 집계 숫자("같은 표 N석")도 마지막 장 뒤에 나타난다.
+  4. 문서: DESIGN_SPEC "## T114 — 봉인과 순차 공개" 단락(새는 경로 4개와 막은 방법, 공개 타이밍 표), FACILITATOR_GUIDE(결과 화면 연출 설명 한 줄), TASKS 행.
+  5. 테스트·e2e: PersuasionBoard 단위(MOTION·VOTE에서 입장 열 봉인·비고 문구·처음부터 같은 편 유지), StageBand(봉인이면 중립 표정), MinutesPanel/LiveStatementCards(FOLLOWUP 발언 입장 라벨 없음), ResultScreen(순차 공개 타이머·reduced-motion 즉시·skip), 서버 프롬프트 테스트(FOLLOWUP 지시에 금지 규칙 포함), mock FOLLOWUP 문장에 '찬성'·'반대' 없음. e2e: flow-full·vote·result 스펙에서 MOTION·VOTE 화면 텍스트에 "→ 찬성"·"설득 완료"가 없고 RESULT에서 네 장이 모두 공개된 뒤 도장이 보임(`reducedMotion: 'reduce'`로 즉시 경로도 1건). 기존 `exec-mood-label-<id>` testid를 쓰는 e2e는 봉인 문구로 갱신.
+- 허용 경로: `src/`, `server/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 답변 전 단계의 안내·'고민 중' 규칙 변경, 표결 규칙표(domain/voting·stance) 변경, 임원 표 봉인 배지 모양 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e flow-full·vote·result·live·screenshots 1080·720 각각 PASS, `docs/screenshots/*/motion.png`·`vote.png`·`result.png` 갱신 뒤 Read.
+- 크기: M~L.
+
+## T113 다음 할 일 점선 테두리(A안 숨쉬는 점선)
+
+- 목표(2026-10-09 사용자 지시): "수행해야 할 것들에 대해 포커싱해 주는 점선 깜빡이 효과를 넣으면 어때?" → 시안 A안 선택. 화면마다 "지금 눌러야 할 것" **하나**에만 요소 바깥 7px에 2px 점선 테두리를 그리고 1.6초 주기로 밝아지고 어두워지게(opacity 1↔0.25) 한다. 코치(T104)와 같은 원칙: 안내만 하고 강제하지 않는다.
+- 시안: https://claude.ai/artifact/6vsQwSsu43MobLEUgvd98i (A안; 아래 체험판의 흐름 규칙 그대로).
+- 읽을 것: `src/domain/coach.ts`(화면·단계 판정), `src/components/screens/{IntroScreen,BriefingScreen,OpinionsScreen,DiscussScreen,ReactionsScreen,MotionScreen,VoteScreen}.tsx`, `src/components/parts/{AssistantPanel,PhraseCard,CoachHost}.tsx`, `src/styles/screens/coach.css`, `e2e/coach.spec.ts`, `docs/design/DESIGN_SPEC.md` T98·T104·T109 단락.
+- 만들 것:
+  1. **공용 훅/속성**: `src/components/parts/focusRing.ts`(또는 `useNextStep`) — 화면이 "다음 할 일" 키 하나를 계산해 해당 요소에 `data-next-step` 속성을 붙이고, CSS(`.next-step::after`, 신규 `src/styles/screens/focus.css`)가 점선을 그린다. 요소 바깥에 그리는 `::after`(pointer-events none, 레이아웃 불변) — 요소가 이미 `::after`를 쓰면 래퍼 span으로. z-index는 코치(35)보다 낮게, 모달(`[role="dialog"]`)이 열려 있으면 숨김(CoachHost의 dialogOpen 감지 재사용).
+  2. **화면별 다음 할 일(한 번 누른 요소에는 다시 붙지 않음)**: INTRO 확인/시작 버튼 → BRIEFING 상황판 열기 → 근거 자료 → 다음 → OPINIONS 다음(의견 듣기 끝) → DISCUSS 추천 문구(아직 0개면 첫 카드) → AI 비서실장 열기(기능 0개 사용 시; 팝업 안에서는 첫 기능 버튼) → 의견 전달(활성화된 뒤) → REACTIONS 1/2 "답하기" → 2/2 입장 선택(미선택 시) → 추천 답변(0개) → 답변 전달 → MOTION 안건 확정 → VOTE 찬성/반대(미선택 시 두 버튼 묶음 하나로) → 확정. RESULT·ATTRACT·SELECT는 없음. live에서 잠긴 버튼(로딩)에는 붙이지 않는다.
+  3. **힌트처럼 시작**: 화면(또는 단계)에 들어온 뒤 참가자가 아무것도 누르지 않은 채 6초가 지나면 점선 시작, 무엇이든 누르면 다음 할 일로 즉시 이동(지연 없음). `prefers-reduced-motion`이면 깜빡이지 않고 점선만. `?coach=off`와는 독립(별도 `?focus=off`로 끌 수 있게, 운영자 메뉴에 토글은 두지 않음).
+  4. 문서: DESIGN_SPEC "## T113 — 다음 할 일 점선" 단락(화면별 매핑 표·시작 지연·숨김 규칙), FACILITATOR_GUIDE 한 줄, TASKS 행.
+  5. 테스트·e2e: 훅 단위(화면별 매핑·한 번 누른 요소 제외·지연), 컴포넌트(점선 요소가 화면에 정확히 1개 이하·모달 열리면 0개), `e2e/focus.spec.ts`(DISCUSS에서 문구→비서실장→전달 순서로 `[data-next-step]`가 옮겨 가고 전달 뒤 0개, `?focus=off`면 0개), noscroll·screenshots 영향 없음 확인.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 버튼 활성/비활성 규칙(T97·T109) 변경, 코치 문구 변경, 덮개·스포트라이트·클릭 막음, 영문 UI.
+- 완료 확인: `npm run check`, e2e focus·coach·noscroll·flow-full 1080·720 각각 PASS.
+- 크기: M.
 
 ## T112 코치 안내 아이콘·말풍선 드래그 이동
 
