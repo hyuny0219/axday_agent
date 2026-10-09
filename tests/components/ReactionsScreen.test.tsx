@@ -774,8 +774,8 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   const allUndecided: Record<ExecMemberId, Stance> = { CEO: 'UNDECIDED', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
 
   it('2/2에서 입장을 바꾸면 위로 올리는 기울음도 바뀐 입장 기준이다(무대 표정과 같은 기준)', () => {
-    const calls: Array<Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null> = [];
-    const onLeaningChange = (value: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null) => {
+    const calls: Array<{ leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null> = [];
+    const onViewChange = (value: { leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null) => {
       calls.push(value);
     };
     const opinions = mk(['FULL_AUTO'], 'FOR');
@@ -789,12 +789,12 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       roundLog: [],
       stances: allUndecided,
       step: 'answer' as const,
-      onLeaningChange,
+      onViewChange,
     };
     const { rerender } = render(<ReactionsScreen {...props} side="AGAINST" />);
-    expect(calls[calls.length - 1]).toEqual({ CEO: 'AGAINST' });
+    expect(calls[calls.length - 1]?.leaning).toEqual({ CEO: 'AGAINST' });
     rerender(<ReactionsScreen {...props} side="FOR" />);
-    expect(calls[calls.length - 1]?.CEO).toBeUndefined();
+    expect(calls[calls.length - 1]?.leaning.CEO).toBeUndefined();
   });
 
   it('반대 참가자 카드: 배지는 "찬성 → 반대 쪽", 무드 라벨은 "반대 쪽"이다', () => {
@@ -836,8 +836,8 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   });
 
   it('입장 미선택(side=null)이어도 마지막 의견의 입장 기준이며, 의견이 없으면 기울음이 없다', () => {
-    const calls: Array<Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null> = [];
-    const onLeaningChange = (value: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null) => {
+    const calls: Array<{ leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null> = [];
+    const onViewChange = (value: { leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null) => {
       calls.push(value);
     };
     const common = {
@@ -850,16 +850,44 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       roundLog: [],
       stances: allUndecided,
       step: 'listen' as const,
-      onLeaningChange,
+      onViewChange,
     };
     const { unmount } = render(
       <ReactionsScreen {...common} opinions={mk(['LIMIT', 'REVIEW', 'LOG', 'OWNER'], 'FOR')} />,
     );
-    expect(calls[calls.length - 1]).toEqual({ CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' });
+    expect(calls[calls.length - 1]?.leaning).toEqual({ CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' });
     unmount();
     expect(calls[calls.length - 1]).toBeNull();
     cleanup();
     render(<ReactionsScreen {...common} opinions={[]} />);
-    expect(calls[calls.length - 1]).toEqual({});
+    expect(calls[calls.length - 1]?.leaning).toEqual({});
+  });
+
+  it('LOG 칩을 해제하면 올리는 유효 stance도 CAIO 반대·기울음 없음으로 바뀐다(무대 동기화)', () => {
+    const calls: Array<{ leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null> = [];
+    const opinions = mk(['LOG'], 'FOR');
+    const saved = scriptedStances(ai, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false });
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={opinions}
+        side="FOR"
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={saved}
+        step="answer"
+        onViewChange={(value) => calls.push(value)}
+      />,
+    );
+    expect(calls[calls.length - 1]?.leaning).toEqual({ CAIO: 'FOR' });
+    expect(calls[calls.length - 1]?.stances.CAIO).toBe('UNDECIDED');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '더 논의가 필요합니다.' } });
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(calls[calls.length - 1]?.leaning).toEqual({});
+    expect(calls[calls.length - 1]?.stances.CAIO).toBe('AGAINST');
   });
 });
+

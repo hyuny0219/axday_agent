@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PersuasionBoard } from '../../src/components/parts/PersuasionBoard';
+import { LiveStatementCards } from '../../src/components/parts/LiveStatementCards';
 import { StageBand } from '../../src/components/parts/StageBand';
 import { aiApprovalScenario as ai } from '../../src/content/scenarios/aiApproval';
 import type { ExecMemberId } from '../../src/content/types';
@@ -81,8 +82,48 @@ describe('StageBand 기울음', () => {
     expect(screen.getByTestId('stage-seat-CAIO')).toHaveTextContent('고민 중');
   });
 
+  it('기울음이 사라지고 유효 stance가 반대면 캡션은 "반대 쪽"이다(2/2 칩 해제)', () => {
+    render(
+      <StageBand
+        stage="REACTIONS"
+        mode="scripted"
+        roleStatus={roleStatus}
+        statements={[]}
+        opinions={[]}
+        scenario={ai}
+        stances={{ ...stances, CAIO: 'AGAINST' }}
+        leaning={{}}
+      />,
+    );
+    expect(screen.getByTestId('stage-seat-CAIO')).toHaveTextContent('반대 쪽');
+    expect(screen.getByTestId('stage-seat-CAIO')).not.toHaveTextContent('미확정');
+  });
+
   it('leaning이 없으면 기존 표정이다', () => {
     band();
     expect(screen.getByTestId('stage-mood-CFO')).toHaveClass('stage-band__mood--undecided');
+  });
+});
+
+describe('LiveStatementCards 기울음', () => {
+  it('기울음 임원 카드는 점선 스타일·"찬성 쪽 · 미확정"·"답변하면 확정됩니다"를 보이고 나머지는 그대로다', () => {
+    render(
+      <LiveStatementCards
+        scenario={ai}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={[]}
+        stances={{ CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' }}
+        leaning={{ CFO: 'FOR' }}
+        variant="reaction"
+      />,
+    );
+    const card = screen.getByTestId('live-role-CFO');
+    expect(card).toHaveClass('live-statement--leaning', 'live-statement--leaning-for');
+    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽 · 미확정');
+    expect(screen.getByTestId('live-leaning-note-CFO')).toHaveTextContent('답변하면 확정됩니다');
+    expect(screen.getByTestId('live-role-CAIO')).not.toHaveClass('live-statement--leaning');
+    expect(screen.queryByTestId('live-leaning-note-CAIO')).toBeNull();
+    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
   });
 });

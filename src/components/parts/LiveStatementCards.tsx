@@ -144,7 +144,8 @@ export function LiveStatementCards({
         // stale 값) 이 카드에 한해 'pending'으로 본다(위 모듈 주석 참고). 'failed'는
         // 그대로 둔다 — 실패는 정상 상태에서도 발언이 없는 게 맞다.
         const status: RoleStatus = rawStatus === 'answered' && !statement ? 'pending' : rawStatus;
-        const stance: Stance = leaning?.[roleId] ?? stances[roleId];
+        const leanTo = leaning?.[roleId];
+        const stance: Stance = leanTo ?? stances[roleId];
         // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
         // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
         // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다). status가
@@ -165,7 +166,7 @@ export function LiveStatementCards({
             key={roleId}
             className={`live-statement live-statement--${status}${
               isGrid || isReaction ? ` live-statement--grid live-statement--stance-${STANCE_MODIFIER[stance]}` : ''
-            }${isReaction ? ' live-statement--reaction' : ''}${isMaintained ? ' live-statement--maintained' : ''}`}
+            }${isReaction ? ' live-statement--reaction' : ''}${leanTo ? ` live-statement--leaning live-statement--leaning-${leanTo.toLowerCase()}` : ''}${isMaintained ? ' live-statement--maintained' : ''}`}
             data-testid={`live-role-${roleId}`}
           >
             <div className="live-statement__head">
@@ -184,6 +185,7 @@ export function LiveStatementCards({
                 data-testid={`exec-mood-label-${roleId}`}
               >
                 {STANCE_LABEL[stance]}
+                {leanTo ? ' · 미확정' : ''}
               </span>
             </div>
             {status === 'answered' && statement ? (
@@ -215,6 +217,11 @@ export function LiveStatementCards({
                 data-testid={status === 'failed' ? `statement-failed-${roleId}` : `statement-pending-${roleId}`}
               >
                 {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
+              </p>
+            )}
+            {leanTo && (
+              <p className="live-statement__leaning-note" data-testid={`live-leaning-note-${roleId}`}>
+                답변하면 확정됩니다
               </p>
             )}
             {isReaction && status === 'failed' && roleId === firstFailedRoleId && onRetryFailedRoles && (

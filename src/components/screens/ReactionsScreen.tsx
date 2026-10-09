@@ -115,6 +115,12 @@ export interface ReactionsFollowupPayload {
   confirmedConditionIds: string[];
 }
 
+/** 2/2에서 지금 고른 입장·조건 기준의 유효 stance와 기울음(T118). */
+export interface ReactionsView {
+  stances: Record<ExecMemberId, Stance>;
+  leaning: LeaningMap;
+}
+
 export interface ReactionsScreenProps {
   scenario: Scenario;
   sessionId: string;
@@ -142,7 +148,7 @@ export interface ReactionsScreenProps {
    * 보여준다. 도메인 session.stage는 두 서브스텝 모두 REACTIONS다. */
   step: 'listen' | 'answer';
   /** T118: 지금 고른 입장·조건 기준 기울음을 위로 알려 무대 표정이 현황판·카드와 같은 기준을 쓰게 한다. */
-  onLeaningChange?: (leaning: LeaningMap | null) => void;
+  onViewChange?: (view: ReactionsView | null) => void;
   /** "답하기 ▶"를 눌러 'listen' → 'answer'로 넘어간다(뒤로가기는 없다). */
   onAdvanceStep: () => void;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
@@ -184,7 +190,7 @@ export function ReactionsScreen({
   stances,
   transcriptRevision,
   side,
-  onLeaningChange,
+  onViewChange,
   onChooseSide,
   step,
   onAdvanceStep,
@@ -577,11 +583,6 @@ export function ReactionsScreen({
       ),
     [scenario, effectiveOpinions, mode, stances],
   );
-  const leaningKey = JSON.stringify(leaning);
-  useEffect(() => {
-    onLeaningChange?.(JSON.parse(leaningKey) as LeaningMap);
-  }, [leaningKey, onLeaningChange]);
-  useEffect(() => () => onLeaningChange?.(null), [onLeaningChange]);
   const awaitingAnswerIds = useMemo(
     () => EXEC_MEMBER_ORDER.filter((memberId) => leaning[memberId] !== undefined),
     [leaning],
@@ -597,7 +598,13 @@ export function ReactionsScreen({
           })
         : stances,
     [scenario, effectiveOpinions, mode, opinions.length, stances],
-  );
+  );  // 무대 표정이 현황판·카드와 같은 유효 입장·기울음을 쓰도록 위로 올린다(Codex 99차 P2).
+  const viewKey = JSON.stringify({ stances: effectiveStances, leaning });
+  useEffect(() => {
+    onViewChange?.(JSON.parse(viewKey) as ReactionsView);
+  }, [viewKey, onViewChange]);
+  useEffect(() => () => onViewChange?.(null), [onViewChange]);
+
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
   // 않고 넘어가기")뿐이고, 발언 흐름(MinutesPanel)은 App.tsx AppShell이 OPINIONS와
