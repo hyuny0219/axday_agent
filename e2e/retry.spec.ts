@@ -289,7 +289,8 @@ test('FOLLOWUP에서 CFO가 실패해도 표결로 진행할 수 있고, "응답
     '이번에는 답을 받지 못했습니다',
     { timeout: 10_000 },
   );
-  await expect(page.getByTestId('exec-mood-label-CFO')).not.toHaveText('고민 중');
+  // T114: MOTION에서는 방향을 봉인한다(재요청 성공 여부와 무관하게 입장 문구를 읽지 않는다).
+  await expect(page.getByTestId('exec-mood-label-CFO')).toContainText('입장 봉인');
   await expect(page.getByTestId('retry-failed-roles')).toHaveCount(0);
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
 

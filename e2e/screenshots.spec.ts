@@ -42,6 +42,18 @@ async function capture(page: Page, projectName: string, screenName: string) {
   await page.screenshot({ path: path.join(dir, `${screenName}.png`), animations: 'disabled' });
 }
 
+/** T114: 임원 표 순차 공개(약 4초)와 도장이 모두 끝날 때까지 기다린다(무한 반복 애니메이션 제외). */
+async function waitForRevealDone(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+        .map((a) => a.finished),
+    ),
+  );
+}
+
 test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({
   page,
 }, testInfo) => {
@@ -197,9 +209,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeVisible();
   await expect(page.getByTestId('result-stamp')).toBeVisible();
-  await page
-    .getByTestId('result-stamp')
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await waitForRevealDone(page);
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');
 
@@ -236,9 +246,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('confirm-vote').click();
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-stamp')).toBeVisible();
-  await page
-    .getByTestId('result-stamp')
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await waitForRevealDone(page);
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result-reject');
 });

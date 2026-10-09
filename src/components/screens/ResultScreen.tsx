@@ -165,7 +165,13 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     if (skip) {
       return;
     }
-    function handleSkip() {
+    // 결과 화면을 연 바로 그 클릭·키 입력(표결 확정)은 건너뛰기로 세지 않는다 — React가 그
+    // 이벤트 처리 중에 이 화면을 마운트해 리스너가 같은 이벤트를 곧바로 받기 때문이다(T114).
+    const mountedAt = performance.now();
+    function handleSkip(event: Event) {
+      if (event.timeStamp <= mountedAt) {
+        return;
+      }
       setSkip(true);
     }
     window.addEventListener('click', handleSkip);

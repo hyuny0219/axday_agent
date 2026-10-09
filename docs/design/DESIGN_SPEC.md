@@ -939,3 +939,32 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - **결과**: 답하지 않아 돌아간 표의 판단 이유는 "조건은 좋았지만 추가 질문에 답이 없어 마음을 정하지 못하고 반대합니다"이고, "한 끗 차이"는 "조건은 맞았으니 추가 질문에 답했다면 찬성"(조건이 모자라면 "'…'와 추가 질문 답변이 있었으면 찬성")이다. 아무도 못 움직였는데 답했다면 움직였을 임원이 있으면 제목이 "조건은 맞았지만 추가 질문에 답하지 않아 임원의 마음을 바꾸지 못했습니다 — 다음엔 답하러 가 보세요"다.
 - **live(프롬프트 v12)**: REACTIONS 지시에 "조건이 충분해도 stance는 UNDECIDED까지만, 확정은 추가 질문에 답한 뒤"(`REACTIONS_FIRST_PASS_RULE`, 기존 stance 지침보다 우선), FOLLOWUP 지시에 "답을 받았으니 확정해도 된다", VOTE 지시에 `followUpAnswered`가 false일 때 "고민 중이던 임원은 처음 입장대로 표결"을 더했다. 요청 스키마(round·vote)에 `followUpAnswered` 선택 필드가 있다.
 
+
+## T114 — 봉인과 순차 공개 (2026-10-09)
+
+사용자 지시: "마지막에 반응에 답하기 후 AI 임원들의 찬반 방향이 어떻게 될지 몰라야 투표하고 나서 결과가 더 극적일 것 같아." 추가 질문에 답한 뒤(MOTION·VOTE)에는 임원이 어느 쪽으로 기울었는지 어떤 경로로도 알 수 없고, RESULT에서 임원 표를 한 장씩 뒤집어 공개한다. **답변 전 단계(OPINIONS·REACTIONS·DISCUSS)의 표시·규칙과 표결 규칙표(`domain/voting`·`stance`)는 바꾸지 않았다.** "답변 전 힌트도 중립화"는 사용자가 고르지 않았다. 봉인 단계는 `stage`가 MOTION·VOTE인 동안이다(두 단계는 SUBMIT_FOLLOWUP 또는 KEEP_PREVIOUS 뒤에만 열린다).
+
+### 새던 경로 4개와 막은 방법
+
+| # | 새던 경로 | 막은 방법 |
+| --- | --- | --- |
+| 1 | MOTION·VOTE 설득 현황판의 입장 열("반대 → 찬성")·비고("설득 완료"/"움직일 조건")·집계("설득한 임원 N/M", "○○ 남음") | `PersuasionBoard`에 `sealed`. 입장 열은 임원 표와 같은 점선 `?` 원 + "가림", 비고는 "답변을 들었습니다 · 결과에서 공개", 집계는 "임원 방향 봉인"·"결과에서 공개". 처음부터 같은 편 임원은 이미 아는 사실이라 "처음부터 같은 편" 그대로. 봉인이면 `stances`를 읽지 않는다 |
+| 2 | 무대 표정 배지·캡션(`StageBand`)과 스크린리더 목록(`ExecStanceList`) | `App`이 MOTION·VOTE에서 `StageBand`에 네 명 모두 "고민 중" 중립 `stances`를 준다. `ExecStanceList`는 `sealed`면 "입장 봉인"만 읽는다 |
+| 3 | live FOLLOWUP 2차 발언 문장("찬성합니다" 류)과 입장 라벨 | 프롬프트 v13: FOLLOWUP 지시에 "답변에 대한 평가·소회만 말하고 최종 찬반·표결 방향을 문장으로 밝히지 말 것"(`FOLLOWUP_NO_VERDICT_RULE`). 스키마의 `stance`는 그대로 받되 MOTION·VOTE 화면 어디에도 그리지 않는다(회의록 `MinutesPanel`은 발언 텍스트만 보여 주고 입장 라벨이 없다). mock FOLLOWUP 문장도 방향 없는 문장 |
+| 4 | 비서실장·의장·안내 문구 | MOTION 의장 한 줄(`chairMotionLine`)은 조건 수·이름만 말한다. 답변 뒤 방향을 말하는 문구는 찾지 못했다. 답변 전 단계 문구("조건은 충분 · 답변 뒤 찬성")는 답변 전이라 그대로 둔다 |
+
+### 결과 순차 공개 타이밍
+
+상수는 `src/components/resultStamp.ts` 한 곳이다. `setTimeout` 없이 CSS `animation-delay`로만 구현해 Clock 규칙과 무관하다.
+
+| 시각(초) | 일어나는 일 |
+| --- | --- |
+| 0 | 임원 네 장이 봉인(`?`)으로 시작. 좌측 TALLY 막대 4칸은 회색, 우측 판단 행은 직함만 보임, 결론 제목·집계·설득 요약은 숨김. 참가자 표 배지는 처음부터 보임 |
+| 0.9 / 1.8 / 2.7 / 3.6 | CEO → CFO → CAIO → CISO 순서(`EXEC_MEMBER_ORDER`)로 한 장씩 뒤집힘(0.5초). 무대 표 배지·좌측 막대·우측 판단 행이 같은 시각에 열린다 |
+| 4.1 | 마지막 장이 다 열림. 이때 집계 숫자("찬성 N / 반대 N"·"같은 표 N석")·결론 제목·설득 요약이 나타남 |
+| 4.2 | 가결·부결 도장(`STAMP_DELAY_SECONDS`) |
+| 4.6 | 성공·실패 도장(`PERSUASION_STAMP_DELAY_SECONDS`) |
+
+- **줄이기**: `prefers-reduced-motion`이면 `base.css` 전역 규칙이 지연을 0으로 만들어 봉인 없이 즉시 전부 공개. 운영자 skip(결과 화면 클릭·키 입력)은 `<html data-result-skip="true">`를 켜 같은 효과(무대는 결과 화면 밖 DOM이라 속성으로 전달).
+- **접근성**: 봉인 표시는 `aria-hidden`. 표 배지·판단 행의 텍스트는 처음부터 DOM에 있어 스크린리더에는 결과가 바로 읽힌다(시각 연출만 지연).
+- **스크린샷**: `motion.png`·`vote.png`·`result.png`를 갱신했다. result는 모든 공개가 끝난 상태다.

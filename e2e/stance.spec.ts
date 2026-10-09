@@ -80,15 +80,16 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await page.getByTestId('followup-option-0').click();
     await page.getByTestId('submit-followup').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
-    await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--for/);
+    // T114: 답변 뒤에는 임원 방향을 봉인한다 — 네 명 모두 중립 표정이고 본문은 "입장 봉인"이다.
+    for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--undecided/);
+      await expect(page.getByTestId(`exec-mood-label-${id}`)).toContainText('입장 봉인');
+    }
     await page.getByTestId('freeze-motion').click();
 
-    // VOTE: 표정은 마지막 확정 집합으로 고정된다.
+    // VOTE: 봉인은 표결까지 이어진다.
     await expect(page.getByTestId('vote-motion-card')).toBeVisible();
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--for/);
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
 
     await page.getByTestId('vote-radio-YES').check();
     await page.getByTestId('confirm-vote').click();
@@ -126,9 +127,9 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // 추가 질문에 답하지 않고 넘어간다 — 고민 중이던 세 임원은 반대 쪽으로 확정된다.
     await page.getByTestId('keep-previous-answer').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
-    await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    for (const id of ['CFO', 'CAIO', 'CISO']) {
-      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--against/);
+    // T114: 답하지 않고 넘어간 뒤에도 방향은 봉인이다 — 표정은 모두 중립이다.
+    for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--undecided/);
     }
     await page.getByTestId('freeze-motion').click();
 
@@ -213,14 +214,14 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
-  // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차).
+  // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차). T114: 답변 뒤에는 "입장 봉인".
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|고민 중/);
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toContainText('입장 봉인');
   }
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-    await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText(/찬성 쪽|반대 쪽|고민 중/);
+    await expect(page.getByTestId(`exec-mood-label-${id}`)).toContainText('입장 봉인');
   }
 });
 
