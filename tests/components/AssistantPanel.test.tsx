@@ -138,10 +138,9 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
     expect(screen.queryByTestId('assistant-check-summary')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-action-summary')).not.toHaveAttribute('data-coach');
   });
 
-  it('첫 화면에 제목·기능 세 줄·체크가 보이고, 안 쓴 첫 기능 버튼이 코치 대상이다', () => {
+  it('첫 화면에 제목·기능 세 줄·체크가 보인다', () => {
     render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['summary']) }} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     const intro = screen.getByTestId('assistant-intro');
@@ -151,13 +150,10 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     expect(screen.getByTestId('assistant-check-summary')).toHaveTextContent('☑');
     expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☐');
     expect(screen.getByTestId('assistant-done-summary')).toHaveTextContent('완료');
-    expect(screen.getByTestId('assistant-action-summary')).not.toHaveAttribute('data-coach');
-    expect(screen.getByTestId('assistant-action-compare')).toHaveAttribute('data-coach', 'assistant-next');
     expect(screen.queryByTestId('assistant-intro-done')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-close')).toHaveAttribute('data-coach', 'assistant-close');
   });
 
-  it('세 기능을 다 쓰면 완료 문구가 뜨고 코치 대상 기능 버튼은 없어진다', () => {
+  it('세 기능을 다 쓰면 완료 문구가 뜬다', () => {
     render(
       <AssistantPanel
         {...base()}
@@ -168,7 +164,6 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     expect(screen.getByTestId('assistant-intro-done')).toHaveTextContent(
       '이제 팝업을 닫고 의견을 전달하세요',
     );
-    expect(screen.getByTestId('assistant-action-refine')).not.toHaveAttribute('data-coach');
   });
 
   it('결과가 생기면 소개가 한 줄로 줄어든다', async () => {

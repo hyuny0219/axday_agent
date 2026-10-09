@@ -167,9 +167,6 @@ export function AssistantPanel({
     ? ASSISTANT_FEATURE_ORDER.filter((feature) => requiredFeatures.used.has(feature)).length
     : 0;
   const allUsed = requiredFeatures !== undefined && usedCount === ASSISTANT_FEATURE_ORDER.length;
-  const nextFeature = requiredFeatures
-    ? ASSISTANT_FEATURE_ORDER.find((feature) => !requiredFeatures.used.has(feature))
-    : undefined;
   const onAllUsed = requiredFeatures?.onAllUsed;
   const allUsedNotifiedRef = useRef(false);
   useEffect(() => {
@@ -443,7 +440,6 @@ export function AssistantPanel({
         disabled={toggleLocked}
         aria-describedby={toggleLocked ? 'assistant-toggle-why' : undefined}
         data-testid="assistant-toggle"
-        data-coach="assistant-toggle"
       >
         AI 비서실장에게 맡기기
       </button>
@@ -459,7 +455,6 @@ export function AssistantPanel({
           title="AI 비서실장"
           onClose={closePopup}
           closeTestId="assistant-close"
-          closeCoach="assistant-close"
         >
           <div className="assistant-panel__content">
             {requiredFeatures && (
@@ -536,7 +531,6 @@ export function AssistantPanel({
                     disabled={status === 'loading'}
                     aria-busy={status === 'loading' && activeFeature === feature ? true : undefined}
                     data-testid={`assistant-action-${feature}`}
-                    data-coach={nextFeature === feature ? 'assistant-next' : undefined}
                   >
                     {status === 'loading' && activeFeature === feature ? `${FEATURE_LABELS[feature]} · 정리 중…` : FEATURE_LABELS[feature]}
                     {used && (

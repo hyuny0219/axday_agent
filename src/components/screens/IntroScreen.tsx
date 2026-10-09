@@ -10,7 +10,7 @@ import '../../styles/screens/select.css';
 import '../../styles/screens/intro.css';
 
 export interface IntroScreenProps {
-  /** "안내 받으며 시작 ▶" 하나뿐(T104) — 안건 선택으로 간다. 진행 도우미(T103)는 기본으로 켜져
+  /** "확인" 하나뿐(T104) — 안건 선택으로 간다. 진행 도우미(T103)는 기본으로 켜져
    * 있고, 끄는 길은 운영 메뉴 "안내 끄기"와 URL `?coach=off`다. */
   onStart: () => void;
 }
@@ -78,9 +78,9 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
             type="button"
             className="cta intro-screen__cta"
             onClick={onStart}
-            data-testid="intro-start-coach"
+            data-testid="intro-start"
           >
-            안내 받으며 시작 ▶
+            확인
           </button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { test, expect, type Page } from './fixtures';
 async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickSide = true) {
   await page.goto(url);
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -58,10 +58,8 @@ test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열�
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await expect(page.getByTestId('assistant-action-summary')).toHaveAttribute('data-coach', 'assistant-next');
   await runFeature(page, 'summary');
   await runFeature(page, 'compare');
-  await expect(page.getByTestId('assistant-action-refine')).toHaveAttribute('data-coach', 'assistant-next');
   await expect(page.getByTestId('assistant-intro-done')).toHaveCount(0);
   await page.getByTestId('assistant-close').click();
 
@@ -71,7 +69,6 @@ test('두 개만 써도 (2/3)이고, 세 개를 다 쓰면 의견 전달이 열�
   await page.getByTestId('assistant-toggle').click();
   await runFeature(page, 'refine');
   await expect(page.getByTestId('assistant-intro-done')).toContainText('이제 팝업을 닫고 의견을 전달하세요');
-  await expect(page.getByTestId('assistant-close')).toHaveAttribute('data-coach', 'assistant-close');
   await page.getByTestId('assistant-close').click();
 
   await expect(page.getByTestId('submit-opinion')).toBeEnabled();

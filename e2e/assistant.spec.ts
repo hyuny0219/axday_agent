@@ -4,7 +4,7 @@ import { tryAllAssistantFeatures } from './helpers/assistant';
 async function reachDiscuss(page: Page) {
   await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -101,7 +101,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

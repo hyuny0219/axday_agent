@@ -301,7 +301,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         {/* 종이 보고서 머리글(T64→T66, C_Result.html "DEBRIEF 02 · 이사회 한 장 요약").
             왼쪽은 결론 제목 + YOUR CONDITIONS·YOUR WORDS 두 카드, 오른쪽은 200px
             도장 칸이다(item 1). */}
-        <div className="result-report__top" data-coach="result-title">
+        <div className="result-report__top">
           <div className="result-report__main">
             <p className="result-report__eyebrow" aria-hidden="true">
               {/* T85 #20: 안건 번호는 선택한 안건(incident.caseLabel, "사건 02")에서 — T83이

@@ -35,13 +35,13 @@ describe('IntroScreen', () => {
     expect(screen.getByTestId('intro-success').querySelectorAll('mark.key-term').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('시작 버튼은 "안내 받으며 시작 ▶" 하나뿐이고 누르면 콜백을 부른다', () => {
+  it('시작 버튼은 "확인" 하나뿐이고 누르면 콜백을 부른다', () => {
     const onStart = vi.fn();
     render(<IntroScreen onStart={onStart} />);
 
     expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: '안내 없이 시작' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '안내 받으며 시작 ▶' }));
+    fireEvent.click(screen.getByRole('button', { name: '확인' }));
     expect(onStart).toHaveBeenCalledTimes(1);
   });
 });

@@ -172,7 +172,6 @@ export function OpinionsScreen({
               stances={stances}
               onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
               retryDisabled={retryUsed}
-              coachTarget="opinion-cards"
             />
           </div>
         </div>
@@ -186,7 +185,7 @@ export function OpinionsScreen({
       <div className="app-body__content screen opinions-screen__info">
         <div className="opinions-screen__paper">
           {paperHead}
-          <div className="opinions-screen__cards" data-coach="opinion-cards">
+          <div className="opinions-screen__cards">
             {scenario.initialOpinions.slice(0, revealedCount).map((opinion) => {
               const stance = stances[opinion.memberId];
               const evidenceLabel = lastEvidenceLabel(scenario, opinion.evidenceIds);

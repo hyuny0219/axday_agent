@@ -151,7 +151,7 @@
   }
 }
 
-/* 시작 버튼은 "안내 받으며 시작" 하나뿐(T104). */
+/* 시작 버튼은 "확인" 하나뿐(T104). */
 .intro-screen__actions {
   display: flex;
   align-items: center;

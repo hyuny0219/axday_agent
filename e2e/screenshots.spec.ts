@@ -57,7 +57,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // `?coach=off`로 시작했다(코치 화면은 아래 별도 테스트).
   await expect(page.getByRole('heading', { name: '오늘 이사님은 특별 이사입니다' })).toBeVisible();
   await capture(page, testInfo.project.name, 'intro');
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
 
   // SELECT(T70): 시안(S1_Select) 카드 2장이 보이는 상태. T84 #10부터 카드를 누르면
   // 바로 입장하므로(별도 선택 상태·CTA가 없다) 입장 전 화면을 그대로 캡처한다.
@@ -208,7 +208,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('end-session-confirm-ok').click();
   await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');
@@ -241,38 +241,24 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await capture(page, testInfo.project.name, 'result-reject');
 });
 
-// T103·T104 진행 도우미 캡처: 1단계(상황판)·2단계(근거 자료)·6단계(비서실장 팝업 안). 코치가
-// 밝힌 대상과 말풍선이 화면 안에 들어오는 모습을 남긴다.
-test('진행 도우미 1단계(상황판)·2단계(근거 자료)·6단계(비서실장 팝업)를 캡처한다', async ({ page }, testInfo) => {
+// T103·T104 진행 도우미 캡처: 상황 안내(1/6)와 토론 안내(3/6). 카드가 화면 안에 들어오는 모습을 남긴다.
+test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', async ({ page }, testInfo) => {
   await page.goto('/?mode=scripted');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
 
-  await expect(page.getByTestId('coach-progress')).toHaveText('진행 도우미 · 1/10');
-  await page.getByTestId('coach-bubble').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(page.getByTestId('coach-progress')).toHaveText('안내 1/6');
+  await page.getByTestId('coach').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await capture(page, testInfo.project.name, 'coach-briefing');
-
-  await page.getByTestId('coach-ack').click();
-  await expect(page.getByTestId('coach-progress')).toHaveText('진행 도우미 · 2/10');
-  await page.getByTestId('coach-bubble').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  await capture(page, testInfo.project.name, 'coach-evidence');
 
   await page.getByTestId('open-evidence').click();
   await page.getByTestId('evidence-dialog-close').click();
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('.opinion-card')).toHaveCount(4);
-  await page.getByRole('button', { name: '알겠어요' }).click(); // 3단계(임원 의견 읽기)
+  await page.getByTestId('coach-ack').click();
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
-  await page.getByTestId('discuss-side-for').click();
-  await page.getByTestId('phrase-card-P1').click();
-  await expect(page.getByTestId('coach-progress')).toHaveText('진행 도우미 · 6/10');
-  await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await expect(page.getByTestId('coach')).toHaveClass(/coach--dialog/);
-  await page
-    .getByTestId('assistant-panel-backdrop')
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  await page.getByTestId('coach-bubble').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  await capture(page, testInfo.project.name, 'coach-assistant');
+  await expect(page.getByTestId('coach-progress')).toHaveText('안내 3/6');
+  await page.getByTestId('coach').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'coach-discuss');
 });

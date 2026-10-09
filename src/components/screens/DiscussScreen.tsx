@@ -45,7 +45,6 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
-import { useCoachReport } from '../coachUi';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
@@ -197,14 +196,6 @@ export function DiscussScreen({
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
-  // 진행 도우미(T103): 코치가 단계를 정하는 데 쓰는 화면 상태를 알린다.
-  useCoachReport({
-    side,
-    draftReady,
-    canSubmit,
-    assistantUsedCount: assistantUsed.size,
-    assistantOpen,
-  });
 
   // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
   // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
@@ -472,7 +463,6 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
-            data-coach="submit-opinion"
             aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
           >
             의견 전달 ▶
@@ -508,7 +498,6 @@ export function DiscussScreen({
           <div
             className="side-select"
             data-testid="discuss-side-select"
-            data-coach="side-select"
           >
             <button
               type="button"
@@ -538,7 +527,6 @@ export function DiscussScreen({
             <>
               <div
                 className="discuss-screen__phrase-list"
-                data-coach="phrase-list"
               >
                 {scenario.phrases
                   .filter((phrase) => {

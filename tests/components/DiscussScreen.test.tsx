@@ -13,8 +13,6 @@ import { aiApprovalScenario, anonBoardScenario, experienceFirstScenario } from '
 import type { ExecMemberId } from '../../src/content/types';
 import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
 import { scriptedStances } from '../../src/domain/stance';
-import { CoachUiContext } from '../../src/components/coachUi';
-import type { CoachUi } from '../../src/domain/coach';
 import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
 afterEach(() => {
@@ -380,7 +378,7 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.queryByTestId('assistant-toggle-hint')).not.toBeInTheDocument();
   });
 
-  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며, 코치 대상 속성이 걸리지 않는다', () => {
+  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며', () => {
     renderDiscuss([]);
     expect(screen.getByTestId('submit-opinion')).toBeDisabled();
     expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
@@ -462,54 +460,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(document.querySelector('[data-guide]')).toBeNull();
   });
 
-  it('코치 대상 속성이 입장·문구 목록·비서실장·전달 버튼에 걸려 있다(T103)', () => {
-    render(
-      <ControlledDiscuss
-        scenario={aiApprovalScenario}
-        sessionId="s1"
-        transcript={emptyTranscript}
-        mode="scripted"
-        roleStatus={idle}
-        stances={stances}
-        onSubmit={noop}
-        onAssistantAction={noop}
-        assistantActions={[]}
-        initialSide="FOR"
-      />,
-    );
-    expect(screen.getByTestId('discuss-side-select')).toHaveAttribute('data-coach', 'side-select');
-    expect(document.querySelector('[data-coach="phrase-list"]')).not.toBeNull();
-    expect(screen.getByTestId('assistant-toggle')).toHaveAttribute('data-coach', 'assistant-toggle');
-    expect(screen.getByTestId('submit-opinion')).toHaveAttribute('data-coach', 'submit-opinion');
-  });
-
-  it('입장·문구·비서실장 사용 수를 코치에게 알린다(T103)', () => {
-    const reports: Partial<CoachUi>[] = [];
-    const report = (patch: Partial<CoachUi>) => reports.push(patch);
-    render(
-      <CoachUiContext.Provider value={report}>
-        <ControlledDiscuss
-          scenario={aiApprovalScenario}
-          sessionId="s1"
-          transcript={emptyTranscript}
-          mode="scripted"
-          roleStatus={idle}
-          stances={stances}
-          onSubmit={noop}
-          onAssistantAction={noop}
-          assistantActions={[entry('OPINION_SUMMARY'), entry('CONDITION_RECOMMEND_VIEW')]}
-        />
-      </CoachUiContext.Provider>,
-    );
-    const latest = () => Object.assign({}, ...reports) as Partial<CoachUi>;
-    expect(latest()).toMatchObject({ side: null, draftReady: false, assistantUsedCount: 2, assistantOpen: false });
-    fireEvent.click(screen.getByTestId('discuss-side-for'));
-    expect(latest().side).toBe('FOR');
-    fireEvent.click(screen.getByTestId('phrase-card-P1'));
-    expect(latest().draftReady).toBe(true);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(latest().assistantOpen).toBe(true);
-  });
 });
 
 // PR #20 Codex 28차 P2-1: 복합 추천 "모두 적용"은 조건 여러 개를 단일 상태 업데이트로 반영한다.

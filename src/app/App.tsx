@@ -24,8 +24,6 @@ import {
 } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
-import { EMPTY_COACH_UI, type CoachUi } from '../domain/coach';
-import { CoachUiContext } from '../components/coachUi';
 import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
@@ -601,19 +599,14 @@ function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMem
   return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
 }
 
-/** 화면 + 진행 도우미(T103). 화면이 알려 주는 상태(CoachUiContext)를 모아 코치에게 넘긴다. */
+/** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
 function StageRouter() {
   const { session, dispatch, reactionsStep } = useSession();
-  const [reported, setReported] = useState<Partial<CoachUi>>({});
-  const report = useCallback((patch: Partial<CoachUi>) => {
-    setReported((previous) => ({ ...previous, ...patch }));
-  }, []);
-  const coachUi: CoachUi = { ...EMPTY_COACH_UI, ...reported, reactionsStep };
   return (
-    <CoachUiContext.Provider value={report}>
+    <>
       <StageScreen />
-      <CoachHost session={session} ui={coachUi} dispatch={dispatch} />
-    </CoachUiContext.Provider>
+      <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />
+    </>
   );
 }
 

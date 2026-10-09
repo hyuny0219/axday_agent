@@ -731,10 +731,9 @@ export function ReactionsScreen({
                 variant="reaction"
                 onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
                 retryDisabled={retryUsed}
-                coachTarget="reaction-cards"
               />
             ) : (
-              <div className="reactions-screen__cards" data-coach="reaction-cards">
+              <div className="reactions-screen__cards">
                 {EXEC_MEMBER_ORDER.map((memberId) => {
                   const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
                   const opposition = oppositionReactionText(

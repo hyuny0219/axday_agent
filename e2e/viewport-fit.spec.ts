@@ -52,7 +52,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await startCta.click();
 
   await expectNoPageScroll(page, 'INTRO');
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
 
   await expectNoPageScroll(page, 'SELECT');
   // T84 #10: 카드 자체가 입장 버튼이다 — 별도 "이사회 입장" CTA가 없다.
@@ -152,7 +152,7 @@ test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리
   await page.setViewportSize({ width: 1568, height: 777 });
   await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
-  await page.getByRole('button', { name: '안내 받으며 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
   await page.getByTestId('open-evidence').click();
   await page.keyboard.press('Escape');

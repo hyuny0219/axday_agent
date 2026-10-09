@@ -17,7 +17,6 @@ import { useState } from 'react';
 import type { Scenario } from '../../content/types';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { HighlightText } from '../parts/HighlightText';
-import { useCoachReport } from '../coachUi';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -32,7 +31,6 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 열어도(두 번째부터) 이미 본 것으로 유지한다.
   const [evidenceSeen, setEvidenceSeen] = useState(false);
 
-  useCoachReport({ evidenceSeen, evidenceOpen });
 
   function handleCloseEvidence() {
     setEvidenceOpen(false);
@@ -82,7 +80,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
             </div>
             <h2 className="briefing-screen__question">{scenario.chairBriefing.question}</h2>
           </div>
-          <div className="briefing-screen__status" data-testid="briefing-status" data-coach="briefing-status">
+          <div className="briefing-screen__status" data-testid="briefing-status">
             <p className="briefing-screen__situation">
               <span className="briefing-screen__label">상황</span>
               <HighlightText text={scenario.chairBriefing.situation} terms={terms} />
@@ -110,7 +108,6 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               className="cta cta--secondary"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
-              data-coach="evidence-open"
             >
               근거 자료 보기 · 자료 4장
             </button>

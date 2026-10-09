@@ -51,7 +51,6 @@ describe('BriefingScreen', () => {
     const nextButton = screen.getByRole('button', { name: '의견 듣기 ▶' });
     expect(nextButton).toBeDisabled();
     expect(nextButton).toHaveAccessibleDescription('근거 자료를 먼저 확인해 주세요');
-    expect(screen.getByTestId('open-evidence')).toHaveAttribute('data-coach', 'evidence-open');
 
     fireEvent.click(nextButton);
     expect(onNext).not.toHaveBeenCalled();
