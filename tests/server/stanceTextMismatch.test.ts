@@ -189,6 +189,14 @@ describe('declaredDirection(T115)', () => {
       ['찬성하기로 했습니다.', 'FOR'], ['부결시키기로 했습니다.', 'AGAINST'], ['반대하기로 결정했습니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('같은 문장 안의 미해소 방향과 결정 관용구 범위(Codex 83차). "반대로 결정했습니다"는 부사 동형이라 허용된 놓침(null)', () => {
+    for (const [text, expected] of [
+      ['찬성합니다만 최종적으로는 반대 입장을 고수합니다.', null], ['찬성합니다만 최종적으로는 반대합니다.', 'AGAINST'],
+      ['반대합니다. 찬성 사유는 없습니다.', 'AGAINST'], ['찬성합니다, 반대할 이유가 없습니다.', 'FOR'],
+      ['찬성하지 않았다만, 일정은 결정했습니다.', null], ['찬성하기로 결정했습니다.', 'FOR'],
+      ['일정을 결정했습니다. 찬성하지 않았다.', null], ['반대로 결정했습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
