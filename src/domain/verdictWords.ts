@@ -272,8 +272,8 @@ const AFFIRMED_TAIL = new RegExp(
     '|' +
     '입장(?:입니다|이에요|이다|이라고?)' +
     '|' +
-    // 입장 고수 꼬리: 반대 입장을 고수합니다 / 승인 노선을 유지하겠습니다 / 찬성 입장을 굽히지 않겠습니다
-    '(?:입장|태도|노선|쪽|편)(?:을|를)? ?(?:(?:고수|유지|견지)' + HADA_END + '|굽히지 않(?:겠습니다|습니다|겠다|는다|아요))' +
+    // 입장 고수 꼬리: 반대 입장을 고수합니다 / 승인 노선을 유지하겠습니다 / 찬성 입장을 굽히지 않겠습니다 (쪽·편에는 붙이지 않는다: 공간·배치 설명과 겹침)
+    '(?:입장|태도|노선|의견|결론)(?:을|를)? ?(?:(?:고수|유지|견지)' + HADA_END + '|굽히지 않(?:겠습니다|습니다|겠다|는다|아요))' +
     '|' +
     // 불가피("찬성은 불가피합니다")는 그 방향이 피할 수 없다는 긍정 선언이다. 불가결·불가역은 해당 없음.
     '(?:은|는|이|가)? ?불가피(?:합니다|하다|해 보입니다|할 것입니다|하겠습니다)' +
@@ -405,11 +405,16 @@ const DECISION_TAIL = /^\s?(?:시키기로|하기로|하는 것으로|하는 쪽
 /** 문장 안에서 현재 표지 뒤의 말이 현재 결론이다. */
 const PRESENT_SPLIT = /(?:지금은|현재는|이제는|이번에는|오늘은|최종적으로는|최종적으로|결론은)\s?(.*)$/;
 
+/** 띄어쓰기 없는 합성어는 공간·대상 명사라(반대편 의견, 맞은편) 방향 명사 출현으로 세지 않는다. 띄어 쓴 "반대 편에 서겠습니다"만 방향 꼬리다.
+ * "반대쪽으로 가겠습니다"도 공간으로 읽힐 수 있어 허용된 놓침(null)이다. */
+const SPATIAL_COMPOUNDS = /반대편|반대쪽|찬성쪽|찬성편|맞은편|건너편|오른편|왼편|한편|상대편|저편|이편|그편/g;
+
 function classifySentence(
-  sentence: string,
+  rawSentence: string,
   asked: boolean,
   participantStance?: 'FOR' | 'AGAINST' | null,
 ): SentenceKind {
+  const sentence = rawSentence.replace(SPATIAL_COMPOUNDS, (m) => '□'.repeat(m.length));
   let target = sentence;
   const present = PRESENT_SPLIT.exec(target);
   if (present) {

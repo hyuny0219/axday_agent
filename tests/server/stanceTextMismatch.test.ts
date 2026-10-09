@@ -61,7 +61,7 @@ describe('declaredDirection(T115)', () => {
   });
   it('명사와 서술 사이 공백이 있어도 없어도 같은 방향이다', () => {
     for (const [text, expected] of [
-      ['찬성 쪽입니다.', 'FOR'], ['찬성쪽입니다.', 'FOR'], ['반대 편입니다.', 'AGAINST'], ['반대편입니다.', 'AGAINST'],
+      ['찬성 쪽입니다.', 'FOR'], ['찬성쪽입니다.', null], ['반대 편입니다.', 'AGAINST'], ['반대편입니다.', null],
       ['승인 쪽으로 가겠습니다.', 'FOR'], ['승인쪽으로 가겠습니다.', 'FOR'], ['찬성 입니다.', 'FOR'], ['부결 시키겠습니다.', 'AGAINST'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
@@ -203,6 +203,13 @@ describe('declaredDirection(T115)', () => {
       ['승인 입장을 고수합니다.', 'FOR'], ['반대 입장을 고수합니다.', 'AGAINST'], ['찬성합니다. 반대 입장을 고수합니다.', null],
       ['자동 승인 방식에 찬성합니다.', 'FOR'], ['승인 한도를 두면 찬성합니다.', null], ['통과 여부는 조건을 보고 정하겠습니다.', null],
       ['찬성 입장을 굽히지 않겠습니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
+  it('공간 합성어(반대편·반대쪽)는 방향 선언이 아니다(Codex 85차). "반대쪽으로 가겠습니다"는 허용된 놓침', () => {
+    for (const [text, expected] of [
+      ['화면 배치는 지금 반대편을 유지합니다.', null], ['반대편 의견도 들었습니다.', null], ['반대쪽으로 가겠습니다.', null],
+      ['저는 반대 입장을 유지합니다.', 'AGAINST'], ['반대 입장을 고수합니다.', 'AGAINST'], ['승인 입장을 고수합니다.', 'FOR'],
+      ['반대 편에 서겠습니다.', 'AGAINST'], ['찬성 쪽에 섭니다.', 'FOR'], ['한편 반대 의견도 있었습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
