@@ -82,7 +82,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
             </div>
             <h2 className="briefing-screen__question">{scenario.chairBriefing.question}</h2>
           </div>
-          <div className="briefing-screen__status" data-testid="briefing-status">
+          <div className="briefing-screen__status" data-testid="briefing-status" data-coach="briefing-status">
             <p className="briefing-screen__situation">
               <span className="briefing-screen__label">상황</span>
               <HighlightText text={scenario.chairBriefing.situation} terms={terms} />

@@ -38,8 +38,8 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
   if (!state || state.done) {
     return null;
   }
-  // 근거 자료 팝업이 열려 있는 동안 1단계 말풍선은 숨긴다(팝업을 읽는 데 방해하지 않게).
-  if (state.step === 1 && ui.evidenceOpen) {
+  // 근거 자료 팝업이 열려 있는 동안 2단계 말풍선은 숨긴다(팝업을 읽는 데 방해하지 않게).
+  if (state.step === 2 && ui.evidenceOpen) {
     return null;
   }
 

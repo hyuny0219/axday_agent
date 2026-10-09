@@ -1,4 +1,4 @@
-// 진행 도우미(튜토리얼 코치, T103) 문구. 9단계 표(docs/TASKS.md T103)를 그대로 옮겼다.
+// 진행 도우미(튜토리얼 코치, T103) 문구. 10단계 표(docs/TASKS.md T103·T104)를 옮겼다.
 // 제목의 핵심 말(`keys`)은 화면의 `.key-term` 강조로 그려진다. 새 문구는 쉬운 말만 쓴다
 // (server/prompts/plainLanguage.ts FORBIDDEN_WORDS 0건, tests/components/Coach.test.tsx).
 
@@ -21,48 +21,55 @@ export interface CoachStepCopy {
 export const COACH_STEPS: readonly CoachStepCopy[] = [
   {
     step: 1,
+    title: '먼저 상황을 읽어 보세요',
+    keys: ['상황'],
+    body: '무슨 일이 생겼고, 무엇을 제안했고, 무엇이 아직 정해지지 않았는지 세 줄입니다.',
+    placement: 'left',
+  },
+  {
+    step: 2,
     title: '먼저 근거 자료 4장을 열어 보세요',
     keys: ['근거 자료 4장'],
     body: '임원들은 이 자료를 보고 말합니다. 닫으면 "의견 듣기"가 열립니다.',
     placement: 'left',
   },
   {
-    step: 2,
+    step: 3,
     title: '임원 네 명의 말을 읽어 보세요',
     keys: ['임원 네 명'],
     body: '누가 찬성·반대인지, 왜 그런지가 다음 단계의 재료입니다.',
     placement: 'left',
   },
   {
-    step: 3,
+    step: 4,
     title: '찬성인지 반대인지 먼저 고르세요',
     keys: ['찬성', '반대'],
     body: '고른 쪽의 추천 문구가 나옵니다.',
     placement: 'left',
   },
   {
-    step: 4,
+    step: 5,
     title: '마음에 드는 추천 문구를 눌러 담으세요',
     keys: ['추천 문구'],
     body: '여러 개 가능하고, 직접 고쳐 써도 됩니다.',
     placement: 'left',
   },
   {
-    step: 5,
+    step: 6,
     title: 'AI 비서실장을 열어 세 가지를 한 번씩 써 보세요',
     keys: ['AI 비서실장'],
     body: '한눈에 보기, 조건 추천, 발언 정리를 차례로 눌러 보세요.',
     placement: 'above',
   },
   {
-    step: 6,
+    step: 7,
     title: '이제 의견 전달을 누르세요',
     keys: ['의견 전달'],
     body: '전달하면 임원들이 이사님 말에 답합니다.',
     placement: 'above',
   },
   {
-    step: 7,
+    step: 8,
     title: '이사님 말에 임원들이 답했습니다',
     keys: ['임원들이 답했습니다'],
     body: '반대 → 찬성 배지는 이사님 조건으로 움직인 임원입니다. 답해도 되고 넘어가도 됩니다.',
@@ -72,14 +79,14 @@ export const COACH_STEPS: readonly CoachStepCopy[] = [
     placement: 'left',
   },
   {
-    step: 8,
+    step: 9,
     title: '찬성·반대 도장 중 하나를 고르고 확정하세요',
     keys: ['찬성', '반대'],
     body: '같은 표가 3석 이상이면 설득 도장을 받습니다.',
     placement: 'left',
   },
   {
-    step: 9,
+    step: 10,
     title: '이사님의 조건이 임원을 움직였는지 보세요',
     keys: ['조건이 임원을 움직였는지'],
     body: '"이사님 조건으로 바뀜" 줄이 설득한 임원입니다.',
@@ -115,7 +122,7 @@ export const COACH_ACK_LABEL = '알겠어요 ▶';
 export const COACH_FINAL_ACK_LABEL = '안내 끝';
 
 export function coachAckLabel(step: number): string {
-  return step === 9 ? COACH_FINAL_ACK_LABEL : COACH_ACK_LABEL;
+  return step === 10 ? COACH_FINAL_ACK_LABEL : COACH_ACK_LABEL;
 }
 
 export function coachCopy(step: number, mode: 'scripted' | 'live' = 'scripted'): CoachStepCopy {

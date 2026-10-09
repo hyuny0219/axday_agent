@@ -48,7 +48,7 @@ function renderCoach(extra: Partial<React.ComponentProps<typeof Coach>> = {}) {
   render(
     <Coach
       step={2}
-      total={9}
+      total={10}
       targetSelector="[data-coach='t']"
       title="제목"
       body="보조 문장"
@@ -61,32 +61,32 @@ function renderCoach(extra: Partial<React.ComponentProps<typeof Coach>> = {}) {
 }
 
 describe('coachCopy의 live 분기(PR #20 Codex 36차 검토 P2)', () => {
-  it('7단계는 live에서 전환 배지를 말하지 않고 지금 입장을 확인하라고 안내한다', () => {
-    expect(coachCopy(7, 'scripted').body).toContain('반대 → 찬성 배지');
-    expect(coachCopy(7, 'live').body).not.toContain('배지');
-    expect(coachCopy(7, 'live').body).toContain('지금 입장');
-    expect(coachCopy(7).body).toBe(coachCopy(7, 'scripted').body);
+  it('8단계는 live에서 전환 배지를 말하지 않고 지금 입장을 확인하라고 안내한다', () => {
+    expect(coachCopy(8, 'scripted').body).toContain('반대 → 찬성 배지');
+    expect(coachCopy(8, 'live').body).not.toContain('배지');
+    expect(coachCopy(8, 'live').body).toContain('지금 입장');
+    expect(coachCopy(8).body).toBe(coachCopy(8, 'scripted').body);
   });
-  it('9단계는 live에서 "이사님 조건으로 바뀜" 줄·조건 인과를 말하지 않는다(37차)', () => {
-    const live = coachCopy(9, 'live');
+  it('10단계는 live에서 "이사님 조건으로 바뀜" 줄·조건 인과를 말하지 않는다(37차)', () => {
+    const live = coachCopy(10, 'live');
     expect(live.title).toContain('어떻게 바뀌었는지');
     expect(live.body).not.toContain('조건으로 바뀜');
     // 제목의 실제 뜻(이사님 편이 된 임원 수)과 맞춘다(38차) — '첫 의견과 다른 표'라고 말하지 않는다.
     expect(live.body).toContain('이사님 편이 된 임원 수');
     expect(live.body).not.toContain('첫 의견과 다른');
     expect(live.keys.every((k) => live.title.includes(k))).toBe(true);
-    expect(coachCopy(9, 'scripted').body).toContain('조건으로 바뀜');
+    expect(coachCopy(10, 'scripted').body).toContain('조건으로 바뀜');
   });
   it('bodyLive가 없는 단계는 live에서도 같은 문장을 쓴다', () => {
-    expect(coachCopy(1, 'live').body).toBe(coachCopy(1, 'scripted').body);
+    expect(coachCopy(2, 'live').body).toBe(coachCopy(2, 'scripted').body);
   });
 });
 
 describe('Coach', () => {
-  it('머리에 "진행 도우미 · N/9"와 제목·보조 문장을 그린다', () => {
+  it('머리에 "진행 도우미 · N/10"와 제목·보조 문장을 그린다', () => {
     addTarget('t');
     renderCoach();
-    expect(screen.getByTestId('coach-progress')).toHaveTextContent('진행 도우미 · 2/9');
+    expect(screen.getByTestId('coach-progress')).toHaveTextContent('진행 도우미 · 2/10');
     expect(screen.getByTestId('coach-title')).toHaveTextContent('제목');
     expect(screen.getByTestId('coach-bubble')).toHaveTextContent('보조 문장');
     expect(screen.getByTestId('coach-spot')).toBeInTheDocument();
@@ -119,11 +119,11 @@ describe('Coach', () => {
     addTarget('t');
     const onAck = vi.fn();
     const { rerender } = render(
-      <Coach step={2} total={9} targetSelector="[data-coach='t']" title="제목" body="b" placement="left" onSkip={vi.fn()} />,
+      <Coach step={2} total={10} targetSelector="[data-coach='t']" title="제목" body="b" placement="left" onSkip={vi.fn()} />,
     );
     expect(screen.queryByTestId('coach-ack')).toBeNull();
     rerender(
-      <Coach step={2} total={9} targetSelector="[data-coach='t']" title="제목" body="b" placement="left" onSkip={vi.fn()} onAck={onAck} />,
+      <Coach step={2} total={10} targetSelector="[data-coach='t']" title="제목" body="b" placement="left" onSkip={vi.fn()} onAck={onAck} />,
     );
     fireEvent.click(screen.getByRole('button', { name: '알겠어요 ▶' }));
     expect(onAck).toHaveBeenCalledTimes(1);
@@ -183,7 +183,7 @@ describe('Coach 운영 메뉴 예외', () => {
 describe('Esc·구멍 합치기', () => {
   it('아무것도 그리지 않는 동안에는 Esc를 가로채지 않는다', () => {
     const onSkip = vi.fn();
-    render(<Coach step={2} total={9} targetSelector="[data-coach='none']" title="t" body="b" placement="left" onSkip={onSkip} />);
+    render(<Coach step={2} total={10} targetSelector="[data-coach='none']" title="t" body="b" placement="left" onSkip={onSkip} />);
     const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
     window.dispatchEvent(event);
     expect(onSkip).not.toHaveBeenCalled();
@@ -242,18 +242,18 @@ describe('CoachHost', () => {
     const dispatch = vi.fn();
     const session = { ...createInitialSession(0, 's'), stage: 'OPINIONS' as const };
     render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={dispatch} />);
-    expect(screen.getByTestId('coach-progress')).toHaveTextContent('2/9');
+    expect(screen.getByTestId('coach-progress')).toHaveTextContent('3/10');
     fireEvent.click(screen.getByTestId('coach-ack'));
-    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 2 });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 });
   });
 
-  it('건너뛰기는 이 화면의 남은 단계를 모두 기록한다(DISCUSS 3~6)', () => {
+  it('건너뛰기는 이 화면의 남은 단계를 모두 기록한다(DISCUSS 4~7)', () => {
     addTarget('side-select');
     const dispatch = vi.fn();
     const session = { ...createInitialSession(0, 's'), stage: 'DISCUSS' as const };
     render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={dispatch} />);
     fireEvent.click(screen.getByTestId('coach-skip'));
-    expect(dispatch.mock.calls.map((call) => call[0].step)).toEqual([3, 4, 5, 6]);
+    expect(dispatch.mock.calls.map((call) => call[0].step)).toEqual([4, 5, 6, 7]);
   });
 
   it('이미 끝난 단계는 화면에 그리지 않고 기록만 한다', () => {
@@ -262,7 +262,7 @@ describe('CoachHost', () => {
     const session = { ...createInitialSession(0, 's'), stage: 'DISCUSS' as const };
     render(<CoachHost session={session} ui={{ ...EMPTY_COACH_UI, side: 'FOR' }} dispatch={dispatch} />);
     expect(screen.queryByTestId('coach')).toBeNull();
-    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 4 });
   });
 
   it('코치가 꺼져 있으면 그리지 않는다', () => {
@@ -272,18 +272,29 @@ describe('CoachHost', () => {
     expect(screen.queryByTestId('coach')).toBeNull();
   });
 
-  it('근거 자료 팝업이 열려 있는 동안 1단계 말풍선을 숨긴다', () => {
-    addTarget('evidence-open');
+  it('BRIEFING은 상황판 읽기(1/10)부터 나오고 알겠어요로 넘긴다', () => {
+    addTarget('briefing-status');
+    const dispatch = vi.fn();
     const session = { ...createInitialSession(0, 's'), stage: 'BRIEFING' as const };
+    render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={dispatch} />);
+    expect(screen.getByTestId('coach-progress')).toHaveTextContent('1/10');
+    expect(screen.getByTestId('coach-title')).toHaveTextContent('먼저 상황을 읽어 보세요');
+    fireEvent.click(screen.getByTestId('coach-ack'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 1 });
+  });
+
+  it('근거 자료 팝업이 열려 있는 동안 2단계 말풍선을 숨긴다', () => {
+    addTarget('evidence-open');
+    const session = { ...createInitialSession(0, 's'), stage: 'BRIEFING' as const, coachDismissed: [1] };
     const { rerender } = render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
     expect(screen.getByTestId('coach')).toBeInTheDocument();
     rerender(<CoachHost session={session} ui={{ ...EMPTY_COACH_UI, evidenceOpen: true }} dispatch={vi.fn()} />);
     expect(screen.queryByTestId('coach')).toBeNull();
   });
 
-  it('5단계는 팝업 안에서 어둡기가 낮은 coach--dialog로 그린다', () => {
+  it('6단계는 팝업 안에서 어둡기가 낮은 coach--dialog로 그린다', () => {
     addTarget('assistant-next');
-    const session = { ...createInitialSession(0, 's'), stage: 'DISCUSS' as const, coachDismissed: [3, 4] };
+    const session = { ...createInitialSession(0, 's'), stage: 'DISCUSS' as const, coachDismissed: [4, 5] };
     render(
       <CoachHost
         session={session}
@@ -297,8 +308,8 @@ describe('CoachHost', () => {
 });
 
 describe('코치 문구', () => {
-  it('9단계가 모두 있고 쉬운 말만 쓴다', () => {
-    expect(COACH_STEPS.map((item) => item.step)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  it('10단계가 모두 있고 쉬운 말만 쓴다', () => {
+    expect(COACH_STEPS.map((item) => item.step)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     for (const item of COACH_STEPS) {
       expect(findForbiddenWords(`${item.title} ${item.body}`)).toEqual([]);
       expect(item.title).toMatch(/[가-힣]/);
