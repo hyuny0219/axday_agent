@@ -388,7 +388,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   </span>
                   <span className="result-stamp__text">{persuasion.earned ? '성공' : '실패'}</span>
                   <span className="result-stamp__meta" aria-hidden="true">
-                    같은 표 {persuasion.sameVoteSeats}석{persuasion.earned ? '' : ' · 3석부터'}
+                    같은 표 {persuasion.sameVoteSeats}석
                   </span>
                 </div>
               )}
