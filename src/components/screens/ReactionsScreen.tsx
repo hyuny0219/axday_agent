@@ -549,9 +549,18 @@ export function ReactionsScreen({
   const awaitingAnswerIds = useMemo(
     () =>
       mode === 'scripted'
-        ? membersAwaitingAnswer(scenario, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false })
+        ? membersAwaitingAnswer(scenario, {
+            stage: 'REACTIONS',
+            // 답변 화면에서 입장을 바꾸면 제출 뒤 규칙표는 바뀐 입장 기준이다 — 마지막 의견의
+            // 입장을 지금 고른 입장으로 바꿔 계산한다(Codex 48차 P2).
+            opinions: opinions.map((opinion, index) =>
+              index === opinions.length - 1 && side ? { ...opinion, stance: side } : opinion,
+            ),
+            followUpUsed: false,
+            followUpAnswered: false,
+          })
         : [],
-    [scenario, opinions, mode],
+    [scenario, opinions, mode, side],
   );
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지

@@ -212,9 +212,9 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
       );
     }
   }
-  // T110(v12): 추가 질문에 답했는지. 단계가 REACTIONS이면 아직 답하기 전이라 줄을 싣지
-  // 않고(지시문이 대신 설명한다), FOLLOWUP·VOTE에서 값이 있을 때만 싣는다.
-  if (input.followUpAnswered !== undefined && input.stage !== 'REACTIONS') {
+  // T110(v12): 추가 질문에 답했는지. 질문이 나온 뒤인 FOLLOWUP·VOTE에서만 싣는다 — OPINIONS·
+  // REACTIONS(첫 반응)에 "답변: 없음"을 싣으면 질문 전부터 미답변으로 읽혀 입장이 왜곡된다.
+  if (input.followUpAnswered !== undefined && (input.stage === 'FOLLOWUP' || input.stage === 'VOTE')) {
     lines.push(`추가 질문 답변: ${input.followUpAnswered ? '있음' : '없음'}`);
   }
   lines.push('</meeting_record>');

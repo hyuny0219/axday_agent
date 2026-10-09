@@ -42,6 +42,8 @@ export interface MockRequestEnvelope {
   /** 참가자가 추가 질문에 답했는지(T110, 프롬프트 v12). 표결 envelope에서 false면 "답하지
    * 않고 넘어감" 규칙을 흉내 낸다. */
   followUpAnswered?: boolean;
+  /** 참가자 입장(T110 대칭). 생략·FOR는 찬성 쪽 목표, AGAINST는 반대 쪽 목표다. */
+  participantStance?: 'FOR' | 'AGAINST';
 }
 
 // 이 고정 맵은 scenarioId를 모를 때만 쓰는 폴백이다(아래 scenarioAwareRoleEvidence 참고).
@@ -139,13 +141,18 @@ const STAGE_LABEL_KO: Record<string, string> = {
   VOTE: '표결',
 };
 
-/** T110(v12): 첫 반응에서 참가자 쪽으로 움직이는 임원은 "고민 중"까지만 간다. mock은
- * 고정 맵의 FOR 중 그 안건의 출발 성향이 FOR가 아닌 임원(처음부터 같은 편이 아닌 임원)을
- * "움직이는 임원"으로 본다. 안건을 모르면 고정 맵 그대로다. */
-function movedTowardParticipant(roleId: string, scenarioId: string | undefined): boolean {
+/** T110(v12): 첫 반응에서 참가자 쪽으로 움직이는 임원은 "고민 중"까지만 간다. mock은 고정 맵이
+ * 참가자 목표 쪽(찬성 참가자면 FOR, 반대 참가자면 AGAINST)이면서 그 안건의 출발 성향은 목표가
+ * 아닌 임원을 "움직이는 임원"으로 본다(찬성·반대 대칭). 안건을 모르면 고정 맵 그대로다. */
+function movedTowardParticipant(
+  roleId: string,
+  scenarioId: string | undefined,
+  participantStance: 'FOR' | 'AGAINST' | undefined,
+): boolean {
   const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
   const opening = materials?.roleLenses?.[roleId as ExecRoleId]?.opening;
-  return ROLE_STANCE[roleId] === 'FOR' && opening !== undefined && opening !== 'FOR';
+  const target = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+  return ROLE_STANCE[roleId] === target && opening !== undefined && opening !== target;
 }
 
 function buildStatementJson(env: MockRequestEnvelope): unknown {
@@ -161,7 +168,7 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     stance:
       stage === 'OPINIONS'
         ? scenarioAwareOpeningStance(roleId, env.scenarioId)
-        : stage === 'REACTIONS' && movedTowardParticipant(roleId, env.scenarioId)
+        : stage === 'REACTIONS' && movedTowardParticipant(roleId, env.scenarioId, env.participantStance)
           ? 'UNDECIDED'
           : ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
@@ -173,9 +180,12 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     roleId,
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
+    // 답하지 않았다면 움직인 임원은 참가자 목표의 반대편(찬성 참가자면 NO, 반대 참가자면 YES)이다.
     vote:
-      env.followUpAnswered === false && movedTowardParticipant(roleId, env.scenarioId)
-        ? 'NO'
+      env.followUpAnswered === false && movedTowardParticipant(roleId, env.scenarioId, env.participantStance)
+        ? env.participantStance === 'AGAINST'
+          ? 'YES'
+          : 'NO'
         : ROLE_VOTE[roleId] ?? 'NO',
     reason: `[모의] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],

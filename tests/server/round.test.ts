@@ -558,3 +558,19 @@ describe('두 단계 설득 프롬프트(T110, v12)', () => {
     }
   });
 });
+
+describe('초기·첫 반응 프롬프트에는 미답변 기록이 없다(Codex 48차 P2)', () => {
+  it('OPINIONS·REACTIONS에 followUpAnswered:false가 와도 "추가 질문 답변" 줄이 없다', async () => {
+    for (const stage of ['OPINIONS', 'REACTIONS'] as const) {
+      const systems: string[] = [];
+      const provider: ModelProvider = {
+        async complete(req) {
+          systems.push(req.system);
+          return createMockProvider('mock-model').complete(req);
+        },
+      };
+      await handleRound(baseRoundInput({ requestId: `req-48-${stage}`, stage, followUpAnswered: false }), { provider });
+      for (const system of systems) expect(system).not.toContain('추가 질문 답변:');
+    }
+  });
+});

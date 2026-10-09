@@ -663,3 +663,47 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     expect(screen.getByTestId('keep-previous-answer')).toHaveClass('cta--secondary');
   });
 });
+
+// Codex 48차 P2: 답변 화면에서 입장을 바꾸면 답변 대기 임원도 바뀐 입장 기준으로 다시 계산한다.
+describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', () => {
+  const ai = aiApprovalScenario;
+  const opinions: Opinion[] = [
+    {
+      id: 'op1',
+      originalText: '조건을 모두 붙입니다.',
+      selectedPhraseIds: [],
+      confirmedConditionIds: ['LIMIT', 'REVIEW', 'LOG', 'OWNER'],
+      stance: 'FOR',
+      createdAt: 0,
+    },
+  ];
+  function renderAnswer(side: 'FOR' | 'AGAINST') {
+    const session = { stage: 'REACTIONS' as const, opinions, followUpUsed: false, followUpAnswered: false };
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={opinions}
+        side={side}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(ai, session)}
+        step="answer"
+      />,
+    );
+    const toggle = screen.getByTestId('persuasion-board-toggle');
+    if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
+  }
+
+  it('찬성 입장이면 CFO가 "답변 뒤 찬성"이다', () => {
+    renderAnswer('FOR');
+    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('답변 뒤 찬성');
+  });
+
+  it('반대로 바꾸면 "답변 뒤 찬성"이 사라지고 반대로 안내하지도 않는다', () => {
+    renderAnswer('AGAINST');
+    expect(screen.getByTestId('persuasion-board-note-CFO')).not.toHaveTextContent('답변 뒤');
+  });
+});

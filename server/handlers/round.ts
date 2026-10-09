@@ -201,6 +201,7 @@ async function attemptRole(
       // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
       scenarioId: input.scenarioId,
       followUpAnswered: input.followUpAnswered,
+      participantStance: input.participantStance,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({

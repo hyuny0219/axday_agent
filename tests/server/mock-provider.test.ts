@@ -323,3 +323,23 @@ describe('parseMockFault', () => {
     expect(parseMockFault(42)).toBeUndefined();
   });
 });
+
+// Codex 48차 P2: mock의 두 단계 게이트는 반대 입장에도 대칭이다.
+describe('createMockProvider 반대 입장 대칭(T110)', () => {
+  const provider = createMockProvider('mock-model');
+  const call = async (body: Record<string, unknown>) =>
+    (await provider.complete(baseRequest(JSON.stringify(body)))).json as { stance?: string; vote?: string };
+
+  it('반대 참가자: 목표(AGAINST) 쪽으로 움직일 임원이 없어 CAIO(FOR)는 게이트 없이 그대로다', async () => {
+    const base = { scenarioId: 'ai-approval', participantStance: 'AGAINST' };
+    expect((await call({ kind: 'statement', roleId: 'CAIO', stage: 'REACTIONS', ...base })).stance).toBe('FOR');
+    expect((await call({ kind: 'vote', roleId: 'CAIO', followUpAnswered: false, ...base })).vote).toBe('YES');
+    expect((await call({ kind: 'vote', roleId: 'CAIO', followUpAnswered: true, ...base })).vote).toBe('YES');
+  });
+
+  it('찬성 참가자는 기존 게이트 그대로다(CAIO 고민 중, 미답변 NO)', async () => {
+    const base = { scenarioId: 'ai-approval', participantStance: 'FOR' };
+    expect((await call({ kind: 'statement', roleId: 'CAIO', stage: 'REACTIONS', ...base })).stance).toBe('UNDECIDED');
+    expect((await call({ kind: 'vote', roleId: 'CAIO', followUpAnswered: false, ...base })).vote).toBe('NO');
+  });
+});
