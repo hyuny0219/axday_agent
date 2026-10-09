@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
-import { countVotesChangedByConditions, decideBoard } from '../../src/domain/voting';
+import { countVotesChangedByConditions, decideBoard, membersChangedByConditionsToward } from '../../src/domain/voting';
 import {
   computePersuasionTally,
   persuadedCountLabel,
@@ -234,9 +234,12 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
           const match = /임원 (\d)명이 이사님 편이 됐습니다/.exec(result.headline);
           if (m > 0) {
             expect(Number(match?.[1])).toBe(m);
-            // 조건 문구는 조건을 뺀 기준 표와 실제로 다른 임원이 있을 때만 쓴다(Codex 35차 P2-2).
-            const k = countVotesChangedByConditions(sc, motion);
-            expect(result.headline).toContain(k > 0 ? '발언과 조건' : '발언으로');
+            // 조건 문구는 조건을 뺀 기준 표에서 참가자 목표 방향으로 넘어온 임원이 설득된 임원 안에
+            // 있을 때만 쓴다(Codex 35차 P2-2 → 46차 P2: 방향·교집합).
+            const toward = membersChangedByConditionsToward(sc, motion, side === 'FOR' ? 'YES' : 'NO').filter((id) =>
+              result.tally.persuaded.includes(id),
+            );
+            expect(result.headline).toContain(toward.length > 0 ? '발언과 조건' : '발언으로');
           } else {
             expect(match).toBeNull();
             expect(result.headline).toContain('이번엔 임원의 입장을 바꾸지 못했습니다');
@@ -284,6 +287,24 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
       finalConditionIds: ['REVIEW'], finalMotion: motion,
     });
     expect(result.headline).toBe('이사님의 발언으로 임원 1명이 이사님 편이 됐습니다');
+  });
+
+  it('Codex 46차 P2: 참가자 반대 + LIMIT+REVIEW면 CFO는 조건으로 찬성(반대편)이 되고 CAIO는 조건 없이도 NO라 "조건"을 말하지 않는다', () => {
+    const motion: Motion = {
+      id: 'm', scenarioId: aiApprovalScenario.id, kind: 'amended', conditionIds: ['LIMIT', 'REVIEW'],
+      baseConditionIds: [], effectiveConditionIds: ['LIMIT', 'REVIEW'], executionMode: 'DEFAULT',
+      frozenAt: 0, text: aiApprovalScenario.originalMotion.text, hash: 'h',
+    };
+    const stances = { CEO: 'FOR', CFO: 'FOR', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
+    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
+      participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 2,
+      finalConditionIds: ['LIMIT', 'REVIEW'], finalMotion: motion,
+    });
+    // 방향을 따지지 않는 countVotesChangedByConditions는 CFO 때문에 1이지만, 참가자(반대) 쪽으로 넘어온 임원은 없다.
+    expect(countVotesChangedByConditions(aiApprovalScenario, motion)).toBeGreaterThan(0);
+    expect(membersChangedByConditionsToward(aiApprovalScenario, motion, 'NO')).toEqual([]);
+    expect(result.headline).toBe(`이사님의 발언으로 임원 ${result.tally.persuaded.length}명이 이사님 편이 됐습니다`);
   });
 
   it('Codex 35차 P2-3: 찬성 발언 뒤 반대 표를 던지면 다음 조건 추천도 반대 목표를 쓴다', () => {
