@@ -115,6 +115,13 @@ export interface Reaction {
   text: string;
   /** 무대 말풍선용 핵심 한 구절(T102, 최대 18자). InitialOpinion.bubble과 같다. */
   bubble?: string;
+  /** 1차 반응에서 이 조건 때문에 참가자 쪽으로 움직일 임원이 "고민 중"에 머물 때 쓰는 문구
+   * (T110, 두 단계 설득): "조건은 좋습니다. 하나만 더 묻겠습니다" 톤의 쉬운 말. 한 임원의
+   * 조건이 여러 개면 reactions 순서대로 이어 붙여 읽히도록 쓴다. 조건을 다 채웠는데도 이
+   * 문구가 없으면 일반 text로 되돌아간다. */
+  pendingText?: string;
+  /** pendingText의 무대 말풍선 한 구절(최대 18자). */
+  pendingBubble?: string;
 }
 
 /** 추천 답변이 어느 입장에서 하는 말인지(T89, 사용자 지시 "반응에 답하기에서도 내

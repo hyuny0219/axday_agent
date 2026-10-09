@@ -52,6 +52,7 @@ function buildSession(conditionIds: string[]): Session {
   };
   return {
     ...createInitialSession(0, 's1'),
+    followUpAnswered: true,
     stage: 'RESULT',
     mode: 'scripted',
     scenarioId: scenario.id,
@@ -222,7 +223,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
             const id = ballot.memberId as 'CEO' | 'CFO' | 'CAIO' | 'CISO';
             finalStances[id] = ballot.vote === 'YES' ? 'FOR' : ballot.vote === 'NO' ? 'AGAINST' : 'UNDECIDED';
           }
-          const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+          const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
           const result = buildPersuasionResult(sc, session, finalStances, {
             participantVote: side === 'FOR' ? 'YES' : 'NO',
             participantStance: side,
@@ -251,7 +252,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
 
   it('참가자 반대·조건 없음(안건①): 현황판처럼 CAIO(미정→반대) 한 명을 설득한 것으로 제목에도 나온다', () => {
     const stances = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
-    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 0, finalConditionIds: [],
     });
@@ -281,7 +282,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
       frozenAt: 0, text: aiApprovalScenario.originalMotion.text, hash: 'h',
     };
     const stances = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
-    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 1,
       finalConditionIds: ['REVIEW'], finalMotion: motion,
@@ -296,7 +297,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
       frozenAt: 0, text: aiApprovalScenario.originalMotion.text, hash: 'h',
     };
     const stances = { CEO: 'FOR', CFO: 'FOR', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
-    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 2,
       finalConditionIds: ['LIMIT', 'REVIEW'], finalMotion: motion,
@@ -309,7 +310,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
 
   it('Codex 35차 P2-3: 찬성 발언 뒤 반대 표를 던지면 다음 조건 추천도 반대 목표를 쓴다', () => {
     const stances = { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
-    const session = { ...createInitialSession(0, 's'), mode: 'scripted' as const };
+    const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'FOR', conditionCount: 1,
       finalConditionIds: ['LOG'],

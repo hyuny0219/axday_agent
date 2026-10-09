@@ -169,3 +169,11 @@ describe('selectPublic', () => {
     expect(payload.revision).toBe(42);
   });
 });
+
+describe('selectPublic의 followUpAnswered(T110)', () => {
+  it('세션의 추가 질문 답변 여부를 그대로 싣는다', () => {
+    const base = createInitialSession(0, 's-t110');
+    expect(selectPublic(base, null, 1).followUpAnswered).toBe(false);
+    expect(selectPublic({ ...base, followUpAnswered: true }, null, 1).followUpAnswered).toBe(true);
+  });
+});

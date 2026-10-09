@@ -82,8 +82,14 @@ import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
-import { changeCauseLabel, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from '../reactionsFor';
-import { scriptedStances } from '../../domain/stance';
+import {
+  changeCauseLabel,
+  reactionBodyText,
+  reactionsFor,
+  oppositionReactionText,
+  resolveFollowUpPrompt,
+} from '../reactionsFor';
+import { membersAwaitingAnswer, scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -538,6 +544,15 @@ export function ReactionsScreen({
     () => scriptedStances(scenario, { stage: 'OPINIONS', opinions: [] }),
     [scenario],
   );
+  // T110: 조건은 맞았지만 추가 질문의 답을 기다리느라 "고민 중"에 머문 임원. 이 화면은
+  // REACTIONS에서만 그려지고 그때는 아직 답하지도 넘기지도 않은 상태다.
+  const awaitingAnswerIds = useMemo(
+    () =>
+      mode === 'scripted'
+        ? membersAwaitingAnswer(scenario, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false })
+        : [],
+    [scenario, opinions, mode],
+  );
 
   // "반응 듣기"(T89 1/2): 왼쪽 열은 OPINIONS와 같은 모양의 단일 CTA 줄(+보조 "답하지
   // 않고 넘어가기")뿐이고, 발언 흐름(MinutesPanel)은 App.tsx AppShell이 OPINIONS와
@@ -629,7 +644,7 @@ export function ReactionsScreen({
                   const reactionBody =
                     opposition ??
                     (reactions.length > 0
-                      ? reactions.map((reaction) => reaction.text).join(' ')
+                      ? reactionBodyText(reactions, awaitingAnswerIds.includes(memberId))
                       : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
                   const causeText =
                     changed && !opposition ? changeCauseLabel(scenario, reactions) : null;

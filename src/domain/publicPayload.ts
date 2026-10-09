@@ -30,6 +30,8 @@ export interface PublicPayload {
   tally: TallyResult | null;
   outcome: SessionOutcome;
   participantStatus: ParticipantStatus;
+  /** 추가 질문에 답을 전달했는지(T110). 불리언 하나라 공개해도 원문·판단 근거가 새지 않는다. */
+  followUpAnswered: boolean;
 }
 
 const STAGE_ORDER: readonly SessionStage[] = [
@@ -119,5 +121,6 @@ export function selectPublic(session: Session, scenario: Scenario | null, revisi
     tally: isResult ? tally(session.ballots) : null,
     outcome: isResult ? session.outcome : null,
     participantStatus: selectParticipantStatus(session.stage),
+    followUpAnswered: session.followUpAnswered,
   };
 }

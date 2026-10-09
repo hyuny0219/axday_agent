@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
 
@@ -352,5 +353,75 @@ describe('followUpStance(T93·Codex 23차)', () => {
   it('stance 없이 KEEP_PREVIOUS 하면 followUpStance는 그대로(null)다', () => {
     const session = reduce(sessionAtReactions(), { type: 'KEEP_PREVIOUS' }, T0);
     expect(session.followUpStance).toBeNull();
+  });
+});
+
+// T110: 추가 질문에 답했는지(followUpAnswered)가 표결에 반영된다.
+describe('추가 질문 답변 여부(T110)', () => {
+  const ai = aiApprovalScenario;
+  const ALL = ['LIMIT', 'REVIEW', 'LOG', 'OWNER'];
+
+  function reactionsWithAllConditions(): Session {
+    let session = createInitialSession(T0);
+    session = reduce(session, { type: 'START' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0);
+    session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: ai.id }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0);
+    return reduce(
+      session,
+      {
+        type: 'SUBMIT_OPINION',
+        originalText: '네 가지 조건을 모두 붙입니다.',
+        selectedPhraseIds: [],
+        confirmedConditionIds: ALL,
+        stance: 'FOR',
+      },
+      T0,
+    );
+  }
+
+  it('초기값과 SUBMIT_OPINION 직후는 false다', () => {
+    expect(createInitialSession(T0).followUpAnswered).toBe(false);
+    expect(reactionsWithAllConditions().followUpAnswered).toBe(false);
+  });
+
+  it('SUBMIT_FOLLOWUP은 true, KEEP_PREVIOUS는 false로 남긴다', () => {
+    const answered = reduce(
+      reactionsWithAllConditions(),
+      { type: 'SUBMIT_FOLLOWUP', originalText: '책임자를 정하겠습니다.', selectedPhraseIds: [], confirmedConditionIds: ALL, stance: 'FOR' },
+      T0,
+    );
+    expect(answered.followUpAnswered).toBe(true);
+    const skipped = reduce(reactionsWithAllConditions(), { type: 'KEEP_PREVIOUS', stance: 'FOR' }, T0);
+    expect(skipped.followUpAnswered).toBe(false);
+  });
+
+  it('조건을 모두 맞춘 뒤 답을 전달하면 임원 4명 모두 찬성이라 가결 경로다', () => {
+    let session = reduce(
+      reactionsWithAllConditions(),
+      { type: 'SUBMIT_FOLLOWUP', originalText: '책임자를 정하겠습니다.', selectedPhraseIds: [], confirmedConditionIds: ALL, stance: 'FOR' },
+      T0,
+    );
+    session = reduce(session, { type: 'FREEZE_MOTION', scenario: ai, confirmedConditionIds: ALL }, T0);
+    expect(session.ballots.map((b) => b.vote)).toEqual(['YES', 'YES', 'YES', 'YES']);
+  });
+
+  it('같은 조건이라도 답하지 않고 넘어가면 CEO만 찬성이라 참가자 표를 더해도 과반에 못 미친다', () => {
+    let session = reduce(reactionsWithAllConditions(), { type: 'KEEP_PREVIOUS', stance: 'FOR' }, T0);
+    session = reduce(session, { type: 'FREEZE_MOTION', scenario: ai, confirmedConditionIds: ALL }, T0);
+    expect(session.ballots.map((b) => b.vote)).toEqual(['YES', 'NO', 'NO', 'NO']);
+    session = reduce(session, { type: 'SELECT_VOTE', vote: 'YES' }, T0);
+    session = reduce(session, { type: 'CONFIRM_VOTE' }, T0);
+    expect(session.outcome).toBe('REJECT');
+  });
+
+  it('OPERATOR_RESET은 false로 되돌린다', () => {
+    const answered = reduce(
+      reactionsWithAllConditions(),
+      { type: 'SUBMIT_FOLLOWUP', originalText: '책임자를 정하겠습니다.', selectedPhraseIds: [], confirmedConditionIds: ALL, stance: 'FOR' },
+      T0,
+    );
+    expect(reduce(answered, { type: 'OPERATOR_RESET', nextSessionId: 'new' }, T0).followUpAnswered).toBe(false);
   });
 });

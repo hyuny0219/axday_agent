@@ -23,12 +23,13 @@ import { findPhraseForCondition } from './recommendMatch';
  * scripted만 계산하고(live는 규칙표로 "조건 없었다면"을 가정할 수 없어 0) */
 export function countVotesChangedByFinalConditions(
   scenario: Scenario,
-  session: Pick<Session, 'mode' | 'finalMotion'>,
+  session: Pick<Session, 'mode' | 'finalMotion'> & Partial<Pick<Session, 'opinions' | 'followUpAnswered'>>,
 ): number {
   if (session.mode !== 'scripted' || !session.finalMotion) {
     return 0;
   }
-  return countVotesChangedByConditions(scenario, session.finalMotion);
+  const lastStance = session.opinions?.[session.opinions.length - 1]?.stance ?? null;
+  return countVotesChangedByConditions(scenario, session.finalMotion, lastStance, session.followUpAnswered ?? true);
 }
 
 /** 부결(NO)한 임원이 조건 1~2개만 더 있었으면 찬성이었을지(T96, "한 끗 차이"). scripted
@@ -38,13 +39,19 @@ export function oneStepAwayNote(
   memberId: ExecMemberId,
   finalConditionIds: string[],
   participantStance: 'FOR' | 'AGAINST' | null,
+  /** 추가 질문에 답했는지(T110). false면 "조건 + 답변"을 함께 안내한다. 생략하면 답한 것으로 본다. */
+  followUpAnswered = true,
 ): string | null {
   // 반대 참가자에게 "찬성이었을 텐데"는 목표와 반대 방향이라 보여주지 않는다.
   if (participantStance === 'AGAINST') {
     return null;
   }
   const required = requiredConditionsFor(scenario, memberId, finalConditionIds, participantStance);
-  if (required.persuaded || required.conditionIds === null) {
+  if (required.persuaded) {
+    // 조건은 이미 맞는데 NO였다면 답변 게이트 때문이다(T110).
+    return followUpAnswered ? null : '조건은 맞았으니 추가 질문에 답했다면 찬성';
+  }
+  if (required.conditionIds === null) {
     return null;
   }
   const ids = required.conditionIds;
@@ -52,9 +59,11 @@ export function oneStepAwayNote(
     return null;
   }
   const labels = ids.map((id) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id);
-  return labels.length === 1
-    ? `'${labels[0]}' 하나만 더 있었으면 찬성`
-    : `'${labels.join('·')}'만 더 있었으면 찬성`;
+  const tail = followUpAnswered ? '' : '와 추가 질문 답변이';
+  if (labels.length === 1) {
+    return followUpAnswered ? `'${labels[0]}' 하나만 더 있었으면 찬성` : `'${labels[0]}'${tail} 있었으면 찬성`;
+  }
+  return followUpAnswered ? `'${labels.join('·')}'만 더 있었으면 찬성` : `'${labels.join('·')}'${tail} 있었으면 찬성`;
 }
 
 /** 임원 표를 하나도 바꾸지 못했을 때(countVotesChangedFromOpening === 0) "다음엔 이런
@@ -150,7 +159,7 @@ export interface PersuasionResult {
  * 의견 입장, 그것도 없으면 찬성)로 정한다. live는 조건 때문이라는 인과를 말하지 않는다. */
 export function buildPersuasionResult(
   scenario: Scenario,
-  session: Pick<Session, 'mode' | 'transcript'>,
+  session: Pick<Session, 'mode' | 'transcript'> & Partial<Pick<Session, 'followUpAnswered'>>,
   finalStances: Record<ExecMemberId, Stance>,
   input: {
     participantVote: Vote | null;
@@ -173,11 +182,18 @@ export function buildPersuasionResult(
   // 실제로 넘어온 임원이 있고, 그 임원이 지금 설득된 임원(tally.persuaded)에도 들어 있을 때만
   // 쓴다 — 방향을 따지지 않으면 참가자 반대편으로 돌아간 변화(예: 참가자 반대 + LIMIT+REVIEW로
   // CFO가 찬성이 된 경우)까지 조건 성과로 잘못 귀속된다. 다음 조건 추천도 같은 목표 방향을 쓴다.
+  const targetVote: Vote = target === 'FOR' ? 'YES' : 'NO';
+  const answered = session.followUpAnswered ?? true;
   const changedByConditions =
     session.mode === 'scripted' && input.finalMotion
-      ? membersChangedByConditionsToward(scenario, input.finalMotion, target === 'FOR' ? 'YES' : 'NO').filter((memberId) =>
-          tally.persuaded.includes(memberId),
+      ? membersChangedByConditionsToward(scenario, input.finalMotion, targetVote, input.participantStance, answered).filter(
+          (memberId) => tally.persuaded.includes(memberId),
         ).length
+      : 0;
+  // T110: 답하지 않아 아무도 못 움직였는데, 답했다면 조건 때문에 움직였을 임원이 있으면 그 이유를 말한다.
+  const wouldMoveIfAnswered =
+    session.mode === 'scripted' && !answered && input.finalMotion
+      ? membersChangedByConditionsToward(scenario, input.finalMotion, targetVote, input.participantStance, true).length
       : 0;
   let headline: string;
   if (persuadedCount > 0) {
@@ -185,6 +201,8 @@ export function buildPersuasionResult(
       changedByConditions > 0
         ? `이사님의 발언과 조건 ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
         : `이사님의 발언으로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`;
+  } else if (wouldMoveIfAnswered > 0) {
+    headline = '조건은 맞았지만 추가 질문에 답하지 않아 임원의 마음을 바꾸지 못했습니다 — 다음엔 답하러 가 보세요';
   } else {
     const suggestion =
       session.mode === 'scripted'

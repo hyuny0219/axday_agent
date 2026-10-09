@@ -5,7 +5,7 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Ballot, Opinion, Session, SessionStage, Stance } from './types';
-import { EXEC_MEMBER_ORDER, decideMember } from './voting';
+import { EXEC_MEMBER_ORDER, decideMember, isGatedByUnanswered } from './voting';
 import type { VoteContext } from './voting';
 
 export type { Stance };
@@ -72,11 +72,23 @@ function openingStances(scenario: Scenario): Record<ExecMemberId, Stance> {
   return result;
 }
 
-/** scripted 표결 규칙표로 임원 4명의 표정을 미리 계산한다(순수 함수). live와는 무관하다. */
-export function scriptedStances(
-  scenario: Scenario,
-  session: Pick<Session, 'stage' | 'opinions'>,
-): Record<ExecMemberId, Stance> {
+/** scriptedStances가 읽는 세션 필드. followUpUsed·followUpAnswered는 T110(두 단계 설득)에서
+ * 더했다 — 조건이 맞아도 추가 질문에 답하기 전에는 "고민 중"까지만 움직인다. 두 필드를
+ * 생략하면 "답을 이미 받은 상태"(followUpAnswered=true)로 본다: 의견 단계(OPINIONS·DISCUSS)와
+ * 규칙표 자체를 확인하는 호출부는 값을 넘기지 않아도 되고, 실제 세션을 그대로 넘기는
+ * App.tsx는 항상 두 값을 함께 넘긴다. */
+export type ScriptedStanceSession = Pick<Session, 'stage' | 'opinions'> &
+  Partial<Pick<Session, 'followUpUsed' | 'followUpAnswered'>>;
+
+/** scripted 표결 규칙표로 임원 4명의 표정을 미리 계산한다(순수 함수). live와는 무관하다.
+ *
+ * T110(2026-10-09 사용자 지시 "처음 추천 문구를 선택해서 의견전달했을 때 전부 설득당하면
+ * 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해줘"): 조건 덕분에 참가자 쪽으로
+ * 움직일 임원(찬성 참가자면 YES, 반대 참가자면 NO — 대칭)은 추가 질문에 답하기 전
+ * (REACTIONS, 아직 답하지도 넘기지도 않음)에는 UNDECIDED(고민 중)까지만 보인다. 답을 전달하면
+ * (followUpAnswered) 원래 규칙표 결과로, "답하지 않고 넘어가기"를 하면 표결과 같은 값(처음
+ * 입장)으로 정해진다. 조건 없이도 같은 편인 임원은 영향이 없다. */
+export function scriptedStances(scenario: Scenario, session: ScriptedStanceSession): Record<ExecMemberId, Stance> {
   if (!STANCE_COMPUTED_STAGES.has(session.stage)) {
     return ALL_UNDECIDED;
   }
@@ -87,12 +99,35 @@ export function scriptedStances(
     conditionIds: latestConfirmedConditionIds(session.opinions),
     executionMode: 'DEFAULT',
     participantStance: session.opinions[session.opinions.length - 1]?.stance ?? null,
+    followUpAnswered: session.followUpAnswered ?? true,
   };
+  const waiting = session.stage === 'REACTIONS' && session.followUpUsed !== true;
   const result: Record<ExecMemberId, Stance> = { ...ALL_UNDECIDED };
   for (const memberId of EXEC_MEMBER_ORDER) {
-    result[memberId] = voteToStance(decideMember(scenario.voteRules[memberId], ctx));
+    const rules = scenario.voteRules[memberId];
+    if (waiting && isGatedByUnanswered(rules, ctx)) {
+      result[memberId] = 'UNDECIDED';
+      continue;
+    }
+    result[memberId] = voteToStance(decideMember(rules, ctx));
   }
   return result;
+}
+
+/** 지금 추가 질문의 답을 기다리느라 "고민 중"에 머문 임원(T110). 현황판의 "답변 뒤 찬성"
+ * 표기와 반응 카드의 "조건은 좋습니다" 문구가 쓴다. scripted 전용이며 REACTIONS 단계에서
+ * 아직 답하지도 넘기지도 않았을 때만 비어 있지 않다. */
+export function membersAwaitingAnswer(scenario: Scenario, session: ScriptedStanceSession): ExecMemberId[] {
+  if (session.stage !== 'REACTIONS' || session.followUpUsed === true || session.opinions.length === 0) {
+    return [];
+  }
+  const ctx: VoteContext = {
+    conditionIds: latestConfirmedConditionIds(session.opinions),
+    executionMode: 'DEFAULT',
+    participantStance: session.opinions[session.opinions.length - 1]?.stance ?? null,
+    followUpAnswered: false,
+  };
+  return EXEC_MEMBER_ORDER.filter((memberId) => isGatedByUnanswered(scenario.voteRules[memberId], ctx));
 }
 
 /** live 임원의 가장 최근 발언(단계 무관, transcript 전체에서 그 임원의 마지막 항목)에

@@ -234,30 +234,50 @@ export const experienceFirstScenario: Scenario = {
       memberId: 'CAIO',
       text: '처음 겪는 상황으로 범위를 좁히면, 데이터가 약한 곳에서만 경험을 앞세우게 됩니다. 범위를 어떻게 나누시겠습니까?',
       bubble: '범위를 어떻게 나누시나요',
+      pendingText:
+        '처음 겪는 상황으로 범위를 좁힌다는 점은 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '범위는 좋습니다. 하나만 더',
     },
     {
       conditionId: 'RECORD',
       memberId: 'CISO',
       text: '판단 이유를 기록해 두면 나중에 그 결정을 다시 확인할 수 있습니다. 어떻게 적을지부터 정하겠습니다.',
       bubble: '이유를 적어 두면 확인됩니다',
+      pendingText:
+        '판단 이유를 남긴다는 점은 좋습니다.',
+      pendingBubble: '기록은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'DATA_VETO',
       memberId: 'CFO',
       text: '데이터가 경고할 때 멈추는 절차를 두면, 숫자를 무시하는 일은 없을 것입니다.',
       bubble: '경고 때 멈추면 안심입니다',
+      pendingText:
+        '데이터가 경고하면 멈춘다는 점은 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '멈춤은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'REVIEW',
       memberId: 'CISO',
       text: '결과를 다시 보는 것까지 더하면, 기록과 함께 판단 기준을 계속 다듬을 수 있습니다.',
       bubble: '다시 보면 기준을 다듬습니다',
+      pendingText:
+        '나중에 다시 본다는 점도 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '기록은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'EXP_ONLY',
       memberId: 'CFO',
       text: '경험만 항상 앞세우면, 데이터가 분명히 경고해도 멈출 방법이 없습니다.',
       bubble: '경고해도 멈출 수 없습니다',
+    },
+    {
+      conditionId: 'EXP_ONLY',
+      memberId: 'CEO',
+      text: '경험만 항상 앞세우면, 데이터를 아예 버리는 셈이라 걱정입니다.',
+      bubble: '데이터를 버리는 셈입니다',
+      pendingText: '경험만 앞세우면 걱정이라는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '걱정은 알겠습니다. 하나만 더',
     },
     {
       conditionId: 'none',

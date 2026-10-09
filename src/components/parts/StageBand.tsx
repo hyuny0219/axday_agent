@@ -28,6 +28,7 @@ import type {
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { firstSentenceClipped } from '../stageText';
 import { bubbleLineOf } from '../bubbleText';
+import { reactionBubble } from '../reactionsFor';
 import { STANCE_LABEL } from '../moodLabel';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
@@ -81,6 +82,8 @@ function scriptedReactionFor(
   scenario: Scenario,
   memberId: ExecMemberId,
   previousConfirmedIds: string[],
+  /** 조건은 맞았지만 추가 질문의 답을 기다리는 임원이면 true(T110) — pendingBubble을 쓴다. */
+  pending = false,
 ): string | null {
   const matches =
     previousConfirmedIds.length === 0
@@ -89,7 +92,10 @@ function scriptedReactionFor(
           (r) => r.memberId === memberId && previousConfirmedIds.includes(r.conditionId),
         );
   const first = matches[0];
-  return first ? (first.bubble ?? bubbleLineOf(first.text)) : null;
+  if (!first) {
+    return null;
+  }
+  return reactionBubble(matches, pending) ?? bubbleLineOf(first.text);
 }
 
 /** 임원 한 명의 이번 단계 말풍선 상태를 계산한다(DESIGN_SPEC.md v1.0 1절 "화면별 상태"). */
@@ -102,6 +108,7 @@ function execSeatOverlay(
   opinions: Opinion[],
   scenario: Scenario,
   chairLine: string | undefined,
+  stance: Stance,
 ): SeatOverlay {
   if (stage === 'BRIEFING' || stage === 'MOTION') {
     if (memberId === 'CEO' && chairLine) {
@@ -136,7 +143,8 @@ function execSeatOverlay(
 
     const lastOpinion = opinions[opinions.length - 1] ?? null;
     const previousConfirmedIds = lastOpinion?.confirmedConditionIds ?? [];
-    const reactionText = scriptedReactionFor(scenario, memberId, previousConfirmedIds);
+    // scripted REACTIONS에서 UNDECIDED는 곧 "조건은 맞았고 답을 기다리는 중"이다(T110, stance.ts).
+    const reactionText = scriptedReactionFor(scenario, memberId, previousConfirmedIds, stance === 'UNDECIDED');
     if (reactionText) {
       return { bubbleKind: 'speech', bubbleText: reactionText, dimmed: false };
     }
@@ -278,6 +286,7 @@ export function StageBand({
             opinions,
             scenario,
             chairLine,
+            stances[memberId],
           );
           return (
             <div

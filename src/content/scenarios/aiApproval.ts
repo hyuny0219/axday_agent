@@ -228,30 +228,50 @@ export const aiApprovalScenario: Scenario = {
       memberId: 'CFO',
       text: '돈 한도를 정하면 잘못 승인되는 돈이 얼마나 되는지 알 수 있습니다. 어디까지 맡길지 숫자로 정합시다.',
       bubble: '한도를 숫자로 정합시다',
+      pendingText:
+        '돈 한도를 정한다는 점은 좋습니다.',
+      pendingBubble: '한도는 좋습니다. 하나만 더',
     },
     {
       conditionId: 'LOG',
       memberId: 'CAIO',
       text: '승인 사유를 남기면 나중에 왜 승인했는지 다시 확인할 수 있습니다. 어떻게 적을지부터 정하겠습니다.',
       bubble: '사유를 남기면 확인됩니다',
+      pendingText:
+        '승인 사유를 남긴다는 점은 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '사유 기록은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'REVIEW',
       memberId: 'CFO',
       text: '일부를 다시 확인하는 절차까지 더하면, 한도 안에서도 잘못된 승인을 걸러낼 수 있습니다.',
       bubble: '일부를 다시 보면 걸러집니다',
+      pendingText:
+        '일부를 다시 확인한다는 점도 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '한도는 좋습니다. 하나만 더',
     },
     {
       conditionId: 'OWNER',
       memberId: 'CISO',
       text: '책임질 사람을 정하면, 잘못된 승인이 나왔을 때 누가 설명할지 분명해집니다.',
       bubble: '책임질 사람이 분명해집니다',
+      pendingText:
+        '책임질 사람을 정한다는 점은 좋습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '책임자는 좋습니다. 하나만 더',
     },
     {
       conditionId: 'FULL_AUTO',
       memberId: 'CISO',
       text: '사람이 보는 과정을 다 없애면, 잘못된 승인이 나와도 아무도 책임지지 못합니다.',
       bubble: '아무도 책임지지 못합니다',
+    },
+    {
+      conditionId: 'FULL_AUTO',
+      memberId: 'CEO',
+      text: '사람 검토를 아예 없애면, 사고가 났을 때 되돌릴 수 없어 걱정입니다.',
+      bubble: '되돌릴 수 없어 걱정입니다',
+      pendingText: '사람 검토를 없애면 위험하다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '위험하다는 말씀, 하나만 더',
     },
     {
       conditionId: 'none',

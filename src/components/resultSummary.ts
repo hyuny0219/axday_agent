@@ -9,7 +9,7 @@
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
 import { EXEC_MEMBER_ORDER, explainBoard, participantDecisive, tally, type TallyResult } from '../domain/voting';
-import { collectConfirmedConditionIds } from './opinionConditions';
+import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
 const NO_REASON_TEXT = '판단 근거 없음';
 
@@ -59,7 +59,10 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
 
   const execRows: ResultSummaryExecRow[] =
     session.mode === 'scripted'
-      ? explainBoard(scenario, finalMotion).map((row) => ({
+      ? explainBoard(scenario, finalMotion, {
+          participantStance: collectParticipantStance(session.opinions),
+          followUpAnswered: session.followUpAnswered,
+        }).map((row) => ({
           memberId: row.memberId,
           vote: row.vote,
           reason: row.reason ?? NO_REASON_TEXT,

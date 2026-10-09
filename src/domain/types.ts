@@ -132,6 +132,12 @@ export interface Session {
   draft: DraftState;
   opinions: Opinion[];
   followUpUsed: boolean;
+  /** 추가 질문에 실제로 답했는지(T110, 2026-10-09 사용자 지시 "처음 추천 문구를 선택해서
+   * 의견전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을
+   * 해줘"). SUBMIT_FOLLOWUP만 true로 만들고 KEEP_PREVIOUS("답하지 않고 넘어가기")는
+   * false로 둔다. 조건이 맞은 임원은 이 값이 true일 때만 참가자 편이 되고, false인 채
+   * 표결에 들어가면 처음 입장(조건 없을 때의 표)으로 돌아간다. */
+  followUpAnswered: boolean;
   /** 후속 질문을 어느 입장 기준으로 보여 줬는지(T93 byStance). 답을 제출하면 둘째 의견의
    * stance와 같고, "답하지 않고 넘어가기"로 건너뛰면 그때 화면에 보인 입장이 여기만 남는다
    * — 회의록이 실제로 본 질문을 기록하기 위해(PR #20 Codex 23차 검토 P2). */

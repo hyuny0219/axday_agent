@@ -102,7 +102,7 @@ function buildFinalVotes(ctx: BoardAgentsContext): BallotOutcome[] {
   }
   const opinions = ctx.session.opinions;
   const participantStance = opinions[opinions.length - 1]?.stance ?? null;
-  return decideBoard(ctx.scenario, motion, participantStance).map((ballot) => ({
+  return decideBoard(ctx.scenario, motion, participantStance, ctx.session.followUpAnswered).map((ballot) => ({
     roleId: ballot.memberId as ExecMemberId,
     status: 'answered',
     ballot,

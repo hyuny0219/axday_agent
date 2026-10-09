@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
-import { liveStances, persuasionStamp, scriptedStances } from '../../src/domain/stance';
+import { liveStances, membersAwaitingAnswer, persuasionStamp, scriptedStances } from '../../src/domain/stance';
 import type { Ballot, Opinion, Session, Statement } from '../../src/domain/types';
 
 const scenario = anonBoardScenario;
@@ -117,6 +117,53 @@ describe('scriptedStances의 OPINIONS 출발 성향(안건①·②, PR #13 Codex
     expect(scriptedStances(experienceFirstScenario, sessionAt('REACTIONS', opinions)).CAIO).toBe(
       'AGAINST',
     );
+  });
+});
+
+// T110: 조건이 맞아도 1차 반응(REACTIONS, 아직 답하지도 넘기지도 않음)에서는 "고민 중"까지만 움직이고,
+// 추가 질문에 답하면(followUpAnswered) 찬성, 답하지 않고 넘어가면 표결과 같은 반대가 된다.
+describe('scriptedStances의 두 단계 설득(T110)', () => {
+  const ai = aiApprovalScenario;
+  const forOpinion = (ids: string[]): Opinion => ({ ...opinion(ids), stance: 'FOR' });
+  const againstOpinion = (ids: string[]): Opinion => ({ ...opinion(ids), stance: 'AGAINST' });
+  const ALL = ['LIMIT', 'REVIEW', 'LOG', 'OWNER'];
+
+  it('1차 반응: 조건이 모두 맞아도 CFO·CAIO·CISO는 고민 중이고 CEO는 처음부터 찬성이다', () => {
+    const session = { stage: 'REACTIONS' as const, opinions: [forOpinion(ALL)], followUpUsed: false, followUpAnswered: false };
+    expect(scriptedStances(ai, session)).toEqual({ CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' });
+    expect(membersAwaitingAnswer(ai, session)).toEqual(['CFO', 'CAIO', 'CISO']);
+  });
+
+  it('조건이 모자라 원래 반대인 임원은 고민 중이 아니라 반대 그대로다', () => {
+    const session = { stage: 'REACTIONS' as const, opinions: [forOpinion(['LOG'])], followUpUsed: false, followUpAnswered: false };
+    expect(scriptedStances(ai, session)).toEqual({ CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' });
+    expect(membersAwaitingAnswer(ai, session)).toEqual(['CAIO']);
+  });
+
+  it('답변을 전달한 뒤(MOTION)에는 조건이 맞은 임원이 모두 찬성이다', () => {
+    const session = { stage: 'MOTION' as const, opinions: [forOpinion(ALL), forOpinion(ALL)], followUpUsed: true, followUpAnswered: true };
+    expect(scriptedStances(ai, session)).toEqual({ CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' });
+    expect(membersAwaitingAnswer(ai, session)).toEqual([]);
+  });
+
+  it('답하지 않고 넘어가면(MOTION·VOTE) 고민 중이던 임원은 반대로 확정된다', () => {
+    const base = { opinions: [forOpinion(ALL)], followUpUsed: true, followUpAnswered: false };
+    const expected = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' };
+    expect(scriptedStances(ai, { ...base, stage: 'MOTION' })).toEqual(expected);
+    expect(scriptedStances(ai, { ...base, stage: 'VOTE' })).toEqual(expected);
+  });
+
+  it('반대 참가자(대칭): 조건으로 돌아설 CEO가 1차 반응에서는 고민 중, 답하면 반대, 넘어가면 찬성 그대로', () => {
+    const opinions = [againstOpinion(['FULL_AUTO'])];
+    expect(scriptedStances(ai, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false }).CEO).toBe('UNDECIDED');
+    expect(scriptedStances(ai, { stage: 'MOTION', opinions: [...opinions, ...opinions], followUpUsed: true, followUpAnswered: true }).CEO).toBe('AGAINST');
+    expect(scriptedStances(ai, { stage: 'MOTION', opinions, followUpUsed: true, followUpAnswered: false }).CEO).toBe('FOR');
+  });
+
+  it('값을 생략하면 답을 이미 받은 것으로 본다(의견 단계·규칙표 확인용 호출)', () => {
+    expect(scriptedStances(ai, { stage: 'REACTIONS', opinions: [forOpinion(ALL)] })).toEqual({
+      CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR',
+    });
   });
 });
 

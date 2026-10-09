@@ -7,7 +7,8 @@
 import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
-import { reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from './reactionsFor';
+import { membersAwaitingAnswer } from '../domain/stance';
+import { reactionBodyText, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from './reactionsFor';
 import { chairMotionLine } from './chairMotionLine';
 import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
@@ -124,9 +125,14 @@ function scriptedReactionText(
   reactions: Reaction[],
   opposition: string | undefined,
   holdReason: string | undefined,
+  pending: boolean,
 ): string {
   if (opposition !== undefined) {
     return opposition;
+  }
+  // T110: 1차 반응에서 답을 기다리는 임원은 반응 카드와 같은 pendingText를 쓴다.
+  if (pending && reactions.length > 0) {
+    return reactionBodyText(reactions, true);
   }
   // T101: 입장을 유지하는 임원은 반응 카드와 같은 holdReasons(역할별 유지 이유)를 쓴다.
   return reactions.length > 0 ? reactions[0]?.text ?? NO_REACTION_TEXT : holdReason ?? NO_REACTION_TEXT;
@@ -216,6 +222,12 @@ export function buildMinutes(
         });
       }
     } else {
+      const awaitingIds = membersAwaitingAnswer(scenario, {
+        stage: 'REACTIONS',
+        opinions: [firstOpinion],
+        followUpUsed: false,
+        followUpAnswered: false,
+      });
       for (const roleId of EXEC_MEMBER_ORDER) {
         const reactions = reactionsFor(scenario, roleId, firstOpinion.confirmedConditionIds);
         const opposition = oppositionReactionText(
@@ -227,7 +239,7 @@ export function buildMinutes(
         entries.push({
           id: `reaction-${roleId}`,
           speaker: roleId,
-          text: scriptedReactionText(reactions, opposition, scenario.holdReasons?.[roleId]),
+          text: scriptedReactionText(reactions, opposition, scenario.holdReasons?.[roleId], awaitingIds.includes(roleId)),
           kind: 'speech',
           timeLabel: TIME_UNKNOWN,
         });

@@ -465,6 +465,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                             row.memberId,
                             finalMotion.effectiveConditionIds,
                             persuasionTally?.target ?? participantStance,
+                            session.followUpAnswered,
                           );
                           return note ? (
                             <span

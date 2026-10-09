@@ -108,6 +108,7 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     draft: EMPTY_DRAFT_STATE,
     opinions: [],
     followUpUsed: false,
+    followUpAnswered: false,
     followUpStance: null,
     assistantActions: [],
     transcript: { revision: 0, statements: [] },
@@ -231,6 +232,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         opinions: [...session.opinions, opinion],
         draft: EMPTY_DRAFT_STATE,
         followUpUsed: true,
+        followUpAnswered: true,
         followUpStance: opinion.stance ?? session.followUpStance,
       });
     }
@@ -243,6 +245,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ...session,
         stage: 'MOTION',
         followUpUsed: true,
+        followUpAnswered: false,
         followUpStance: action.stance ?? session.followUpStance,
       });
     }
@@ -272,7 +275,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         });
       }
       const participantStance = session.opinions[session.opinions.length - 1]?.stance ?? null;
-      const ballots = decideBoard(action.scenario, finalMotion, participantStance);
+      const ballots = decideBoard(action.scenario, finalMotion, participantStance, session.followUpAnswered);
       return withNoWarnings({
         ...session,
         stage: 'VOTE',
