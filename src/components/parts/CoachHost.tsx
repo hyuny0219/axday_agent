@@ -37,7 +37,8 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
       return;
     }
     function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      // 팝업(role=dialog)이 열려 있으면 Esc는 팝업이 쓴다 — 안내까지 같이 닫지 않는다.
+      if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) {
         setReopenedScreen(null);
       }
     }
