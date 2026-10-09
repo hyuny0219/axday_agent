@@ -577,6 +577,7 @@ export function DiscussScreen({
       {evidenceOpen && (
         <EvidenceDialog
           evidence={scenario.evidence}
+          scenario={scenario}
           caseTag={caseTag}
           statements={dialogStatements}
           onClose={() => setEvidenceOpen(false)}

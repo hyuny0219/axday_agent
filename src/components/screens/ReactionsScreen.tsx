@@ -91,6 +91,8 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
+import { statementHighlightTerms } from '../highlightTerms';
+import { HighlightText } from '../parts/HighlightText';
 import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 // T89 "다시 답하기"(2/2)는 DiscussScreen과 같은 종이·입장 선택·문구 그리드 CSS를
@@ -752,6 +754,11 @@ export function ReactionsScreen({
                   const badgeText = changed
                     ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
                     : '유지';
+                  const reactionBody =
+                    opposition ??
+                    (reactions.length > 0
+                      ? reactions.map((reaction) => reaction.text).join(' ')
+                      : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.');
                   const causeText =
                     changed && !opposition ? changeCauseLabel(scenario, reactions) : null;
                   return (
@@ -770,10 +777,10 @@ export function ReactionsScreen({
                         </span>
                       </div>
                       <p className="reaction-card__text reaction-card__text--full">
-                        {opposition ??
-                          (reactions.length > 0
-                            ? reactions.map((reaction) => reaction.text).join(' ')
-                            : scenario.holdReasons?.[memberId] ?? '앞서 말씀드린 입장 그대로입니다.')}
+                        <HighlightText
+                          text={reactionBody}
+                          terms={statementHighlightTerms(scenario, reactionBody)}
+                        />
                       </p>
                       {causeText && (
                         <p
@@ -792,7 +799,12 @@ export function ReactionsScreen({
               <span className="reactions-screen__followup-label">
                 추가 질문 · {followUpPrompt.askedBy}가 묻습니다
               </span>
-              <p className="reactions-screen__followup-text">{followUpPrompt.question}</p>
+              <p className="reactions-screen__followup-text">
+                <HighlightText
+                  text={followUpPrompt.question}
+                  terms={statementHighlightTerms(scenario, followUpPrompt.question)}
+                />
+              </p>
             </div>
           </div>
         </div>
@@ -993,6 +1005,7 @@ export function ReactionsScreen({
       {evidenceOpen && (
         <EvidenceDialog
           evidence={scenario.evidence}
+          scenario={scenario}
           caseTag={caseTag}
           statements={dialogStatements}
           statementsColumnLabel="임원이 한 말(의견 + 반응)"

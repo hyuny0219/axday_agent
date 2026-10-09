@@ -24,7 +24,7 @@
 // 위 껍데기(딤·포커스 트랩·Esc·스크롤 잠금·도장·제목·닫기·하단 안내)를 공용
 // DialogShell(parts/DialogShell.tsx)로 떼어내 AssistantPanel과 함께 쓴다. 이 파일은
 // 이제 EXHIBIT·STATEMENTS 2열 본문만 그린다 — 동작·testid는 전혀 바뀌지 않았다.
-import type { EvidenceCard as EvidenceCardData, ExecMemberId } from '../../content/types';
+import type { EvidenceCard as EvidenceCardData, ExecMemberId, Scenario } from '../../content/types';
 import type { Stance, StatementStage } from '../../domain/types';
 import { EvidenceGrid } from './EvidenceGrid';
 import { DialogShell } from './DialogShell';
@@ -61,6 +61,8 @@ export interface EvidenceDialogStatementView {
 
 export interface EvidenceDialogProps {
   evidence: EvidenceCardData[];
+  /** 있으면 자료 카드 해석의 핵심 말을 굵게 표시한다(T105). */
+  scenario?: Scenario;
   /** 좌상단 CASE 칩(시안 "CASE 02"). */
   caseTag: string;
   /** STATEMENTS 열. 비어 있으면(BRIEFING) 빈 상태 한 줄을 보여준다. */
@@ -88,6 +90,7 @@ const STATUS_TEXT: Record<'pending' | 'failed', string> = {
 
 export function EvidenceDialog({
   evidence,
+  scenario,
   caseTag,
   statements,
   statementsColumnLabel = '임원이 한 말(임원 의견)',
@@ -106,7 +109,7 @@ export function EvidenceDialog({
       <div className="evidence-dialog__body">
         <div className="evidence-dialog__column evidence-dialog__column--exhibits">
           <span className="evidence-dialog__column-label">자료 ①~④ · 판단에 참고할 자료</span>
-          <EvidenceGrid evidence={evidence} />
+          <EvidenceGrid evidence={evidence} scenario={scenario} />
         </div>
         <div className="evidence-dialog__column evidence-dialog__column--statements">
           <span className="evidence-dialog__column-label">{statementsColumnLabel}</span>
