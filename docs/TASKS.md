@@ -10,8 +10,10 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T110 | 진행 중 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게: 1차 반응에서는 조건이 맞아도 '고민 중'까지만, 추가 질문에 답해야(답하지 않고 넘어가면 아님) 찬성으로 바뀜(scripted·live 모두)(2026-10-09 사용자 지시). 상세는 아래 T110 카드 |
+| T111 | 진행 중 | 버튼을 **B안(요원 장비 패널) 모양 + E안 색(주황)**으로 변경(D안 대체)(2026-10-09 사용자 지시). 상세는 아래 T111 카드 |
 | T109 | 진행 중 | AI 비서실장 세 기능 중 **하나만 써도** 의견 전달이 열리게(T97 완화, 2026-10-09 사용자 지시). 팝업 소개·힌트·코치·가이드 문구 통일. 상세는 아래 T109 카드 |
-| T108 | 완료 | 버튼 디자인을 E안(라벨 테이프)에서 **D안 '밀랍 봉인 봉투'**로 변경(2026-10-09 사용자 재선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp D 보드). 상세는 아래 T108 카드 |
+| T108 | 완료(T111에서 대체) | 버튼 디자인을 E안(라벨 테이프)에서 **D안 '밀랍 봉인 봉투'**로 변경(2026-10-09 사용자 재선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp D 보드). 상세는 아래 T108 카드 |
 | T107 | 완료(T108에서 D안으로 대체) | 버튼 디자인 E안 '라벨 테이프' 전 화면 적용(주황 유지, 양끝 사선 컷·위아래 가는 검은 선·펀치 구멍; 보조=테두리, 잠김=점선)(2026-10-09 사용자 선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp E 보드). 상세는 아래 T107 카드 |
 | T106 | 완료 | 코치 말풍선을 닫아도 작은 '안내' 아이콘으로 남겨 언제든 다시 볼 수 있게(2026-10-09 사용자 지시). 상세는 아래 T106 카드 |
 | T105 | 완료 | 근거 자료 카드·임원 의견/반응 카드의 중요한 말 강조(브리핑과 같은 `.key-term`): 안건별 강조어 + 조건 이름 + 숫자·단위 자동 강조, live 발언도 적용, 근거 자료 팝업의 임원 발언 열은 제거(2026-10-09 사용자 지시). 상세는 아래 T105 카드 |
@@ -90,6 +92,45 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T110 난이도 조절 — 첫 의견만으로 전원 설득되지 않게(추가 질문 답변이 설득을 완성)
+
+- 목표(2026-10-09 사용자 지시): "처음 추천 문구를 선택해서 의견 전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해 줘." 설득은 두 단계 대화로 완성된다 — **1차 반응(REACTIONS 1/2)에서는 조건이 맞아도 '반대 → 고민 중'까지만** 움직이고, **추가 질문에 답해야(2/2 '답변 전달')** 조건이 맞는 임원이 '찬성'으로 바뀐다. '답하지 않고 넘어가기'면 고민 중인 임원은 표결에서 반대(NO)표를 던진다. 처음부터 같은 편인 임원(①CEO)은 그대로.
+- 읽을 것: `src/domain/{stance,voting,session,types}.ts`(scriptedStances·decideBoard·VoteContext·SUBMIT_FOLLOWUP/KEEP_PREVIOUS·followUpStance), `src/content/types.ts`(VoteRule·Reaction·holdReasons), `src/content/scenarios/{aiApproval,experienceFirst}.ts`(reactions·followUp 문구), `src/components/{reactionsFor,persuasionSummary,conditionRecommendation}.ts`, `PersuasionBoard`, `server/prompts/{common,version}.ts`·`server/handlers/{round,vote}.ts`·`server/validate.ts`(live 프롬프트·요청 필드), `scripts/eval-set*.{json,ts}`·`docs/eval/tuning-v11.md`, `docs/SCENARIO_*.md`(표결 분기표), `docs/FACILITATOR_GUIDE.md`, `e2e/{stance,opposition,flow-full,reactions,noscroll}.spec.ts`, `tests/domain/*`.
+- 만들 것:
+  1. **세션 상태**: `session.followUpAnswered: boolean`(SUBMIT_FOLLOWUP → true, KEEP_PREVIOUS → false, 초기 false). publicPayload·서버 요청(vote·round REACTIONS 이후)에 함께 보낸다.
+  2. **scripted 입장(stance.ts)**: REACTIONS 1/2에서 조건으로 YES가 되는 임원은 `UNDECIDED`('고민 중')로 표시하고 반응 문구는 "조건은 좋습니다. 하나만 더 묻겠습니다" 톤의 **새 `reactions[].pendingText`**(안건별·조건별, 쉬운 말)를 쓴다 — 기존 "바뀜" 배지는 "반대 → 고민 중". 2/2에서 답변을 전달하면(`followUpAnswered`) 조건이 맞는 임원이 FOR로 바뀌고 반응 카드(답변 뒤 반응이 있으면)·현황판에 "고민 중 → 찬성". 참가자가 반대 입장이면 대칭(찬성 → 고민 중 → 반대).
+  3. **scripted 표결(voting.ts)**: `VoteContext.followUpAnswered`. 조건 규칙상 YES인 임원이라도 `followUpAnswered`가 false면 NO(①CEO처럼 조건 없이도 YES인 임원은 영향 없음). `requiredConditionsFor`·조건 추천·"한 끗 차이"는 "조건 + 답변"을 함께 안내("조건은 맞으니 추가 질문에 답하면 찬성").
+  4. **live(프롬프트 v12)**: `server/prompts/common.ts`의 REACTIONS 규칙에 "첫 반응에서는 참가자 조건이 충분해도 입장은 '고민 중'(UNDECIDED)까지만 — 찬성 확정은 추가 질문에 답한 뒤" 명시, VOTE 규칙에 "참가자가 추가 질문에 답하지 않았으면(followUpAnswered=false) 고민 중이던 임원은 반대표" 명시. 요청 스키마(`server/validate.ts`)에 `followUpAnswered` 추가, `PROMPT_VERSION` v12, `scripts/eval-set.json`에 "답변 안 함" 케이스 2개 추가, `docs/eval/tuning-v12.md`(mock 기준 요약만, live 실측은 사용자 승인 후).
+  5. **화면**: REACTIONS 1/2 "답하러 가기"가 주 버튼, "답하지 않고 넘어가기"는 보조로 더 작게(지금 구조 유지) + 코치 REACTIONS 안내 "답해야 찬성으로 바뀝니다" 한 줄 추가. 현황판 행 문구에 "답변 뒤 찬성" 상태 표기. 결과 요약·"한 끗 차이"도 새 규칙과 모순 없게.
+  6. **문서**: DESIGN_SPEC "## T110 — 두 단계 설득" 단락(상태표·표결 규칙), SCENARIO_*.md 표결 분기표에 "추가 질문 답변" 열, FACILITATOR_GUIDE(진행 요원이 "답하러 가기"를 권하는 멘트), TASKS 행.
+  7. **테스트·e2e**: `tests/domain/{stance,voting,session}.test.ts`(고민 중 단계·답변 뒤 FOR·미답변 NO·반대 대칭), `tests/components/*`(현황판·반응 카드·결과), `tests/server/*`(followUpAnswered 스키마·프롬프트 v12 문구), e2e `stance`·`opposition`·`flow-full`·`reactions`·`noscroll`·`screenshots` 갱신 — **"추천 문구 전부 + 답하지 않고 넘어가기 → 실패 도장"**과 **"답변 전달 → 성공 도장"** 두 시나리오를 반드시 추가.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`, `server/`, `scripts/`.
+- 하지 말 것: 조건 라벨·추천 문구 의미 변경, 영문·붉은 박스, 버튼 스타일(T111).
+- 완료 확인: `npm run check`, e2e 1080·720 각각 PASS, 720 `reactions.png`·`result.png`·`result-reject.png` Read.
+- 크기: L — 커밋은 1·2·3 → 4 → 5 → 6·7.
+
+---
+
+## T111 버튼을 B안 모양 + E안 색으로(D안 대체)
+
+- 목표(2026-10-09 사용자 지시): "버튼은 B 디자인에 E 색상으로." 시안 B 보드(요원 장비 패널: 네 모서리 꺾쇠·넓은 자간·이중 테두리)의 모양에, 청록(#28d9f0) 대신 **E안 주황(--amber #e0a34a)**을 쓴다. 시안 파일: `scratchpad/buttons/project/B_Panel.dc.html`(수치), 색만 치환.
+- 읽을 것: T108이 바꾼 `src/styles/screens/shell.css`(`.cta` 계열·`::before` 봉인·`outline` 점선·`.cta--solid`·입장 탭·1280 분기), `coach.css`(`.coach__ack`), `discuss.css`·`reactions.css`(T108이 늘린 토글·전달 폭 — B안은 봉인이 없으니 원래 폭으로 되돌릴 수 있음), `docs/design/DESIGN_SPEC.md` T107·T108 단락, `e2e/style-consistency.spec.ts`.
+- 디자인 수치(B 보드 → E 색):
+  - **주 버튼(.cta, 어두운 바탕)**: 바탕 #e0a34a, 글자 #0b0d10, 2px 실선 #e0a34a, **이중 테두리** `box-shadow: 0 0 0 4px #0b0d10, 0 0 0 6px #8a5f12`(바깥 홈), **네 모서리 꺾쇠** 12px(`::before/::after` 두 개 + 자식 span 두 개 대신 — 가상 요소 2개로 위 두 모서리, `background: linear-gradient` 또는 `outline`으로 아래 두 모서리; 구현 방식은 자유, 결과는 네 모서리 L자 2px 주황), 글자 자간 0.16em, 좌우 패딩 30px. `:active`는 bottom shadow 제거.
+  - **보조 버튼(.cta--secondary)**: 바탕 #0f1620, 글자 #e0a34a, 2px 실선 #e0a34a, 자간 0.12em, 꺾쇠 없음.
+  - **잠긴 버튼(:disabled, .cta--outline)**: 바탕 #0f1620, 글자 #7a766d, 2px 실선 #4a4540, 자간 0.16em.
+  - **작은 글자 버튼(건너뛰기)**: 글자 연한 주황 #f0c27a, 앞뒤 "[ " " ]" 글리프 없이 자간 0.1em(영문·기호 금지 규칙).
+  - **종이 위 주 버튼(.cta--solid: 근거 자료 보기·팝업 닫기·팝업 안 기능 버튼·코치·INTRO 확인·ATTRACT 체험 시작)**: 바탕 #1b1a17, 글자 #ece7dc, 이중 테두리 `0 0 0 3px #ece7dc, 0 0 0 5px #1b1a17`, 자간 0.14em, 꺾쇠 없음(종이 위는 B 보드 "종이용 변형"대로 먹색).
+  - **입장 탭**: 선택됨 = 바탕 #1b1a17 + 글자 #e0a34a + 2px #1b1a17, 미선택 = 투명 + 2px #1b1a17 + 글자 #1b1a17, 자간 0.1em.
+  - **조건 칩·안내 아이콘·운영 버튼**은 바꾸지 않는다. 1280×720: 꺾쇠 10px, 이중 테두리 3/5px, 패딩 20px.
+- 만들 것: `shell.css` `.cta` 계열 교체(봉인·점선·T108 폭 조정 되돌리기 — 토글 225/180/150, 전달 250/200), coach/dialogShell/assistant/discuss/reactions 확인, DESIGN_SPEC "## T111" 단락 + T108 대체 주석, TASKS 행, e2e style-consistency·viewport-fit·noscroll·a11y 통과, `UPDATE_SCREENSHOTS=1` 전체 갱신.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 버튼 높이·720 레이아웃 변경, 영문·기호 글리프, 붉은색.
+- 완료 확인: `npm run check`, e2e 1080·720 각각 PASS, 1080·720 전수 스크린샷 Read(꺾쇠·이중 테두리·주황이 보이고 잘림 없음, 720 reactions-answer 세 버튼 한 줄).
+- 크기: M.
 
 ---
 
