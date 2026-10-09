@@ -28,7 +28,6 @@
   /* 2026-10-09 사용자 지시: 팝업 배경을 더 키워 여유 있게. */
   width: 1360px;
   max-width: 94vw;
-  min-height: 560px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -42,9 +41,8 @@
 @media (max-width: 1280px) {
   .intro-screen__paper {
     width: 1000px;
-    min-height: 420px;
     gap: 18px;
-    padding: 40px 52px;
+    padding: 44px 56px;
   }
 }
 

@@ -255,7 +255,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
               {persuasionTally && persuasionTally.total > 0 && persuasionTally.alreadySame.length > 0
                 ? ` · 처음부터 같은 편 ${persuasionTally.alreadySame.length}명은 세지 않음`
                 : ''}
-              {persuasion.earned ? ' — 설득 도장을 받았습니다' : ' · 3석부터 설득 도장을 받습니다'}
+              {persuasion.earned ? ' — 성공 도장을 받았습니다' : ' — 실패 도장 · 3석부터 성공입니다'}
               {resultSummary?.participant.decisive ? '. 이사님의 한 표가 결과를 정했습니다' : ''}
             </p>
           )}
@@ -373,30 +373,25 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   {tallyResult.counts.NO}
                 </span>
               </div>
-              {persuasion &&
-                (persuasion.earned ? (
-                  <div
-                    className="result-stamp result-stamp--persuasion"
-                    data-testid="persuasion-stamp"
-                    style={{
-                      animationDelay: `${skip ? 0 : PERSUASION_STAMP_DELAY_SECONDS}s`,
-                    }}
-                  >
-                    <span className="result-stamp__case" aria-hidden="true">
-                      임원 설득
-                    </span>
-                    <span className="result-stamp__text">설득 도장</span>
-                    <span className="result-stamp__meta" aria-hidden="true">
-                      같은 표 {persuasion.sameVoteSeats}석
-                    </span>
-                  </div>
-                ) : (
-                  <p className="result-bonus-missed" data-testid="persuasion-stamp-missed">
-                    설득 도장은 다음 기회에
-                    <br />
-                    같은 표 {persuasion.sameVoteSeats}석 · 3석부터
-                  </p>
-                ))}
+              {persuasion && (
+                // 2026-10-09 사용자 지시: "AI 임원들을 설득해야 성공이므로 설득 도장 말고 성공/실패
+                // 도장으로". 받았으면 "성공", 못 받았으면 같은 자리에 "실패" 도장(흐린 잉크).
+                <div
+                  className={`result-stamp result-stamp--persuasion${persuasion.earned ? '' : ' result-stamp--fail'}`}
+                  data-testid={persuasion.earned ? 'persuasion-stamp' : 'persuasion-stamp-missed'}
+                  style={{
+                    animationDelay: `${skip ? 0 : PERSUASION_STAMP_DELAY_SECONDS}s`,
+                  }}
+                >
+                  <span className="result-stamp__case" aria-hidden="true">
+                    임원 설득
+                  </span>
+                  <span className="result-stamp__text">{persuasion.earned ? '성공' : '실패'}</span>
+                  <span className="result-stamp__meta" aria-hidden="true">
+                    같은 표 {persuasion.sameVoteSeats}석{persuasion.earned ? '' : ' · 3석부터'}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

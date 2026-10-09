@@ -25,12 +25,12 @@ export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
   'AI 임원들을 설득',
   '같은 편',
   '같은 표가 3석 이상',
-  '설득 도장',
+  '성공 도장',
 ];
 
 // 2026-10-09 사용자 지시: "성공 기준은 특별 이사의 의견으로 AI 임원들을 설득시켜 같은 편으로 만드는 것".
 const SUCCESS_TEXT =
-  '특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것입니다. 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다.';
+  '특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것입니다. 이사님을 포함해 같은 표가 3석 이상이면 ‘성공 도장’을, 아니면 ‘실패 도장’을 받습니다.';
 
 export function IntroScreen({ onStart }: IntroScreenProps) {
   return (

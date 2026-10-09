@@ -203,6 +203,13 @@
   font-size: 16px;
 }
 
+/* 실패 도장(2026-10-09 사용자 지시 성공/실패 도장): 같은 자리·크기에 흐린 잉크. */
+.result-stamp--fail {
+  border-color: var(--ink-muted);
+  color: var(--ink-muted);
+  opacity: 0.85;
+}
+
 @keyframes result-stamp-in {
   from {
     opacity: 0;

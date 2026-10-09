@@ -55,7 +55,7 @@ export const COACH_SCREENS: readonly CoachScreenCopy[] = [
     step: 5,
     title: '마지막 표결입니다',
     keys: ['표결'],
-    lines: ['찬성·반대 도장 중 하나를 고르고 확정합니다.', '같은 표가 3석 이상이면 설득 도장을 받습니다.'],
+    lines: ['찬성·반대 도장 중 하나를 고르고 확정합니다.', '같은 표가 3석 이상이면 성공 도장, 아니면 실패 도장입니다.'],
   },
   {
     step: 6,
