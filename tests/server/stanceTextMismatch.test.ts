@@ -157,6 +157,14 @@ describe('declaredDirection(T115)', () => {
       ['반대하는 쪽으로 하겠습니다.', 'AGAINST'], ['찬성하기로 했다고 들었습니다.', null], ['부결시키기로 했다는 소식입니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('처격 단서가 뒤 어절 규칙보다 우선(Codex 78차)', () => {
+    for (const [text, expected] of [
+      ['협상에서 지면 의견을 바꿔 반대하겠습니다.', null], ['그 편에 서면 결정을 내리고 찬성하겠습니다.', null],
+      ['이 안건을 서면 결의로 승인합니다.', 'FOR'], ['서면 의견으로 반대합니다.', 'AGAINST'],
+      ['로그를 켜면 자료를 확인해 찬성하겠습니다.', null], ['협상에서 지면 반대하겠습니다.', null],
+      ['비대면 회의에서 찬성합니다.', 'FOR'], ['회의에서 비대면 방식으로 찬성합니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

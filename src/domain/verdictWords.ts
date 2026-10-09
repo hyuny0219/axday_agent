@@ -302,10 +302,19 @@ function hasConditionalMyeon(sentence: string): boolean {
   for (let i = 0; i < words.length; i += 1) {
     const word = (words[i] ?? '').replace(/[,、]+$/, '');
     if (word.length < 2 || !word.endsWith('면')) continue;
-    // (-1) 동사 활용과 형태가 같은 명사는 목록으로만 구분할 수 있어 의도적으로 목록을 둔다. 단, 목록에 있어도 **명사 문맥**
-    // (뒤 어절이 명사·조사 결합)일 때만 명사로 확정한다("이 안건을 서면 결의로 승인합니다"). 뒤가 바로 용언·선언이거나 앞 어절이
-    // 처격(에서·에)이면 조건으로 넘긴다("협상에서 지면 반대하겠습니다"). '내면'은 "돈을 내면"과 구분할 수 없어 목록에 넣지 않는다.
-    if (MYEON_KNOWN_NOUNS.includes(word) && MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '') && !/에서?$/.test(words[i - 1] ?? '')) continue;
+    // 규칙 순서(앞쪽에서 판정이 나면 뒤 규칙은 보지 않는다):
+    //   (-2) 3음절 이상 알려진 명사(비대면·다방면)는 동사 활용이 불가능해 항상 명사.
+    //   (-1) 2음절 알려진 명사(서면·대면·지면·화면 …, 동사 활용과 형태가 같아 목록으로만 구분 가능 — 의도적 목록):
+    //        앞 어절이 처격(에·에서)이면 뒤 어절이 명사 결합이어도 조건("협상에서 지면 의견을 바꿔 …");
+    //        그렇지 않고 뒤 어절이 명사 결합이면 명사("이 안건을 서면 결의로 …"; 앞 어절이 '을'이어도 이 조합만은 명사).
+    //   (0) 2음절 어절 앞이 을·를로 끝나면 조건 확정("로그를 켜면").
+    //   (1) 2음절 동사 어간 + 앞 어절 을·를·에·로·서·게·히 → 조건 확정, (2) 3음절 이상 + 동사 어간 → 조건,
+    //   (3) 뒤 어절 명사 결합 → 명사, (4) 그 밖 → 조건. '내면'은 "돈을 내면"과 구분할 수 없어 목록에 넣지 않는다.
+    if (MYEON_KNOWN_NOUNS.includes(word)) {
+      if (word.length >= 3) continue;
+      if (/에서?$/.test(words[i - 1] ?? '')) return true;
+      if (MYEON_NOUN_FOLLOWER.test(words[i + 1] ?? '')) continue;
+    }
     const prev = word[word.length - 2] ?? '';
     const finalConsonant = finalConsonantIndex(prev);
     // (a) ㄹ이 아닌 자음 받침 + 면은 명사다: 용언은 자음 받침 뒤에 "으면"이 온다(다방면·전면·국면·정면).
