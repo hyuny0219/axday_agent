@@ -93,6 +93,8 @@ import { membersAwaitingAnswer, scriptedStances } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
+import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
@@ -594,6 +596,18 @@ export function ReactionsScreen({
   // 쪽(side)이 있으면 그것을, 없으면 참가자의 최근 의견 입장을 쓴다.
   const boardParticipantStance = side ?? lastOpinion?.stance ?? null;
 
+  // T113: 다음 할 일 점선. 1/2와 2/2는 다른 범위라 단계가 바뀌면 6초 지연을 새로 센다.
+  const gate = useFocusGate(`reactions-${step}`);
+  const answerStep = reactionsAnswerNextStep({
+    sideChosen: side !== null,
+    hasAnswer: textValue.trim() !== '',
+    canSubmit,
+  });
+  const firstOptionIndex = scenario.followUp.options.findIndex((option) => {
+    const optionSide = option.side ?? 'FOR';
+    return !option.keepPrevious && (optionSide === 'BOTH' || optionSide === side);
+  });
+
   if (step === 'listen') {
     return (
       <>
@@ -613,6 +627,7 @@ export function ReactionsScreen({
             onClick={onAdvanceStep}
             disabled={listenLocked}
             data-testid="reactions-advance"
+            {...nextStepAttr(gate.visible && reactionsListenNextStep({ locked: listenLocked }) === 'advance')}
             aria-describedby={listenLocked ? 'reactions-advance-why' : undefined}
           >
             {listenLocked ? '임원 반응을 듣는 중…' : '답하러 가기 ▶'}
@@ -828,6 +843,7 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
+            {...nextStepAttr(gate.visible && answerStep === 'submit')}
             aria-describedby={!canSubmit ? 'reactions-submit-why' : undefined}
           >
             답변 전달 ▶
@@ -856,6 +872,7 @@ export function ReactionsScreen({
           <div
             className="side-select"
             data-testid="reactions-side-select"
+            {...nextStepAttr(gate.visible && answerStep === 'side')}
           >
             <button
               type="button"
@@ -909,6 +926,7 @@ export function ReactionsScreen({
                     selected={selectedOptionIds.includes(String(index))}
                     onToggle={() => handleToggleOption(index)}
                     testId={`followup-option-${index}`}
+                    nextStep={gate.visible && answerStep === 'option' && index === firstOptionIndex}
                     disabled={pendingOptionIndex !== null}
                   />
                 );

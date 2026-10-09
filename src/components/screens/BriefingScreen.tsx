@@ -15,6 +15,8 @@
 // 요약 카드가 빠지며 생기는 종이 아래 여백은 그대로 종이 바탕으로 둔다.
 import { useState } from 'react';
 import type { Scenario } from '../../content/types';
+import { briefingNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { HighlightText } from '../parts/HighlightText';
 import '../../styles/screens/briefing.css';
@@ -30,6 +32,8 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 비활성"): 근거 자료 팝업을 한 번 열어 닫기 전까지 "의견 듣기 ▶"를 잠근다. 다시
   // 열어도(두 번째부터) 이미 본 것으로 유지한다.
   const [evidenceSeen, setEvidenceSeen] = useState(false);
+  const gate = useFocusGate('briefing');
+  const nextStep = briefingNextStep({ evidenceSeen });
 
 
   function handleCloseEvidence() {
@@ -56,6 +60,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           className="cta briefing-screen__cta"
           onClick={onNext}
           disabled={!evidenceSeen}
+          {...nextStepAttr(gate.visible && nextStep === 'next')}
           aria-describedby={!evidenceSeen ? 'briefing-next-why' : undefined}
         >
           의견 듣기 ▶
@@ -108,6 +113,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
               className="cta cta--solid"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
+              {...nextStepAttr(gate.visible && nextStep === 'evidence')}
             >
               근거 자료 보기 · 자료 4장
             </button>

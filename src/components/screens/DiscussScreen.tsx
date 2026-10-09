@@ -39,6 +39,8 @@ import {
 } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
+import { discussNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
@@ -179,6 +181,14 @@ export function DiscussScreen({
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
+  // T113: 다음 할 일 점선 — 입장 → 추천 문구(글이 아직 없을 때) → 비서실장 → 의견 전달.
+  const gate = useFocusGate('discuss');
+  const nextStep = discussNextStep({
+    sideChosen: side !== null,
+    hasDraft: isSubmittable(draft),
+    assistantUsed: assistantDone,
+    canSubmit,
+  });
 
   // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
   // "사건 02" 형식이라 그대로 쓴다(ResultScreen·BriefingScreen도 같다).
@@ -395,6 +405,7 @@ export function DiscussScreen({
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
             requiredFeatures={{ used: assistantUsed }}
+            focusNext={gate.armed && nextStep === 'assistant'}
             toggleLocked={!draftReady}
             toggleLockedHint={side === null ? '먼저 입장을 골라 주세요' : undefined}
             onOpenChange={handleAssistantOpenChange}
@@ -406,6 +417,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
+            {...nextStepAttr(gate.visible && nextStep === 'submit')}
             aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
           >
             의견 전달 ▶
@@ -441,6 +453,7 @@ export function DiscussScreen({
           <div
             className="side-select"
             data-testid="discuss-side-select"
+            {...nextStepAttr(gate.visible && nextStep === 'side')}
           >
             <button
               type="button"
@@ -476,9 +489,10 @@ export function DiscussScreen({
                     const phraseSide = phrase.side ?? 'FOR';
                     return phraseSide === 'BOTH' || phraseSide === side;
                   })
-                  .map((phrase) => (
+                  .map((phrase, phraseIndex) => (
                     <PhraseCard
                       key={phrase.id}
+                      nextStep={gate.visible && nextStep === 'phrase' && phraseIndex === 0}
                       phrase={phrase}
                       selected={draft.selectedPhraseIds.includes(phrase.id)}
                       disabled={pendingPhraseId !== null}

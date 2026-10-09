@@ -20,6 +20,8 @@ import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
 import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { useState } from 'react';
+import { voteNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -82,6 +84,8 @@ export function VoteScreen({
   const [submitted, setSubmitted] = useState(false);
   // 1회 제한(T65) — server/sessionLimit.ts의 호출 상한(vote: 2)이 최종 방어선이다.
   const [retryUsed, setRetryUsed] = useState(false);
+  const gate = useFocusGate('vote');
+  const nextStep = voteNextStep({ picked: pendingVote !== null, submitted });
 
   function handleConfirm() {
     if (pendingVote === null || submitted) {
@@ -215,6 +219,7 @@ export function VoteScreen({
           <fieldset
             className="vote-screen__choices"
             disabled={submitted}
+            {...nextStepAttr(gate.visible && nextStep === 'choice')}
           >
             <legend className="vote-screen__sr-only">이사님의 최종 표를 선택해 주세요</legend>
             {VOTE_ORDER.map((vote) => (
@@ -252,6 +257,7 @@ export function VoteScreen({
               aria-describedby={pendingVote === null && !submitted ? 'vote-confirm-why' : undefined}
               onClick={handleConfirm}
               data-testid="confirm-vote"
+              {...nextStepAttr(gate.visible && nextStep === 'confirm')}
             >
               {submitted ? (
                 <>
