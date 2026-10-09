@@ -239,7 +239,7 @@ export const aiApprovalScenario: Scenario = {
       bubble: '사유를 남기면 확인됩니다',
       pendingText:
         '승인 사유를 남긴다는 점은 좋습니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '사유 기록은 좋습니다. 하나만 더',
+      pendingBubble: '기록은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'REVIEW',
@@ -257,7 +257,7 @@ export const aiApprovalScenario: Scenario = {
       bubble: '책임질 사람이 분명해집니다',
       pendingText:
         '책임질 사람을 정한다는 점은 좋습니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '책임자는 좋습니다. 하나만 더',
+      pendingBubble: '조건은 좋습니다. 하나만 더',
     },
     {
       conditionId: 'FULL_AUTO',
@@ -271,7 +271,7 @@ export const aiApprovalScenario: Scenario = {
       text: '사람 검토를 아예 없애면, 사고가 났을 때 되돌릴 수 없어 걱정입니다.',
       bubble: '되돌릴 수 없어 걱정입니다',
       pendingText: '사람 검토를 없애면 위험하다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '위험하다는 말씀, 하나만 더',
+      pendingBubble: '알겠습니다. 하나만 더',
     },
     {
       conditionId: 'none',

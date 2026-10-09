@@ -277,7 +277,7 @@ export const experienceFirstScenario: Scenario = {
       text: '경험만 항상 앞세우면, 데이터를 아예 버리는 셈이라 걱정입니다.',
       bubble: '데이터를 버리는 셈입니다',
       pendingText: '경험만 앞세우면 걱정이라는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '걱정은 알겠습니다. 하나만 더',
+      pendingBubble: '알겠습니다. 하나만 더',
     },
     {
       conditionId: 'none',

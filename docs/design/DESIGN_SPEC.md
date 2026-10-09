@@ -891,3 +891,21 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 고르는 규칙은 `src/components/highlightTerms.ts`(순수 함수)에 있다. 후보는 시나리오의 `highlightTerms`·`evidenceHighlightTerms`·`statementHighlightTerms`, 조건 이름(`conditions[].label`), 숫자+단위 자동 추출이다. 텍스트에 실제로 나오는 것만 쓰고 긴 말을 먼저 잡는다.
 - 밀도 규칙: 카드 한 장의 강조 표시는 4곳 이하(`MAX_HIGHLIGHTS`). 넘으면 짧은 말부터 뺀다. 두 안건 모두 자료용·발언용 핵심 말은 각 6~10개이며 문장에 실제로 들어 있는지 테스트로 확인한다.
 - **임원 발언 열 제거(2026-10-09 추가 지시)**: "근거 자료 및 임원 발언에서 임원 발언은 아예 제거해 주고 근거 자료만 보여 주게끔 해." `EvidenceDialog`는 자료 4장(2×2)만 그리고 `statements` 입력이 없다. BRIEFING·DISCUSS·REACTIONS의 "근거 자료 보기" 버튼 옆 설명은 "자료 4장"이다. 임원 발언은 OPINIONS·REACTIONS 종이 카드와 발언 흐름에서만 본다.
+
+## T110 — 두 단계 설득 (2026-10-09)
+
+사용자 지시: "처음 추천문구를 선택해서 의견전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해줘." 설득은 **첫 의견 → 고민 중 → 추가 질문 답변 → 확정** 두 단계로 완성된다.
+
+| 시점 | 조건이 맞은 임원(처음부터 같은 편이 아닌 임원) | 처음부터 같은 편인 임원(①②의 CEO) |
+| --- | --- | --- |
+| OPINIONS·DISCUSS | 출발 성향 그대로(반대·미정) | 출발 성향 그대로 |
+| REACTIONS 1/2 반응 듣기 | **고민 중**(배지 "반대 → 고민 중", 처음부터 미정이던 CAIO는 "고민 중 유지"). 반응 문구는 `pendingText`("조건은 좋습니다. 하나만 더 묻겠습니다" 톤) | 찬성 유지 |
+| 답변 전달(SUBMIT_FOLLOWUP) 뒤 MOTION·VOTE | **찬성**("고민 중 → 찬성") | 찬성 |
+| 답하지 않고 넘어가기(KEEP_PREVIOUS) 뒤 | **반대**(표결도 NO) | 찬성 |
+
+- **규칙(scripted)**: `session.followUpAnswered`(SUBMIT_FOLLOWUP true, KEEP_PREVIOUS false, 초기 false)를 `VoteContext.followUpAnswered`로 넘긴다. 값이 명시적으로 `false`일 때만 게이트가 켜져, 규칙표상 참가자가 노리는 표(찬성 참가자면 YES, 반대 참가자면 NO)인데 조건 없는 표와 다른 임원을 조건 없는 표로 되돌린다. 목표 반대 방향으로 움직이는 조건(예: 찬성 참가자의 FULL_AUTO)은 게이트가 없다. 값을 생략하면 규칙표 그대로라 조건 추천·필요 조건 계산(`requiredConditionsFor`)은 영향이 없다.
+- **표정(scriptedStances)**: 게이트에 걸린 임원은 REACTIONS(아직 답하지도 넘기지도 않음)에서 UNDECIDED, 답을 전달하면 규칙표 그대로, 넘어가면 표결과 같은 값이다. `membersAwaitingAnswer`가 "답만 남은 임원"을 돌려준다.
+- **화면**: 반응 카드와 무대 말풍선은 `pendingText`·`pendingBubble`을 쓴다. 설득 현황판 행은 "조건은 충분 · 답변 뒤 찬성"(반대 참가자는 "답변 뒤 반대"). AI 비서실장 조건 추천은 답만 남은 임원을 "더 필요한 조건"에서 빼고 "조건은 맞으니 추가 질문에 답하면 찬성입니다"로 따로 말한다. 코치 4번에 "고민 중인 임원은 답해야 찬성으로 바뀝니다." 한 줄을 더했다. 1/2의 "답하러 가기 ▶"가 주 버튼, "넘어가기"가 보조 버튼인 구조는 그대로다(버튼 모양은 T111).
+- **결과**: 답하지 않아 돌아간 표의 판단 이유는 "조건은 좋았지만 추가 질문에 답이 없어 마음을 정하지 못하고 반대합니다"이고, "한 끗 차이"는 "조건은 맞았으니 추가 질문에 답했다면 찬성"(조건이 모자라면 "'…'와 추가 질문 답변이 있었으면 찬성")이다. 아무도 못 움직였는데 답했다면 움직였을 임원이 있으면 제목이 "조건은 맞았지만 추가 질문에 답하지 않아 임원의 마음을 바꾸지 못했습니다 — 다음엔 답하러 가 보세요"다.
+- **live(프롬프트 v12)**: REACTIONS 지시에 "조건이 충분해도 stance는 UNDECIDED까지만, 확정은 추가 질문에 답한 뒤"(`REACTIONS_FIRST_PASS_RULE`, 기존 stance 지침보다 우선), FOLLOWUP 지시에 "답을 받았으니 확정해도 된다", VOTE 지시에 `followUpAnswered`가 false일 때 "고민 중이던 임원은 처음 입장대로 표결"을 더했다. 요청 스키마(round·vote)에 `followUpAnswered` 선택 필드가 있다.
+

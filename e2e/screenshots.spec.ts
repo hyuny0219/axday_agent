@@ -168,9 +168,11 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('reactions-advance').click();
   await expect(page.getByTestId('followup-textarea')).toBeVisible();
   await capture(page, testInfo.project.name, 'reactions-answer');
-  // T84 #1: "앞서 전달한 의견을 유지하겠습니다" 체크 카드를 보조 버튼 "답하지 않고
-  // 넘어가기"로 옮겼다 — 확정한 4개 조건은 그대로 넘어간다.
-  await page.getByTestId('keep-previous-answer').click();
+  // T110: 조건이 맞은 임원은 추가 질문에 답을 전달해야 찬성이 된다 — 책임자를 정하는
+  // 추천 답변(OWNER, 이미 확정된 조건)으로 답해 확정한 4개 조건을 그대로 넘긴다. 성공 결과
+  // 화면(result.png)이 이 경로다. "답하지 않고 넘어가기"는 실패 도장으로 이어진다(stance.spec).
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
 
   // MOTION(T75, S5_Motion): 확정 조건 4개가 반영된 MOTION ON THE TABLE·CONDITIONS·
   // NOT INCLUDED·CHAIR 안내가 모두 보이는 상태를 캡처한 뒤 표결을 건다.

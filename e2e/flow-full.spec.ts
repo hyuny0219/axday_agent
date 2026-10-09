@@ -130,11 +130,14 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  // REACTIONS: 앞선 의견을 유지해 OWNER 조건을 추가하지 않는다.
+  // REACTIONS: OWNER 조건을 더하지 않는 BOTH 답변으로 추가 질문에 답한다(T110: 조건이 맞은
+  // 임원은 답을 전달해야 찬성이 된다 — 넘어가면 CFO도 반대로 남는다).
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('reactions-advance').click();
+  await page.getByTestId('followup-option-6').click();
+  await page.getByTestId('submit-followup').click();
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();

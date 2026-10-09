@@ -26,7 +26,7 @@ function moodBadge(page: Page, memberId: string) {
 }
 
 test.describe('scripted: 무대 표정과 설득 도장', () => {
-  test('조건을 모두 확정하면 REACTIONS에서 전원 찬성 쪽으로 바뀌고 RESULT에서 설득 도장을 얻는다', async ({
+  test('추천 문구를 모두 고르고 추가 질문에 답하면 고민 중을 거쳐 전원 찬성이 되고 RESULT에서 성공 도장을 얻는다', async ({
     page,
   }) => {
     await enterOpinions(page);
@@ -54,15 +54,36 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
 
-    // REACTIONS: 네 조건이 모두 확정돼 CFO·CAIO·CISO의 표정이 반대 쪽에서 찬성 쪽으로
-    // 바뀐다(조건 확정 후 표정 전환).
+    // REACTIONS 1/2(T110, 두 단계 설득): 네 조건이 모두 확정돼도 CFO·CAIO·CISO는 "고민 중"까지만
+    // 움직인다. 처음부터 같은 편인 CEO는 찬성 그대로다.
+    await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
+    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
+    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--undecided/);
+    for (const id of ['CFO', 'CAIO', 'CISO']) {
+      await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('하나만 더 묻겠습니다');
+      await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('고민 중');
+    }
+    await expect(page.getByTestId('reaction-card-CEO')).not.toContainText('하나만 더 묻겠습니다');
+    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 고민 중');
+
+    // 현황판: 조건은 충분하고 답변만 남았다고 알려 준다.
+    // 1280 이하에서는 접혀 있고 넓은 화면에서는 펼쳐져 있다 — 펼친 상태로 맞춘다.
+    const boardToggle = page.getByTestId('persuasion-board-toggle');
+    if ((await boardToggle.getAttribute('aria-expanded')) !== 'true') {
+      await boardToggle.click();
+    }
+    await expect(page.getByTestId('persuasion-board-note-CFO')).toContainText('조건은 충분 · 답변 뒤 찬성');
+
+    // 추가 질문에 답을 전달하면(책임자를 정하는 추천 답변) 조건이 맞은 임원이 찬성으로 바뀐다.
+    await page.getByTestId('reactions-advance').click();
+    await page.getByTestId('followup-option-0').click();
+    await page.getByTestId('submit-followup').click();
+    await expect(page.getByTestId('motion-card')).toBeVisible();
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--for/);
-
-    await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
-    await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();
 
     // VOTE: 표정은 마지막 확정 집합으로 고정된다.
@@ -84,6 +105,45 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(page.getByTestId('result-tally-caption')).toContainText(
       '찬성 · 나를 포함해 같은 표 5석 · 설득한 임원 3/3 · 처음부터 같은 편 1명은 세지 않음 — 성공 도장을 받았습니다',
     );
+  });
+
+  test('추천 문구를 모두 고르고 답하지 않고 넘어가면 고민 중이던 임원이 반대표를 던져 실패 도장을 받는다(T110)', async ({
+    page,
+  }) => {
+    await enterOpinions(page);
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId('discuss-side-for').click();
+    await page.getByTestId('phrase-card-P1').click();
+    await page.getByTestId('phrase-card-P2').click();
+    await page.getByTestId('phrase-card-P3').click();
+    await page.getByTestId('phrase-card-P4').click();
+    await tryAllAssistantFeatures(page);
+    await page.getByTestId('submit-opinion').click();
+
+    // 1차 반응: 조건이 모두 맞아도 고민 중까지만이다(전원 설득으로 끝나지 않는다).
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
+
+    // 추가 질문에 답하지 않고 넘어간다 — 고민 중이던 세 임원은 반대 쪽으로 확정된다.
+    await page.getByTestId('keep-previous-answer').click();
+    await expect(page.getByTestId('motion-card')).toBeVisible();
+    await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
+    for (const id of ['CFO', 'CAIO', 'CISO']) {
+      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--against/);
+    }
+    await page.getByTestId('freeze-motion').click();
+
+    await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+    await page.getByTestId('vote-radio-YES').check();
+    await page.getByTestId('confirm-vote').click();
+
+    await expect(page.getByTestId('result-conclusion')).toBeVisible();
+    // CEO와 나만 찬성(2석) — 부결이고 같은 표 3석에 못 미쳐 실패 도장이다.
+    await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 2');
+    await expect(page.getByTestId('persuasion-stamp')).toHaveCount(0);
+    await expect(page.getByTestId('persuasion-stamp-missed')).toBeVisible();
+    await expect(page.getByTestId('result-persuasion-summary')).toContainText('추가 질문에 답하지 않아');
+    await expect(page.getByTestId('result-seat-reason-CFO')).toContainText('추가 질문에 답이 없어');
+    await expect(page.getByTestId('result-near-miss-CFO')).toContainText('추가 질문에 답했다면 찬성');
   });
 
   test('조건 없이 진행하면 REACTIONS 표정이 그대로 유지되고 RESULT에서 설득 도장을 얻지 못한다', async ({
@@ -201,9 +261,15 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
 
-    await page.getByTestId('keep-previous-answer').click();
+    // v12(T110): 첫 반응에서 참가자 쪽으로 움직이는 CAIO(출발 성향 미정)는 고민 중까지만이다.
+    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
+
+    // 추가 질문에 답을 전달하면(FOLLOWUP 라운드) mock 최종표가 그대로 나온다.
+    await page.getByTestId('reactions-advance').click();
+    await page.getByTestId('followup-option-0').click();
+    await page.getByTestId('submit-followup').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
-    await expect(page.getByTestId('freeze-motion')).toBeEnabled();
+    await expect(page.getByTestId('freeze-motion')).toBeEnabled({ timeout: 15_000 });
     await page.getByTestId('freeze-motion').click();
 
     await expect(page.getByTestId('vote-motion-card')).toBeVisible();
@@ -221,5 +287,34 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.getByTestId('result-tally-caption')).toContainText('찬성 · 나를 포함해 같은 표 3석');
     await expect(page.getByTestId('result-tally-caption')).toContainText(/설득한 임원 \d\/\d|모두 처음부터 같은 편/);
     await expect(page.getByTestId('result-tally-caption')).toContainText('성공 도장을 받았습니다');
+  });
+  test('추가 질문에 답하지 않고 넘어가면 mock에서도 CAIO가 반대표로 돌아가 찬성 2석·실패 도장이다(v12)', async ({
+    page,
+  }) => {
+    await page.goto('/?coach=off');
+    await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '확인', exact: true }).click();
+    await page.getByTestId('scenario-card-ai-approval').click();
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId('discuss-side-for').click();
+    await page.getByTestId('phrase-card-P1').click();
+    await tryAllAssistantFeatures(page);
+    await page.getByTestId('submit-opinion').click();
+    await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+
+    await page.getByTestId('keep-previous-answer').click();
+    await expect(page.getByTestId('motion-card')).toBeVisible();
+    await page.getByTestId('freeze-motion').click();
+    await expect(page.getByTestId('vote-motion-card')).toBeVisible();
+    await page.getByTestId('vote-radio-YES').check();
+    await page.getByTestId('confirm-vote').click();
+
+    await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 2');
+    await expect(page.getByTestId('persuasion-stamp-missed')).toBeVisible();
   });
 });
