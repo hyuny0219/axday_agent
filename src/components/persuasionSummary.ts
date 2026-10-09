@@ -14,7 +14,7 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Motion, Session, Stance, Statement } from '../domain/types';
-import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, requiredConditionsFor } from '../domain/voting';
+import { EXEC_MEMBER_ORDER, countVotesChangedByConditions, membersChangedByConditionsToward, requiredConditionsFor } from '../domain/voting';
 import { buildConditionRecommendation } from './conditionRecommendation';
 import { openingStanceOf } from './openingStance';
 import { findPhraseForCondition } from './recommendMatch';
@@ -169,11 +169,15 @@ export function buildPersuasionResult(
         : (input.participantStance ?? 'FOR');
   const tally = computePersuasionTally(scenario, session.mode, session.transcript.statements, target, finalStances);
   const persuadedCount = tally.persuaded.length;
-  // PR #20 Codex 35차 P2-2·3: 조건 문구는 조건을 뺀 기준 표와 실제로 달라진 임원이 있을 때만
-  // 쓴다. 다음 조건 추천도 tally와 같은 목표 방향(최종 표)을 쓴다.
+  // PR #20 Codex 35차 P2-2·3 → 46차 P2: 조건 문구는 조건을 뺀 기준 표에서 참가자 목표 방향으로
+  // 실제로 넘어온 임원이 있고, 그 임원이 지금 설득된 임원(tally.persuaded)에도 들어 있을 때만
+  // 쓴다 — 방향을 따지지 않으면 참가자 반대편으로 돌아간 변화(예: 참가자 반대 + LIMIT+REVIEW로
+  // CFO가 찬성이 된 경우)까지 조건 성과로 잘못 귀속된다. 다음 조건 추천도 같은 목표 방향을 쓴다.
   const changedByConditions =
     session.mode === 'scripted' && input.finalMotion
-      ? countVotesChangedByConditions(scenario, input.finalMotion)
+      ? membersChangedByConditionsToward(scenario, input.finalMotion, target === 'FOR' ? 'YES' : 'NO').filter((memberId) =>
+          tally.persuaded.includes(memberId),
+        ).length
       : 0;
   let headline: string;
   if (persuadedCount > 0) {

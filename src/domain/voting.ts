@@ -92,6 +92,24 @@ export function countVotesChangedByConditions(scenario: Scenario, motion: Motion
   return changed;
 }
 
+/** 조건 없는 baseline에서 참가자 목표(targetVote)가 아니었는데, 조건을 넣은 최종안에서는
+ * 목표 표가 된 임원 목록(PR #20 Codex 46차 검토 P2 — 방향을 따지지 않는
+ * countVotesChangedByConditions는 참가자 반대편으로 돌아간 변화까지 조건 성과로 셌다). */
+export function membersChangedByConditionsToward(scenario: Scenario, motion: Motion, targetVote: Vote): ExecMemberId[] {
+  const baseline: Motion = { ...motion, effectiveConditionIds: [] };
+  const baselineBallots = decideBoard(scenario, baseline);
+  const actualBallots = decideBoard(scenario, motion);
+  const changed: ExecMemberId[] = [];
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    const baselineVote = baselineBallots.find((b) => b.memberId === memberId)?.vote;
+    const actualVote = actualBallots.find((b) => b.memberId === memberId)?.vote;
+    if (baselineVote !== targetVote && actualVote === targetVote) {
+      changed.push(memberId);
+    }
+  }
+  return changed;
+}
+
 export interface RequiredConditions {
   /** 이미 YES(찬성)로 설득됐으면 true — 더 필요한 조건이 없다. */
   persuaded: boolean;

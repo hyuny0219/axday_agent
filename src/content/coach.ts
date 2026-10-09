@@ -38,7 +38,7 @@ export const COACH_SCREENS: readonly CoachScreenCopy[] = [
     lines: [
       '찬성·반대를 고릅니다.',
       '추천 문구를 여러 개 담거나 직접 씁니다.',
-      'AI 비서실장을 열어 세 가지를 한 번씩 써 봅니다.',
+      'AI 비서실장을 열어 한 가지 이상 써 봅니다(셋 다 써도 좋아요).',
       '의견 전달을 누릅니다.',
     ],
   },

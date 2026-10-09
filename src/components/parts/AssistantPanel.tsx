@@ -55,7 +55,7 @@ const REFINE_FALLBACK_MESSAGE = '정리하지 못했습니다. 원문으로 계�
 export interface RequiredFeatures {
   /** 이번 세션에서 이미 써 본 기능(실패·연결 지연 포함). */
   used: ReadonlySet<FeatureKey>;
-  /** 세 기능이 모두 채워지는 순간 한 번 호출된다. */
+  /** 한 기능 이상 쓴 순간(T109) 한 번 호출된다. */
   onAllUsed?: () => void;
 }
 
@@ -166,7 +166,8 @@ export function AssistantPanel({
   const usedCount = requiredFeatures
     ? ASSISTANT_FEATURE_ORDER.filter((feature) => requiredFeatures.used.has(feature)).length
     : 0;
-  const allUsed = requiredFeatures !== undefined && usedCount === ASSISTANT_FEATURE_ORDER.length;
+  // T109: 한 가지 이상 쓰면 완료(옛 이름 allUsed·onAllUsed는 그대로 둔다).
+  const allUsed = requiredFeatures !== undefined && usedCount >= 1;
   const onAllUsed = requiredFeatures?.onAllUsed;
   const allUsedNotifiedRef = useRef(false);
   useEffect(() => {
@@ -465,7 +466,7 @@ export function AssistantPanel({
                 {status === 'idle' ? (
                   <>
                     <h3 className="assistant-intro__title">
-                      AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요
+                      AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)
                     </h3>
                     <ul className="assistant-intro__list">
                       {ASSISTANT_FEATURE_ORDER.map((feature) => {
