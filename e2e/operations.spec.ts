@@ -174,6 +174,8 @@ test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 
   await page.getByTestId('operator-confirm-restart-scripted-yes').click();
 
   await page.waitForURL(/mode=scripted/);
+  // 재시작 URL은 쿼리를 버리므로 코치(T104)를 다시 끄고 같은 주소로 들어간다.
+  await page.goto(`${page.url()}&coach=off`);
   // T86: 참가자 화면에는 모드 배지를 전혀 보여주지 않는다 — scripted로 떨어졌는지는
   // 사전 구성된 임원 4열 카드(.opinion-card, live 발언 카드가 아니다)로 확인한다.
   await expect(page.getByTestId('mode-badge')).toHaveCount(0);
