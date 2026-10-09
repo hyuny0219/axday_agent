@@ -540,7 +540,7 @@ export interface FollowUpVerdictWord {
  * 같은 방향 단어가 있으면 안 된다(기준은 0건, 서버가 실제로 막는 검사와 같은 함수). 일반 명사로
  * 쓴 문장은 사람이 읽어 판정한다. */
 export interface FollowUpVerdictStats {
-  /** answered FOLLOWUP 행 수. */
+  /** 시도별 원문(audit)이 남은 FOLLOWUP 행 수(최종 failed 포함). */
   rows: number;
   /** 첫 시도 원문에 방향 표현이 있던 행(프롬프트가 규칙을 못 지킨 비율의 분자). */
   rawViolationRows: number;
@@ -555,7 +555,9 @@ export interface FollowUpVerdictStats {
 /** T114(Codex 54차): 서버가 재시도·중립 대체로 가린 뒤의 문장만 보면 위반이 0건으로 보이므로, 서버가
  * 남긴 시도별 원문(followUpRawAttempts·followUpViolations)으로 "원시 위반율"과 "대체율"을 따로 센다. */
 export function followUpVerdictStats(rows: EvalRow[]): FollowUpVerdictStats {
-  const followUps = rows.filter((row) => row.stage === 'FOLLOWUP' && row.status === 'answered');
+  // 최종 성공 여부와 무관하게 서버 audit(시도별 원문)가 남은 FOLLOWUP 행은 모두 포함한다 — 첫 시도에
+  // 위반이 있고 재시도가 연결 오류로 끝난 failed 행도 원시 위반율에 들어가야 한다(Codex 55차).
+  const followUps = rows.filter((row) => row.stage === 'FOLLOWUP' && row.followUpViolations !== undefined);
   const rawViolationRows = followUps.filter((row) => (row.followUpViolations?.[0] ?? 0) > 0).length;
   const rawViolationCount = followUps.reduce(
     (sum, row) => sum + (row.followUpViolations ?? []).reduce((a, b) => a + b, 0),

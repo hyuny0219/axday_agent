@@ -107,6 +107,12 @@ const DECLARATIONS = [
   '승인으로 결정했습니다.',
   '승인으로 정했습니다.',
   '결론은 승인입니다.',
+  '승인 쪽입니다.',
+  '저는 반대 쪽에 섭니다.',
+  '제 입장은 승인입니다.',
+  '찬성에 가깝습니다.',
+  '참가자 편입니다.',
+  '최종적으로 저는 승인입니다.',
 ];
 
 describe('findVerdictWords — 임원 FOLLOWUP 발언 전용 방향 표현 검사', () => {
@@ -132,6 +138,37 @@ describe('findVerdictWords — 임원 FOLLOWUP 발언 전용 방향 표현 검�
 });
 
 describe('FOLLOWUP 방향 단어 서버 방어(T114)', () => {
+  it('다른 필드가 형식 오류여도 원문 위반이 audit에 남는다(Codex 55차)', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    let calls = 0;
+    const provider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: calls === 1 ? '이번에는 찬성합니다.' : '답변을 잘 들었습니다.',
+            evidenceIds: [],
+            referencedStatementIds: calls === 1 ? ['없는-발언'] : [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const followUpAudit: FollowUpAuditEntry[] = [];
+    const [result] = await handleRound(input(), { provider, followUpAudit });
+    expect(result?.statement?.message).toBe('답변을 잘 들었습니다.');
+    expect(followUpAudit[0]?.attempts).toEqual([
+      { text: '이번에는 찬성합니다.', violations: ['찬성'], invalidReason: 'schema' },
+      { text: '답변을 잘 들었습니다.', violations: [] },
+    ]);
+    expect(followUpAudit[0]?.masked).toBe(false);
+  });
+
   it('동의어 선언("지지하겠습니다")도 거절·재시도·대체 경로를 탄다', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const { provider, calls } = providerReturning(['이 안을 지지하겠습니다.', '이사님 쪽에 표를 보태겠습니다.']);

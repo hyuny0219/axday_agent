@@ -202,4 +202,15 @@ describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차
     expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 3, maskedRows: 1 });
     expect(stats.maskedRate).toBeCloseTo(0.5);
   });
+
+  it('최종 실패(failed) 행도 audit이 있으면 원시 위반율 분모·분자에 들어간다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ status: 'failed', message: undefined, followUpRawAttempts: ['찬성합니다.'], followUpViolations: [1], followUpMasked: false }),
+      followUp({ followUpRawAttempts: ['답변을 들었습니다.'], followUpViolations: [0], followUpMasked: false }),
+      followUp({}),
+    ]);
+    // audit이 없는 행(구버전 기록)은 제외한다.
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 1 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+  });
 });
