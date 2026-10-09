@@ -20,13 +20,16 @@ export interface IntroScreenProps {
 export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
   '가상 임원 네 명',
   '한 표',
+  '특별 이사의 의견',
+  'AI 임원들을 설득',
+  '같은 편',
   '같은 표가 3석 이상',
   '설득 도장',
-  '처음부터 같은 편인 임원도 한 석',
 ];
 
+// 2026-10-09 사용자 지시: "성공 기준은 특별 이사의 의견으로 AI 임원들을 설득시켜 같은 편으로 만드는 것".
 const SUCCESS_TEXT =
-  '임원을 설득해, 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다. 처음부터 같은 편인 임원도 한 석으로 셉니다.';
+  '특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것입니다. 이사님을 포함해 같은 표가 3석 이상이면 ‘설득 도장’을 받습니다.';
 
 export function IntroScreen({ onStart }: IntroScreenProps) {
   return (

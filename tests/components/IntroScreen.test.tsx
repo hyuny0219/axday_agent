@@ -30,9 +30,11 @@ describe('IntroScreen', () => {
 
     const marked = Array.from(document.querySelectorAll('mark.key-term')).map((el) => el.textContent);
     expect(marked).toEqual(
-      expect.arrayContaining(['가상 임원 네 명', '한 표', '같은 표가 3석 이상', '설득 도장']),
+      expect.arrayContaining(['가상 임원 네 명', '한 표', '특별 이사의 의견', 'AI 임원들을 설득', '같은 편', '같은 표가 3석 이상', '설득 도장']),
     );
     expect(screen.getByTestId('intro-success').querySelectorAll('mark.key-term').length).toBeGreaterThanOrEqual(2);
+    // 2026-10-09 사용자 지시: 성공 기준은 "특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것".
+    expect(screen.getByTestId('intro-success').textContent).toContain('특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것');
   });
 
   it('시작 버튼은 "확인" 하나뿐이고 누르면 콜백을 부른다', () => {
