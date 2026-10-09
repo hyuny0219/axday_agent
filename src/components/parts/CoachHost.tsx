@@ -3,12 +3,13 @@
 // "알겠어요" 또는 그 화면의 첫 조작(버튼·카드 클릭)이 있으면 세션의 coachDismissed에 기록해
 // 한 번만 보이게 한다. 규칙은 도메인에 있고 여기서는 연결만 한다.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { COACH_TOTAL, coachScreenOf, coachStep, type CoachUi } from '../../domain/coach';
 import type { SessionAction } from '../../domain/session';
 import type { Session } from '../../domain/types';
 import { COACH_CLOSE_LABEL, coachCopy } from '../../content/coach';
 import { Coach, CoachIcon } from './Coach';
+import { clearCoachPos } from './coachPosition';
 import { HighlightText } from './HighlightText';
 
 export interface CoachHostProps {
@@ -35,6 +36,15 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
   // 팝업(role=dialog)이 열려 있는 동안은 말풍선·아이콘을 아예 그리지 않는다 — z-index로는
   // 축소 모드(.app-scale-wrapper의 transform이 만드는 stacking context) 안의 팝업과 body로
   // portal된 코치를 비교할 수 없다(PR #20 Codex 44차 검토 P2).
+  // 새 체험(sessionId 변경)이면 옮겨 둔 자리를 지우고 기본 자리로 돌아간다(T112).
+  const sessionIdRef = useRef(session.sessionId);
+  useEffect(() => {
+    if (sessionIdRef.current !== session.sessionId) {
+      sessionIdRef.current = session.sessionId;
+      clearCoachPos();
+    }
+  }, [session.sessionId]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   useEffect(() => {
     function check() {

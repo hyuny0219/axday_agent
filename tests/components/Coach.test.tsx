@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { Coach } from '../../src/components/parts/Coach';
+import { Coach, CoachIcon } from '../../src/components/parts/Coach';
 import { CoachHost } from '../../src/components/parts/CoachHost';
 import { EMPTY_COACH_UI } from '../../src/domain/coach';
 import { createInitialSession } from '../../src/domain/session';
@@ -130,7 +130,7 @@ describe('안내 아이콘(T106)', () => {
     expect(screen.queryByTestId('coach')).toBeNull();
     const icon = screen.getByTestId('coach-icon');
     expect(icon).toHaveTextContent('안내');
-    expect(icon).toHaveAttribute('aria-label', '안내 다시 보기');
+    expect(icon).toHaveAttribute('aria-label', '안내 다시 보기, 끌어서 옮길 수 있음');
     fireEvent.click(icon);
     expect(screen.getByTestId('coach-progress')).toHaveTextContent('안내 2/6');
     expect(screen.getByTestId('coach-ack')).toHaveTextContent('닫기 ▶');
@@ -220,5 +220,131 @@ describe('코치 문구', () => {
         expect(item.title).toContain(key);
       }
     }
+  });
+});
+
+// T112: 끌어서 옮기기. jsdom은 PointerEvent의 좌표를 안 실어 주므로 MouseEvent 기반으로 대신한다.
+describe('코치 끌어서 옮기기(T112)', () => {
+  function pointer(type: string, target: Element, x: number, y: number) {
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+    Object.defineProperty(event, 'pointerId', { value: 1 });
+    Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+    fireEvent(target, event);
+  }
+  function drag(target: Element, from: [number, number], to: [number, number]) {
+    pointer('pointerdown', target, ...from);
+    pointer('pointermove', target, ...to);
+    pointer('pointerup', target, ...to);
+  }
+  function left(el: HTMLElement) {
+    return parseFloat(el.style.left);
+  }
+  function top(el: HTMLElement) {
+    return parseFloat(el.style.top);
+  }
+  afterEach(() => window.sessionStorage.clear());
+
+  it('말풍선 머리를 끌면 따라 움직이고, 비율로 sessionStorage에 저장된다', () => {
+    render(<Coach step={1} total={6} title="제목" lines={['한 줄']} onAck={vi.fn()} />);
+    const card = screen.getByTestId('coach');
+    const startLeft = left(card);
+    const startTop = top(card);
+    drag(screen.getByTestId('coach-head'), [100, 100], [220, 160]);
+    expect(left(card)).toBe(startLeft + 120);
+    expect(top(card)).toBe(startTop + 60);
+    const saved = JSON.parse(window.sessionStorage.getItem('coach-pos')!);
+    expect(saved.x).toBeCloseTo(left(card) / window.innerWidth);
+    expect(saved.y).toBeCloseTo(top(card) / window.innerHeight);
+  });
+
+  it('4px 미만 움직임은 클릭이다 — 아이콘이 열리고 자리는 그대로다', () => {
+    const onOpen = vi.fn();
+    render(<CoachIcon onOpen={onOpen} />);
+    const icon = screen.getByTestId('coach-icon');
+    const startLeft = left(icon);
+    drag(icon, [50, 50], [52, 52]);
+    fireEvent.click(icon);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(left(icon)).toBe(startLeft);
+    expect(window.sessionStorage.getItem('coach-pos')).toBeNull();
+  });
+
+  it('끌어서 옮긴 직후의 click은 열기로 세지 않는다', async () => {
+    const onOpen = vi.fn();
+    render(<CoachIcon onOpen={onOpen} />);
+    const icon = screen.getByTestId('coach-icon');
+    drag(icon, [50, 50], [150, 150]);
+    fireEvent.click(icon);
+    expect(onOpen).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    fireEvent.click(icon);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('화면 밖으로는 나가지 않는다(여백 8px)', () => {
+    render(<CoachIcon onOpen={vi.fn()} />);
+    const icon = screen.getByTestId('coach-icon');
+    drag(icon, [50, 50], [-5000, -5000]);
+    expect(left(icon)).toBe(8);
+    expect(top(icon)).toBe(8);
+    drag(icon, [50, 50], [9000, 9000]);
+    expect(left(icon)).toBe(window.innerWidth - 8); // jsdom은 요소 크기가 0이다.
+    expect(top(icon)).toBe(window.innerHeight - 8);
+  });
+
+  it('저장된 자리는 말풍선↔아이콘이 바뀌어도 복원된다', () => {
+    window.sessionStorage.setItem('coach-pos', JSON.stringify({ x: 0.25, y: 0.5 }));
+    const { unmount } = render(<CoachIcon onOpen={vi.fn()} />);
+    expect(left(screen.getByTestId('coach-icon'))).toBe(window.innerWidth * 0.25);
+    unmount();
+    render(<Coach step={1} total={6} title="제목" lines={['한 줄']} onAck={vi.fn()} />);
+    const card = screen.getByTestId('coach');
+    expect(left(card)).toBe(window.innerWidth * 0.25);
+    expect(top(card)).toBe(window.innerHeight * 0.5);
+  });
+
+  it('저장소가 막혀 있어도 끌 수 있다', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    render(<CoachIcon onOpen={vi.fn()} />);
+    const icon = screen.getByTestId('coach-icon');
+    const startLeft = left(icon);
+    expect(() => drag(icon, [10, 10], [60, 10])).not.toThrow();
+    expect(left(icon)).toBe(startLeft + 50);
+    spy.mockRestore();
+  });
+
+  it('아이콘을 두 번 빠르게 누르면 기본 자리로 돌아가고 저장도 지운다', () => {
+    render(<CoachIcon onOpen={vi.fn()} />);
+    const icon = screen.getByTestId('coach-icon');
+    const startLeft = left(icon);
+    drag(icon, [10, 10], [200, 10]);
+    expect(left(icon)).not.toBe(startLeft);
+    fireEvent.doubleClick(icon);
+    expect(left(icon)).toBe(startLeft);
+    expect(window.sessionStorage.getItem('coach-pos')).toBeNull();
+  });
+
+  it('아이콘에 포커스한 뒤 화살표로 16px씩 움직인다', () => {
+    render(<CoachIcon onOpen={vi.fn()} />);
+    const icon = screen.getByTestId('coach-icon');
+    const startLeft = left(icon);
+    const startTop = top(icon);
+    fireEvent.keyDown(icon, { key: 'ArrowRight' });
+    expect(left(icon)).toBe(startLeft + 16);
+    fireEvent.keyDown(icon, { key: 'ArrowDown' });
+    expect(top(icon)).toBe(startTop + 16);
+    fireEvent.keyDown(icon, { key: 'ArrowLeft' });
+    fireEvent.keyDown(icon, { key: 'ArrowLeft' });
+    expect(left(icon)).toBe(startLeft - 16);
+  });
+
+  it('새 체험(sessionId 변경)이면 옮긴 자리를 지운다', () => {
+    const session = sessionAt('BRIEFING', { coachDismissed: [1] });
+    const { rerender } = render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    window.sessionStorage.setItem('coach-pos', JSON.stringify({ x: 0.3, y: 0.3 }));
+    rerender(<CoachHost session={{ ...session, sessionId: 'next' }} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(window.sessionStorage.getItem('coach-pos')).toBeNull();
   });
 });

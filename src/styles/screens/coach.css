@@ -33,7 +33,21 @@
 }
 
 .coach__head {
-  margin-bottom: 4px;
+  /* T112: 제목 줄 전체가 끌어서 옮기는 손잡이다. */
+  margin: -12px -16px 4px;
+  padding: 12px 16px 2px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.coach[data-dragging] {
+  user-select: none;
+}
+
+.coach[data-dragging] .coach__head,
+.coach-icon[data-dragging] {
+  cursor: grabbing;
 }
 
 .coach__progress {
@@ -94,6 +108,11 @@
     padding: 8px 12px 10px;
   }
 
+  .coach__head {
+    margin: -8px -12px 4px;
+    padding: 8px 12px 2px;
+  }
+
   .coach__title {
     font-size: 18px;
   }
@@ -129,7 +148,9 @@
   font-size: 14px;
   font-weight: 800;
   line-height: 1;
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
+  touch-action: none; /* T112: 터치로도 끌어 옮긴다. */
 }
 
 .coach-icon:hover {
