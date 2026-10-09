@@ -105,7 +105,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           <div className="briefing-screen__exhibit">
             <button
               type="button"
-              className="cta cta--secondary"
+              className="cta cta--solid"
               onClick={() => setEvidenceOpen(true)}
               data-testid="open-evidence"
             >

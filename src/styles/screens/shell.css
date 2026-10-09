@@ -556,85 +556,165 @@
   }
 }
 
-/* 주 CTA(T64, Main.html 의견 듣기 버튼): 앰버 채움 + 검정 글자 + 굵은 그림자
-   (6px 6px 0 #3a2a12) + 모서리 14px 깎기. 64px 높이·56px 최소 클릭 영역은 그대로
-   유지한다. focus-visible은 base.css 전역 규칙을 그대로 쓴다. */
+/* 버튼 "라벨 테이프"(T107, 시안 E 보드): 서류 가방에 붙인 라벨 테이프 모양. 주 버튼은
+   주황 채움 + 위아래 2px 먹색 선 + 양끝 사선 컷 + 끝 펀치 구멍 두 개. clip-path가
+   box-shadow를 잘라내므로 그림자는 쓰지 않는다. 컷 크기는 --cta-cut, 구멍 크기·위치는
+   --cta-hole·--cta-hole-x로 줄인다(1280 분기). 포커스 링은 사선 컷 밖으로 나가지 않게
+   안쪽 inset 그림자로 그린다. 색 체계(주황·먹색·종이)와 버튼 높이는 T86 그대로. */
 .cta {
+  --cta-cut: 12px;
+  --cta-hole: 7px;
+  --cta-hole-x: 14px;
+  --cta-pad: 36px;
+  position: relative;
   align-self: flex-start;
   min-height: var(--cta-height);
   min-width: var(--touch-min);
-  padding: 0 var(--space-4);
-  border-radius: 0;
+  padding: 0 var(--cta-pad);
   border: none;
+  border-top: 2px solid #0b0d10;
+  border-bottom: 2px solid #0b0d10;
+  border-radius: 0;
   background-color: var(--amber);
   background-image: none;
   color: #0b0d10;
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 18px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   /* 버튼 라벨은 짧은 한 줄 — 720 높이에서 '▶'만 둘째 줄로 떨어지지 않게(Opus 최종 검토 should 4). */
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 6px 6px 0 #3a2a12;
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-  transition:
-    box-shadow var(--transition-fast) ease,
-    transform var(--transition-fast) ease;
+  box-shadow: none;
+  clip-path: polygon(var(--cta-cut) 0, 100% 0, calc(100% - var(--cta-cut)) 100%, 0 100%);
+  transition: filter var(--transition-fast) ease;
+}
+
+/* 양끝 펀치 구멍: 글자와 겹치지 않게 좌우 패딩(36px)이 구멍 바깥쪽을 비워 둔다.
+   보조·잠긴·종이 위 주 버튼은 구멍이 없다. */
+.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::before,
+.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: var(--cta-hole);
+  height: var(--cta-hole);
+  margin-top: calc(var(--cta-hole) / -2);
+  border-radius: 50%;
+  background: #0b0d10;
+  pointer-events: none;
+}
+
+.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::before {
+  left: var(--cta-hole-x);
+}
+
+.cta:not(.cta--secondary):not(.cta--solid):not(:disabled)::after {
+  right: var(--cta-hole-x);
 }
 
 .cta:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    6px 6px 0 #3a2a12,
-    0 0 24px rgba(224, 163, 74, 0.35);
+  filter: brightness(1.1);
 }
 
 .cta:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* 비활성 CTA(T85 #2): 이전에는 진한 남색 채움(--panel-active)이라 활성 버튼처럼
-   보였다 — 눌러도 되는 버튼인지 참가자가 구분할 수 없었다. 투명 배경 + 점선
-   테두리 + 흐린 글자 + opacity로 "지금은 못 누른다"를 뚜렷이 보여준다. clip-path로
-   깎인 모서리는 그대로 유지한다. */
-.cta:disabled {
-  background-color: transparent;
-  border: 2px dashed var(--border);
-  color: var(--text-muted);
-  opacity: 0.55;
-  box-shadow: none;
-  cursor: not-allowed;
+.cta:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px #0b0d10;
 }
 
-/* 보조 CTA(T86, 2026-10-07 사용자 — "버튼 색상을 체험 시작과 동일하게, 모든 버튼은
-   통일"). 이전에는 테두리만 있는 outline 버튼이라 주 CTA와 다른 색 체계로 보였다 —
-   이제는 주 CTA와 같은 앰버 채움 + 검정 글자 + 같은 글꼴 + 같은 깎인 모서리를 그대로
-   쓰고, 크기(최소 높이·패딩·글자 크기·그림자)만 작게 줄여 위계만 구분한다. 비활성
-   모양(점선 테두리·흐린 잉크)은 .cta:disabled를 그대로 물려받는다. */
+/* 보조 버튼: 투명 바탕 + 2px 주황 테두리 + 주황 글자, 같은 사선 컷(구멍 없음). */
 .cta.cta--secondary {
+  --cta-cut: 10px;
+  --cta-pad: 28px;
   min-height: var(--touch-min);
-  padding: 0 var(--space-3);
+  border: 2px solid var(--amber);
+  background-color: transparent;
+  color: var(--amber);
   font-size: 15px;
-  box-shadow: 4px 4px 0 #3a2a12;
+  letter-spacing: 0.06em;
 }
 
 .cta.cta--secondary:hover:not(:disabled) {
-  box-shadow:
-    4px 4px 0 #3a2a12,
-    0 0 16px rgba(224, 163, 74, 0.35);
+  background-color: rgba(224, 163, 74, 0.14);
+  filter: none;
 }
 
-/* 비활성이어도 "있는 버튼"으로 보이는 빈 버튼(T98, REACTIONS 답변 전달 전용 — 사용자
-   지적 "의견 전달하는 버튼이 없어"). 점선·흐린 잉크 대신 종이색 굵은 실선 테두리와
-   선명한 종이색 글자를 쓴다. 클릭은 여전히 disabled로 막힌다. MOTION·VOTE는 쓰지 않는다. */
-.cta.cta--outline:disabled {
+.cta.cta--secondary:focus-visible {
+  box-shadow: inset 0 0 0 2px #f4d79a;
+}
+
+.cta.cta--solid {
+  --cta-cut: 10px;
+  --cta-pad: 28px;
+  min-height: var(--touch-min);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+/* 종이 위·팝업 안 주 버튼(근거 자료 보기, 팝업 닫기·비서실장 기능 버튼, 선택된 입장 탭):
+   주황 바탕 + 위아래 1~2px 먹색 선 + 사선 컷(구멍 없음). 팝업 안 보조 버튼은 모두 이 모양. */
+.cta.cta--solid:not(:disabled),
+.dialog-shell .cta.cta--secondary:not(:disabled),
+.side-select__btn[aria-pressed='true']:not(:disabled) {
+  --cta-cut: 10px;
+  border: none;
+  border-top: 2px solid #1b1a17;
+  border-bottom: 2px solid #1b1a17;
+  background-color: var(--amber);
+  color: #0b0d10;
+}
+
+.cta.cta--solid:hover:not(:disabled),
+.dialog-shell .cta.cta--secondary:hover:not(:disabled),
+.side-select__btn[aria-pressed='true']:hover:not(:disabled) {
+  background-color: var(--amber);
+  filter: brightness(1.1);
+}
+
+.cta.cta--solid:focus-visible,
+.dialog-shell .cta.cta--secondary:focus-visible,
+.side-select__btn[aria-pressed='true']:focus-visible {
+  box-shadow: inset 0 0 0 3px #0b0d10;
+}
+
+/* 잠긴 버튼: 투명 바탕 + 2px 점선 회색(#7a766d) 테두리·글자, 사선 컷 유지. 못 누르는
+   버튼임을 점선으로 분명히 한다. 구멍은 없다. */
+.cta:disabled {
   background-color: transparent;
-  border: 3px solid var(--paper);
-  color: var(--paper);
+  border: 2px dashed #7a766d;
+  color: #7a766d;
   opacity: 1;
   box-shadow: none;
   cursor: not-allowed;
+}
+
+/* 비활성이어도 "있는 버튼"으로 보이는 빈 버튼(T98, REACTIONS 답변 전달 전용). T107부터
+   일반 잠긴 버튼과 같은 점선 라벨 테이프 모양으로 통일했다(클래스는 호출처 구분용). */
+.cta.cta--outline:disabled {
+  border: 2px dashed #7a766d;
+  color: #7a766d;
+}
+
+@media (max-width: 1280px) {
+  /* 1280×720: 높이·글자 크기는 그대로 두고 컷·구멍 비율만 줄인다(컷 8px, 구멍 5px). */
+  .cta {
+    --cta-cut: 8px;
+    --cta-hole: 5px;
+    --cta-hole-x: 10px;
+    --cta-pad: 24px;
+  }
+
+  .cta.cta--secondary,
+  .cta.cta--solid,
+  .dialog-shell .cta.cta--secondary:not(:disabled),
+  .side-select__btn[aria-pressed='true']:not(:disabled) {
+    --cta-cut: 8px;
+    --cta-pad: 18px;
+  }
 }
 
 /* 진행 스트립(v0.9, T67에서 헤더 가운데로 이동): ① 상황 파악 → ⑤ 표결 5단계를
@@ -731,19 +811,18 @@
   gap: 10px;
 }
 
-.side-select__btn:not([aria-pressed='true']) {
-  /* 미선택 쪽은 "아직 안 고른 선택지"다 — 비활성 CTA의 점선·흐린 잉크와 겹쳐 보이면
-     못 누르는 버튼으로 오해하므로(T87 리드 확인), 주황 실선 테두리·주황 글자로 둔다. */
+.side-select__btn:not([aria-pressed='true']):not(:disabled) {
+  /* 미선택 쪽은 "아직 안 고른 선택지"다 — 잠긴 버튼의 점선·회색과 겹쳐 보이면
+     못 누르는 버튼으로 오해하므로(T87 리드 확인), 주황 실선 테두리로 둔다. 종이 위라
+     글자는 진한 주황(#8a5f12, T107 시안 E). */
   background-color: transparent;
   border: 2px solid var(--amber);
-  color: var(--amber);
-  box-shadow: none;
+  color: #8a5f12;
 }
 
-.side-select__btn:not([aria-pressed='true']):hover {
+.side-select__btn:not([aria-pressed='true']):not(:disabled):hover {
   background-color: rgba(224, 163, 74, 0.14);
-  box-shadow: none;
-  transform: none;
+  filter: none;
 }
 
 .side-select__hint {
