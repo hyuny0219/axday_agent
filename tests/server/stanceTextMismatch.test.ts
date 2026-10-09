@@ -219,6 +219,14 @@ describe('declaredDirection(T115)', () => {
       ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'], ['찬성합니다. 저는 찬성쪽입니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('방향 합성어는 기본 AMBIGUOUS, 공간·대상 화이트리스트만 무시(Codex 87차). 쪽 선택 꼬리는 해소하지 않는 허용된 놓침', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 하지만 최종적으로 반대쪽을 택하겠습니다.', null], ['반대쪽을 선택하겠습니다.', null],
+      ['화면 배치는 지금 반대편을 유지합니다.', null], ['반대편 의견도 들었습니다.', null],
+      ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'], ['찬성합니다. 하지만 제 최종 입장은 반대쪽입니다.', null],
+      ['찬성합니다. 반대쪽 자료도 보겠습니다.', null], ['찬성합니다. 오른편 화면을 확인했습니다.', 'FOR'],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',

@@ -407,22 +407,21 @@ const PRESENT_SPLIT = /(?:지금은|현재는|이제는|이번에는|오늘은|�
 
 /** 띄어쓰기 없는 합성어는 공간·대상 명사라(반대편 의견, 맞은편) 방향 명사 출현으로 세지 않는다. 띄어 쓴 "반대 편에 서겠습니다"만 방향 꼬리다.
  * "반대쪽으로 가겠습니다"도 공간으로 읽힐 수 있어 허용된 놓침(null)이다. */
-const SPATIAL_COMPOUNDS = /반대편|반대쪽|찬성쪽|찬성편|맞은편|건너편|오른편|왼편|한편|상대편|저편|이편|그편/g;
+const SPATIAL_COMPOUNDS = /반대편|반대쪽|찬성쪽|찬성편|맞은편|건너편|오른편|왼편|한편|상대편|저편|이편|그편/g; // 방향 합성어는 hasUnresolvedDirectionalCompound를 통과한 공간·대상 문맥만 여기까지 온다
 
-/** 합성어 2분류(Codex 86차). ① 입장 문맥: 합성어 바로 뒤가 서술격·"으로 가/에 서 …"이거나 같은 절 앞에 입장 표지(입장은·결론은·저는·제 …)가 있으면
- * "제 입장은 반대쪽입니다"처럼 방향을 말하는 것이라 방향 없음으로 지우지 않고 AMBIGUOUS로 둔다(단독이면 null — 허용된 놓침; 해소하지 않는다).
- * ② 공간 문맥: 그 밖의 합성어("반대편을 유지", "반대편 의견", "반대쪽은 비용을 말합니다")는 방향 없음이다. */
-const DIRECTIONAL_COMPOUNDS = /(반대편|반대쪽|찬성쪽|찬성편)/g;
-const COMPOUND_PREDICATE = /^(?:입니다|이다|이에요|이죠|이네요|이라고|이라|일 것|으로 가|에 서|에 섭|으로 기울|로 돌아)/;
-const STANCE_MARKER = /(?:입장|결론|태도|생각)(?:은|이|는|가)|저는|(?:^|\s)제\s|우리는|우리 (?:측|쪽)/;
+/** 방향 합성어(Codex 87차: 기본값 반전). 반대편·반대쪽·찬성쪽·찬성편·상대편은 **기본 AMBIGUOUS**(방향이 있을 수 있으나 미해소)로 보고, 바로 뒤가
+ * 명시적인 공간·대상 문맥(화이트리스트)일 때만 방향 없음으로 지운다. 입장 표현을 열거하는 방식은 계속 구멍이 나기 때문이다.
+ *  - 공간·대상: "반대편을 유지·배치·이동·표시·확인·정렬·배열", "반대편 의견·주장·논거·진영·사람·임원·이사·말·목소리", "반대쪽은 … 말합니다" 류 상대 진영 지칭.
+ *  - 그 밖("반대쪽을 택하겠습니다", "반대쪽 자료도 보겠습니다", "제 입장은 반대쪽입니다")은 AMBIGUOUS — 해소하지 않으며 허용된 놓침이다.
+ * 맞은편·건너편·오른편·왼편·한편·저편·이편·그편은 항상 방향 없음이다(SPATIAL_COMPOUNDS). */
+const DIRECTIONAL_COMPOUNDS = /(반대편|반대쪽|찬성쪽|찬성편|상대편)/g;
+const COMPOUND_SPATIAL_AFTER =
+  /^(?:(?:을|를)? ?(?:유지|배치|이동|표시|확인|정렬|배열|놓|두)|(?:의|에서의)? ?(?:의견|주장|논거|진영|사람|임원|이사|말|목소리)|(?:은|는) [^.]*(?:말합니다|말씀|주장합니다|설명합니다|지적합니다|이야기합니다))/;
 
-function hasStanceContextCompound(sentence: string): boolean {
+function hasUnresolvedDirectionalCompound(sentence: string): boolean {
   for (const match of sentence.matchAll(DIRECTIONAL_COMPOUNDS)) {
-    const index = match.index ?? 0;
-    const after = sentence.slice(index + match[0].length);
-    const clauseStart = Math.max(sentence.lastIndexOf(',', index), sentence.lastIndexOf('、', index)) + 1;
-    const before = sentence.slice(clauseStart, index);
-    if (COMPOUND_PREDICATE.test(after) || STANCE_MARKER.test(before)) return true;
+    const after = sentence.slice((match.index ?? 0) + match[0].length);
+    if (!COMPOUND_SPATIAL_AFTER.test(after)) return true;
   }
   return false;
 }
@@ -432,7 +431,7 @@ function classifySentence(
   asked: boolean,
   participantStance?: 'FOR' | 'AGAINST' | null,
 ): SentenceKind {
-  if (hasStanceContextCompound(rawSentence)) return 'AMBIGUOUS';
+  if (hasUnresolvedDirectionalCompound(rawSentence)) return 'AMBIGUOUS';
   const sentence = rawSentence.replace(SPATIAL_COMPOUNDS, (m) => '□'.repeat(m.length));
   let target = sentence;
   const present = PRESENT_SPLIT.exec(target);
