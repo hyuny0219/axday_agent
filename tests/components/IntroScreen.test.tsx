@@ -18,7 +18,7 @@ describe('IntroScreen', () => {
 
     expect(screen.getByRole('heading', { name: '오늘 이사님은 특별 이사입니다' })).toBeInTheDocument();
     const purposes = Array.from(document.querySelectorAll('.intro-screen__purpose')).map((el) => el.textContent);
-    expect(purposes).toEqual(['가상 임원 네 명과 안건을 두고 토론하고,', '마지막에 한 표를 던집니다.']);
+    expect(purposes).toEqual(['가상 임원 네 명과 안건을 두고 토론하고,', '마지막에 찬성·반대 중 하나를 골라 한 표를 던집니다.']);
     expect(screen.getByTestId('intro-success')).toHaveTextContent('3석 이상');
     expect(screen.queryByTestId('intro-steps')).toBeNull();
     expect(document.querySelector('.intro-screen__tips')).toBeNull();
@@ -30,7 +30,7 @@ describe('IntroScreen', () => {
 
     const marked = Array.from(document.querySelectorAll('mark.key-term')).map((el) => el.textContent);
     expect(marked).toEqual(
-      expect.arrayContaining(['가상 임원 네 명', '한 표', '특별 이사의 의견', 'AI 임원들을 설득', '같은 편', '같은 표가 3석 이상', '설득 도장']),
+      expect.arrayContaining(['가상 임원 네 명', '찬성·반대 중 하나', '한 표', '특별 이사의 의견', 'AI 임원들을 설득', '같은 편', '같은 표가 3석 이상', '설득 도장']),
     );
     expect(screen.getByTestId('intro-success').querySelectorAll('mark.key-term').length).toBeGreaterThanOrEqual(2);
     // 2026-10-09 사용자 지시: 성공 기준은 "특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것".

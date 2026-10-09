@@ -19,6 +19,7 @@ export interface IntroScreenProps {
  * 마찬가지로 강조"). 문장 속 글자와 그대로 일치할 때만 표시된다. */
 export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
   '가상 임원 네 명',
+  '찬성·반대 중 하나',
   '한 표',
   '특별 이사의 의견',
   'AI 임원들을 설득',
@@ -62,7 +63,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
                 <HighlightText text="가상 임원 네 명과 안건을 두고 토론하고," terms={INTRO_HIGHLIGHT_TERMS} />
               </p>
               <p className="intro-screen__purpose">
-                <HighlightText text="마지막에 한 표를 던집니다." terms={INTRO_HIGHLIGHT_TERMS} />
+                <HighlightText text="마지막에 찬성·반대 중 하나를 골라 한 표를 던집니다." terms={INTRO_HIGHLIGHT_TERMS} />
               </p>
             </div>
           </div>
