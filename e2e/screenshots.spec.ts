@@ -261,4 +261,8 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await expect(page.getByTestId('coach-progress')).toHaveText('안내 3/6');
   await page.getByTestId('coach').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await capture(page, testInfo.project.name, 'coach-discuss');
+  // 닫으면 같은 자리에 "안내" 아이콘이 남는다(T106).
+  await page.getByTestId('coach-ack').click();
+  await expect(page.getByTestId('coach-icon')).toBeVisible();
+  await capture(page, testInfo.project.name, 'coach-icon-discuss');
 });

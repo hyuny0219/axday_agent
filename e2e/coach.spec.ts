@@ -156,3 +156,55 @@ test('운영 메뉴에서 안내를 끄면 코치가 사라지고, 다시 켜면
   await page.getByTestId('operator-toggle-coach').click();
   await expectCoach(page, 1);
 });
+
+test('알겠어요로 닫으면 안내 아이콘이 남고, 누르면 다시 열려 닫기·Esc로 닫힌다', async ({ page }) => {
+  await startWithCoach(page);
+  await expectCoach(page, 1);
+  await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+  await expect(page.getByTestId('coach-ack')).toHaveText('알겠어요 ▶');
+  await page.getByTestId('coach-ack').click();
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+
+  const icon = page.getByTestId('coach-icon');
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveAccessibleName('안내 다시 보기');
+  // 아이콘은 무대 사진 안쪽에 있다(720에서도 밖으로 나가지 않는다).
+  const band = (await page.getByTestId('stage-band').boundingBox())!;
+  const box = (await icon.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(band.x);
+  expect(box.y).toBeGreaterThanOrEqual(band.y);
+  expect(box.x + box.width).toBeLessThanOrEqual(band.x + band.width);
+  expect(box.y + box.height).toBeLessThanOrEqual(band.y + band.height);
+
+  await icon.click();
+  await expectCoach(page, 1);
+  await expect(page.getByTestId('coach-ack')).toHaveText('닫기 ▶');
+  // 다시 연 안내는 다른 조작으로는 닫히지 않는다.
+  await page.getByTestId('open-evidence').click();
+  await expect(page.getByTestId('evidence-dialog')).toBeVisible();
+  await page.getByTestId('evidence-dialog-close').click();
+  await expect(page.getByTestId('coach')).toHaveCount(1);
+  await page.getByTestId('coach-ack').click();
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(icon).toBeVisible();
+
+  await icon.click();
+  await expect(page.getByTestId('coach')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(icon).toBeVisible();
+
+  // 화면이 바뀌면 그 화면의 첫 안내가 자동으로 뜨고 아이콘은 사라진다.
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await expectCoach(page, 2);
+  await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+});
+
+test('?coach=off면 안내 아이콘도 없다', async ({ page }) => {
+  await page.goto('/?mode=scripted&coach=off');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await expect(page.getByTestId('open-evidence')).toBeVisible();
+  await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+});

@@ -3,12 +3,12 @@
 // "알겠어요" 또는 그 화면의 첫 조작(버튼·카드 클릭)이 있으면 세션의 coachDismissed에 기록해
 // 한 번만 보이게 한다. 규칙은 도메인에 있고 여기서는 연결만 한다.
 
-import { useEffect } from 'react';
-import { COACH_TOTAL, coachStep, type CoachUi } from '../../domain/coach';
+import { useEffect, useState } from 'react';
+import { COACH_TOTAL, coachScreenOf, coachStep, type CoachUi } from '../../domain/coach';
 import type { SessionAction } from '../../domain/session';
 import type { Session } from '../../domain/types';
-import { coachCopy } from '../../content/coach';
-import { Coach } from './Coach';
+import { COACH_CLOSE_LABEL, coachCopy } from '../../content/coach';
+import { Coach, CoachIcon } from './Coach';
 import { HighlightText } from './HighlightText';
 
 export interface CoachHostProps {
@@ -23,6 +23,27 @@ const NOT_OPERATION = '[data-testid="coach"], .operator-menu__trigger, .operator
 
 export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
   const step = coachStep(session, ui);
+  const screen = session.coachEnabled ? coachScreenOf(session, ui) : null;
+  // 아이콘으로 다시 연 화면 번호. 세션에 저장하지 않는 화면 안 상태이고, 화면이 바뀌면 비운다.
+  const [reopenedScreen, setReopenedScreen] = useState<number | null>(null);
+  const reopened = screen !== null && reopenedScreen === screen;
+
+  useEffect(() => {
+    setReopenedScreen(null);
+  }, [screen]);
+
+  useEffect(() => {
+    if (!reopened) {
+      return;
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setReopenedScreen(null);
+      }
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [reopened]);
 
   useEffect(() => {
     if (step === null) {
@@ -44,8 +65,24 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
     return () => document.removeEventListener('click', handleClick, true);
   }, [step, dispatch]);
 
-  if (step === null) {
+  if (screen === null) {
     return null;
+  }
+  if (step === null) {
+    if (!reopened) {
+      return <CoachIcon onOpen={() => setReopenedScreen(screen)} />;
+    }
+    const again = coachCopy(screen, session.mode);
+    return (
+      <Coach
+        step={screen}
+        total={COACH_TOTAL}
+        title={<HighlightText text={again.title} terms={again.keys} />}
+        lines={again.lines}
+        ackLabel={COACH_CLOSE_LABEL}
+        onAck={() => setReopenedScreen(null)}
+      />
+    );
   }
 
   const copy = coachCopy(step, session.mode);

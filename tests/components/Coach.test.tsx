@@ -14,7 +14,7 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function sessionAt(stage: 'BRIEFING' | 'OPINIONS' | 'DISCUSS' | 'REACTIONS' | 'VOTE' | 'RESULT', patch = {}) {
+function sessionAt(stage: 'INTRO' | 'BRIEFING' | 'OPINIONS' | 'DISCUSS' | 'REACTIONS' | 'VOTE' | 'RESULT', patch = {}) {
   return { ...createInitialSession(0, 's'), stage, ...patch };
 }
 
@@ -120,6 +120,64 @@ describe('CoachHost', () => {
     expect(screen.queryByTestId('coach')).toBeNull();
     rerender(<CoachHost session={sessionAt('REACTIONS')} ui={{ reactionsStep: 'listen' }} dispatch={vi.fn()} />);
     expect(screen.getByTestId('coach-progress')).toHaveTextContent('안내 4/6');
+  });
+});
+
+describe('안내 아이콘(T106)', () => {
+  it('이미 본 화면에는 말풍선 대신 "안내" 아이콘이 있고, 누르면 닫기 버튼이 있는 말풍선이 다시 열린다', () => {
+    const dispatch = vi.fn();
+    render(<CoachHost session={sessionAt('OPINIONS', { coachDismissed: [2] })} ui={EMPTY_COACH_UI} dispatch={dispatch} />);
+    expect(screen.queryByTestId('coach')).toBeNull();
+    const icon = screen.getByTestId('coach-icon');
+    expect(icon).toHaveTextContent('안내');
+    expect(icon).toHaveAttribute('aria-label', '안내 다시 보기');
+    fireEvent.click(icon);
+    expect(screen.getByTestId('coach-progress')).toHaveTextContent('안내 2/6');
+    expect(screen.getByTestId('coach-ack')).toHaveTextContent('닫기 ▶');
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
+    fireEvent.click(screen.getByTestId('coach-ack'));
+    expect(screen.queryByTestId('coach')).toBeNull();
+    expect(screen.getByTestId('coach-icon')).toBeInTheDocument();
+    expect(dispatch).not.toHaveBeenCalled(); // 세션에는 아무것도 기록하지 않는다
+  });
+
+  it('처음 자동으로 뜬 말풍선은 "알겠어요"이고 아이콘은 없다', () => {
+    render(<CoachHost session={sessionAt('OPINIONS')} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(screen.getByTestId('coach-ack')).toHaveTextContent('알겠어요 ▶');
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
+  });
+
+  it('다시 연 말풍선은 다른 버튼을 눌러도 닫히지 않고, Esc로 닫힌다', async () => {
+    render(
+      <>
+        <button type="button">아무 버튼</button>
+        <CoachHost session={sessionAt('DISCUSS', { coachDismissed: [3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId('coach-icon'));
+    fireEvent.click(screen.getByRole('button', { name: '아무 버튼' }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByTestId('coach')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('coach')).toBeNull());
+    expect(screen.getByTestId('coach-icon')).toBeInTheDocument();
+  });
+
+  it('화면이 바뀌면 다시 연 상태가 초기화되고, 코치가 꺼져 있거나 안내 없는 화면에는 아이콘이 없다', () => {
+    const { rerender } = render(
+      <CoachHost session={sessionAt('OPINIONS', { coachDismissed: [2, 3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByTestId('coach-icon'));
+    expect(screen.getByTestId('coach')).toBeInTheDocument();
+    rerender(<CoachHost session={sessionAt('DISCUSS', { coachDismissed: [2, 3] })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(screen.queryByTestId('coach')).toBeNull();
+    expect(screen.getByTestId('coach-icon')).toBeInTheDocument();
+    rerender(<CoachHost session={sessionAt('DISCUSS', { coachEnabled: false })} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
+    rerender(<CoachHost session={sessionAt('INTRO')} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
+    rerender(<CoachHost session={sessionAt('REACTIONS', { coachDismissed: [4] })} ui={{ reactionsStep: 'answer' }} dispatch={vi.fn()} />);
+    expect(screen.queryByTestId('coach-icon')).toBeNull();
   });
 });
 
