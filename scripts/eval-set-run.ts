@@ -21,7 +21,7 @@ import { CONDITION_IDS, EXEC_ROLE_IDS, type ExecRoleId } from '../server/validat
 
 type ConditionId = (typeof CONDITION_IDS)[number];
 import { getScenarioMaterials } from '../server/scenario-data';
-import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
+import { handleRound, type FollowUpAuditEntry, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
 import { handleProbe } from '../server/handlers/probe';
 import { MOCK_MODEL_ID, createMockProvider } from '../server/providers/mock';
@@ -97,6 +97,12 @@ export interface EvalRow {
   stance?: string;
   /** T92: 이 케이스의 참가자 입장(EvalCase.participantStance 그대로). --check 집계용. */
   participantStance?: string;
+  /** T114(Codex 54차): FOLLOWUP 행만. 시도별 원시 응답 문장(재시도·중립 대체 전 원문). */
+  followUpRawAttempts?: string[];
+  /** 시도별 방향 표현 건수(followUpRawAttempts와 같은 순서). */
+  followUpViolations?: number[];
+  /** 재시도 뒤에도 남아 중립 문장으로 대체됐는가(서버 로그 note followup_verdict_masked). */
+  followUpMasked?: boolean;
   latencyMs: number;
   modelId: string;
   promptVersion: string;
@@ -106,8 +112,11 @@ function toRoundRows(
   results: RoundRoleResult[],
   evalCase: EvalCase,
   stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP',
+  audit: FollowUpAuditEntry[] = [],
 ): EvalRow[] {
-  return results.map((result) => ({
+  return results.map((result) => {
+    const entry = stage === 'FOLLOWUP' ? audit.find((item) => item.roleId === result.roleId) : undefined;
+    return {
     caseId: evalCase.id,
     scenarioId: evalCase.scenarioId,
     pathId: evalCase.pathId,
@@ -123,10 +132,18 @@ function toRoundRows(
     concernCount: result.statement?.concerns.length,
     stance: result.statement?.stance,
     participantStance: evalCase.participantStance,
+    ...(entry
+      ? {
+          followUpRawAttempts: entry.attempts.map((attempt) => attempt.text),
+          followUpViolations: entry.attempts.map((attempt) => attempt.violations.length),
+          followUpMasked: entry.masked,
+        }
+      : {}),
     latencyMs: result.latencyMs,
     modelId: result.modelId,
     promptVersion: result.promptVersion,
-  }));
+  };
+  });
 }
 
 // --- provider.complete() 계측: handleVote()는 라운드 핸들러와 달리 latencyMs를 돌려주지 않아
@@ -306,8 +323,9 @@ async function runCase(
       scenarioId: evalCase.scenarioId,
       budgetMs: BUDGET_MS,
     };
-    const followUpResults = await handleRound(followUpRequest, { provider, clock });
-    followUpRows = toRoundRows(followUpResults, evalCase, 'FOLLOWUP');
+    const followUpAudit: FollowUpAuditEntry[] = [];
+    const followUpResults = await handleRound(followUpRequest, { provider, clock, followUpAudit });
+    followUpRows = toRoundRows(followUpResults, evalCase, 'FOLLOWUP', followUpAudit);
   }
 
   const voteRequest: VoteRequest = {
@@ -521,6 +539,40 @@ export interface FollowUpVerdictWord {
 /** T114: 답변 뒤 방향은 결과 화면에서 공개하므로 FOLLOWUP 발언(message)에 찬성·반대·가결·부결
  * 같은 방향 단어가 있으면 안 된다(기준은 0건, 서버가 실제로 막는 검사와 같은 함수). 일반 명사로
  * 쓴 문장은 사람이 읽어 판정한다. */
+export interface FollowUpVerdictStats {
+  /** answered FOLLOWUP 행 수. */
+  rows: number;
+  /** 첫 시도 원문에 방향 표현이 있던 행(프롬프트가 규칙을 못 지킨 비율의 분자). */
+  rawViolationRows: number;
+  rawViolationRate: number;
+  /** 모든 시도의 원시 위반 건수 합. */
+  rawViolationCount: number;
+  /** 재시도 뒤에도 남아 중립 문장으로 대체된 행. */
+  maskedRows: number;
+  maskedRate: number;
+}
+
+/** T114(Codex 54차): 서버가 재시도·중립 대체로 가린 뒤의 문장만 보면 위반이 0건으로 보이므로, 서버가
+ * 남긴 시도별 원문(followUpRawAttempts·followUpViolations)으로 "원시 위반율"과 "대체율"을 따로 센다. */
+export function followUpVerdictStats(rows: EvalRow[]): FollowUpVerdictStats {
+  const followUps = rows.filter((row) => row.stage === 'FOLLOWUP' && row.status === 'answered');
+  const rawViolationRows = followUps.filter((row) => (row.followUpViolations?.[0] ?? 0) > 0).length;
+  const rawViolationCount = followUps.reduce(
+    (sum, row) => sum + (row.followUpViolations ?? []).reduce((a, b) => a + b, 0),
+    0,
+  );
+  const maskedRows = followUps.filter((row) => row.followUpMasked === true).length;
+  const total = followUps.length;
+  return {
+    rows: total,
+    rawViolationRows,
+    rawViolationRate: total === 0 ? 0 : rawViolationRows / total,
+    rawViolationCount,
+    maskedRows,
+    maskedRate: total === 0 ? 0 : maskedRows / total,
+  };
+}
+
 export function findFollowUpVerdictWords(rows: EvalRow[]): FollowUpVerdictWord[] {
   const found: FollowUpVerdictWord[] = [];
   rows.forEach((row, index) => {
@@ -738,6 +790,7 @@ function runCheck(files: string[]): void {
     const mentions = findEvidenceIdMentions(rows);
     const missingStance = findMissingStance(rows);
     const verdictWords = findFollowUpVerdictWords(rows);
+    const verdictStats = followUpVerdictStats(rows);
     const agreement = stanceVoteAgreement(rows);
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
@@ -749,7 +802,9 @@ function runCheck(files: string[]): void {
         ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
         ` · 문장 속 자료 ID(E\\d) 잔존 ${mentions.length}건` +
         ` · stance 누락 ${missingStance.length}건` +
-        ` · FOLLOWUP 발언 방향 단어 ${verdictWords.length}건` +
+        ` · FOLLOWUP 최종 발언 방향 표현 ${verdictWords.length}건` +
+        ` · 원시 위반율 ${verdictStats.rawViolationRows}/${verdictStats.rows}(${(verdictStats.rawViolationRate * 100).toFixed(1)}%)` +
+        ` · 대체율 ${verdictStats.maskedRows}/${verdictStats.rows}(${(verdictStats.maskedRate * 100).toFixed(1)}%)` +
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );

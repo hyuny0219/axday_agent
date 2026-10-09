@@ -80,6 +80,17 @@ export interface RoundHandlerDeps {
   /** OPINIONS·VOTE와 REACTIONS·FOLLOWUP의 타임아웃(ms, T65). 생략하면 config.ts 기본값
    * (8000/12000)을 쓴다 — 기존 테스트가 그대로 통과한다. */
   timeouts?: { roundTimeoutMs: number; reactionTimeoutMs: number };
+  /** T114(Codex 54차): FOLLOWUP 임원 한 명의 시도별 원시 응답·위반과 대체 여부를 받는 내부 수집기.
+   * 평가 스크립트만 넘긴다 — 클라이언트 응답 JSON에는 실리지 않는다(반환값·로그와 별개). */
+  followUpAudit?: FollowUpAuditEntry[];
+}
+
+export interface FollowUpAuditEntry {
+  roleId: ExecRoleId;
+  /** 시도별 원시 message(스키마를 통과한 응답만; 형식 오류·타임아웃 시도는 건너뛴다). */
+  attempts: Array<{ text: string; violations: string[] }>;
+  /** 재시도 뒤에도 방향 표현이 남아 중립 문장으로 대체했는가(로그 note followup_verdict_masked). */
+  masked: boolean;
 }
 
 const DEFAULT_TIMEOUTS = {
@@ -182,6 +193,8 @@ interface RoleAttemptResult extends RoundRoleResult {
   /** T114: FOLLOWUP 응답이 스키마는 통과했지만 문장에 방향 단어가 있어 거절된 시도의 원본.
    * callRole이 재시도 뒤에도 이 값이 남아 있으면 그 임원 발언을 중립 문장으로 대체한다. */
   verdictStatement?: StatementResponse;
+  /** T114: 스키마를 통과한 이 시도의 원시 message(평가 수집용). */
+  rawMessage?: string;
 }
 
 /** 제공자 호출 1회(파싱·조건 ID 검증 포함). 로그를 남기지 않는다 — callRole이 재시도
@@ -257,6 +270,7 @@ async function attemptRole(
         cacheWriteTokens: result.usage?.cacheCreationInputTokens,
         promptVersion: PROMPT_VERSION,
         verdictStatement: parsed.data,
+        rawMessage: parsed.data.message,
       };
     }
     return {
@@ -268,6 +282,7 @@ async function attemptRole(
       promptVersion: PROMPT_VERSION,
       cacheReadTokens: result.usage?.cacheReadInputTokens,
       cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+      rawMessage: parsed.data.message,
     };
   } catch (err) {
     const latencyMs = clock.now() - start;
@@ -298,10 +313,18 @@ async function callRole(
   timeoutMs: number,
   provider: ModelProvider,
   clock: Clock,
+  audit?: FollowUpAuditEntry[],
 ): Promise<RoundRoleResult> {
   const overallStart = clock.now();
   let attempts = 1;
   let outcome = await attemptRole(roleId, input, materials, timeoutMs, provider, clock);
+  const rawAttempts: FollowUpAuditEntry['attempts'] = [];
+  const noteAttempt = (attempt: RoleAttemptResult) => {
+    if (attempt.rawMessage !== undefined) {
+      rawAttempts.push({ text: attempt.rawMessage, violations: findVerdictWords(attempt.rawMessage) });
+    }
+  };
+  noteAttempt(outcome);
   if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason, outcome.providerErrorClass)) {
     // 재시도까지 포함한 전체 시간은 서버 상한(timeoutMs)을 넘지 않는다 — input.budgetMs는
     // 클라이언트가 보낸 값이라 서버 상한보다 클 수 있다(PR #20 Codex 17차 검토 P2).
@@ -310,6 +333,7 @@ async function callRole(
       attempts = 2;
       const first = outcome;
       const second = await attemptRole(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock);
+      noteAttempt(second);
       // 캐시 토큰은 두 시도를 합산한다(PR #20 Codex 36차 검토 P2).
       outcome = {
         ...second,
@@ -331,6 +355,9 @@ async function callRole(
       verdictStatement: undefined,
     };
     masked = true;
+  }
+  if (audit && input.stage === 'FOLLOWUP') {
+    audit.push({ roleId, attempts: rawAttempts, masked });
   }
   const latencyMs = clock.now() - overallStart;
   logCall({
@@ -382,7 +409,7 @@ export async function handleRound(
   const targets = input.roleIds ?? EXEC_ROLE_IDS;
 
   const settled = await Promise.allSettled(
-    targets.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock)),
+    targets.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock, deps.followUpAudit)),
   );
 
   return settled.map((result, index) => {

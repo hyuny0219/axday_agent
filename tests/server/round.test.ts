@@ -558,6 +558,8 @@ describe('두 단계 설득 프롬프트(T110, v12)', () => {
     for (const system of followUp.systems) {
       expect(system).toContain('최종 찬반이나 표결 방향을 문장으로 밝히지 마십시오');
       expect(system).toContain('"찬성합니다"');
+      expect(system).toContain('지지·동의·같은 편·표를 보탠다');
+      expect(system).toContain('남은 우려');
     }
     for (const stage of ['OPINIONS', 'REACTIONS'] as const) {
       const other = captureSystems();

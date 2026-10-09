@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
   findFollowUpVerdictWords,
+  followUpVerdictStats,
   findStyleViolations,
   resolveEvalModel,
   toVoteRows,
@@ -173,5 +174,32 @@ describe('findFollowUpVerdictWords — FOLLOWUP 발언 방향 단어(T114)', () 
 
   it('다른 단계 발언과 실패한 행은 보지 않는다', () => {
     expect(findFollowUpVerdictWords([row('찬성합니다.'), followUp('찬성합니다.', 'failed')])).toEqual([]);
+  });
+});
+
+describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차)', () => {
+  function followUp(extra: Partial<EvalRow>): EvalRow {
+    return { ...row('답변을 잘 들었습니다.'), stage: 'FOLLOWUP', ...extra };
+  }
+
+  it('재시도로 깨끗해진 행도 첫 시도 원시 위반 1건으로 센다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ followUpRawAttempts: ['찬성합니다.', '답변을 들었습니다.'], followUpViolations: [1, 0], followUpMasked: false }),
+      followUp({ followUpRawAttempts: ['답변을 들었습니다.'], followUpViolations: [0], followUpMasked: false }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 1, maskedRows: 0 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+    // 최종 문장 검사는 0건이라 이 지표 없이는 위반이 사라져 보인다.
+    expect(findFollowUpVerdictWords([followUp({})])).toEqual([]);
+  });
+
+  it('중립 대체된 행은 대체율에 따로 잡힌다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ followUpViolations: [1, 2], followUpMasked: true }),
+      followUp({ followUpViolations: [0], followUpMasked: false }),
+      followUp({ status: 'failed' }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 3, maskedRows: 1 });
+    expect(stats.maskedRate).toBeCloseTo(0.5);
   });
 });
