@@ -10,7 +10,8 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
-| T107 | 완료 | 버튼 디자인 E안 '라벨 테이프' 전 화면 적용(주황 유지, 양끝 사선 컷·위아래 가는 검은 선·펀치 구멍; 보조=테두리, 잠김=점선)(2026-10-09 사용자 선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp E 보드). 상세는 아래 T107 카드 |
+| T108 | 진행 중 | 버튼 디자인을 E안(라벨 테이프)에서 **D안 '밀랍 봉인 봉투'**로 변경(2026-10-09 사용자 재선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp D 보드). 상세는 아래 T108 카드 |
+| T107 | 완료(T108에서 D안으로 대체) | 버튼 디자인 E안 '라벨 테이프' 전 화면 적용(주황 유지, 양끝 사선 컷·위아래 가는 검은 선·펀치 구멍; 보조=테두리, 잠김=점선)(2026-10-09 사용자 선택, 시안 https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp E 보드). 상세는 아래 T107 카드 |
 | T106 | 완료 | 코치 말풍선을 닫아도 작은 '안내' 아이콘으로 남겨 언제든 다시 볼 수 있게(2026-10-09 사용자 지시). 상세는 아래 T106 카드 |
 | T105 | 완료 | 근거 자료 카드·임원 의견/반응 카드의 중요한 말 강조(브리핑과 같은 `.key-term`): 안건별 강조어 + 조건 이름 + 숫자·단위 자동 강조, live 발언도 적용, 근거 자료 팝업의 임원 발언 열은 제거(2026-10-09 사용자 지시). 상세는 아래 T105 카드 |
 | T104 | 완료 | 코치를 화면 사용법 안내형으로 개정(화면당 말풍선 하나·6화면 "안내 N/6"·덮개·강제 없음·첫 조작/알겠어요로 닫힘), INTRO 버튼은 "확인" 하나·팝업 확대, 코치 끄기는 운영 메뉴·`?coach=off`로만(2026-10-09 사용자 지시, 초기 10단계 안은 폐기). 상세는 아래 T104 카드와 DESIGN_SPEC T103·T104 단락 |
@@ -88,6 +89,31 @@
 | T82 | 완료 | live 프롬프트 v9 — 임원 발언 속 조건 ID 잔존 제거(2026-10-07 사용자 지적: "영어 단어가 섞여 AI스럽다"). v8 실측 재집계 결과 192행 중 87행(45%)의 message·reason·draftText에 조건 ID(LOG·SCOPE 등)가 그대로 섞여 있었다 — 원인은 `server/prompts/common.ts`의 `buildMeetingRecordBlock`이 조건을 `- ${id}: ${label}` 한 줄로 줬기 때문. `formatConditionLabels`(한국어 라벨만, 본문)·`formatConditionIdMap`("조건 이름-ID 대응표", 응답 필드 전용·조건 있을 때만)로 블록을 분리하고, `buildCommonGuardrails`의 자료 인용 규칙에 조건 호칭·영문 금지(`"AI"`·임원 역할 이름(`EXEC_ROLE_IDS`에서 동적 생성)·숫자·단위만 예외)를 합쳐 한 항목으로 정리. `server/validate.ts`에 `findStrayLatinRun()`(라틴 문자 2자 이상 연속, 예외 외 전부 거절 — `CONDITION_IDS`를 따로 나열하지 않아도 자동으로 잡힌다)을 추가해 `statementResponseSchema`(message)·`voteResponseSchema`(reason)·`assistantResponseSchema`(draftText)에 `.superRefine()`으로 붙였다(기존 `!parsed.success` → `invalid_response` 경로를 그대로 재사용, 핸들러 코드 변경 없음). `server/providers/mock.ts`의 `"[mock]"`·영문 단계명(OPINIONS 등)이 새 검사기에 그 자체로 걸려 `"[모의]"`·`STAGE_LABEL_KO`(의견/반응/후속/표결)로 교체하고 `e2e/live.spec.ts`·`retry.spec.ts`·`reactions.spec.ts`의 같은 고정 문자열을 맞춰 갱신. `server/prompts/version.ts` v8→v9. 테스트: `tests/server/meetingRecord.test.ts`(2건, 라벨만·ID 대응표 분리 확인)·`tests/server/validate.test.ts`(findStrayLatinRun 직접 3건 + 세 응답 스키마의 조건 ID 거절·한국어 라벨/AI/역할 이름/숫자·단위 허용·비서실장 suggestedConditionIds는 여전히 ID 8건). 실제 키로 1회 실측(`docs/eval/tuning-v9-after.jsonl`, 같은 16케이스·192행): **189행 응답·3행 실패**(8초 타임아웃 `provider_error`/`other` — v8의 2건은 JSON 파싱 실패였던 것과 다른 종류, **스키마 거절로 실패한 행은 0건**). 핵심 결과: 조건 ID·잔존 영문이 87/192(45%) → 0/189(0%). stance 누락·존댓말 위반·자료 ID(`E\d`) 잔존 모두 0건, OPINIONS stance 의도 일치 62/63(98.4%, 1건은 CAIO가 의도한 UNDECIDED 대신 AGAINST·1건은 CISO 타임아웃), 조건 보완 경로 설득률 12/12(100%, v8과 동일) — 기록은 `docs/eval/tuning-v9.md`(발언 예문 7개 포함, "CFO·CISO 의견에 동의합니다" 같은 역할 호명은 그대로 남고 조건은 전부 한국어 이름으로만 등장함을 확인). `AGENT_BOARDROOM_SPEC.md` 5장에 "조건·자료 호칭(T82)" 단락, README 두 곳(실측 요약)·`FACILITATOR_GUIDE.md`에 "v1.3 — 조건을 한국어 이름으로만 부르게" 절 추가. `npm run check`(단위 519)·`npx playwright test`(scratchpad 로컬 config, mock 8792+preview 4175, chrome 채널, 142건) 모두 통과. |
 | T18~T22 | 대기 | P1, P0 PR 이후 카드 상세화 |
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
+
+---
+
+## T108 버튼 디자인 D안 "밀랍 봉인 봉투"로 변경(E안 대체)
+
+- 목표(2026-10-09 사용자 재선택): "아 버튼 D안으로 변경해줘." 시안 캔버스 D 보드 그대로. 시안 파일 사본: `scratchpad/buttons/project/D_Seal.dc.html`(수치 기준). T107의 라벨 테이프(사선 컷·펀치 구멍·`--cta-cut`·사선 띠 `::before/::after`)는 제거한다.
+- 읽을 것: T107이 바꾼 `src/styles/screens/shell.css`(`.cta`, `.cta--secondary`, `.cta--solid`, `.cta--outline`, `:disabled`, `:focus-visible`, 1280 분기, `--cta-cut`·`--cta-line`), `vote.css`·`motion.css`의 띠 색, `coach.css`(`.coach__ack`), `dialogShell.css`(닫기), `assistant.css`(토글·기능 버튼), `discuss.css`·`reactions.css`(입장 탭·버튼 행 폭 — 720에서 세 버튼 한 줄), `docs/design/DESIGN_SPEC.md` T107 단락, `e2e/style-consistency.spec.ts`.
+- 디자인 수치(D 보드):
+  - **주 버튼(.cta, 어두운 바탕)**: 바탕 #141413, 글자 종이색 #ece7dc, **2px 실선 테두리 #ece7dc**, 안쪽 **2px 점선 #7a766d**(`outline: 2px dashed; outline-offset: -8px`), 왼쪽에 **밀랍 봉인** 원 30px(바탕 #b23b3b, `box-shadow: inset 0 0 0 4px #8f2d2d, inset 0 0 0 6px #b23b3b, 0 1px 0 #5a1d1d`, 안에 흰 글자 한 자 "결"은 **쓰지 않는다**(글자 없는 봉인) — `::before`로 그림), 봉인과 글자 사이 14px, 좌 패딩 16px·우 26px. 글자 자간 0.06em. 누를 때(`:active`) 봉인이 `scale(0.9)`로 살짝 눌림.
+  - **보조 버튼(.cta--secondary, 어두운 바탕)**: 봉인 없는 봉투 — 같은 바탕·테두리·안쪽 점선, 패딩 0 20px.
+  - **잠긴 버튼(:disabled, .cta--outline)**: 봉투 테두리 #4a4540, 안쪽 점선 #3a3631, 글자 #7a766d, 봉인은 회색 원(#4a4540, 그림자 없음).
+  - **종이 위 주 버튼(.cta--solid: 근거 자료 보기·팝업 닫기·팝업 안 기능 버튼·코치 알겠어요/닫기·INTRO 확인·ATTRACT 체험 시작)**: 바탕 #fbf7ee, 글자 #1b1a17, **2px 실선 먹색 #1b1a17**, 안쪽 점선 #a8a194(offset -7px), 왼쪽 봉인 24px(같은 붉은색). 팝업 안 기능 버튼 세 개와 코치 소형은 봉인 없이(폭 절약, 높이 44~48px).
+  - **입장 탭**: 선택됨 = 먹색 바탕 #1b1a17 + 종이색 글자(봉인 없음), 미선택 = 투명 바탕 + 2px 먹색 테두리 + 안쪽 점선 #a8a194 + 먹색 글자.
+  - **작은 글자 버튼**(건너뛰기 밑줄, 조건 칩, 안내 아이콘, 운영 버튼)은 바꾸지 않는다.
+  - 1280×720: 높이·글자 크기 유지, 봉인 24px·안쪽 점선 offset -6px, 좌우 패딩 12/18px로 줄여 REACTIONS 세 버튼이 한 줄에.
+  - 색 규칙: 붉은색은 봉인 장식에만(글자·테두리에 붉은색 금지). 영문 없음.
+- 만들 것:
+  1. `shell.css`의 `.cta` 계열을 위 수치로 교체(clip-path·펀치 구멍·사선 띠·`--cta-cut`·`--cta-line` 제거, 죽은 규칙 삭제). 포커스 링은 `outline`을 안쪽 점선에 쓰고 있으므로 `:focus-visible`은 `box-shadow: 0 0 0 3px #e0a34a`(주황 글로우, clip-path가 없으니 보임).
+  2. vote.css·motion.css의 T107 띠 색 규칙 정리, coach/dialogShell/assistant/discuss/reactions의 버튼 변형 확인·조정.
+  3. 문서: DESIGN_SPEC T107 단락에 "T108에서 D안으로 대체" 주석 + "## T108 — 버튼 밀랍 봉인 봉투" 단락(수치·상태표), TASKS 행.
+  4. 테스트·e2e: `style-consistency`·`viewport-fit`·`noscroll`·`a11y` 통과, `screenshots.spec` 전체 갱신(docs/screenshots 포함).
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 버튼 높이·720 레이아웃 변경, 글자·테두리에 붉은색, 영문.
+- 완료 확인: `npm run check`, e2e 1080·720 각각 PASS, 1080·720 전수 스크린샷 Read(봉인·점선·테두리가 모두 보이고 잘림·겹침 없음, 720 reactions-answer 세 버튼 한 줄).
+- 크기: M.
 
 ---
 
