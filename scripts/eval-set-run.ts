@@ -1,4 +1,4 @@
-// T34 고정 평가 세트 실행기(T79에서 두 안건 기준으로 재작성). scripts/eval-set.json(16케이스 =
+// T34 고정 평가 세트 실행기(T79에서 두 안건 기준으로 재작성). scripts/eval-set.json(기본 16케이스 =
 // 안건 2개 × 네 경로(조건 없음·조건 보완·상충·요청형) × 참가자 발언 변형 2개)을
 // server/handlers/round.ts·vote.ts로 직접 실행해 라운드별 비교(전/후)에 쓸 원시 기록(jsonl)을
 // 만든다. 옛 세트(anon-board, 12케이스, 변형 3개, 경로명 '부정')는 T78 안건 교체로 더는 쓸 수
@@ -58,6 +58,9 @@ export interface EvalCase {
   participantOpinion: string;
   /** T92: 참가자 입장. 생략하면(기존 16케이스) null과 같다 — 요청에 필드를 안 싣는다. */
   participantStance?: 'FOR' | 'AGAINST';
+  /** T110(v12): 참가자가 추가 질문에 답했는지. 생략하면(기존 20케이스) 요청에 필드를 싣지 않아
+   * 답한 것과 같게 다룬다. false인 케이스만 "답하지 않고 넘어감"을 잰다. */
+  followUpAnswered?: boolean;
 }
 
 interface EvalSetFile {
@@ -269,6 +272,8 @@ async function runCase(
     transcript: { revision: 1, statements: opinionsStatements },
     participantOpinion: evalCase.participantOpinion,
     participantStance: evalCase.participantStance,
+    // 첫 반응은 항상 "아직 답하기 전"이다(REACTIONS 단계 자체가 그 뜻이라 값은 영향이 없다).
+    followUpAnswered: false,
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -298,6 +303,7 @@ async function runCase(
       executionMode: 'DEFAULT',
     },
     participantStance: evalCase.participantStance,
+    followUpAnswered: evalCase.followUpAnswered,
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;

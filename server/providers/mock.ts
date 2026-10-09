@@ -39,6 +39,9 @@ export interface MockRequestEnvelope {
   /** PR #13 Codex 2차 검토 P1: 역할별 조건 ID를 안건에 맞게 고르려면 어느 안건인지
    * 알아야 한다(server/handlers/round.ts·assistant.ts가 envelope에 실어 보낸다). */
   scenarioId?: string;
+  /** 참가자가 추가 질문에 답했는지(T110, 프롬프트 v12). 표결 envelope에서 false면 "답하지
+   * 않고 넘어감" 규칙을 흉내 낸다. */
+  followUpAnswered?: boolean;
 }
 
 // 이 고정 맵은 scenarioId를 모를 때만 쓰는 폴백이다(아래 scenarioAwareRoleEvidence 참고).
@@ -136,6 +139,15 @@ const STAGE_LABEL_KO: Record<string, string> = {
   VOTE: '표결',
 };
 
+/** T110(v12): 첫 반응에서 참가자 쪽으로 움직이는 임원은 "고민 중"까지만 간다. mock은
+ * 고정 맵의 FOR 중 그 안건의 출발 성향이 FOR가 아닌 임원(처음부터 같은 편이 아닌 임원)을
+ * "움직이는 임원"으로 본다. 안건을 모르면 고정 맵 그대로다. */
+function movedTowardParticipant(roleId: string, scenarioId: string | undefined): boolean {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  const opening = materials?.roleLenses?.[roleId as ExecRoleId]?.opening;
+  return ROLE_STANCE[roleId] === 'FOR' && opening !== undefined && opening !== 'FOR';
+}
+
 function buildStatementJson(env: MockRequestEnvelope): unknown {
   const roleId = env.roleId ?? 'CEO';
   const stage = env.stage ?? 'OPINIONS';
@@ -149,7 +161,9 @@ function buildStatementJson(env: MockRequestEnvelope): unknown {
     stance:
       stage === 'OPINIONS'
         ? scenarioAwareOpeningStance(roleId, env.scenarioId)
-        : ROLE_STANCE[roleId] ?? 'UNDECIDED',
+        : stage === 'REACTIONS' && movedTowardParticipant(roleId, env.scenarioId)
+          ? 'UNDECIDED'
+          : ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
 
@@ -159,7 +173,10 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     roleId,
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
-    vote: ROLE_VOTE[roleId] ?? 'NO',
+    vote:
+      env.followUpAnswered === false && movedTowardParticipant(roleId, env.scenarioId)
+        ? 'NO'
+        : ROLE_VOTE[roleId] ?? 'NO',
     reason: `[모의] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     remainingConcerns: [],

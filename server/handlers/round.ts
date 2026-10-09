@@ -16,7 +16,12 @@ import {
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
-import { buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
+import {
+  FOLLOWUP_ANSWERED_RULE,
+  REACTIONS_FIRST_PASS_RULE,
+  buildCommonGuardrails,
+  buildMeetingRecordBlock,
+} from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
@@ -44,6 +49,9 @@ export const roundRequestSchema = z.object({
   participantOpinion: z.string().min(1).optional(),
   /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). 없으면 입장을 고르지 않은 것이다. */
   participantStance: z.enum(PARTICIPANT_STANCE_VALUES).optional(),
+  /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 없으면(기존 요청) 답한 것으로
+   * 보지 않는다 — REACTIONS는 단계 자체가 "아직 답하기 전"이라 이 값과 무관하다. */
+  followUpAnswered: z.boolean().optional(),
   scenarioId: z.string().min(1),
   budgetMs: z.number().int().positive(),
   /** 실패한 역할만 다시 호출할 때 쓰는 선택 필드(T65, "다시 요청"). 없으면 임원 4명 전체를
@@ -118,12 +126,14 @@ function stageInstruction(stage: RoundRequest['stage']): string {
         '지금은 반응 단계입니다. 참가자 발언과 동료 임원의 기존 발언(ID)을 참고해 동의·반론·입장' +
         ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.' +
         ' 참가자 발언의 핵심 주장 한 가지를 짚어 그 주장에 직접 답하십시오 — "말씀은 잘' +
-        ' 들었습니다" 같은 수신 확인만 하고 넘어가지 마십시오.'
+        ' 들었습니다" 같은 수신 확인만 하고 넘어가지 마십시오. ' +
+        REACTIONS_FIRST_PASS_RULE
       );
     case 'FOLLOWUP':
       return (
         '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
-        ' 보완하십시오.'
+        ' 보완하십시오. ' +
+        FOLLOWUP_ANSWERED_RULE
       );
   }
 }
@@ -147,6 +157,7 @@ function buildRoundSystemPrompt(
     statements: input.transcript.statements,
     participantOpinion: input.participantOpinion,
     participantStance: input.participantStance ?? null,
+    followUpAnswered: input.followUpAnswered,
   });
   return [
     buildCommonGuardrails(),
@@ -189,6 +200,7 @@ async function attemptRole(
       // PR #13 Codex 2차 검토 P1: mock 제공자가 안건별로 유효한 조건 ID를 고르려면
       // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
       scenarioId: input.scenarioId,
+      followUpAnswered: input.followUpAnswered,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({

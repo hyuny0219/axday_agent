@@ -60,4 +60,13 @@
 // oppositionReactions·voteRules reason·followUp.question)도 같은 기준으로 다시 썼다 —
 // 자료 카드·조건 라벨·추천 문구(P1~P6·N1~N4)·후속 추천 답변은 범위 밖(참가자 몫이거나
 // 키워드 규칙과 묶여 있음). 전후 비교는 docs/eval/tuning-v11.md.
-export const PROMPT_VERSION = 'v11';
+// v12(2026-10-09, T110): 사용자 지시 "처음 추천문구를 선택해서 의견전달했을 때 전부
+// 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해줘." 설득을 두 단계로
+// 나눴다 — REACTIONS(첫 반응) 지시에 "조건이 충분해도 stance는 UNDECIDED(고민 중)까지만,
+// 참가자 쪽 확정은 추가 질문에 답한 뒤"를(prompts/common.ts의 REACTIONS_FIRST_PASS_RULE,
+// 위 stance 지침보다 우선), FOLLOWUP 지시에 "답을 받았으니 확정해도 된다"를, VOTE 지시에
+// "추가 질문 답변: 없음이면 고민 중이던 임원은 처음 입장대로 표결(찬성 참가자면 반대표)"을
+// 더했다(VOTE_UNANSWERED_RULE, followUpAnswered가 false일 때만 붙는다). 요청 스키마에
+// followUpAnswered(round·vote 모두 선택 필드, 생략 시 기존 동작)를 추가했다. 응답 스키마는
+// 바뀌지 않았다. 전후 비교는 docs/eval/tuning-v12.md(mock 기준 요약, live 실측은 승인 후).
+export const PROMPT_VERSION = 'v12';

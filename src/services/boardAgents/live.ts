@@ -134,6 +134,7 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     transcript: transcriptPayload(ctx),
     participantOpinion: latestParticipantOpinion(ctx),
     participantStance: latestParticipantStance(ctx),
+    followUpAnswered: ctx.session.followUpAnswered,
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,
     roleIds: ctx.roleIds,
@@ -235,6 +236,7 @@ function buildVoteBody(ctx: BoardAgentsContext, timeoutMs: number) {
       executionMode: motion.executionMode,
     },
     participantStance: latestParticipantStance(ctx),
+    followUpAnswered: ctx.session.followUpAnswered,
     roleIds: ctx.roleIds,
   };
 }

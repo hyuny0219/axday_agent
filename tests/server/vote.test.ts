@@ -392,3 +392,44 @@ describe('callRoleVote의 1회 재시도(T91)', () => {
     expect(results[0]?.status).toBe('failed');
   });
 });
+
+// T110(프롬프트 v12): 추가 질문에 답하지 않고 넘어간 참가자에 대한 표결 지시.
+describe('추가 질문 미답변 표결 지시(T110, v12)', () => {
+  function captureSystems(): { systems: string[]; provider: ModelProvider } {
+    const systems: string[] = [];
+    const provider: ModelProvider = {
+      async complete(req) {
+        systems.push(req.system);
+        return createMockProvider('mock-model').complete(req);
+      },
+    };
+    return { systems, provider };
+  }
+
+  it('followUpAnswered:false면 "처음 입장대로 표결" 규칙과 회의 기록의 "답변: 없음"이 붙는다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleVote(baseVoteInput({ requestId: 'req-t110-no', participantStance: 'FOR', followUpAnswered: false }), { provider });
+    expect(systems).toHaveLength(4);
+    for (const system of systems) {
+      expect(system).toContain('처음 입장대로 표결하십시오');
+      expect(system).toContain('추가 질문 답변: 없음');
+    }
+  });
+
+  it('followUpAnswered가 true이거나 생략(기존 요청)이면 미답변 규칙이 붙지 않는다', async () => {
+    for (const followUpAnswered of [true, undefined]) {
+      const { systems, provider } = captureSystems();
+      await handleVote(baseVoteInput({ requestId: `req-t110-${String(followUpAnswered)}`, followUpAnswered }), { provider });
+      for (const system of systems) {
+        expect(system).not.toContain('처음 입장대로 표결하십시오');
+        expect(system).not.toContain('추가 질문 답변: 없음');
+      }
+    }
+  });
+
+  it('요청 스키마가 followUpAnswered(불리언, 선택)를 받는다', () => {
+    const parsed = voteRequestSchema.safeParse({ ...baseVoteInput(), followUpAnswered: false });
+    expect(parsed.success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...baseVoteInput(), followUpAnswered: 0 }).success).toBe(false);
+  });
+});

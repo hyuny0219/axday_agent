@@ -16,7 +16,7 @@ import {
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
-import { buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
+import { VOTE_UNANSWERED_RULE, buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
@@ -54,6 +54,9 @@ const voteRequestShape = z.object({
    * 중 입장이라 스펙 6장의 "참가자 표는 보내지 않는다"와 다르다 — 안건에 붙은 조건이
    * 참가자의 요구였는지 판단하는 데 쓴다. */
   participantStance: z.enum(PARTICIPANT_STANCE_VALUES).optional(),
+  /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 생략하면(기존 요청) 답한 것과
+   * 같게 다룬다 — false일 때만 "답하지 않고 넘어감" 규칙이 붙는다. */
+  followUpAnswered: z.boolean().optional(),
   /** 미표결(UNCAST) 임원만 다시 호출할 때 쓰는 선택 필드(T65, "미표결 임원 다시 요청").
    * 없으면 임원 4명 전체를 부른다. */
   roleIds: roleIdsSchema.optional(),
@@ -162,6 +165,7 @@ function buildVoteSystemPrompt(
       executionMode: input.motion.executionMode,
     },
     participantStance: input.participantStance ?? null,
+    followUpAnswered: input.followUpAnswered,
   });
   return [
     buildCommonGuardrails(),
@@ -171,6 +175,7 @@ function buildVoteSystemPrompt(
       ' 않으며, 당신은 그것을 알 수 없다는 전제로 스스로 판단하십시오.',
     '응답의 motionId·motionHash는 meeting_record에 적힌 값과 정확히 같아야 하고, reason은' +
       ' 160자 이내여야 합니다.',
+    ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
     meetingRecord,
   ].join('\n\n');
 }
@@ -208,6 +213,7 @@ async function attemptRoleVote(
       // PR #13 Codex 2차 검토 후속: mock 제공자가 역할별 인용 자료도 안건에 맞게 고르려면
       // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
       scenarioId: input.scenarioId,
+      followUpAnswered: input.followUpAnswered,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({

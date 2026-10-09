@@ -258,18 +258,39 @@ describe('createMockProvider 안건별 OPINIONS 출발 성향(PR #13 Codex 3차 
     },
   );
 
+  // T110(v12): 첫 반응(REACTIONS)에서 참가자 쪽으로 움직이는 임원(출발 성향이 FOR가 아닌 CAIO)은
+  // 고민 중까지만 가고, 후속(FOLLOWUP)에서야 FOR가 된다. 처음부터 같은 편인 CEO는 그대로 FOR다.
   it.each(['ai-approval', 'experience-first'] as const)(
-    '%s의 REACTIONS·FOLLOWUP stance는 OPINIONS와 무관하게 고정 맵을 쓴다(CAIO는 FOR)',
+    '%s의 REACTIONS stance는 CAIO가 UNDECIDED(고민 중), FOLLOWUP은 FOR다(T110)',
     async (scenarioId) => {
       const provider = createMockProvider('mock-model');
-      for (const stage of ['REACTIONS', 'FOLLOWUP'] as const) {
-        const result = await provider.complete(
-          baseRequest(
-            JSON.stringify({ kind: 'statement', roleId: 'CAIO', stage, scenarioId }),
-          ),
-        );
-        expect((result.json as { stance: string }).stance).toBe('FOR');
-      }
+      const stanceOf = async (roleId: string, stage: string) =>
+        (
+          (await provider.complete(baseRequest(JSON.stringify({ kind: 'statement', roleId, stage, scenarioId }))))
+            .json as { stance: string }
+        ).stance;
+      expect(await stanceOf('CAIO', 'REACTIONS')).toBe('UNDECIDED');
+      expect(await stanceOf('CAIO', 'FOLLOWUP')).toBe('FOR');
+      expect(await stanceOf('CEO', 'REACTIONS')).toBe('FOR');
+    },
+  );
+
+  it.each(['ai-approval', 'experience-first'] as const)(
+    '%s의 표결은 followUpAnswered가 false일 때만 CAIO가 반대로 돌아간다(T110)',
+    async (scenarioId) => {
+      const provider = createMockProvider('mock-model');
+      const voteOf = async (roleId: string, followUpAnswered?: boolean) =>
+        (
+          (
+            await provider.complete(
+              baseRequest(JSON.stringify({ kind: 'vote', roleId, scenarioId, followUpAnswered })),
+            )
+          ).json as { vote: string }
+        ).vote;
+      expect(await voteOf('CAIO')).toBe('YES');
+      expect(await voteOf('CAIO', true)).toBe('YES');
+      expect(await voteOf('CAIO', false)).toBe('NO');
+      expect(await voteOf('CEO', false)).toBe('YES');
     },
   );
 

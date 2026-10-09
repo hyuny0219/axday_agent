@@ -495,3 +495,66 @@ describe('callRole의 1회 재시도(T91)', () => {
     expect(parsed.status).toBe('answered');
   });
 });
+
+// T110(프롬프트 v12): 두 단계 설득 — 첫 반응은 고민 중까지, 후속에서 확정.
+describe('두 단계 설득 프롬프트(T110, v12)', () => {
+  function captureSystems(): { systems: string[]; provider: ModelProvider } {
+    const systems: string[] = [];
+    const provider: ModelProvider = {
+      async complete(req) {
+        systems.push(req.system);
+        return createMockProvider('mock-model').complete(req);
+      },
+    };
+    return { systems, provider };
+  }
+
+  it('프롬프트 버전이 v12다', () => {
+    expect(PROMPT_VERSION).toBe('v12');
+  });
+
+  it('요청 스키마가 followUpAnswered(불리언, 선택)를 받고 다른 타입은 거절한다', () => {
+    const base = {
+      sessionId: 's',
+      requestId: 'r',
+      mode: 'live',
+      stage: 'REACTIONS',
+      transcript: { revision: 0, statements: [] },
+      scenarioId: 'ai-approval',
+      budgetMs: 8000,
+    };
+    expect(roundRequestSchema.safeParse(base).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, followUpAnswered: false }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, followUpAnswered: 'no' }).success).toBe(false);
+  });
+
+  it('REACTIONS 지시에 "조건이 충분해도 고민 중(UNDECIDED)까지만, 확정은 추가 질문 답변 뒤"가 들어간다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-r', stage: 'REACTIONS', followUpAnswered: false }), { provider });
+    expect(systems).toHaveLength(4);
+    for (const system of systems) {
+      expect(system).toContain('UNDECIDED(고민 중)까지만');
+      expect(system).toContain('추가 질문에 답한 뒤');
+      expect(system).not.toContain('추가 질문 답변:');
+    }
+  });
+
+  it('FOLLOWUP 지시에는 답을 받았으니 확정해도 된다는 말이 들어가고, 회의 기록에 답변 있음이 실린다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-f', stage: 'FOLLOWUP', followUpAnswered: true }), { provider });
+    for (const system of systems) {
+      expect(system).toContain('참가자가 추가 질문에 답했습니다');
+      expect(system).toContain('추가 질문 답변: 있음');
+      expect(system).not.toContain('UNDECIDED(고민 중)까지만');
+    }
+  });
+
+  it('OPINIONS 지시에는 두 단계 설득 문구가 붙지 않는다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-o' }), { provider });
+    for (const system of systems) {
+      expect(system).not.toContain('UNDECIDED(고민 중)까지만');
+      expect(system).not.toContain('참가자가 추가 질문에 답했습니다');
+    }
+  });
+});

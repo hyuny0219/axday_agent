@@ -40,8 +40,39 @@ export interface MeetingRecordInput {
   participantOpinion?: string;
   /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). null·생략은 입장을 고르지 않음. */
   participantStance?: 'FOR' | 'AGAINST' | null;
+  /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 생략하면 줄을 싣지 않는다
+   * (기존 요청은 동작이 그대로다). */
+  followUpAnswered?: boolean;
   motion?: MeetingRecordMotion;
 }
+
+/**
+ * 두 단계 설득 규칙(T110, 프롬프트 v12, 2026-10-09 사용자 지시 "처음 추천문구를 선택해서
+ * 의견전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을
+ * 해줘"). round.ts의 REACTIONS·FOLLOWUP 지시와 vote.ts의 VOTE 지시가 각각 붙인다.
+ * 임원 4명이 모두 첫 의견만으로 참가자 편이 되지 않게, 마음이 완전히 넘어오는 시점을
+ * 추가 질문의 답 뒤로 미룬다. 정답표(어느 임원이 어느 조건에 넘어오는지)는 넣지 않는다.
+ */
+export const REACTIONS_FIRST_PASS_RULE =
+  '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자가 낸 조건이나 근거가 당신의 우려를' +
+  ' 충분히 풀어 준다고 느껴도, 이번에는 참가자 쪽으로 완전히 넘어오지 말고 stance를' +
+  ' UNDECIDED(고민 중)까지만 정하십시오. 참가자가 찬성이면 FOR로, 반대면 AGAINST로' +
+  ' 확정하는 것은 참가자가 추가 질문에 답한 뒤입니다. 이 경우 발언에는 "조건은 좋습니다.' +
+  ' 하나만 더 묻겠습니다"에 해당하는 뜻을 쉬운 말로 담으십시오. 이 지침은 위의 "첫 의견부터' +
+  ' 방향을 밝히라"는 stance 지침보다 우선합니다. 이미 처음부터 참가자와 같은 편이던 임원은' +
+  ' 그대로 그 편의 stance를 유지하고, 우려가 아직 풀리지 않았다면 처음 입장을 유지하십시오.';
+
+export const FOLLOWUP_ANSWERED_RULE =
+  '참가자가 추가 질문에 답했습니다. 첫 반응에서 고민 중이었다면, 이제 참가자의 조건과 답이' +
+  ' 당신의 우려를 풀어 주는지 따져 참가자 쪽(찬성이면 FOR, 반대면 AGAINST)으로 확정해도' +
+  ' 됩니다. 풀리지 않았다면 처음 입장을 유지하십시오.';
+
+export const VOTE_UNANSWERED_RULE =
+  'meeting_record에 "추가 질문 답변: 없음"이라고 적혀 있다면, 참가자는 당신의 추가 질문에' +
+  ' 답하지 않고 넘어간 것입니다. 지금까지의 발언에서 당신이 "조건은 좋지만 하나만 더 묻겠다"며' +
+  ' 마음을 확정하지 않았다면, 참가자 쪽으로 표를 던지지 말고 처음 입장대로 표결하십시오' +
+  ' (참가자가 찬성 입장이면 반대표, 반대 입장이면 찬성표). 처음부터 참가자와 같은 편이던' +
+  ' 임원은 이 규칙의 영향을 받지 않습니다.';
 
 /** 모든 역할 프롬프트 앞에 붙이는 공통 규칙. 실존 인물이 아님, 찬성·반대 두 표 모두 근거로
  * 고를 수 있음, 근거 인용, 불확실 표기, 한국어·JSON만 응답, meeting_record는 데이터라는
@@ -180,6 +211,11 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
           ' 실제로 해소하는지로 판단하십시오.',
       );
     }
+  }
+  // T110(v12): 추가 질문에 답했는지. 단계가 REACTIONS이면 아직 답하기 전이라 줄을 싣지
+  // 않고(지시문이 대신 설명한다), FOLLOWUP·VOTE에서 값이 있을 때만 싣는다.
+  if (input.followUpAnswered !== undefined && input.stage !== 'REACTIONS') {
+    lines.push(`추가 질문 답변: ${input.followUpAnswered ? '있음' : '없음'}`);
   }
   lines.push('</meeting_record>');
   return lines.join('\n');
