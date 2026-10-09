@@ -202,8 +202,8 @@ describe('안내 아이콘(T106)', () => {
 });
 
 describe('코치 문구', () => {
-  it('반응 화면(4)은 고민 중인 임원이 답해야 찬성으로 바뀐다고 한 줄 알려 준다(T110)', () => {
-    expect(COACH_SCREENS.find((item) => item.step === 4)?.lines).toContain('고민 중인 임원은 답해야 찬성으로 바뀝니다.');
+  it('반응 화면(4)은 기울어진 임원이 답해야 확정된다고 한 줄 알려 준다(T110·T118)', () => {
+    expect(COACH_SCREENS.find((item) => item.step === 4)?.lines).toContain("'찬성 쪽'으로 기울어진 임원은 답해야 확정됩니다.");
     expect(COACH_SCREENS.find((item) => item.step === 4)?.linesLive?.join(' ')).toContain('답해야');
   });
 
