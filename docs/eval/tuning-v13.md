@@ -29,3 +29,7 @@
 | 발언이 너무 밋밋해지지 않는지(평가·소회가 실제 내용을 담는가) | 샘플 8개를 사람이 읽고 기록 |
 
 실행: `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v13-after.jsonl` (사용자 승인 뒤). 집계 후 이 문서의 결과 절을 채운다.
+
+## 서버·화면 방어 (Codex 53차)
+
+프롬프트만으로는 모델이 규칙을 어길 수 있어 서버가 FOLLOWUP 응답의 방향 단어를 같은 함수(`src/domain/verdictWords.ts`)로 검사한다. 걸리면 1회 재시도, 그래도 걸리면 역할별 중립 문장으로 대체하고 로그 note에 `followup_verdict_masked`를 남긴다. live 실측 때 이 note 건수(= 프롬프트가 규칙을 못 지킨 횟수)도 함께 센다. 화면 회의록도 MOTION·VOTE에서 한 번 더 가린다.

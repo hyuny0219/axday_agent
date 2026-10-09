@@ -982,10 +982,17 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 | --- | --- |
 | 0 | 임원 네 장이 봉인(`?`)으로 시작. 좌측 TALLY 막대 4칸은 회색, 우측 판단 행은 직함만 보임, 결론 제목·집계·설득 요약은 숨김. 참가자 표 배지는 처음부터 보임 |
 | 0.9 / 1.8 / 2.7 / 3.6 | CEO → CFO → CAIO → CISO 순서(`EXEC_MEMBER_ORDER`)로 한 장씩 뒤집힘(0.5초). 무대 표 배지·좌측 막대·우측 판단 행이 같은 시각에 열린다 |
-| 4.1 | 마지막 장이 다 열림. 이때 집계 숫자("찬성 N / 반대 N"·"같은 표 N석")·결론 제목·설득 요약이 나타남 |
+| 4.1 | 마지막 장이 다 열림. 이때 집계 숫자("찬성 N / 반대 N"·"같은 표 N석")·결론 제목·설득 요약에 더해, **결과에 따라 문장이 달라지는 나머지 요소**("6개월 뒤" 카드, 남은 과제·AI 비서실장 줄, 참가자 행의 다수·소수 의견 문구, 일부 미표결 안내, 도장 칸 스크린리더 텍스트)도 함께 나타남. 그 전에는 opacity 0 + `aria-hidden`(`useResultReveal`이 같은 시각에 푼다) |
 | 4.2 | 가결·부결 도장(`STAMP_DELAY_SECONDS`) |
 | 4.6 | 성공·실패 도장(`PERSUASION_STAMP_DELAY_SECONDS`) |
 
 - **줄이기**: `prefers-reduced-motion`이면 `base.css` 전역 규칙이 지연을 0으로 만들어 봉인 없이 즉시 전부 공개. 운영자 skip(결과 화면 클릭·키 입력)은 `<html data-result-skip="true">`를 켜 같은 효과(무대는 결과 화면 밖 DOM이라 속성으로 전달).
 - **접근성**: 봉인 표시는 `aria-hidden`. 표 배지·판단 행의 텍스트는 처음부터 DOM에 있어 스크린리더에는 결과가 바로 읽힌다(시각 연출만 지연).
 - **스크린샷**: `motion.png`·`vote.png`·`result.png`를 갱신했다. result는 모든 공개가 끝난 상태다.
+
+### FOLLOWUP 원문 방어 (T114, Codex 53차)
+
+프롬프트 규칙(v13)을 모델이 어길 수 있어 두 겹으로 막는다. 기준 함수는 `src/domain/verdictWords.ts`(`findVerdictWords`: 찬성·반대·가결·부결)이고 평가 스크립트도 같은 함수를 쓴다.
+
+- **서버**(`server/handlers/round.ts`, FOLLOWUP 단계만): 응답 문장에 방향 단어가 있으면 `invalid_response`로 보고 기존 재시도 경로를 한 번 탄다. 재시도에서도 남거나 재시도 예산이 없으면 그 임원 발언만 역할별 중립 문장("이사님 답변은 들었습니다. … 제 판단은 표결에서 밝히겠습니다.")으로 바꿔 내려보내고(`stance`·근거는 유지, 캐시 토큰은 두 시도 합산) 로그 `note`에 `followup_verdict_masked`를 남긴다.
+- **화면**(`buildMinutes`): MOTION·VOTE 회의록은 방향 단어가 든 FOLLOWUP 행을 "(답변을 들었습니다 · 결과에서 공개)"로 바꾼다. RESULT 이후는 원문이고, 결과 화면의 회의 기록 전문도 순차 공개가 끝나기 전에는 같은 방식으로 가린다.

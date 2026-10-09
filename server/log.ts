@@ -34,6 +34,8 @@ export interface CallLogEntry {
   cacheReadTokens?: number;
   /** 프롬프트 캐시에 새로 쓴 토큰 수(T91, anthropic 제공자만). */
   cacheWriteTokens?: number;
+  /** 응답을 서버가 손봤을 때의 표시(T114 `followup_verdict_masked`: FOLLOWUP 발언에 방향 단어가 남아 중립 문장으로 대체). */
+  note?: string;
 }
 
 const LOG_DIR = resolve(process.cwd(), 'logs');

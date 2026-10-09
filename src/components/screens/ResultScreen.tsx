@@ -144,10 +144,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // "처음 화면으로" 확인 단계(T84, Opus UX 검토 #5 — "'체험 종료'가 확인 없이 즉시
   // 초기화"). 세션 초기화(onReset)는 되돌릴 수 없으므로 한 번 더 확인한다.
   const [endSessionConfirmOpen, setEndSessionConfirmOpen] = useState(false);
-  const transcriptEntries = useMemo(
-    () => buildMinutes(session, scenario, roundLog),
-    [session, scenario, roundLog],
-  );
+
 
   // 클릭·키 입력으로 도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
   // 뒤에는 리스너를 더 둘 이유가 없어 정리한다.
@@ -185,6 +182,11 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
 
   // T114: 공개 전에는 해당 결과 블록을 스크린리더에서도 가린다(연출은 CSS, 이건 aria-hidden).
   const reveal = useResultReveal(skip);
+  // 회의 기록 전문도 공개가 끝나기 전에는 FOLLOWUP 방향 단어를 가린다.
+  const transcriptEntries = useMemo(
+    () => buildMinutes(session, scenario, roundLog, { sealFollowUp: !reveal.allRevealed }),
+    [session, scenario, roundLog, reveal.allRevealed],
+  );
   const hiddenUntilAll = reveal.allRevealed ? undefined : true;
 
   if (!finalMotion) {
@@ -372,7 +374,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                 시뮬레이션 표시도 빼줘"): 모드 안내 줄은 live·scripted 가리지 않고
                 완전히 없앴다 — 모드 확인은 운영 메뉴에서만 한다. */}
             {tallyResult.limitedByUnavailable && (
-              <p className="result-screen__limited-notice" data-testid="result-limited-notice">
+              <p
+                className="result-screen__limited-notice reveal-anim reveal-fade"
+                style={finalRevealStyle}
+                aria-hidden={hiddenUntilAll}
+                data-testid="result-limited-notice"
+              >
                 일부 임원 미표결로 판단이 제한되었습니다.
               </p>
             )}
@@ -404,7 +411,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
               늘리지 않는다). 설득 도장은 0.4초 뒤 왼쪽 아래에 겹친다. 클릭·키 입력으로
               건너뛰면(위 skip) 두 도장 모두 지연 없이 바로 보인다. */}
           {resultStamp && (
-            <div className="result-stamp-box">
+            <div className="result-stamp-box" aria-hidden={hiddenUntilAll}>
               <div
                 className="result-stamp"
                 data-testid="result-stamp"
@@ -555,14 +562,23 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                     )}
                     {VOTE_TEXT[resultSummary.participant.vote]}
                   </span>
-                  <span className="result-seat__reason" data-testid="result-summary-decisive">
+                  <span
+                    className="result-seat__reason reveal-anim reveal-fade"
+                    style={finalRevealStyle}
+                    aria-hidden={hiddenUntilAll}
+                    data-testid="result-summary-decisive"
+                  >
                     {resultSummary.participant.decisive
                       ? '이사님의 한 표가 결과를 정했습니다'
                       : participantRowNote}
                   </span>
                 </li>
               </ul>
-              <div className="result-verdicts__footer">
+              <div
+                className="result-verdicts__footer reveal-anim reveal-fade"
+                style={finalRevealStyle}
+                aria-hidden={hiddenUntilAll}
+              >
                 {remainingTasksLine && (
                   <p className="result-verdicts__line" data-testid="result-tasks">
                     남은 과제 · {remainingTasksLine}
@@ -586,7 +602,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             큰 칩으로 채운다. 회의록 전문을 보는 동안(showTranscript)은 그리지
             않는다 — 전문 보기도 VERDICTS와 자리를 바꿔 쓰는 요약 전용 카드다. */}
         {!showTranscript && resultSummary && epilogue !== null && (
-          <section className="result-epilogue-card" data-testid="result-epilogue">
+          <section
+            className="result-epilogue-card reveal-anim reveal-fade"
+            style={finalRevealStyle}
+            aria-hidden={hiddenUntilAll}
+            data-testid="result-epilogue"
+          >
             <div className="result-epilogue-card__head">
               <h3 className="result-screen__section-label">6개월 뒤, 이사님의 결정은</h3>
               <span className="result-epilogue__badge">체험용 가상 전망</span>

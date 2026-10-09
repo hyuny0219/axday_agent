@@ -43,6 +43,7 @@ export function resolveEvalModel(env: NodeJS.ProcessEnv): { useMock: boolean; mo
   return { useMock, modelId: useMock ? MOCK_MODEL_ID : env.MODEL_ID?.trim() || DEFAULT_MODEL_ID };
 }
 import { systemClock, type Clock } from '../server/clock';
+import { findVerdictWords } from '../src/domain/verdictWords';
 
 const BUDGET_MS = 8000;
 
@@ -518,17 +519,14 @@ export interface FollowUpVerdictWord {
 }
 
 /** T114: 답변 뒤 방향은 결과 화면에서 공개하므로 FOLLOWUP 발언(message)에 찬성·반대·가결·부결
- * 같은 방향 단어가 있으면 안 된다. 기준은 0건. 일반 명사로 쓴 문장은 사람이 읽어 판정한다. */
-const FOLLOWUP_VERDICT_WORDS = ['찬성', '반대', '가결', '부결'] as const;
-
+ * 같은 방향 단어가 있으면 안 된다(기준은 0건, 서버가 실제로 막는 검사와 같은 함수). 일반 명사로
+ * 쓴 문장은 사람이 읽어 판정한다. */
 export function findFollowUpVerdictWords(rows: EvalRow[]): FollowUpVerdictWord[] {
   const found: FollowUpVerdictWord[] = [];
   rows.forEach((row, index) => {
     if (row.stage !== 'FOLLOWUP' || row.status !== 'answered' || !row.message) return;
-    for (const word of FOLLOWUP_VERDICT_WORDS) {
-      if (row.message.includes(word)) {
-        found.push({ line: index + 1, caseId: row.caseId, roleId: row.roleId, word, text: row.message });
-      }
+    for (const word of findVerdictWords(row.message)) {
+      found.push({ line: index + 1, caseId: row.caseId, roleId: row.roleId, word, text: row.message });
     }
   });
   return found;

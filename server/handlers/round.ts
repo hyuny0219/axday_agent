@@ -28,6 +28,7 @@ import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
+import { findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 import { withTimeout } from './timeout';
 import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
@@ -178,6 +179,9 @@ interface RoleAttemptResult extends RoundRoleResult {
   httpStatus?: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
+  /** T114: FOLLOWUP 응답이 스키마는 통과했지만 문장에 방향 단어가 있어 거절된 시도의 원본.
+   * callRole이 재시도 뒤에도 이 값이 남아 있으면 그 임원 발언을 중립 문장으로 대체한다. */
+  verdictStatement?: StatementResponse;
 }
 
 /** 제공자 호출 1회(파싱·조건 ID 검증 포함). 로그를 남기지 않는다 — callRole이 재시도
@@ -239,6 +243,22 @@ async function attemptRole(
         promptVersion: PROMPT_VERSION,
       };
     }
+    // T114: 답변 뒤 방향은 결과에서 공개한다 — FOLLOWUP 문장에 찬성·반대 같은 말이 있으면
+    // invalid_response로 보고 기존 재시도 경로를 탄다.
+    if (input.stage === 'FOLLOWUP' && findVerdictWords(parsed.data.message).length > 0) {
+      return {
+        roleId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        modelId: result.modelId,
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+        promptVersion: PROMPT_VERSION,
+        verdictStatement: parsed.data,
+      };
+    }
     return {
       roleId,
       status: 'answered',
@@ -298,6 +318,20 @@ async function callRole(
       };
     }
   }
+  // T114: 재시도(또는 재시도 예산 부족) 뒤에도 방향 단어가 남았으면 그 발언만 중립 문장으로 바꿔
+  // 내려보낸다. 나머지 필드(stance·근거·조건)는 그대로 둔다.
+  let masked = false;
+  if (outcome.status === 'failed' && outcome.verdictStatement) {
+    outcome = {
+      ...outcome,
+      status: 'answered',
+      failReason: undefined,
+      providerErrorClass: undefined,
+      statement: { ...outcome.verdictStatement, message: maskedFollowUpMessage(roleId) },
+      verdictStatement: undefined,
+    };
+    masked = true;
+  }
   const latencyMs = clock.now() - overallStart;
   logCall({
     ts: new Date(clock.now()).toISOString(),
@@ -316,6 +350,7 @@ async function callRole(
     cacheWriteTokens: outcome.cacheWriteTokens,
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
+    note: masked ? 'followup_verdict_masked' : undefined,
   });
   return {
     roleId,

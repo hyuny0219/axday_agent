@@ -85,6 +85,8 @@ test('답변 뒤 MOTION·VOTE는 임원 방향을 봉인하고, 결과에서 한
   }
   expect(await opacityOf(page, 'result-stamp')).toBe(0);
   expect(await opacityOf(page, 'result-conclusion')).toBe(0);
+  expect(await opacityOf(page, 'result-epilogue')).toBe(0);
+  await expect(page.getByTestId('result-epilogue')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.getByTestId('result-seat-CFO')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.getByTestId('result-conclusion')).toHaveAttribute('aria-hidden', 'true');
 
@@ -115,6 +117,7 @@ test('답변 뒤 MOTION·VOTE는 임원 방향을 봉인하고, 결과에서 한
   expect(await opacityOf(page, 'result-stamp')).toBeGreaterThan(0.5);
   expect(await opacityOf(page, 'result-conclusion')).toBe(1);
   expect(await opacityOf(page, 'result-summary-tally')).toBe(1);
+  expect(await opacityOf(page, 'result-epilogue')).toBe(1);
 });
 
 test('운영자가 클릭하면(skip) 임원 표가 지연 없이 모두 공개된다', async ({ page }) => {
@@ -136,6 +139,8 @@ test('운영자가 클릭하면(skip) 임원 표가 지연 없이 모두 공개�
   }
   await expect.poll(() => opacityOf(page, 'result-conclusion')).toBe(1);
   await expect.poll(() => opacityOf(page, 'result-summary-tally')).toBe(1);
+  await expect.poll(() => opacityOf(page, 'result-epilogue')).toBe(1);
+  await expect(page.getByTestId('result-epilogue')).not.toHaveAttribute('aria-hidden', 'true');
   await expect(page.getByTestId('result-conclusion')).not.toHaveAttribute('aria-hidden', 'true');
 });
 
