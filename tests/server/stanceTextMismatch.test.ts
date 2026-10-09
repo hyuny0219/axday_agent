@@ -241,6 +241,14 @@ describe('declaredDirection(T115)', () => {
       ['찬성합니다. 반대편 의견도 들었습니다.', 'FOR'], ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('대상 명사도 기본 AMBIGUOUS, 수용·참고 동사만 무시(Codex 90차)', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 하지만 최종적으로 반대편 의견을 지지하겠습니다.', null], ['찬성합니다. 하지만 반대편 주장을 따르겠습니다.', null],
+      ['찬성합니다. 반대편 의견도 들었습니다.', 'FOR'], ['찬성합니다. 반대편 주장을 검토했습니다.', 'FOR'],
+      ['찬성합니다. 반대편 의견을 받아들이겠습니다.', null], ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'],
+      ['찬성합니다. 반대편 의견을 듣고 지지하겠습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
