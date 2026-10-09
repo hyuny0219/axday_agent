@@ -75,7 +75,7 @@ describe('StageBand 기울음', () => {
   it('기울음 임원은 목표 방향 점선 표정과 "찬성 쪽" 캡션이다', () => {
     band({ CFO: 'FOR' });
     expect(screen.getByTestId('stage-mood-CFO')).toHaveClass('stage-band__mood--for', 'stage-band__mood--leaning');
-    expect(screen.getByTestId('stage-seat-CFO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('stage-seat-CFO')).toHaveTextContent('찬성 쪽 · 미확정');
     expect(screen.getByTestId('stage-seat-CFO')).not.toHaveTextContent('고민 중');
     expect(screen.getByTestId('stage-mood-CAIO')).not.toHaveClass('stage-band__mood--leaning');
     expect(screen.getByTestId('stage-seat-CAIO')).toHaveTextContent('고민 중');

@@ -90,6 +90,7 @@ import {
   resolveFollowUpPrompt,
 } from '../reactionsFor';
 import { leaningStances, scriptedStances } from '../../domain/stance';
+import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
@@ -140,6 +141,8 @@ export interface ReactionsScreenProps {
    * 카드만 크게 보여주고, 'answer'(다시 답하기)에서만 입장 선택·추천 답변·입력창을
    * 보여준다. 도메인 session.stage는 두 서브스텝 모두 REACTIONS다. */
   step: 'listen' | 'answer';
+  /** T118: 지금 고른 입장·조건 기준 기울음을 위로 알려 무대 표정이 현황판·카드와 같은 기준을 쓰게 한다. */
+  onLeaningChange?: (leaning: LeaningMap | null) => void;
   /** "답하기 ▶"를 눌러 'listen' → 'answer'로 넘어간다(뒤로가기는 없다). */
   onAdvanceStep: () => void;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
@@ -181,6 +184,7 @@ export function ReactionsScreen({
   stances,
   transcriptRevision,
   side,
+  onLeaningChange,
   onChooseSide,
   step,
   onAdvanceStep,
@@ -573,6 +577,11 @@ export function ReactionsScreen({
       ),
     [scenario, effectiveOpinions, mode, stances],
   );
+  const leaningKey = JSON.stringify(leaning);
+  useEffect(() => {
+    onLeaningChange?.(JSON.parse(leaningKey) as LeaningMap);
+  }, [leaningKey, onLeaningChange]);
+  useEffect(() => () => onLeaningChange?.(null), [onLeaningChange]);
   const awaitingAnswerIds = useMemo(
     () => EXEC_MEMBER_ORDER.filter((memberId) => leaning[memberId] !== undefined),
     [leaning],

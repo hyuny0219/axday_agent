@@ -764,3 +764,102 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent(/움직일 조건 · \S+/);
   });
 });
+
+// T118: 기울어진 방향 — 입장 전환 동기화, 반대 참가자·live·입장 미선택.
+describe('ReactionsScreen 기울어진 방향(T118)', () => {
+  const ai = aiApprovalScenario;
+  const mk = (ids: string[], stance: 'FOR' | 'AGAINST'): Opinion[] => [
+    { id: 'op1', originalText: '의견', selectedPhraseIds: [], confirmedConditionIds: ids, stance, createdAt: 0 },
+  ];
+  const allUndecided: Record<ExecMemberId, Stance> = { CEO: 'UNDECIDED', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
+
+  it('2/2에서 입장을 바꾸면 위로 올리는 기울음도 바뀐 입장 기준이다(무대 표정과 같은 기준)', () => {
+    const calls: Array<Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null> = [];
+    const onLeaningChange = (value: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null) => {
+      calls.push(value);
+    };
+    const opinions = mk(['FULL_AUTO'], 'FOR');
+    const props = {
+      ...baseProps(),
+      scenario: ai,
+      opinions,
+      mode: 'scripted' as const,
+      roleStatus: idleRoleStatus,
+      statements: [],
+      roundLog: [],
+      stances: allUndecided,
+      step: 'answer' as const,
+      onLeaningChange,
+    };
+    const { rerender } = render(<ReactionsScreen {...props} side="AGAINST" />);
+    expect(calls[calls.length - 1]).toEqual({ CEO: 'AGAINST' });
+    rerender(<ReactionsScreen {...props} side="FOR" />);
+    expect(calls[calls.length - 1]?.CEO).toBeUndefined();
+  });
+
+  it('반대 참가자 카드: 배지는 "찬성 → 반대 쪽", 무드 라벨은 "반대 쪽"이다', () => {
+    const opinions = mk(['FULL_AUTO'], 'AGAINST');
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={opinions}
+        side="AGAINST"
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(ai, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false })}
+        step="listen"
+      />,
+    );
+    expect(screen.getByTestId('reaction-card-badge-CEO')).toHaveTextContent('찬성 → 반대 쪽');
+    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('반대 쪽');
+  });
+
+  it('live: 모델 stance가 미정이어도 규칙표로 조건이 맞으면 카드 라벨이 "찬성 쪽"이다', () => {
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={ai}
+        opinions={mk(['LIMIT', 'REVIEW', 'LOG', 'OWNER'], 'FOR')}
+        side="FOR"
+        mode="live"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={allUndecided}
+        step="listen"
+      />,
+    );
+    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽');
+  });
+
+  it('입장 미선택(side=null)이어도 마지막 의견의 입장 기준이며, 의견이 없으면 기울음이 없다', () => {
+    const calls: Array<Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null> = [];
+    const onLeaningChange = (value: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>> | null) => {
+      calls.push(value);
+    };
+    const common = {
+      ...baseProps(),
+      scenario: ai,
+      side: null,
+      mode: 'scripted' as const,
+      roleStatus: idleRoleStatus,
+      statements: [],
+      roundLog: [],
+      stances: allUndecided,
+      step: 'listen' as const,
+      onLeaningChange,
+    };
+    const { unmount } = render(
+      <ReactionsScreen {...common} opinions={mk(['LIMIT', 'REVIEW', 'LOG', 'OWNER'], 'FOR')} />,
+    );
+    expect(calls[calls.length - 1]).toEqual({ CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' });
+    unmount();
+    expect(calls[calls.length - 1]).toBeNull();
+    cleanup();
+    render(<ReactionsScreen {...common} opinions={[]} />);
+    expect(calls[calls.length - 1]).toEqual({});
+  });
+});

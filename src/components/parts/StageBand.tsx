@@ -363,6 +363,7 @@ export function StageBand({
                 {stage !== 'RESULT' && (
                   <span className="stage-band__caption">
                     {ROLE_INTEREST_WORD[memberId]} · {STANCE_LABEL[leaning?.[memberId] ?? stances[memberId]]}
+                    {leaning?.[memberId] ? ' · 미확정' : ''}
                   </span>
                 )}
                 <span
