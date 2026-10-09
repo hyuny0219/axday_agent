@@ -54,6 +54,13 @@ export function DraftEditor({
     <div className="draft-editor">
       <div className="draft-editor__head">
         <span className="draft-editor__label">{label}</span>
+        {/* T116: 오류 줄이 입력 상자 아래에 끼어들면 아래 버튼 줄이 밀린다 — 높이가 고정인
+            머리줄 가운데에 둔다(role=alert·testid 그대로). */}
+        {overLimit && (
+          <p className="draft-editor__error" role="alert" data-testid={errorTestId}>
+            300자를 넘었습니다. 표현을 줄여 주세요.
+          </p>
+        )}
         <span
           className={`draft-editor__count${overLimit ? ' draft-editor__count--over' : ''}`}
           data-testid={countTestId}
@@ -83,11 +90,6 @@ export function DraftEditor({
           }
         }}
       />
-      {overLimit && (
-        <p className="draft-editor__error" role="alert" data-testid={errorTestId}>
-          300자를 넘었습니다. 표현을 줄여 주세요.
-        </p>
-      )}
     </div>
   );
 }

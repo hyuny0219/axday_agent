@@ -378,14 +378,16 @@ export function DiscussScreen({
         )}
         <div className="discuss-screen__hud" data-testid="discuss-hud">
           <DraftEditor value={draft.draftText} onChange={handleDraftTextChange} />
-          <ConditionChips
-            scenario={scenario}
-            proposedIds={proposedConditionIds}
-            acceptedIds={acceptedConditionIds}
-            conflictPairs={conflictPairs}
-            showNoMatchHint={showNoMatchHint}
-            onToggle={handleToggleCondition}
-          />
+          <div className="hud-conditions-slot">
+            <ConditionChips
+              scenario={scenario}
+              proposedIds={proposedConditionIds}
+              acceptedIds={acceptedConditionIds}
+              conflictPairs={conflictPairs}
+              showNoMatchHint={showNoMatchHint}
+              onToggle={handleToggleCondition}
+            />
+          </div>
         </div>
         <div className="discuss-screen__submit-row screen__submit-row">
           <AssistantPanel

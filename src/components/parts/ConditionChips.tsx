@@ -66,6 +66,7 @@ export function ConditionChips({
       {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안의 장식
           라벨이었으나(STEP·EXHIBIT 등과 같은 규칙) T83에서 한국어로 바꿨다. 확정 칩의
           체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
+      <div className="condition-chips__row">
       <p className="condition-chips__label">조건</p>
       <div className="condition-chips__list">
         {proposedIds.map((id) => {
@@ -86,6 +87,7 @@ export function ConditionChips({
             </button>
           );
         })}
+      </div>
       </div>
       {conflictPairs.length > 0 && (
         <ul className="condition-chips__conflicts" role="alert" data-testid="condition-chips-conflicts">
