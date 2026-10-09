@@ -87,14 +87,12 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
-  // DISCUSS: "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS 라운드의 실제
-  // 발언이어야 한다(scenario.initialOpinions 각본 문장이 아니다 — PR #11 Codex 18차 검토
-  // P2. 무대 표정 배지는 실제 stance인데 카드 본문이 각본 문장이면 서로 모순돼 보이고,
-  // 참가자가 AI가 실제로 하지 않은 말을 근거로 의견을 쓰게 된다. T73에서 이 카드는
-  // 화면에 상시 보이지 않고 팝업 안으로 옮겼다).
+  // DISCUSS: 근거 자료 팝업은 자료만 보이고 임원 발언 열이 없다(T105 — 이전에는 이 팝업이
+  // OPINIONS 라운드의 실제 발언을 보여줬다, PR #11 Codex 18차 검토 P2).
   const openEvidence = page.getByTestId('open-evidence');
   await openEvidence.click();
-  await expect(page.getByTestId('statement-card-CEO')).toHaveText('[모의] CEO의 의견 단계 발언입니다.');
+  await expect(page.getByTestId('evidence-card-E1')).toBeVisible();
+  await expect(page.getByTestId('evidence-dialog').locator('[data-testid^="statement-card-"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
 

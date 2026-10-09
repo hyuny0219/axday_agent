@@ -20,7 +20,9 @@
 // 바꿔 팝업 쪽 `evidence-card-<id>`와 겹치지 않게 한다 — 팝업이 열리면 배경의 압축
 // 카드와 팝업 안 전문 카드가 동시에 DOM에 있어야 하기 때문이다.
 
-import type { EvidenceCard as EvidenceCardData } from '../../content/types';
+import type { EvidenceCard as EvidenceCardData, Scenario } from '../../content/types';
+import { evidenceTextHighlightTerms } from '../highlightTerms';
+import { HighlightText } from './HighlightText';
 import '../../styles/screens/evidence.css';
 
 export interface EvidenceGridProps {
@@ -28,6 +30,8 @@ export interface EvidenceGridProps {
   /** 'dialog'(기본, EvidenceDialog 팝업 전문 — 원문 클램프 없음) | 'compact'(BRIEFING
    * 오른쪽 열 상시 요약 카드, Main.html EXHIBIT 2×2 — 해석·원문 각 1~2줄 클램프). */
   variant?: 'dialog' | 'compact';
+  /** 있으면 해석(insight) 속 핵심 수치·사실을 굵게 표시한다(T105). 제목은 제외. */
+  scenario?: Scenario;
 }
 
 // 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록", T83에서
@@ -36,7 +40,7 @@ export interface EvidenceGridProps {
 // 자동화용 값이 아니라 순수 장식이다.
 const EXHIBIT_MARKS = ['①', '②', '③', '④'] as const;
 
-export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps) {
+export function EvidenceGrid({ evidence, variant = 'dialog', scenario }: EvidenceGridProps) {
   const isCompact = variant === 'compact';
   return (
     <div className={isCompact ? 'evidence-grid evidence-grid--compact' : 'evidence-grid'}>
@@ -56,7 +60,9 @@ export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps
             {' · '}
             {card.title}
           </h3>
-          <p className="evidence-card__insight">{card.insight}</p>
+          <p className="evidence-card__insight">
+            <HighlightText text={card.insight} terms={scenario ? evidenceTextHighlightTerms(scenario, card.insight) : []} />
+          </p>
           {/* T99(2026-10-08 사용자 — "글씨가 너무 많다"): 원문(content)은 카드에서 뺐다. 해석
               한 문장(insight)과 관련 임원만 보인다. content는 데이터·서버 프롬프트용으로 남는다. */}
           {card.relatedMemberIds.length > 0 && (

@@ -1,15 +1,11 @@
 // PR #12 Codex 2차 검토 수정 확인(ReactionsScreen.tsx):
 // 1) RebuildConfirm이 뜬 동안(pendingOptionIndex !== null)은 "답변 전달" 버튼이
 //    비활성화돼, 참가자가 요청한 체크 변경을 건너뛰고 조용히 전달되지 않는다.
-// 2) 근거 자료 팝업 STATEMENTS의 02(OPINIONS)·04(REACTIONS) 행은 각 발언 자체의
-//    Statement.stance를 쓴다 — 둘 다 같은 "현재" stances를 쓰면 REACTIONS에서 입장이
-//    바뀐 임원의 02 행까지 덩달아 다시 라벨된다.
-// 3) 02 발언이 아직 없을 때(아직 응답 전) roundLog에 그 역할의 OPINIONS 실패 기록이
-//    없으면 "판단 중"으로, 있으면 "응답 지연·확인 필요"로 보여준다.
+// (2·3: 근거 자료 팝업 발언 열의 stance·판단 중/실패 표시는 T105에서 열을 없애며 함께 뺐다.)
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   ReactionsScreen,
   type ReactionsScreenProps,
@@ -88,124 +84,6 @@ describe('ReactionsScreen', () => {
     fireEvent.click(screen.getByTestId('rebuild-confirm-keep'));
     expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
     expect(screen.getByTestId('submit-followup')).toBeEnabled();
-  });
-
-  it('STATEMENTS 02·04 행이 각 발언 자체의 stance를 쓴다(PR #12 Codex 2차 검토 2)', () => {
-    const statements: Statement[] = [
-      {
-        id: 's-opinion',
-        roleId: 'CEO',
-        stage: 'OPINIONS',
-        text: '원안에는 반대합니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        stance: 'AGAINST',
-        source: 'live',
-        createdAt: 0,
-      },
-      {
-        id: 's-reaction',
-        roleId: 'CEO',
-        stage: 'REACTIONS',
-        text: '조건을 보니 찬성으로 바꾸겠습니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        stance: 'FOR',
-        source: 'live',
-        createdAt: 1,
-      },
-    ];
-    const roleStatus: Record<ExecMemberId, RoleStatus> = { ...idleRoleStatus, CEO: 'answered' };
-    // "현재" stances는 REACTIONS 이후 값(찬성)이다 — 02 행이 이 값을 그대로 쓰면
-    // 과거 반대 의견이 찬성으로 잘못 보인다.
-    const currentStances: Record<ExecMemberId, Stance> = { ...stances, CEO: 'FOR' };
-
-    render(
-      <ReactionsScreen
-        {...baseProps()}
-        mode="live"
-        roleStatus={roleStatus}
-        statements={statements}
-        roundLog={[{ stage: 'OPINIONS', roleId: 'CEO', status: 'answered' }]}
-        stances={currentStances}
-      />,
-    );
-
-    fireEvent.click(screen.getByTestId('open-evidence'));
-
-    const opinionArticle = screen
-      .getByTestId('statement-card-CEO-opinions')
-      .closest('.evidence-dialog__statement');
-    const reactionArticle = screen
-      .getByTestId('statement-card-CEO-reactions')
-      .closest('.evidence-dialog__statement');
-    expect(opinionArticle).toHaveTextContent('반대 쪽');
-    expect(reactionArticle).toHaveTextContent('찬성 쪽');
-  });
-
-  it('02 발언이 아직 없고 OPINIONS 라운드 실패 기록도 없으면 "판단 중"으로 보여준다(PR #12 Codex 2차 검토 3)', () => {
-    render(
-      <ReactionsScreen
-        {...baseProps()}
-        mode="live"
-        roleStatus={idleRoleStatus}
-        statements={[]}
-        roundLog={[]}
-        stances={stances}
-      />,
-    );
-
-    fireEvent.click(screen.getByTestId('open-evidence'));
-
-    expect(screen.getByTestId('statement-pending-CAIO-opinions')).toHaveTextContent(
-      '생각을 정리하고 있습니다',
-    );
-    expect(screen.queryByTestId('statement-failed-CAIO-opinions')).not.toBeInTheDocument();
-  });
-
-  it('scripted에서도 02(최초 의견) 행은 조건 확정 전 입장을, 04(반응) 행은 현재 입장을 보여준다(PR #12 Codex 3차 검토 2)', () => {
-    // anonBoard의 CFO 표결 규칙: 조건 없음(기본) → 반대, PILOT+MEASURE 확정 → 찬성.
-    const opinions: Opinion[] = [
-      {
-        id: 'op1',
-        originalText: '한 게시판에서 시범 운영하고 효과를 측정합시다.',
-        selectedPhraseIds: ['P1', 'P4'],
-        confirmedConditionIds: ['PILOT', 'MEASURE'],
-        createdAt: 0,
-      },
-    ];
-    // App.tsx가 stancesFor로 계산해 넘기는 "현재" stances — PILOT+MEASURE가 확정된
-    // 뒤라 CFO는 찬성이다.
-    const currentStances: Record<ExecMemberId, Stance> = { ...stances, CFO: 'FOR' };
-
-    render(
-      <ReactionsScreen
-        {...baseProps()}
-        opinions={opinions}
-        mode="scripted"
-        roleStatus={idleRoleStatus}
-        statements={[]}
-        roundLog={[]}
-        stances={currentStances}
-      />,
-    );
-
-    fireEvent.click(screen.getByTestId('open-evidence'));
-    const dialog = screen.getByTestId('evidence-dialog');
-
-    // 오른쪽 종이의 .reaction-card도 같은 직함 문구를 쓰므로, 팝업 안으로 범위를
-    // 좁혀 찾는다.
-    const cfoArticles = within(dialog)
-      .getAllByText('재무책임임원(CFO)')
-      .map((el) => el.closest('.evidence-dialog__statement') as HTMLElement);
-    const opinionArticle = cfoArticles.find((el) => el.textContent?.includes('02 임원 의견'));
-    const reactionArticle = cfoArticles.find((el) => el.textContent?.includes('04 반응'));
-    expect(opinionArticle).toHaveTextContent('반대 쪽');
-    expect(reactionArticle).toHaveTextContent('찬성 쪽');
   });
 
   it('scripted 반응 카드: PILOT만 확정돼 CFO 표는 그대로 반대여도 반응 문구가 있으면 배지는 "유지"다(PR #12 Codex 5차 검토 P2-a)', () => {
@@ -375,24 +253,22 @@ describe('ReactionsScreen', () => {
     expect(screen.getByTestId('followup-textarea')).toHaveValue('제 나름대로 정리한 답변입니다.');
   });
 
-  it('02 발언이 없고 roundLog에 그 역할의 OPINIONS 실패 기록이 있으면 "응답 지연·확인 필요"로 보여준다', () => {
+  it('근거 자료 팝업에는 자료만 있고 임원 발언 열이 없다(T105)', () => {
     render(
       <ReactionsScreen
         {...baseProps()}
         mode="live"
         roleStatus={idleRoleStatus}
         statements={[]}
-        roundLog={[{ stage: 'OPINIONS', roleId: 'CAIO', status: 'failed' } satisfies RoundLogEntry]}
+        roundLog={[]}
         stances={stances}
       />,
     );
 
     fireEvent.click(screen.getByTestId('open-evidence'));
-
-    expect(screen.getByTestId('statement-failed-CAIO-opinions')).toHaveTextContent(
-      '이번에는 답을 받지 못했습니다',
-    );
-    expect(screen.queryByTestId('statement-pending-CAIO-opinions')).not.toBeInTheDocument();
+    const dialog = screen.getByTestId('evidence-dialog');
+    expect(dialog).not.toHaveTextContent('임원이 한 말');
+    expect(screen.queryAllByTestId(/^statement-(card|pending|failed)-/)).toHaveLength(0);
   });
 
   // T89(2026-10-07 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할

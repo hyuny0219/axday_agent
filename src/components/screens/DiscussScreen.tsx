@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { RoleStatus, SessionMode, Stance, Transcript } from '../../domain/types';
+import type { SessionMode, Stance, Transcript } from '../../domain/types';
 import {
   EMPTY_DRAFT_STATE,
   buildDraftText,
@@ -44,7 +44,7 @@ import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
-import { EvidenceDialog, type EvidenceDialogStatementView } from '../parts/EvidenceDialog';
+import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
@@ -59,14 +59,10 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록이자, 근거 자료
-   * 팝업의 STATEMENTS 열(live)이 보여줄 02 임원 의견 발언의 원천이다. */
+  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
   transcript: Transcript;
-  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. STATEMENTS 열 본문을
-   * 실제 발언(live)으로 보여줄지 각본 문장(scripted)으로 보여줄지 가른다. */
+  /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. */
   mode: SessionMode;
-  /** live 모드에서 임원별 OPINIONS 라운드 응답 상태(아직 응답 전/실패 포함). */
-  roleStatus: Record<ExecMemberId, RoleStatus>;
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63)이자 오른쪽 열 STANCE 칩의 근거다. */
   stances: Record<ExecMemberId, Stance>;
   /** 입장 선택(T87→T89, App.tsx StageRouter의 state로 올렸다) — REACTIONS까지 이어지는
@@ -101,23 +97,11 @@ function uniqueInOrder(ids: string[]): string[] {
   return result;
 }
 
-/** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52). evidenceIds가 여럿이면 가장 마지막 것
- * (OpinionsScreen.lastEvidenceLabel과 같은 규칙). */
-function lastEvidenceLabel(scenario: Scenario, evidenceIds: string[]): string | null {
-  const lastId = evidenceIds[evidenceIds.length - 1];
-  if (!lastId) {
-    return null;
-  }
-  const card = scenario.evidence.find((item) => item.id === lastId);
-  return card ? card.title : lastId;
-}
-
 export function DiscussScreen({
   scenario,
   sessionId,
   transcript,
   mode,
-  roleStatus,
   stances,
   side,
   onChooseSide,
@@ -196,46 +180,6 @@ export function DiscussScreen({
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
   const canSubmit = draftReady && assistantDone;
-
-  // 근거 자료 팝업의 STATEMENTS 열(T73). live면 transcript의 OPINIONS 발언(DISCUSS는
-  // 그 라운드가 끝난 뒤 화면이라 OpinionsScreen·LiveStatementCards와 같은 근거다),
-  // scripted면 scenario.initialOpinions 각본 문장이다.
-  const dialogStatements = useMemo<EvidenceDialogStatementView[]>(() => {
-    if (mode === 'live') {
-      return EXEC_MEMBER_ORDER.map((memberId) => {
-        const status = roleStatus[memberId];
-        const statement = transcript.statements.find(
-          (item) => item.roleId === memberId && item.stage === 'OPINIONS',
-        );
-        if (status === 'answered' && statement) {
-          return {
-            memberId,
-            stance: stances[memberId],
-            status: 'answered' as const,
-            text: statement.text,
-            evidenceLabel: lastEvidenceLabel(scenario, statement.evidenceIds),
-            testable: true,
-          };
-        }
-        return {
-          memberId,
-          stance: stances[memberId],
-          status: status === 'failed' ? ('failed' as const) : ('pending' as const),
-          text: '',
-          evidenceLabel: null,
-          testable: true,
-        };
-      });
-    }
-    return scenario.initialOpinions.map((opinion) => ({
-      memberId: opinion.memberId,
-      stance: stances[opinion.memberId],
-      status: 'answered' as const,
-      text: opinion.text,
-      evidenceLabel: lastEvidenceLabel(scenario, opinion.evidenceIds),
-      testable: false,
-    }));
-  }, [mode, roleStatus, transcript, stances, scenario]);
 
   // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
   // "사건 02" 형식이라 그대로 쓴다(ResultScreen·BriefingScreen도 같다).
@@ -554,7 +498,7 @@ export function DiscussScreen({
             >
               근거 자료 보기
             </button>
-            <span className="evidence-open-hint">자료 4장 + 임원 발언 4건</span>
+            <span className="evidence-open-hint">자료 4장</span>
           </div>
           <div className="discuss-screen__stance-row" data-testid="discuss-stance-row">
             <span className="discuss-screen__stance-label">입장</span>
@@ -577,8 +521,8 @@ export function DiscussScreen({
       {evidenceOpen && (
         <EvidenceDialog
           evidence={scenario.evidence}
+          scenario={scenario}
           caseTag={caseTag}
-          statements={dialogStatements}
           onClose={() => setEvidenceOpen(false)}
         />
       )}

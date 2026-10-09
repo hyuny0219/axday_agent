@@ -49,6 +49,8 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/live.css';
+import { HighlightText } from './HighlightText';
+import { statementHighlightTerms } from '../highlightTerms';
 
 /** 카드 역할색 띠·상태 칩 색에 쓰는 소문자 modifier(live.css가 읽는다). OpinionsScreen의
  * STANCE_MODIFIER와 같은 값이다. */
@@ -88,9 +90,7 @@ function referencedLabel(statements: Statement[], id: string): string {
   return referenced ? `${MEMBER_LABELS[referenced.roleId]}의 발언` : id;
 }
 
-// DiscussScreen도 live 모드 임원 카드에 같은 문구를 그대로 써야 하므로(Codex 18차 검토 P2)
-// export한다 — 참가자가 아직 답이 없는 임원을 두 화면에서 다른 말로 보면 안 된다.
-export const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
+const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
   pending: '생각을 정리하고 있습니다…',
   failed: '이번에는 답을 받지 못했습니다',
 };
@@ -184,7 +184,9 @@ export function LiveStatementCards({
             </div>
             {status === 'answered' && statement ? (
               <div data-testid={`statement-card-${roleId}`}>
-                <p className="live-statement__text">{statement.text}</p>
+                <p className="live-statement__text">
+                  <HighlightText text={statement.text} terms={statementHighlightTerms(scenario, statement.text)} />
+                </p>
                 {isGrid &&
                   // 시안은 "근거 · <자료명>" pill 하나만 둔다(evidenceIds가 여럿이면
                   // 마지막 것, OpinionsScreen.lastEvidenceLabel과 같은 규칙). REACTIONS

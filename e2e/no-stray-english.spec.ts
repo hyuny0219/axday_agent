@@ -84,7 +84,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   await page.getByTestId('scenario-card-ai-approval').click();
   await checkScreen('BRIEFING');
 
-  // 근거 자료 팝업도 BRIEFING과 같은 틀(EXHIBIT·CONFIDENTIAL·STATEMENTS)을 쓰므로 함께
+  // 근거 자료 팝업도 BRIEFING과 같은 틀(EXHIBIT·CONFIDENTIAL)을 쓰므로 함께
   // 연다.
   await page.getByTestId('open-evidence').click();
   await checkScreen('BRIEFING(근거 자료 팝업)');

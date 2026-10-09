@@ -15,6 +15,8 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
 import { useMatchMedia } from '../useMatchMedia';
+import { statementHighlightTerms } from '../highlightTerms';
+import { HighlightText } from '../parts/HighlightText';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
 
@@ -206,7 +208,9 @@ export function OpinionsScreen({
                       {STANCE_LABEL[stance]}
                     </span>
                   </div>
-                  <p className="opinion-card__text">{opinion.text}</p>
+                  <p className="opinion-card__text">
+                    <HighlightText text={opinion.text} terms={statementHighlightTerms(scenario, opinion.text)} />
+                  </p>
                   {evidenceLabel && <span className="opinion-card__evidence">근거 · {evidenceLabel}</span>}
                 </article>
               );
