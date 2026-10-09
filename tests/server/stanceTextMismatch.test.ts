@@ -139,6 +139,15 @@ describe('declaredDirection(T115)', () => {
       ['찬성하지 않을 수 없습니다.', 'FOR'], ['찬성할 수밖에 없겠습니다.', 'FOR'], ['반대하지 않겠습니다.', 'FOR'],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('다어절 꼬리 인용 경계와 서면 명사 우선(Codex 76차)', () => {
+    for (const [text, expected] of [
+      ['다른 이사는 찬성해야 한다고 했습니다.', null], ['찬성하기로 했다고 들었습니다.', null], ['찬성할 수밖에 없다고 봅니다.', null],
+      ['찬성해야 한다.', 'FOR'], ['찬성하기로 했다.', 'FOR'], ['반대해야 합니다.', 'AGAINST'],
+      ['이 안건을 서면 결의로 승인합니다.', 'FOR'], ['로그를 켜면 자료를 확인해 찬성하겠습니다.', null],
+      ['기능을 끄면 자료를 보고 반대하겠습니다.', null], ['서면 의견으로 반대합니다.', 'AGAINST'],
+      ['원칙적으로 서면 의견으로 반대합니다.', 'AGAINST'], ['자료를 보면 의견이 달라질 수 있습니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
