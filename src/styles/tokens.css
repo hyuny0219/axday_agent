@@ -122,6 +122,14 @@
   --transcript-border: #2a2d33;
 }
 
+/* T117: 폭만 넓고 낮은 화면(1366×768 등)은 무대 높이(폭의 40% × 9/16)가 세로를 먹어 왼쪽 열 입력
+   상자 자리가 없다 — 무대 열 폭을 세로의 60%로 묶는다(768에서 폭 461px·높이 약 259px로 720과 같은 무대, 720·1080은 그대로). */
+@media (max-height: 800px) and (min-width: 1281px) {
+  :root {
+    --stage-col-width: clamp(320px, min(40vw, 60vh), 860px);
+  }
+}
+
 @media (max-width: 1280px) {
   :root {
     --fs-hero: 40px;
