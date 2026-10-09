@@ -212,6 +212,13 @@ describe('declaredDirection(T115)', () => {
       ['반대 편에 서겠습니다.', 'AGAINST'], ['찬성 쪽에 섭니다.', 'FOR'], ['한편 반대 의견도 있었습니다.', null],
     ] as const) expect(declaredDirection(text), text).toBe(expected);
   });
+  it('입장 문맥의 합성어는 AMBIGUOUS, 공간 문맥은 방향 없음(Codex 86차). "제 입장은 반대쪽입니다" 단독은 허용된 놓침', () => {
+    for (const [text, expected] of [
+      ['찬성합니다. 하지만 제 최종 입장은 반대쪽입니다.', null], ['제 입장은 반대쪽입니다.', null],
+      ['화면 배치는 지금 반대편을 유지합니다.', null], ['반대편 의견도 들었습니다.', null], ['한편 반대 의견도 있었습니다.', null],
+      ['찬성합니다. 반대쪽은 비용을 말합니다.', 'FOR'], ['찬성합니다. 저는 찬성쪽입니다.', null],
+    ] as const) expect(declaredDirection(text), text).toBe(expected);
+  });
   it('방향을 말하지 않는 중립 문장은 모두 null이다', () => {
     const neutral: string[] = [
   '조건을 더 보겠습니다.',
