@@ -367,3 +367,108 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // 빠지며 VERDICTS 행이 그 자리를 겸한다).
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeInViewport();
 });
+
+// T116: 조건 칩이 붙고 답변이 길어져도 입력 상자는 고정이고 아래 버튼 줄(제출 줄)이 밀리지
+// 않는다. 시나리오 조건은 최대 5개라(칩 6개는 만들 수 없다) 다섯 개를 모두 붙이고, 서로 충돌하는
+// 두 조건(충돌 안내 줄 포함)과 600자 입력(300자 초과 오류 줄 포함)을 함께 건다.
+const ALL_CONDITIONS_TEXT =
+  '금액 한도를 정합니다. 승인 사유를 기록합니다. 일부를 다시 보도록 합니다. 책임자를 지정합니다. 전부 자동 승인도 합니다. ';
+
+function longDraft(): string {
+  return ALL_CONDITIONS_TEXT.repeat(10).slice(0, 600);
+}
+
+async function expectSubmitRowFixed(
+  page: Page,
+  label: string,
+  textareaId: string,
+  submitIds: string[],
+  fill: (text: string) => Promise<void>,
+) {
+  const readYs = async () => {
+    const ys: number[] = [];
+    for (const id of submitIds) {
+      const box = await page.getByTestId(id).boundingBox();
+      expect(box, `${label}: ${id} 요소를 찾지 못했다`).not.toBeNull();
+      ys.push(Math.round(box?.y ?? -1));
+    }
+    return ys;
+  };
+  const textareaHeight = async () =>
+    Math.round((await page.getByTestId(textareaId).boundingBox())?.height ?? -1);
+
+  const emptyYs = await readYs();
+  const emptyHeight = await textareaHeight();
+  await fill(longDraft());
+  await expect(page.getByTestId('condition-chips')).toBeVisible();
+  await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
+  await expectNoPageScroll(page, `${label}(칩 5개 + 600자)`);
+  expect(await readYs(), `${label}: 제출 줄 y가 빈 상태와 같아야 한다`).toEqual(emptyYs);
+  // 충돌하는 두 조건(검토·전부 자동)을 모두 확정하면 충돌 안내가 뜬다 — 안내가 잘리지 않고
+  // 읽히며(칸 안에 다 들어온다) 제출 줄도 움직이지 않는다.
+  for (const id of ['REVIEW', 'FULL_AUTO']) {
+    const chip = page.getByTestId(`condition-chip-${id}`);
+    if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+      await chip.click();
+    }
+  }
+  const conflicts = page.getByTestId('condition-chips-conflicts');
+  await expect(conflicts).toBeVisible();
+  const conflictFit = await conflicts.evaluate((el) => ({
+    clientHeight: el.clientHeight,
+    scrollHeight: el.scrollHeight,
+  }));
+  expect(conflictFit.clientHeight, `${label}: 충돌 안내가 최소 한 줄 높이를 가져야 한다`).toBeGreaterThanOrEqual(15);
+  expect(conflictFit.scrollHeight, `${label}: 충돌 안내가 잘리지 않아야 한다`).toBeLessThanOrEqual(
+    conflictFit.clientHeight + 1,
+  );
+  expect(await readYs(), `${label}: 충돌 안내가 떠도 제출 줄 y가 같아야 한다`).toEqual(emptyYs);
+  expect(await textareaHeight(), `${label}: 입력 상자 높이가 고정이어야 한다`).toBe(emptyHeight);
+  // 600자는 입력 상자 안에서 스크롤된다(상자가 늘어나지 않는다).
+  const scrolls = await page
+    .getByTestId(textareaId)
+    .evaluate((el) => el.scrollHeight > el.clientHeight);
+  expect(scrolls, `${label}: 긴 글은 입력 상자 안쪽에서 스크롤돼야 한다`).toBe(true);
+  await expectFullyVisible(page, submitIds[submitIds.length - 1], `${label}(제출 버튼)`);
+}
+
+test('내 의견·내 답변 HUD: 조건 칩 5개와 600자 입력에도 제출 줄 위치와 입력 상자 높이가 변하지 않는다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted&coach=off');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  const draft = page.getByTestId('draft-editor-textarea');
+  await expectSubmitRowFixed(
+    page,
+    'DISCUSS',
+    'draft-editor-textarea',
+    ['assistant-toggle', 'submit-opinion'],
+    (text) => draft.fill(text),
+  );
+
+  await draft.fill('');
+  await page.getByTestId('phrase-card-P1').click();
+  // 직접 쓴 글이 있었으므로 문구로 다시 구성할지 묻는다.
+  await page.getByRole('button', { name: '선택 문구로 다시 구성' }).click();
+  await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+
+  const followup = page.getByTestId('followup-textarea');
+  await expectSubmitRowFixed(
+    page,
+    'REACTIONS(다시 답하기)',
+    'followup-textarea',
+    ['assistant-toggle', 'keep-previous-answer', 'submit-followup'],
+    (text) => followup.fill(text),
+  );
+});
