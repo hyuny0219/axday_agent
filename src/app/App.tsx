@@ -27,7 +27,8 @@ import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
-import { liveStances, scriptedStances } from '../domain/stance';
+import { leaningStances, liveStances, scriptedStances } from '../domain/stance';
+import type { LeaningMap } from '../domain/stance';
 import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
@@ -601,6 +602,18 @@ function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMem
   return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
 }
 
+/** T118: 첫 의견 뒤(REACTIONS)에만 기울어진 방향을 무대에 보인다. MOTION·VOTE 봉인은 그대로다. */
+function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
+  if (!scenario || session.stage !== 'REACTIONS') {
+    return {};
+  }
+  return leaningStances(
+    scenario,
+    session,
+    session.mode === 'live' ? liveStances(session) : undefined,
+  );
+}
+
 /** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
 function StageRouter() {
   const { session, dispatch, reactionsStep } = useSession();
@@ -676,6 +689,7 @@ function AppShell() {
                     opinions={session.opinions}
                     scenario={scenario}
                     stances={sealedStages.has(session.stage) ? ALL_UNDECIDED_STANCES : stancesFor(session, scenario)}
+                    leaning={leaningFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
                     chairLine={chairLineFor(
                       session.stage,

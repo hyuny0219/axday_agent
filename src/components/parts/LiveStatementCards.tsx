@@ -48,6 +48,7 @@ import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
+import type { LeaningMap } from '../../domain/stance';
 import '../../styles/screens/live.css';
 import { HighlightText } from './HighlightText';
 import { statementHighlightTerms } from '../highlightTerms';
@@ -69,6 +70,8 @@ export interface LiveStatementCardsProps {
   statements: Statement[];
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63, "찬성 쪽/반대 쪽/미정"). */
   stances: Record<ExecMemberId, Stance>;
+  /** T118: 기울어진 방향(REACTIONS). 있는 임원은 "고민 중" 대신 "찬성 쪽"으로 보인다. */
+  leaning?: LeaningMap;
   /** 'grid'(기본, OPINIONS 4열) 또는 'reaction'(REACTIONS 2×2, T74). */
   variant?: 'grid' | 'reaction';
   /** 있으면 실패한 역할이 하나 이상일 때 "응답 없는 임원 다시 요청" 버튼을 보여준다(T65).
@@ -104,6 +107,7 @@ export function LiveStatementCards({
   roleStatus,
   statements,
   stances,
+  leaning,
   variant = 'grid',
   onRetryFailedRoles,
   retryDisabled = false,
@@ -140,7 +144,7 @@ export function LiveStatementCards({
         // stale 값) 이 카드에 한해 'pending'으로 본다(위 모듈 주석 참고). 'failed'는
         // 그대로 둔다 — 실패는 정상 상태에서도 발언이 없는 게 맞다.
         const status: RoleStatus = rawStatus === 'answered' && !statement ? 'pending' : rawStatus;
-        const stance = stances[roleId];
+        const stance: Stance = leaning?.[roleId] ?? stances[roleId];
         // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
         // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
         // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다). status가

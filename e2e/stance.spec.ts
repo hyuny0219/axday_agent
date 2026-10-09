@@ -54,26 +54,29 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
 
-    // REACTIONS 1/2(T110, 두 단계 설득): 네 조건이 모두 확정돼도 CFO·CAIO·CISO는 "고민 중"까지만
-    // 움직인다. 처음부터 같은 편인 CEO는 찬성 그대로다.
+    // REACTIONS 1/2(T110·T118, 두 단계 설득): 네 조건이 모두 확정돼도 CFO·CAIO·CISO는 확정 전이라
+    // "찬성 쪽"으로 기울기만 한다(점선 표정). 처음부터 같은 편인 CEO는 찬성 그대로다.
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
-    await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
-    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--undecided/);
     for (const id of ['CFO', 'CAIO', 'CISO']) {
+      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--for/);
+      await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--leaning/);
       await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('하나만 더 묻겠습니다');
-      await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('고민 중');
+      await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('답변하면 확정됩니다');
+      await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('찬성 쪽');
     }
     await expect(page.getByTestId('reaction-card-CEO')).not.toContainText('하나만 더 묻겠습니다');
-    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 고민 중');
+    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 찬성 쪽');
+    await expect(page.getByTestId('reaction-card-badge-CAIO')).toHaveText('고민 중 → 찬성 쪽');
 
-    // 현황판: 조건은 충분하고 답변만 남았다고 알려 준다.
+    // 현황판: 기울어진 방향('반대 → 찬성 쪽')과 답변하면 확정된다는 안내를 보인다.
     // 1280 이하에서는 접혀 있고 넓은 화면에서는 펼쳐져 있다 — 펼친 상태로 맞춘다.
     const boardToggle = page.getByTestId('persuasion-board-toggle');
     if ((await boardToggle.getAttribute('aria-expanded')) !== 'true') {
       await boardToggle.click();
     }
-    await expect(page.getByTestId('persuasion-board-note-CFO')).toContainText('조건은 충분 · 답변 뒤 찬성');
+    await expect(page.getByTestId('persuasion-board-stance-CFO')).toContainText('반대 → 찬성 쪽');
+    await expect(page.getByTestId('persuasion-board-note-CFO')).toContainText('답변하면 확정');
+    await expect(page.getByTestId('persuasion-board-count')).toContainText('(기울음 3)');
 
     // 추가 질문에 답을 전달하면(책임자를 정하는 추천 답변) 조건이 맞은 임원이 찬성으로 바뀐다.
     await page.getByTestId('reactions-advance').click();
@@ -121,10 +124,10 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await tryAllAssistantFeatures(page);
     await page.getByTestId('submit-opinion').click();
 
-    // 1차 반응: 조건이 모두 맞아도 고민 중까지만이다(전원 설득으로 끝나지 않는다).
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
+    // 1차 반응: 조건이 모두 맞아도 기울음까지만이다(전원 설득으로 끝나지 않는다).
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--leaning/);
 
-    // 추가 질문에 답하지 않고 넘어간다 — 고민 중이던 세 임원은 반대 쪽으로 확정된다.
+    // 추가 질문에 답하지 않고 넘어간다 — 기울었던 세 임원은 반대 쪽으로 확정된다.
     await page.getByTestId('keep-previous-answer').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     // T114: 답하지 않고 넘어간 뒤에도 방향은 봉인이다 — 표정은 모두 중립이다.
@@ -262,8 +265,10 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
 
-    // v12(T110): 첫 반응에서 참가자 쪽으로 움직이는 CAIO(출발 성향 미정)는 고민 중까지만이다.
+    // v12(T110)·T118: live는 모델 stance가 미정이어도 규칙표로 조건이 충족돼야 기울음으로 본다.
+    // 이 흐름은 추천 문구 하나(P1)만 골라 CAIO의 조건이 모자라므로 기울음 없이 고민 중 그대로다.
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
+    await expect(moodBadge(page, 'CAIO')).not.toHaveClass(/stage-band__mood--leaning/);
 
     // 추가 질문에 답을 전달하면(FOLLOWUP 라운드) mock 최종표가 그대로 나온다.
     await page.getByTestId('reactions-advance').click();

@@ -609,30 +609,32 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     );
   }
 
-  it('조건이 맞은 CFO·CAIO·CISO는 "반대 → 고민 중" 배지와 "하나만 더 묻겠습니다" 문구, CEO는 "유지"다', () => {
+  it('조건이 맞은 CFO·CAIO·CISO는 "반대 → 찬성 쪽" 배지와 "하나만 더 묻겠습니다" 문구, CEO는 "유지"다', () => {
     renderListen();
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       const card = screen.getByTestId(`reaction-card-${memberId}`);
       // CAIO는 처음부터 미정이라 입장은 그대로(고민 중 유지), CFO·CISO는 반대에서 고민 중으로 움직인다.
       expect(card.querySelector('.reaction-card__badge')).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 유지' : '반대 → 고민 중',
+        memberId === 'CAIO' ? '고민 중 → 찬성 쪽' : '반대 → 찬성 쪽',
       );
       expect(card).toHaveTextContent('하나만 더 묻겠습니다');
-      expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('고민 중');
+      expect(card).toHaveTextContent('답변하면 확정됩니다');
+      expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('찬성 쪽');
     }
     expect(screen.getByTestId('reaction-card-CEO').querySelector('.reaction-card__badge')).toHaveTextContent('유지');
     expect(screen.getByTestId('reaction-card-CEO')).not.toHaveTextContent('하나만 더 묻겠습니다');
   });
 
-  it('현황판 행이 "조건은 충분 · 답변 뒤 찬성"을 보여 준다', () => {
+  it('현황판 행이 "반대 → 찬성 쪽 · 답변하면 확정"을 보여 주고 집계에 기울음을 덧붙인다', () => {
     renderListen();
     fireEvent.click(screen.getByTestId('persuasion-board-toggle'));
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
-      expect(screen.getByTestId(`persuasion-board-note-${memberId}`)).toHaveTextContent('조건은 충분 · 답변 뒤 찬성');
+      expect(screen.getByTestId(`persuasion-board-note-${memberId}`)).toHaveTextContent('답변하면 확정');
       expect(screen.getByTestId(`persuasion-board-stance-${memberId}`)).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중' : '반대 → 고민 중',
+        memberId === 'CAIO' ? '고민 중 → 찬성 쪽' : '반대 → 찬성 쪽',
       );
     }
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('(기울음 3)');
   });
 
   it('조건이 모자라 움직이지 않은 임원은 pendingText를 쓰지 않는다(LOG만 확정 → CAIO만 고민 중)', () => {
@@ -697,9 +699,10 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
   }
 
-  it('찬성 입장이면 CFO가 "답변 뒤 찬성"이다', () => {
+  it('찬성 입장이면 CFO가 "찬성 쪽 · 답변하면 확정"이다', () => {
     renderAnswer('FOR');
-    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('답변 뒤 찬성');
+    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('답변하면 확정');
+    expect(screen.getByTestId('persuasion-board-stance-CFO')).toHaveTextContent('찬성 쪽');
   });
 
   it('반대로 바꾸면 "답변 뒤 찬성"이 사라지고 반대로 안내하지도 않는다', () => {
@@ -728,8 +731,8 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     );
     const toggle = screen.getByTestId('persuasion-board-toggle');
     if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
-    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('고민 중');
-    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변 뒤 찬성');
+    expect(screen.getByTestId('persuasion-board-stance-CAIO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변하면 확정');
   });
 
   // Codex 50차 P2: 답변에서 해제한 조건은 현황판·대기 목록에서도 빠진다.
@@ -752,10 +755,10 @@ describe('ReactionsScreen 답변 화면 입장 변경과 답변 대기(T110)', (
     );
     const toggle = screen.getByTestId('persuasion-board-toggle');
     if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle);
-    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변 뒤 찬성');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('답변하면 확정');
     fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '더 논의가 필요합니다.' } });
     fireEvent.click(screen.getByTestId('condition-chip-LOG'));
-    expect(screen.getByTestId('persuasion-board-note-CAIO')).not.toHaveTextContent('답변 뒤');
+    expect(screen.getByTestId('persuasion-board-note-CAIO')).not.toHaveTextContent('답변하면 확정');
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent('움직일 조건');
     // 해제한 조건 이름이 아니라 다시 필요한 조건 이름이 나온다(빈 "움직일 조건 ·"이 아니다).
     expect(screen.getByTestId('persuasion-board-note-CAIO')).toHaveTextContent(/움직일 조건 · \S+/);
