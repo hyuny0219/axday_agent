@@ -25,9 +25,9 @@ describe('aiApprovalScenario 기본 구조', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
-  it('자료 카드가 4개, 추천 문구가 9개(찬성 4·반대 4·요청 1, T119: 찬성 쪽 1개는 추가 답변으로), 조건이 5개다', () => {
+  it('자료 카드가 4개, 추천 문구가 8개(찬성 3·반대 4·요청 1, T119: 찬성 쪽 2개는 추가 답변으로), 조건이 5개다', () => {
     expect(scenario.evidence).toHaveLength(4);
-    expect(scenario.phrases).toHaveLength(9);
+    expect(scenario.phrases).toHaveLength(8);
     expect(scenario.conditions).toHaveLength(5);
   });
 
@@ -36,7 +36,7 @@ describe('aiApprovalScenario 기본 구조', () => {
       expect(['FOR', 'AGAINST', 'BOTH']).toContain(phrase.side);
     }
     expect(scenario.phrases.filter((p) => p.side === 'AGAINST')).toHaveLength(4);
-    expect(scenario.phrases.filter((p) => p.side === 'FOR')).toHaveLength(4);
+    expect(scenario.phrases.filter((p) => p.side === 'FOR')).toHaveLength(3);
     expect(scenario.phrases.filter((p) => p.side === 'BOTH')).toHaveLength(1);
   });
 

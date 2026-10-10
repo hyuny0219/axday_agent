@@ -2,7 +2,8 @@
 // 안건 × 참가자 입장(FOR·AGAINST)마다 아래 네 가지를 고정한다.
 //  (a) 규칙표(voteRules)가 쓰는 모든 조건은 첫 단계 추천 문구 ∪ 추가 답변에서 제안된다.
 //  (b) 첫 단계 추천 문구만으로는 그 조건 중 정확히 1~2개가 빠진다.
-//  (c) 추가 답변은 (b)에서 빠진 조건을 모두 제안한다.
+//  (c) 추가 답변은 그 입장에서 규칙표가 쓰는 모든 조건을 제안한다(첫 단계에서 빠진 것만이
+//      아니라 전부 — 첫 의견에서 안 고른 조건도 직접 쓰지 않고 붙일 수 있어야 한다).
 //  (d) 추가 답변 문구는 proposeFromText가 선언한 조건과 정확히 같은 값을 돌려준다.
 import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
@@ -50,6 +51,13 @@ function followUpConditionIds(scenario: Scenario, stance: Stance): Set<string> {
   return ids;
 }
 
+// 후속 질문(followUp.askedBy·question)이 묻는 조건. 찬성 입장에서만 지정한다(반대 입장은
+// 첫 문구가 원래 2개를 비운다).
+const ASKED_CONDITION: Record<string, Partial<Record<Stance, string>>> = {
+  'ai-approval': { FOR: 'OWNER' },
+  'experience-first': { FOR: 'DATA_VETO' },
+};
+
 const scenarios: Array<[string, Scenario]> = [
   ['aiApproval', aiApprovalScenario],
   ['experienceFirst', experienceFirstScenario],
@@ -73,9 +81,14 @@ describe.each(scenarios)('T119 조건 커버리지 — %s', (_name, scenario) =>
       expect(missingFirst.length).toBeLessThanOrEqual(2);
     });
 
-    it('(c) 추가 답변이 첫 단계에서 빠진 조건을 모두 제안한다', () => {
-      const notCovered = missingFirst.filter((id) => !later.has(id));
+    it('(c) 추가 답변이 규칙표가 쓰는 모든 조건을 제안한다', () => {
+      const notCovered = required.filter((id) => !later.has(id));
       expect(notCovered).toEqual([]);
+    });
+
+    it('(b2) 첫 단계에서 빠지는 조건에는 후속 질문이 묻는 조건이 들어 있다', () => {
+      const asked = ASKED_CONDITION[scenario.id]?.[stance];
+      if (asked) expect(missingFirst).toContain(asked);
     });
   });
 

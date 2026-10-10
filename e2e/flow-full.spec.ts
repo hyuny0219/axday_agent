@@ -136,7 +136,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await page.getByTestId('reactions-advance').click();
-  await page.getByTestId('followup-option-8').click();
+  await page.getByTestId('followup-option-11').click();
   await page.getByTestId('submit-followup').click();
 
   await expect(page.getByTestId('motion-card')).toBeVisible();

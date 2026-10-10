@@ -14,15 +14,15 @@ import type { ExecMemberId } from '../../src/content/types';
 
 describe('conditionSourceHint', () => {
   it('DISCUSS에서 첫 단계 추천 문구에 있으면 보이는 순서의 번호를 말한다', () => {
-    // 찬성 쪽 보이는 문구: P1 LIMIT, P2 LOG, P3 REVIEW, P4 OWNER, P6(요청)
+    // 찬성 쪽 보이는 문구: P1 LIMIT, P2 LOG, P3 REVIEW, P6(요청)
     expect(phraseNumberForCondition(aiApprovalScenario, 'LIMIT', 'FOR')).toBe(1);
-    expect(conditionSourceHint(aiApprovalScenario, 'OWNER', 'FOR', 'DISCUSS')).toBe(
-      '추천 문구 4번에서 고를 수 있습니다',
+    expect(conditionSourceHint(aiApprovalScenario, 'REVIEW', 'FOR', 'DISCUSS')).toBe(
+      '추천 문구 3번에서 고를 수 있습니다',
     );
   });
 
   it('첫 단계에 없고 추가 답변에만 있는 조건은 추가 답변을 안내한다', () => {
-    expect(conditionSourceHint(aiApprovalScenario, 'FULL_AUTO', 'FOR', 'DISCUSS')).toBe(
+    expect(conditionSourceHint(aiApprovalScenario, 'OWNER', 'FOR', 'DISCUSS')).toBe(
       '다음 단계 추가 답변에서 고를 수 있습니다',
     );
     expect(conditionSourceHint(aiApprovalScenario, 'FULL_AUTO', 'AGAINST', 'REACTIONS')).toBe(
@@ -31,7 +31,12 @@ describe('conditionSourceHint', () => {
   });
 
   it('REACTIONS에서는 추천 문구 단계가 지나 추가 답변이 없으면 안내하지 않는다', () => {
-    expect(conditionSourceHint(aiApprovalScenario, 'REVIEW', 'FOR', 'REACTIONS')).toBeNull();
+    const withoutFollowUp = {
+      ...aiApprovalScenario,
+      followUp: { ...aiApprovalScenario.followUp, options: [] },
+    };
+    expect(conditionSourceHint(withoutFollowUp, 'REVIEW', 'FOR', 'REACTIONS')).toBeNull();
+    expect(isConditionOffered(withoutFollowUp, 'OWNER', 'FOR')).toBe(false);
   });
 
   it('입장이 없으면 안내하지 않고, 두 안건의 모든 조건은 두 입장에서 닿는다', () => {

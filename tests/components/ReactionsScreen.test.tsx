@@ -328,15 +328,15 @@ describe('ReactionsScreen', () => {
         />,
       );
       fireEvent.click(screen.getByTestId('reactions-side-for'));
-      // aiApprovalScenario.followUp.options: 0~3=FOR, 4~7=AGAINST, 8=BOTH.
+      // aiApprovalScenario.followUp.options: 0~4=FOR, 5~10=AGAINST, 11=BOTH.
       expect(screen.getByTestId('followup-option-0')).toBeInTheDocument();
-      expect(screen.queryByTestId('followup-option-4')).not.toBeInTheDocument();
-      expect(screen.getByTestId('followup-option-8')).toBeInTheDocument();
+      expect(screen.queryByTestId('followup-option-5')).not.toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-11')).toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId('reactions-side-against'));
       expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
-      expect(screen.getByTestId('followup-option-4')).toBeInTheDocument();
-      expect(screen.getByTestId('followup-option-8')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-5')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-11')).toBeInTheDocument();
     });
 
     it('입장을 바꾸면 체크된 추천 답변이 해제된다', () => {
