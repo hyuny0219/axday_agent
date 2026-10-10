@@ -554,6 +554,23 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
   });
 
+  it('2/2에서 추가 답변을 고른 뒤 칩을 해제하면 "직접 써 주세요" 없이 재확정 안내가 보이고 적용이 칩을 다시 확정한다(T119)', async () => {
+    renderReactions([]);
+    fireEvent.click(screen.getByTestId(`followup-option-${logIndex}`));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).not.toHaveClass('condition-chip--new');
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
+      '이미 고른 답변의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
+    );
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
+  });
+
   it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderReactions(actions);

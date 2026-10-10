@@ -47,7 +47,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly } from '../conditionSource';
+import { conditionSourceHint, isConditionOffered, isLaterStageOnly, phraseNumberForCondition, releasedHint } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -293,16 +293,31 @@ export function DiscussScreen({
   // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
   const conditionGuide = useMemo(
     () => ({
-      hint: (id: string) => conditionSourceHint(scenario, id, side, 'DISCUSS'),
+      hint: (id: string) =>
+        isReleasedCondition(id)
+          ? releasedHint(
+              phraseNumberForCondition(scenario, id, side ?? 'FOR') === null
+                ? '이미 쓴 내용의 조건입니다'
+                : `이미 고른 문구 ${phraseNumberForCondition(scenario, id, side ?? 'FOR')}번의 조건입니다`,
+            )
+          : conditionSourceHint(scenario, id, side, 'DISCUSS'),
       offered: (id: string) => isConditionOffered(scenario, id, side),
-      later: (id: string) => isLaterStageOnly(scenario, id, side, 'DISCUSS'),
+      later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, side, 'DISCUSS'),
     }),
-    [scenario, side],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scenario, side, proposedConditionIds, acceptedConditionIds],
   );
+
+  // T119(Codex 103차): 고른 문구가 제안하지만 칩을 해제해 지금은 빠진 조건. 내용은 초안에 그대로
+  // 있으므로 "직접 써 주세요"가 아니라 칩을 다시 확정하면 된다.
+  function isReleasedCondition(conditionId: string): boolean {
+    return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
+  }
 
   function canApplyRecommendation(conditionId: string): boolean {
     return (
       confirmedConditionIds.includes(conditionId) ||
+      isReleasedCondition(conditionId) ||
       findPhraseForCondition(scenario, conditionId, side, draft.selectedPhraseIds) !== undefined
     );
   }
@@ -318,6 +333,17 @@ export function DiscussScreen({
     if (pendingPhraseId !== null) {
       return [];
     }
+    // 해제된 조건은 칩을 다시 확정하고, 나머지는 문구를 체크해 적용한다.
+    const released = conditionIds.filter(isReleasedCondition);
+    if (released.length > 0) {
+      setAcceptedConditionIds((previous) => uniqueInOrder([...previous, ...released]));
+      const rest = conditionIds.filter((id) => !released.includes(id));
+      return [...released, ...(rest.length > 0 ? applyRecommendedPhrases(rest) : [])];
+    }
+    return applyRecommendedPhrases(conditionIds);
+  }
+
+  function applyRecommendedPhrases(conditionIds: string[]): string[] {
     if (draft.dirty) {
       // 직접 쓴 내용이 있으면 확인 UI를 먼저 띄운다. 묶음 전체를 보존해 승인 시 한 번에
       // 반영하고, 그때 기록한다(지금은 아직 반영되지 않았으므로 빈 목록).

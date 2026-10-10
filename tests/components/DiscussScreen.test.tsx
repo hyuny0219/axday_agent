@@ -448,6 +448,37 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     expect(screen.getByTestId(`assistant-recommend-apply-bundle-${bundleKey}`)).toHaveTextContent('지금 가능한 것 적용');
   });
 
+  it('문구를 고른 뒤 칩을 해제하면 "직접 써 주세요" 없이 재확정 안내가 보이고, 적용 버튼이 칩을 다시 확정한다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).not.toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
+      '이미 고른 문구 2번의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
+    );
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+  });
+
+  it('묶음 추천에서도 해제된 조건은 지금 적용 가능으로 집계되어 함께 적용된다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    fireEvent.click(screen.getByTestId('condition-chip-LIMIT'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-bundle-LIMIT+REVIEW')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-bundle-where-LIMIT+REVIEW')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    expect(screen.getByTestId('condition-chip-LIMIT')).toHaveClass('condition-chip--accepted');
+    expect(screen.getByTestId('phrase-card-P3').querySelector('input[type="checkbox"]')).toBeChecked();
+  });
+
   it('FOR에서는 기존대로 적용 버튼이 보인다', async () => {
     renderWith(aiApprovalScenario, 'FOR');
     await openCompare();

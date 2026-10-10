@@ -81,7 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly } from '../conditionSource';
+import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
 import {
   changeCauseLabel,
@@ -480,18 +480,27 @@ export function ReactionsScreen({
   // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
   // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
   const guideSide = side ?? lastOpinion?.stance ?? 'FOR';
+  // T119(Codex 103차): 제안돼 있지만 칩을 해제해 지금은 빠진 조건 — 칩을 다시 확정하면 된다.
+  function isReleasedCondition(conditionId: string): boolean {
+    return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
+  }
   const conditionGuide = useMemo(
     () => ({
-      hint: (id: string) => conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
+      hint: (id: string) =>
+        isReleasedCondition(id)
+          ? releasedHint('이미 고른 답변의 조건입니다')
+          : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
       offered: (id: string) => isConditionOffered(scenario, id, guideSide),
-      later: (id: string) => isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
+      later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
-    [scenario, guideSide],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scenario, guideSide, proposedConditionIds, acceptedConditionIds],
   );
 
   function canApplyRecommendation(conditionId: string): boolean {
     return (
       confirmedConditionIds.includes(conditionId) ||
+      isReleasedCondition(conditionId) ||
       findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR', selectedOptionIds) >= 0
     );
   }
@@ -506,6 +515,17 @@ export function ReactionsScreen({
     if (pendingOptionIndex !== null) {
       return [];
     }
+    // 해제된 조건은 칩을 다시 확정하고, 나머지는 추천 답변 카드를 체크해 적용한다.
+    const released = conditionIds.filter(isReleasedCondition);
+    if (released.length > 0) {
+      setAcceptedConditionIds((previous) => uniqueInOrder([...previous, ...released]));
+      const rest = conditionIds.filter((id) => !released.includes(id));
+      return [...released, ...(rest.length > 0 ? applyRecommendedOptions(rest) : [])];
+    }
+    return applyRecommendedOptions(conditionIds);
+  }
+
+  function applyRecommendedOptions(conditionIds: string[]): string[] {
     const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
     if (dirty) {
       // 직접 고친 내용이 있으면 확인 UI를 먼저 띄운다(handleToggleOption과 같은 규칙).

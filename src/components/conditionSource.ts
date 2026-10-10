@@ -85,3 +85,8 @@ export function isLaterStageOnly(
     hasFollowUpForCondition(scenario, conditionId, side)
   );
 }
+
+/** 이미 고른 문구·답변이 제안하지만 칩을 해제해 빠진 조건의 안내 문구(직접 쓰기 아님). */
+export function releasedHint(prefix: string): string {
+  return `${prefix} · 조건 칩을 다시 누르면 붙습니다`;
+}
