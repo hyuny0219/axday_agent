@@ -14,7 +14,8 @@ import type { ExecMemberId, Scenario } from '../../content/types';
 import type { ParticipantStance, SessionMode, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
-import { SHORT_STANCE_LABEL } from '../moodLabel';
+import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
+import type { LeaningMap } from '../../domain/stance';
 import { latestSuggestedConditionIds } from '../liveTranscript';
 import { openingStanceOf } from '../openingStance';
 import { computePersuasionTally, persuadedCountLabel } from '../persuasionSummary';
@@ -42,6 +43,10 @@ export interface PersuasionBoardProps {
    * domain/stance.ts membersAwaitingAnswer). 행에 "답변 뒤 찬성"(반대 참가자면 "답변 뒤
    * 반대")을 적는다. 생략하면 비어 있는 것과 같다. */
   awaitingAnswerIds?: readonly ExecMemberId[];
+  /** T118: 첫 의견 뒤 기울어진 방향(domain/stance.ts leaningStances). 있는 임원은 입장 열을
+   * "반대 → 찬성 쪽"(점선), 비고를 "답변하면 확정"으로 보이고, 집계 끝에 "(기울음 K)"를 붙인다.
+   * 이 값이 있으면 awaitingAnswerIds보다 우선한다. */
+  leaning?: LeaningMap;
   /** T114: 추가 질문에 답한 뒤(MOTION·VOTE)에는 임원이 어느 쪽으로 기울었는지 알려주지
    * 않는다. true면 입장 열은 봉인 배지, 비고는 "답변을 들었습니다 · 결과에서 공개"(처음부터
    * 같은 편은 이미 아는 사실이라 그대로), 집계("설득 N/4"·"○○ 남음")는 가린다. 이때
@@ -88,6 +93,8 @@ interface Row {
   conditionNote: string;
   /** T114: 입장 열을 봉인 배지로 그린다. */
   sealed?: boolean;
+  /** T118: 기울음 스타일(점선). */
+  leaning?: boolean;
 }
 
 function buildRow(
@@ -101,6 +108,7 @@ function buildRow(
   statements: readonly Statement[] = [],
   alreadySame = false,
   awaitingAnswer = false,
+  leaningTo?: 'FOR' | 'AGAINST',
 ): Row {
   const opening = openingStanceOf(scenario, memberId, mode, statements);
   const current = stances[memberId];
@@ -130,6 +138,17 @@ function buildRow(
   // T101: 처음부터 참가자와 같은 편인 임원은 설득 대상이 아니다.
   if (alreadySame) {
     return { memberId, stanceText, stanceChanged, conditionNote: '처음부터 같은 편' };
+  }
+
+  // T118: 기울음 — 현재 입장은 아직 확정이 아니므로 "반대 → 찬성 쪽"으로 방향을 보이고 답변하면 확정된다.
+  if (leaningTo) {
+    return {
+      memberId,
+      stanceText: `${SHORT_STANCE_LABEL[opening]} → ${STANCE_LABEL[leaningTo]}`,
+      stanceChanged: true,
+      leaning: true,
+      conditionNote: leaningTo === 'FOR' ? '답변하면 확정' : '답변하면 반대로 확정',
+    };
   }
 
   // T110: 조건은 이미 맞았고 추가 질문의 답만 남은 임원.
@@ -196,6 +215,7 @@ export function PersuasionBoard({
   liveSuggestedConditionIds,
   statements,
   awaitingAnswerIds,
+  leaning,
   sealed = false,
 }: PersuasionBoardProps) {
   // 설득 현황판 접기/펼치기(2026-10-08 팀리드 지시 — 1280×720 DISCUSS 왼쪽 열이 4행
@@ -217,6 +237,7 @@ export function PersuasionBoard({
   const alreadySameIds = sealed
     ? EXEC_MEMBER_ORDER.filter((id) => openingStanceOf(scenario, id, mode, statements ?? []) === targetVote)
     : tally.alreadySame;
+  const leaningCount = sealed ? 0 : EXEC_MEMBER_ORDER.filter((id) => leaning?.[id]).length;
   const liveHints =
     mode === 'live' ? (liveSuggestedConditionIds ?? latestSuggestedConditionIds(statements ?? [])) : undefined;
   const rows = EXEC_MEMBER_ORDER.map((memberId) =>
@@ -233,6 +254,7 @@ export function PersuasionBoard({
       statements,
       tally.alreadySame.includes(memberId),
       awaitingAnswerIds?.includes(memberId) ?? false,
+      leaning?.[memberId],
     ),
   );
 
@@ -257,7 +279,7 @@ export function PersuasionBoard({
     <div className="persuasion-board" data-testid="persuasion-board" aria-label="설득 현황판">
       <div className="persuasion-board__head">
         <span className="persuasion-board__count" data-testid="persuasion-board-count">
-          {sealed ? '임원 방향 봉인' : persuadedCountLabel(tally)}
+          {sealed ? '임원 방향 봉인' : `${persuadedCountLabel(tally)}${leaningCount > 0 ? ` (기울음 ${leaningCount})` : ''}`}
         </span>
         {!expanded && (
           <span className="persuasion-board__summary" data-testid="persuasion-board-summary">
@@ -301,7 +323,7 @@ export function PersuasionBoard({
                 </span>
               ) : (
                 <span
-                  className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}`}
+                  className={`persuasion-board__stance${row.stanceChanged ? ' persuasion-board__stance--changed' : ''}${row.leaning ? ' persuasion-board__stance--leaning' : ''}`}
                   data-testid={`persuasion-board-stance-${row.memberId}`}
                 >
                   {row.stanceText}

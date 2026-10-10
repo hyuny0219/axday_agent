@@ -130,6 +130,55 @@ export function membersAwaitingAnswer(scenario: Scenario, session: ScriptedStanc
   return EXEC_MEMBER_ORDER.filter((memberId) => isGatedByUnanswered(scenario.voteRules[memberId], ctx));
 }
 
+/** 기울어진 방향(T118): 임원 → 참가자 목표 방향(FOR 참가자면 FOR, AGAINST 참가자면 AGAINST). */
+export type LeaningMap = Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>;
+
+export type LeaningSession = ScriptedStanceSession & Partial<Pick<Session, 'mode'>>;
+
+/** 첫 의견 뒤(REACTIONS, 아직 답하지도 넘기지도 않음) 임원이 참가자 쪽으로 "기울었는지"(T118,
+ * 2026-10-10 사용자 지시 "찬반이 변경되었는지 알 수 있게"). 순수 클라이언트 계산이며 표결·서버
+ * 규칙은 건드리지 않는다. 표시용 stance는 T110대로 고민 중(UNDECIDED)이지만, 조건이 맞아 답변만
+ * 남은 임원에게는 목표 방향을 붙여 "반대 → 찬성 쪽"으로 보여준다.
+ * - scripted: membersAwaitingAnswer에 든 임원.
+ * - live: 모델 stance(liveCurrent)가 UNDECIDED인데 규칙표로 조건이 충족된(조건 없이는 목표 표가
+ *   아닌) 임원. 이미 FOR·AGAINST로 말한 임원은 모델 말을 그대로 둔다. */
+export function leaningStances(
+  scenario: Scenario,
+  session: LeaningSession,
+  liveCurrent?: Record<ExecMemberId, Stance>,
+  liveAnsweredIds: readonly ExecMemberId[] = [],
+): LeaningMap {
+  const result: LeaningMap = {};
+  if (session.stage !== 'REACTIONS' || session.followUpUsed === true || session.opinions.length === 0) {
+    return result;
+  }
+  const participantStance = session.opinions[session.opinions.length - 1]?.stance ?? null;
+  const direction: 'FOR' | 'AGAINST' = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+  if (session.mode !== 'live') {
+    for (const memberId of membersAwaitingAnswer(scenario, session)) {
+      result[memberId] = direction;
+    }
+    return result;
+  }
+  const conditionIds = latestConfirmedConditionIds(session.opinions);
+  const targetVote: Vote = direction === 'FOR' ? 'YES' : 'NO';
+  for (const memberId of EXEC_MEMBER_ORDER) {
+    // 이번 단계(REACTIONS)에 정상 응답(answered)한 임원만 후보다 — 실패·대기 임원은 이전 단계 stance로
+    // 기울음을 만들지 않는다(Codex 100차 P2).
+    if (!liveAnsweredIds.includes(memberId)) continue;
+    if (liveCurrent && liveCurrent[memberId] !== 'UNDECIDED') continue;
+    const rules = scenario.voteRules[memberId];
+    const ctx: VoteContext = { conditionIds, executionMode: 'DEFAULT', participantStance, followUpAnswered: true };
+    if (
+      decideMember(rules, ctx) === targetVote &&
+      decideMember(rules, { ...ctx, conditionIds: [] }) !== targetVote
+    ) {
+      result[memberId] = direction;
+    }
+  }
+  return result;
+}
+
 /** live 임원의 가장 최근 발언(단계 무관, transcript 전체에서 그 임원의 마지막 항목)에
  * 실린 stance를 그대로 쓴다. 발언이 아직 없으면 UNDECIDED, 이번 라운드 응답이 실패하면
  * (새 발언이 기록되지 않으므로) 직전 발언의 stance가 그대로 남는다. */
@@ -157,4 +206,15 @@ export function persuasionStamp(ballots: readonly Ballot[], participantVote: Vot
     (ballot) => ballot.vote !== 'UNCAST' && ballot.vote === participantVote,
   ).length;
   return { earned: sameVoteSeats >= 3, sameVoteSeats };
+}
+
+/** 이번 단계(stage)에 정상 응답(answered 상태이면서 그 단계 발언이 있는)한 임원 목록(T118, live 기울음 후보). */
+export function answeredRoleIds(
+  stage: SessionStage,
+  roleStatus: Record<ExecMemberId, string>,
+  statements: readonly { roleId: string; stage: string }[],
+): ExecMemberId[] {
+  return EXEC_MEMBER_ORDER.filter(
+    (id) => roleStatus[id] === 'answered' && statements.some((item) => item.roleId === id && item.stage === stage),
+  );
 }

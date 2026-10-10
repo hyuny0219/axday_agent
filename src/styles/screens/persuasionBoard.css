@@ -160,3 +160,12 @@
     overflow-y: auto;
   }
 }
+
+/* T118: 기울음 — 확정이 아니라 점선 테두리 + 연한 글자색. */
+.persuasion-board__stance--leaning {
+  color: var(--label);
+  font-weight: 700;
+  border: 1px dashed currentColor;
+  border-radius: 4px;
+  padding: 0 4px;
+}

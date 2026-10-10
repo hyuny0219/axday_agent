@@ -226,7 +226,7 @@ export function buildConditionRecommendation(
 
   // T110: 조건은 맞고 답만 남은 임원은 조건이 아니라 "추가 질문 답변"이 필요하다고 따로 말한다.
   if (awaitingMembers.length > 0) {
-    const awaitingLine = `${awaitingMembers.join('·')}는 조건은 맞으니 추가 질문에 답하면 ${targetStance === 'AGAINST' ? '반대' : '찬성'}입니다`;
+    const awaitingLine = `${awaitingMembers.join('·')}는 ${targetStance === 'AGAINST' ? '반대' : '찬성'} 쪽으로 기울었습니다 · 추가 질문에 답하면 확정됩니다`;
     openingLine = notYetForMembers.length === 0 ? `${awaitingLine}.` : `${openingLine}. ${awaitingLine}`;
   }
 

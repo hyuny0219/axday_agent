@@ -584,3 +584,18 @@
     font-size: 11px;
   }
 }
+
+/* T118: 첫 의견 뒤 기울어진 방향 — 확정이 아니므로 채움 대신 점선 테두리 + 연한 배경. */
+.stage-band__mood--leaning {
+  background-color: transparent;
+  border: 1.5px dashed currentColor;
+  box-sizing: border-box;
+}
+
+.stage-band__mood--leaning.stage-band__mood--for {
+  color: var(--accent);
+}
+
+.stage-band__mood--leaning.stage-band__mood--against {
+  color: var(--vote-no);
+}
