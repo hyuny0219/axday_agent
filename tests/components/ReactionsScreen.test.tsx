@@ -584,10 +584,11 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     );
   });
 
-  function renderWithFirstOpinion(selectedPhraseIds: string[]) {
+  function renderWithFirstOpinion(selectedPhraseIds: string[], currentSide: 'FOR' | 'AGAINST' = 'FOR') {
     return render(
       <ReactionsScreen
         {...baseProps()}
+        side={currentSide}
         scenario={sc}
         opinions={[
           {
@@ -625,6 +626,19 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     const where = screen.getByTestId('assistant-recommend-where-LOG');
     expect(where).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다 · 조건 칩을 다시 누르면 붙습니다');
     expect(where).not.toHaveTextContent('이미 쓴 내용');
+  });
+
+  it('첫 의견(찬성)의 문구 번호는 2/2에서 반대로 바꿔도 첫 의견 당시 입장 기준으로 안내한다(T119)', async () => {
+    renderWithFirstOpinion(['P2'], 'AGAINST');
+    const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
+    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    // 반대 목표의 조건 추천 행에는 LOG가 없을 수 있어 "남은 확인 사항"의 안내로 확인한다.
+    const remaining = await screen.findByTestId('assistant-remaining-LOG', {}, { timeout: 2000 });
+    expect(remaining).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다');
+    expect(remaining).not.toHaveTextContent('이미 쓴 내용');
   });
 
   it('첫 의견을 직접 써서 제출했으면 2/2에서 칩을 해제해도 "이미 쓴 내용" 안내가 유지된다(T119)', async () => {

@@ -490,9 +490,11 @@ export function ReactionsScreen({
       return '이미 고른 답변의 조건입니다';
     }
     // 이전 단계(첫 의견)에서 고른 문구가 이 조건을 제안했으면 그 문구의 DISCUSS 카드 번호를 말한다.
+    // 번호는 첫 의견 화면에서 보였던 번호여야 하므로 지금 고른 입장이 아니라 첫 의견 당시 입장 기준이다.
+    const firstSide = lastOpinion?.stance ?? 'FOR';
     const visible = scenario.phrases.filter((phrase) => {
       const phraseSide = phrase.side ?? 'FOR';
-      return phraseSide === 'BOTH' || phraseSide === guideSide;
+      return phraseSide === 'BOTH' || phraseSide === firstSide;
     });
     const firstIndex = visible.findIndex(
       (phrase) => phrase.conditionId === conditionId && (lastOpinion?.selectedPhraseIds ?? []).includes(phrase.id),
