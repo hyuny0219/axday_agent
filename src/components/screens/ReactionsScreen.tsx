@@ -481,6 +481,14 @@ export function ReactionsScreen({
   // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
   const guideSide = side ?? lastOpinion?.stance ?? 'FOR';
   // T119(Codex 103차): 제안돼 있지만 칩을 해제해 지금은 빠진 조건 — 칩을 다시 확정하면 된다.
+  // 출처는 실제로 고른 추천 답변만 센다 — 카드를 안 고르고 직접 쓴 조건은 "이미 쓴 내용"이다.
+  function releasedSourceText(conditionId: string): string {
+    const picked = scenario.followUp.options.some(
+      (option, index) => option.proposeConditionId === conditionId && selectedOptionIds.includes(String(index)),
+    );
+    return picked ? '이미 고른 답변의 조건입니다' : '이미 쓴 내용의 조건입니다';
+  }
+
   function isReleasedCondition(conditionId: string): boolean {
     return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
   }
@@ -488,13 +496,13 @@ export function ReactionsScreen({
     () => ({
       hint: (id: string) =>
         isReleasedCondition(id)
-          ? releasedHint('이미 고른 답변의 조건입니다')
+          ? releasedHint(releasedSourceText(id))
           : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
       offered: (id: string) => isConditionOffered(scenario, id, guideSide),
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, guideSide, proposedConditionIds, acceptedConditionIds],
+    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds],
   );
 
   function canApplyRecommendation(conditionId: string): boolean {

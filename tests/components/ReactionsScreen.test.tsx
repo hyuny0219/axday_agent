@@ -571,6 +571,19 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
   });
 
+  it('2/2에서 카드를 고르지 않고 직접 쓴 조건을 해제하면 "이미 쓴 내용" 안내가 보인다(T119)', async () => {
+    renderReactions([]);
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '자동 승인마다 승인 사유를 기록합시다.' } });
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
+      '이미 쓴 내용의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
+    );
+  });
+
   it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderReactions(actions);

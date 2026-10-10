@@ -465,6 +465,22 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
   });
 
+  it('문구를 고르지 않고 직접 쓴 조건을 해제하면 "이미 쓴 내용" 안내가 보이고 문구 번호는 말하지 않는다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '자동 승인마다 승인 사유를 기록합시다.' } });
+    // 자유 입력에서 찾은 조건은 칩을 눌러 확정하고, 한 번 더 눌러 해제한다.
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    const where = screen.getByTestId('assistant-recommend-where-LOG');
+    expect(where).toHaveTextContent('이미 쓴 내용의 조건입니다 · 조건 칩을 다시 누르면 붙습니다');
+    expect(where).not.toHaveTextContent('문구');
+  });
+
   it('묶음 추천에서도 해제된 조건은 지금 적용 가능으로 집계되어 함께 적용된다(T119)', async () => {
     renderWith(aiApprovalScenario, 'FOR');
     fireEvent.click(screen.getByTestId('phrase-card-P1'));

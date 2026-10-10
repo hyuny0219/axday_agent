@@ -47,7 +47,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly, phraseNumberForCondition, releasedHint } from '../conditionSource';
+import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -295,21 +295,29 @@ export function DiscussScreen({
     () => ({
       hint: (id: string) =>
         isReleasedCondition(id)
-          ? releasedHint(
-              phraseNumberForCondition(scenario, id, side ?? 'FOR') === null
-                ? '이미 쓴 내용의 조건입니다'
-                : `이미 고른 문구 ${phraseNumberForCondition(scenario, id, side ?? 'FOR')}번의 조건입니다`,
-            )
+          ? releasedHint(releasedSourceText(id))
           : conditionSourceHint(scenario, id, side, 'DISCUSS'),
       offered: (id: string) => isConditionOffered(scenario, id, side),
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, side, 'DISCUSS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, side, proposedConditionIds, acceptedConditionIds],
+    [scenario, side, proposedConditionIds, acceptedConditionIds, draft.selectedPhraseIds],
   );
 
   // T119(Codex 103차): 고른 문구가 제안하지만 칩을 해제해 지금은 빠진 조건. 내용은 초안에 그대로
   // 있으므로 "직접 써 주세요"가 아니라 칩을 다시 확정하면 된다.
+  // 출처는 실제로 고른 문구만 센다 — 문구를 안 고르고 직접 쓴 조건은 "이미 쓴 내용"이다.
+  function releasedSourceText(conditionId: string): string {
+    const visible = scenario.phrases.filter((phrase) => {
+      const phraseSide = phrase.side ?? 'FOR';
+      return phraseSide === 'BOTH' || phraseSide === (side ?? 'FOR');
+    });
+    const index = visible.findIndex(
+      (phrase) => phrase.conditionId === conditionId && draft.selectedPhraseIds.includes(phrase.id),
+    );
+    return index >= 0 ? `이미 고른 문구 ${index + 1}번의 조건입니다` : '이미 쓴 내용의 조건입니다';
+  }
+
   function isReleasedCondition(conditionId: string): boolean {
     return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
   }
