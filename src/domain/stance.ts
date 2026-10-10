@@ -146,6 +146,7 @@ export function leaningStances(
   scenario: Scenario,
   session: LeaningSession,
   liveCurrent?: Record<ExecMemberId, Stance>,
+  liveAnsweredIds: readonly ExecMemberId[] = [],
 ): LeaningMap {
   const result: LeaningMap = {};
   if (session.stage !== 'REACTIONS' || session.followUpUsed === true || session.opinions.length === 0) {
@@ -162,6 +163,9 @@ export function leaningStances(
   const conditionIds = latestConfirmedConditionIds(session.opinions);
   const targetVote: Vote = direction === 'FOR' ? 'YES' : 'NO';
   for (const memberId of EXEC_MEMBER_ORDER) {
+    // 이번 단계(REACTIONS)에 정상 응답(answered)한 임원만 후보다 — 실패·대기 임원은 이전 단계 stance로
+    // 기울음을 만들지 않는다(Codex 100차 P2).
+    if (!liveAnsweredIds.includes(memberId)) continue;
     if (liveCurrent && liveCurrent[memberId] !== 'UNDECIDED') continue;
     const rules = scenario.voteRules[memberId];
     const ctx: VoteContext = { conditionIds, executionMode: 'DEFAULT', participantStance, followUpAnswered: true };
@@ -202,4 +206,15 @@ export function persuasionStamp(ballots: readonly Ballot[], participantVote: Vot
     (ballot) => ballot.vote !== 'UNCAST' && ballot.vote === participantVote,
   ).length;
   return { earned: sameVoteSeats >= 3, sameVoteSeats };
+}
+
+/** 이번 단계(stage)에 정상 응답(answered 상태이면서 그 단계 발언이 있는)한 임원 목록(T118, live 기울음 후보). */
+export function answeredRoleIds(
+  stage: SessionStage,
+  roleStatus: Record<ExecMemberId, string>,
+  statements: readonly { roleId: string; stage: string }[],
+): ExecMemberId[] {
+  return EXEC_MEMBER_ORDER.filter(
+    (id) => roleStatus[id] === 'answered' && statements.some((item) => item.roleId === id && item.stage === stage),
+  );
 }

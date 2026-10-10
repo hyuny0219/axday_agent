@@ -89,7 +89,7 @@ import {
   oppositionReactionText,
   resolveFollowUpPrompt,
 } from '../reactionsFor';
-import { leaningStances, scriptedStances } from '../../domain/stance';
+import { answeredRoleIds, leaningStances, scriptedStances } from '../../domain/stance';
 import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
@@ -580,8 +580,9 @@ export function ReactionsScreen({
         scenario,
         { stage: 'REACTIONS', opinions: effectiveOpinions, followUpUsed: false, followUpAnswered: false, mode },
         stances,
+        answeredRoleIds('REACTIONS', roleStatus, statements),
       ),
-    [scenario, effectiveOpinions, mode, stances],
+    [scenario, effectiveOpinions, mode, stances, roleStatus, statements],
   );
   const awaitingAnswerIds = useMemo(
     () => EXEC_MEMBER_ORDER.filter((memberId) => leaning[memberId] !== undefined),

@@ -27,7 +27,7 @@ import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
-import { leaningStances, liveStances, scriptedStances } from '../domain/stance';
+import { answeredRoleIds, leaningStances, liveStances, scriptedStances } from '../domain/stance';
 import type { LeaningMap } from '../domain/stance';
 import type { ReactionsView } from '../components/screens/ReactionsScreen';
 import { scenarios } from '../content/scenarios';
@@ -622,6 +622,7 @@ function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
     scenario,
     session,
     session.mode === 'live' ? liveStances(session) : undefined,
+    answeredRoleIds('REACTIONS', session.roleStatus, session.transcript.statements),
   );
 }
 

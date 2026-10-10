@@ -7,7 +7,7 @@ import { LiveStatementCards } from '../../src/components/parts/LiveStatementCard
 import { StageBand } from '../../src/components/parts/StageBand';
 import { aiApprovalScenario as ai } from '../../src/content/scenarios/aiApproval';
 import type { ExecMemberId } from '../../src/content/types';
-import type { RoleStatus, Stance } from '../../src/domain/types';
+import type { RoleStatus, Stance, Statement } from '../../src/domain/types';
 
 afterEach(cleanup);
 
@@ -106,24 +106,48 @@ describe('StageBand 기울음', () => {
 });
 
 describe('LiveStatementCards 기울음', () => {
-  it('기울음 임원 카드는 점선 스타일·"찬성 쪽 · 미확정"·"답변하면 확정됩니다"를 보이고 나머지는 그대로다', () => {
+  const stmt = (roleId: ExecMemberId): Statement => ({
+    id: `s-${roleId}`,
+    roleId,
+    stage: 'REACTIONS',
+    text: '발언',
+    evidenceIds: [],
+    referencedStatementIds: [],
+    concerns: [],
+    suggestedConditionIds: [],
+    source: 'live',
+    createdAt: 0,
+  });
+  function cards(status: Record<ExecMemberId, RoleStatus>, statements: Statement[]) {
     render(
       <LiveStatementCards
         scenario={ai}
         stage="REACTIONS"
-        roleStatus={roleStatus}
-        statements={[]}
+        roleStatus={status}
+        statements={statements}
         stances={{ CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' }}
-        leaning={{ CFO: 'FOR' }}
+        leaning={{ CFO: 'FOR', CAIO: 'FOR' }}
         variant="reaction"
       />,
     );
-    const card = screen.getByTestId('live-role-CFO');
-    expect(card).toHaveClass('live-statement--leaning', 'live-statement--leaning-for');
+  }
+
+  it('answered 카드만 점선 스타일·"찬성 쪽 · 미확정"·"답변하면 확정됩니다"를 보인다', () => {
+    cards(roleStatus, [stmt('CEO'), stmt('CFO'), stmt('CAIO'), stmt('CISO')]);
+    expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--leaning', 'live-statement--leaning-for');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽 · 미확정');
     expect(screen.getByTestId('live-leaning-note-CFO')).toHaveTextContent('답변하면 확정됩니다');
-    expect(screen.getByTestId('live-role-CAIO')).not.toHaveClass('live-statement--leaning');
-    expect(screen.queryByTestId('live-leaning-note-CAIO')).toBeNull();
-    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
+    expect(screen.getByTestId('live-role-CISO')).not.toHaveClass('live-statement--leaning');
+  });
+
+  it('실패·대기 카드는 leaning이 있어도 기울음을 보이지 않고 그 상태가 우선이다', () => {
+    cards({ ...roleStatus, CFO: 'failed', CAIO: 'pending' }, [stmt('CEO'), stmt('CISO')]);
+    for (const id of ['CFO', 'CAIO']) {
+      expect(screen.getByTestId(`live-role-${id}`)).not.toHaveClass('live-statement--leaning');
+      expect(screen.queryByTestId(`live-leaning-note-${id}`)).toBeNull();
+      expect(screen.getByTestId(`exec-mood-label-${id}`)).toHaveTextContent('고민 중');
+    }
+    expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--failed');
+    expect(screen.getByTestId('live-role-CAIO')).toHaveClass('live-statement--pending');
   });
 });

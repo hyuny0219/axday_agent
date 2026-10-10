@@ -144,8 +144,7 @@ export function LiveStatementCards({
         // stale 값) 이 카드에 한해 'pending'으로 본다(위 모듈 주석 참고). 'failed'는
         // 그대로 둔다 — 실패는 정상 상태에서도 발언이 없는 게 맞다.
         const status: RoleStatus = rawStatus === 'answered' && !statement ? 'pending' : rawStatus;
-        const leanTo = leaning?.[roleId];
-        const stance: Stance = leanTo ?? stances[roleId];
+
         // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
         // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
         // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다). status가
@@ -153,6 +152,9 @@ export function LiveStatementCards({
         const opinionStatement = isReaction
           ? statements.find((item) => item.roleId === roleId && item.stage === 'OPINIONS')
           : undefined;
+        // 정상 응답한 카드에서만 기울음을 보인다(실패·대기는 그 상태가 우선, Codex 100차 P2).
+        const leanTo = status === 'answered' && statement ? leaning?.[roleId] : undefined;
+        const stance: Stance = leanTo ?? stances[roleId];
         const isMaintained =
           isReaction &&
           status === 'answered' &&

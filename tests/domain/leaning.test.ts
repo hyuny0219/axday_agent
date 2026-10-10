@@ -1,7 +1,7 @@
 // T118: 첫 의견 뒤 기울어진 방향(leaningStances). 표결 규칙표를 읽기만 하는 순수 계산이다.
 import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario as ai } from '../../src/content/scenarios/aiApproval';
-import { leaningStances } from '../../src/domain/stance';
+import { answeredRoleIds, leaningStances } from '../../src/domain/stance';
 import type { ExecMemberId } from '../../src/content/types';
 import type { Opinion, Stance } from '../../src/domain/types';
 
@@ -21,6 +21,7 @@ const reactions = (opinions: Opinion[], extra: object = {}) => ({
   followUpAnswered: false,
   ...extra,
 });
+const EVERYONE: ExecMemberId[] = ['CEO', 'CFO', 'CAIO', 'CISO'];
 const undecided: Record<ExecMemberId, Stance> = { CEO: 'UNDECIDED', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
 
 describe('leaningStances', () => {
@@ -47,7 +48,7 @@ describe('leaningStances', () => {
   });
 
   it('live: 모델 stance가 UNDECIDED인 임원도 규칙표로 조건이 맞으면 기운다', () => {
-    expect(leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), undecided)).toEqual({
+    expect(leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), undecided, EVERYONE)).toEqual({
       CFO: 'FOR',
       CAIO: 'FOR',
       CISO: 'FOR',
@@ -56,9 +57,27 @@ describe('leaningStances', () => {
 
   it('live: 모델이 이미 찬성·반대로 말한 임원은 그대로 두고, 조건이 모자라면 기울지 않는다', () => {
     const current: Record<ExecMemberId, Stance> = { ...undecided, CFO: 'AGAINST', CAIO: 'FOR' };
-    expect(leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), current)).toEqual({
+    expect(leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), current, EVERYONE)).toEqual({
       CISO: 'FOR',
     });
-    expect(leaningStances(ai, reactions([op([], 'FOR')], { mode: 'live' }), undecided)).toEqual({});
+    expect(leaningStances(ai, reactions([op([], 'FOR')], { mode: 'live' }), undecided, EVERYONE)).toEqual({});
+  });
+
+  it('live: 이번 단계에 answered한 임원만 후보다(실패·대기 임원은 이전 stance로 기울지 않는다)', () => {
+    const result = leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), undecided, ['CFO']);
+    expect(result).toEqual({ CFO: 'FOR' });
+    expect(leaningStances(ai, reactions([op(ALL, 'FOR')], { mode: 'live' }), undecided)).toEqual({});
+  });
+});
+
+describe('answeredRoleIds', () => {
+  it('answered 상태이면서 그 단계 발언이 있는 임원만 모은다', () => {
+    const status = { CEO: 'answered', CFO: 'failed', CAIO: 'pending', CISO: 'answered' };
+    const statements = [
+      { roleId: 'CEO', stage: 'REACTIONS' },
+      { roleId: 'CFO', stage: 'OPINIONS' },
+      { roleId: 'CISO', stage: 'OPINIONS' },
+    ];
+    expect(answeredRoleIds('REACTIONS', status, statements)).toEqual(['CEO']);
   });
 });

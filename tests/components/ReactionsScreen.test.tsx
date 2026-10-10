@@ -825,14 +825,16 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
         opinions={mk(['LIMIT', 'REVIEW', 'LOG', 'OWNER'], 'FOR')}
         side="FOR"
         mode="live"
-        roleStatus={idleRoleStatus}
-        statements={[]}
+        roleStatus={{ CEO: 'answered', CFO: 'answered', CAIO: 'answered', CISO: 'failed' }}
+        statements={(['CEO', 'CFO', 'CAIO'] as const).map((roleId) => ({ id: `r-${roleId}`, roleId, stage: 'REACTIONS' as const, text: '발언', evidenceIds: [], referencedStatementIds: [], concerns: [], suggestedConditionIds: [], source: 'live' as const, createdAt: 0 }))}
         roundLog={[]}
         stances={allUndecided}
         step="listen"
       />,
     );
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽');
+    // 실패한 CISO는 이전 stance로 기울지 않는다.
+    expect(screen.getByTestId('exec-mood-label-CISO')).not.toHaveTextContent('찬성 쪽');
   });
 
   it('입장 미선택(side=null)이어도 마지막 의견의 입장 기준이며, 의견이 없으면 기울음이 없다', () => {
