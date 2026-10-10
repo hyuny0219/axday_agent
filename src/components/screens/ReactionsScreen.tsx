@@ -479,6 +479,15 @@ export function ReactionsScreen({
   // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
   // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
   // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
+  const guideSide = side ?? lastOpinion?.stance ?? 'FOR';
+  const conditionGuide = useMemo(
+    () => ({
+      hint: (id: string) => conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
+      offered: (id: string) => isConditionOffered(scenario, id, guideSide),
+    }),
+    [scenario, guideSide],
+  );
+
   function canApplyRecommendation(conditionId: string): boolean {
     return (
       confirmedConditionIds.includes(conditionId) ||
@@ -852,10 +861,7 @@ export function ReactionsScreen({
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
             canApplyCondition={canApplyRecommendation}
-            conditionGuide={{
-              hint: (id) => conditionSourceHint(scenario, id, side ?? lastOpinion?.stance ?? 'FOR', 'REACTIONS'),
-              offered: (id) => isConditionOffered(scenario, id, side ?? lastOpinion?.stance ?? 'FOR'),
-            }}
+            conditionGuide={conditionGuide}
             closeRequest={assistantCloseRequest}
             draftText={textValue}
             draftRevision={draftRevision}

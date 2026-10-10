@@ -764,15 +764,15 @@ export function AssistantPanel({
                   {remainingShown.length > 0 ? (
                     <ul>
                       {remainingShown.map((id) => (
-                          <li key={id} data-testid={`assistant-remaining-${id}`}>
-                            {conditionLabel(scenario, id)}
-                            {conditionGuide?.hint(id) && (
-                              <span className="assistant-panel__remaining-where">
-                                {' '}
-                                · {conditionGuide.hint(id)}
-                              </span>
-                            )}
-                          </li>
+                        <li key={id} data-testid={`assistant-remaining-${id}`}>
+                          {conditionLabel(scenario, id)}
+                          {conditionGuide?.hint(id) && (
+                            <span className="assistant-panel__remaining-where">
+                              {' '}
+                              · {conditionGuide.hint(id)}
+                            </span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   ) : (

@@ -600,7 +600,7 @@
 }
 
 /* T119: 추천 문구 카드 앞 번호. 비서실장이 "추천 문구 N번"이라고 안내하므로 DISCUSS
-   목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(글자·접근성 이름은 그대로). */
+   목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(::before 내용이라 접근성 이름에는 "1. "처럼 번호가 앞에 붙어 읽힌다). */
 .discuss-screen__phrase-list--numbered {
   counter-reset: phrase-no;
 }

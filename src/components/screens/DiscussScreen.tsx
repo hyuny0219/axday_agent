@@ -291,6 +291,14 @@ export function DiscussScreen({
   // 기본 설득 목표와 같다).
   // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
   // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
+  const conditionGuide = useMemo(
+    () => ({
+      hint: (id: string) => conditionSourceHint(scenario, id, side, 'DISCUSS'),
+      offered: (id: string) => isConditionOffered(scenario, id, side),
+    }),
+    [scenario, side],
+  );
+
   function canApplyRecommendation(conditionId: string): boolean {
     return (
       confirmedConditionIds.includes(conditionId) ||
@@ -401,10 +409,7 @@ export function DiscussScreen({
             onRecommendCondition={handleRecommendCondition}
             onRecommendConditions={handleRecommendConditions}
             canApplyCondition={canApplyRecommendation}
-            conditionGuide={{
-              hint: (id) => conditionSourceHint(scenario, id, side, 'DISCUSS'),
-              offered: (id) => isConditionOffered(scenario, id, side),
-            }}
+            conditionGuide={conditionGuide}
             closeRequest={assistantCloseRequest}
             draftText={draft.draftText}
             draftRevision={draftRevision}

@@ -129,7 +129,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // 1차 반응: 조건이 모두 맞아도 기울음까지만이다(전원 설득으로 끝나지 않는다).
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--leaning/);
 
-    // 추가 질문에 답하지 않고 넘어간다 — 기울었던 세 임원은 반대 쪽으로 확정된다.
+    // 추가 질문에 답하지 않고 넘어간다 — 기울었던 두 임원(CFO·CAIO)은 반대 쪽으로 확정된다.
     await page.getByTestId('keep-previous-answer').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     // T114: 답하지 않고 넘어간 뒤에도 방향은 봉인이다 — 표정은 모두 중립이다.
@@ -182,8 +182,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 
     // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
     await page.getByTestId('reactions-advance').click();
-    // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션, 11번 인덱스).
-    await page.getByTestId('followup-option-11').click();
+    // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션).
+    await page.locator('[data-testid^="followup-option-"]', { hasText: '더 논의가 필요' }).click();
     await page.getByTestId('submit-followup').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();
