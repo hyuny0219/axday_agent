@@ -47,7 +47,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import { conditionSourceHint, isConditionOffered } from '../conditionSource';
+import { conditionSourceHint, isConditionOffered, isLaterStageOnly } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -295,6 +295,7 @@ export function DiscussScreen({
     () => ({
       hint: (id: string) => conditionSourceHint(scenario, id, side, 'DISCUSS'),
       offered: (id: string) => isConditionOffered(scenario, id, side),
+      later: (id: string) => isLaterStageOnly(scenario, id, side, 'DISCUSS'),
     }),
     [scenario, side],
   );

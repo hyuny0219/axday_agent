@@ -81,7 +81,7 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
-import { conditionSourceHint, isConditionOffered } from '../conditionSource';
+import { conditionSourceHint, isConditionOffered, isLaterStageOnly } from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
 import {
   changeCauseLabel,
@@ -484,6 +484,7 @@ export function ReactionsScreen({
     () => ({
       hint: (id: string) => conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
       offered: (id: string) => isConditionOffered(scenario, id, guideSide),
+      later: (id: string) => isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     [scenario, guideSide],
   );

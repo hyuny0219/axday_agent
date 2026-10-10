@@ -545,6 +545,15 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     await screen.findByTestId('rebuild-confirm');
   }
 
+  it('2/2에서는 추가 답변에 있는 조건에 "추가 답변에서" 안내와 적용 버튼이 보이고 "직접 써 주세요"는 없다(T119)', async () => {
+    renderReactions([]);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent('추가 답변에서 고를 수 있습니다');
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+  });
+
   it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderReactions(actions);

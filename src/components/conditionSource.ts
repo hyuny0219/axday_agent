@@ -71,3 +71,17 @@ export function conditionSourceHint(
   }
   return null;
 }
+
+/** 지금 단계에는 문구가 없고 다음 단계의 추가 답변에서만 고를 수 있는 조건인지(DISCUSS 전용). */
+export function isLaterStageOnly(
+  scenario: Scenario,
+  conditionId: string,
+  side: 'FOR' | 'AGAINST' | null,
+  stage: ConditionSourceStage,
+): boolean {
+  if (side === null || stage !== 'DISCUSS') return false;
+  return (
+    phraseNumberForCondition(scenario, conditionId, side) === null &&
+    hasFollowUpForCondition(scenario, conditionId, side)
+  );
+}

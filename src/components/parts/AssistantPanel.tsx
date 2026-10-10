@@ -110,6 +110,9 @@ export interface AssistantPanelProps {
   conditionGuide?: {
     hint: (conditionId: string) => string | null;
     offered: (conditionId: string) => boolean;
+    /** 지금 단계에는 문구가 없고 다음 단계(추가 답변)에서만 고를 수 있는 조건이면 true.
+     * 이런 조건에는 "직접 써 주세요" 대신 출처 안내만 보인다. */
+    later: (conditionId: string) => boolean;
   };
   /** 값이 바뀌면(0 제외) 열려 있는 팝업을 닫는다(PR #20 Codex 31차 P2-1). 화면이 확인 창을
    * 띄울 때 팝업의 포커스 트랩이 확인 창을 가리지 않게 한다. 자동으로 다시 열지는 않는다. */
@@ -440,6 +443,20 @@ export function AssistantPanel({
     });
   }
 
+  /** 묶음의 조건을 지금 적용 가능한 것(now)·다음 단계 추가 답변에서만 고를 수 있는 것(later)으로
+   * 나눈다. 둘 어디에도 못 드는 조건이 있으면 manual(직접 써 주세요). */
+  function bundleSplit(conditionIds: readonly string[]) {
+    const now: string[] = [];
+    const later: string[] = [];
+    let manual = false;
+    for (const id of conditionIds) {
+      if (!canApplyCondition || canApplyCondition(id)) now.push(id);
+      else if (conditionGuide?.later(id)) later.push(id);
+      else manual = true;
+    }
+    return { now, later, manual };
+  }
+
   /** 복합 조합 묶음("○○ + △△ 모두 있어야 움직임")의 "적용" — 조합 안의 조건을
    * 하나씩 같은 규칙으로 적용한다. */
   async function handleApplyBundle(conditionIds: readonly string[]) {
@@ -690,12 +707,14 @@ export function AssistantPanel({
                             </span>
                           )}
                           {canApplyCondition && !canApplyCondition(row.conditionId) ? (
-                            <span
-                              className="assistant-panel__recommend-manual"
-                              data-testid={`assistant-recommend-manual-${row.conditionId}`}
-                            >
-                              직접 써 주세요
-                            </span>
+                            conditionGuide?.later(row.conditionId) ? null : (
+                              <span
+                                className="assistant-panel__recommend-manual"
+                                data-testid={`assistant-recommend-manual-${row.conditionId}`}
+                              >
+                                직접 써 주세요
+                              </span>
+                            )
                           ) : (
                             <button
                               type="button"
@@ -728,7 +747,7 @@ export function AssistantPanel({
                             <span className="assistant-panel__recommend-moves">
                               움직이는 임원 · {bundle.movedMemberIds.join('·')}
                             </span>
-                            {canApplyCondition && !bundle.conditionIds.every(canApplyCondition) ? (
+                            {bundleSplit(bundle.conditionIds).manual ? (
                               <span
                                 className="assistant-panel__recommend-manual"
                                 data-testid={`assistant-recommend-manual-bundle-${bundleKey}`}
@@ -736,14 +755,27 @@ export function AssistantPanel({
                                 직접 써 주세요
                               </span>
                             ) : (
-                              <button
-                                type="button"
-                                className="cta cta--secondary"
-                                onClick={() => handleApplyBundle(bundle.conditionIds)}
-                                data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
-                              >
-                                모두 적용
-                              </button>
+                              <>
+                                {bundleSplit(bundle.conditionIds).later.length > 0 && (
+                                  <span
+                                    className="assistant-panel__recommend-where"
+                                    data-testid={`assistant-recommend-bundle-where-${bundleKey}`}
+                                  >
+                                    지금 적용 가능한 조건 {bundleSplit(bundle.conditionIds).now.length}개 + 추가 답변에서{' '}
+                                    {bundleSplit(bundle.conditionIds).later.length}개
+                                  </span>
+                                )}
+                                {bundleSplit(bundle.conditionIds).now.length > 0 && (
+                                  <button
+                                    type="button"
+                                    className="cta cta--secondary"
+                                    onClick={() => handleApplyBundle(bundleSplit(bundle.conditionIds).now)}
+                                    data-testid={`assistant-recommend-apply-bundle-${bundleKey}`}
+                                  >
+                                    {bundleSplit(bundle.conditionIds).later.length > 0 ? '지금 가능한 것 적용' : '모두 적용'}
+                                  </button>
+                                )}
+                              </>
                             )}
                           </li>
                         );

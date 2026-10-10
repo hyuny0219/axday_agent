@@ -413,12 +413,39 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
   it.each([
     ['ai-approval', aiApprovalScenario, 'FULL_AUTO'],
     ['experience-first', experienceFirstScenario, 'EXP_ONLY'],
-  ])('AGAINST + %s: 적용할 문구가 없는 추천은 버튼 없이 직접 써 달라고 안내한다', async (_name, sc, conditionId) => {
+  ])('AGAINST + %s: 다음 단계 추가 답변에서만 고르는 조건은 직접 쓰라는 말 없이 출처만 안내한다(T119)', async (_name, sc, conditionId) => {
     renderWith(sc, 'AGAINST');
     await openCompare();
     expect(screen.getByTestId(`assistant-recommend-row-${conditionId}`)).toBeInTheDocument();
     expect(screen.queryByTestId(`assistant-recommend-apply-${conditionId}`)).not.toBeInTheDocument();
-    expect(screen.getByTestId(`assistant-recommend-manual-${conditionId}`)).toHaveTextContent('직접 써 주세요');
+    expect(screen.queryByTestId(`assistant-recommend-manual-${conditionId}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-where-${conditionId}`)).toHaveTextContent(
+      '다음 단계 추가 답변에서 고를 수 있습니다',
+    );
+  });
+
+  it('experience-first 찬성 · 조건 0개: DATA_VETO 행에 "직접 써 주세요" 없이 추가 답변 안내만 있다(T119)', async () => {
+    renderWith(experienceFirstScenario, 'FOR');
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-row-DATA_VETO')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-DATA_VETO')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-apply-DATA_VETO')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-DATA_VETO')).toHaveTextContent(
+      '다음 단계 추가 답변에서 고를 수 있습니다',
+    );
+  });
+
+  it('ai-approval 찬성 · 묶음에 후속 단계 조건이 섞이면 "지금 적용 가능 N개 + 추가 답변에서 M개"로 보인다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    await openCompare();
+    const bundleKey = 'LOG+OWNER';
+    const bundle = screen.getByTestId(`assistant-recommend-bundle-${bundleKey}`);
+    expect(bundle).toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-bundle-where-${bundleKey}`)).toHaveTextContent(
+      '지금 적용 가능한 조건 1개 + 추가 답변에서 1개',
+    );
+    expect(screen.queryByTestId(`assistant-recommend-manual-bundle-${bundleKey}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-apply-bundle-${bundleKey}`)).toHaveTextContent('지금 가능한 것 적용');
   });
 
   it('FOR에서는 기존대로 적용 버튼이 보인다', async () => {
