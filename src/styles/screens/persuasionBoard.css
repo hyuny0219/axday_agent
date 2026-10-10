@@ -168,4 +168,6 @@
   border: 1px dashed currentColor;
   border-radius: 4px;
   padding: 0 4px;
+  /* 점선 테두리 위아래 1px씩이 행 높이를 키우지 않게 상쇄한다(T117 고정 높이 구조 보존). */
+  margin-block: -1px;
 }
