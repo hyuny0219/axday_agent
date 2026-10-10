@@ -25,4 +25,54 @@
 // 비서실장 refine·summarize에는 EXEC_DECISION_RULE과 같은 위치에 둬 새지 않는다. 응답
 // 스키마는 바뀌지 않았지만 시스템 프롬프트 본문이 바뀌므로 버전을 올린다. 전후 비교는
 // docs/eval/tuning-v8.md.
-export const PROMPT_VERSION = 'v8';
+// v9(2026-10-07, T82): v8 실측(docs/eval/tuning-v8-after.jsonl 192행 중 87행, 39~45%)에서
+// 발언·판단 근거 문장에 조건 ID(LOG, OWNER, SCOPE 등)가 그대로 새는 것을 발견했다 — 프롬프트가
+// meeting_record의 "허용 조건 목록"에 ID와 한국어 라벨을 나란히 줬기 때문이다. 조건 목록을
+// 한국어 라벨만 보이는 블록과 응답 스키마 필드 전용 ID 대응표로 나누고(prompts/common.ts의
+// formatConditionLabels·formatConditionIdMap), 공통 가드레일에 "조건도 한국어 이름으로,
+// 영문 약어·코드 금지('AI'·임원 역할 이름·숫자·단위만 예외)"를 더했다. 응답 스키마 자체는
+// 바뀌지 않았지만(evidenceIds·suggestedConditionIds는 여전히 ID), validate.ts의
+// findStrayLatinRun()이 message·reason·draftText에 남은 조건 ID·영문을 응답 단계에서 한 번
+// 더 거절한다(invalid_response). 전후 비교는 docs/eval/tuning-v9.md.
+// v10(2026-10-07, T92): 사용자 지적 "반대 의견을 작성해도 AI 임원들 및 프로그램 진행이
+// 찬성 쪽으로 몰고 가는 경향". v9 실측에서 임원 4명이 "붙은 조건 유무"로만 판단해
+// 참가자의 찬성·반대 자체가 프롬프트에 없었다 — 조건 보완 경로 16/16 YES, 조건 없음
+// 16/16 NO로 네 임원이 참가자 논리와 무관하게 함께 움직였다. meeting_record에 참가자
+// 입장(FOR/AGAINST/null, buildMeetingRecordBlock)을 추가하고, 반대 입장일 때는 붙은
+// 조건이 "참가자의 요구"라는 설명을 더했다. EXEC_DECISION_RULE을 참가자 주장 중심으로
+// 바꿔 조건 유무가 아니라 참가자 반대 근거의 타당성으로 판단하게 하고, 네 임원이 매번
+// 같은 쪽으로 함께 움직이지 않도록 role_lens 기준 독립 판단을 명시했다. REACTIONS 단계
+// 지시에 참가자 발언의 핵심 주장 한 가지에 직접 답하라는 요구를 더했다. 요청 스키마에
+// participantStance(round·vote 모두 선택 필드, 생략 시 null과 같음)를 추가했다 — 기존
+// 요청은 필드가 없으므로 동작이 그대로다. 응답 스키마는 바뀌지 않았다. 전후 비교는
+// docs/eval/tuning-v10.md.
+// v11(2026-10-07, T93): 사용자 지적 "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수
+// 있는 수준으로 말하게 하자. 지금은 한참 들여다보고 생각해야 하는 게 있다." v10 실측
+// (docs/eval/tuning-v10-after.jsonl)에서 "리스크", "재구성", "비용 리스크가 통제되지
+// 않습니다" 같은 한자어·업무 용어가 발언·판단 이유에 그대로 쓰이는 사례를 확인했다.
+// server/prompts/plainLanguage.ts에 쉬운 말 규칙(PLAIN_LANGUAGE_RULE: 문장 25자 안팎·발언당
+// 2~3문장·금지 어휘 대체)과 금지 어휘 목록(FORBIDDEN_WORDS, 20개 안팎)·가독성 측정
+// 함수(문장당 글자 수·발언당 문장 수)를 새로 두고, roles/index.ts의 withExecStyle에서
+// EXEC_STYLE_RULE 다음에 붙였다(임원 전용, 비서실장 refine·summarize에는 붙이지 않음 —
+// EXEC_STYLE_RULE과 같은 이유). 응답 스키마는 바뀌지 않았지만 시스템 프롬프트 본문이
+// 바뀌므로 버전을 올린다. eval-set-run.ts --check에 가독성 지표를 추가해(서버 검증에서
+// 거절하지는 않음) 전후를 비교한다. scripted 임원 발언(initialOpinions·reactions·
+// oppositionReactions·voteRules reason·followUp.question)도 같은 기준으로 다시 썼다 —
+// 자료 카드·조건 라벨·추천 문구(P1~P6·N1~N4)·후속 추천 답변은 범위 밖(참가자 몫이거나
+// 키워드 규칙과 묶여 있음). 전후 비교는 docs/eval/tuning-v11.md.
+// v12(2026-10-09, T110): 사용자 지시 "처음 추천문구를 선택해서 의견전달했을 때 전부
+// 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해줘." 설득을 두 단계로
+// 나눴다 — REACTIONS(첫 반응) 지시에 "조건이 충분해도 stance는 UNDECIDED(고민 중)까지만,
+// 참가자 쪽 확정은 추가 질문에 답한 뒤"를(prompts/common.ts의 REACTIONS_FIRST_PASS_RULE,
+// 위 stance 지침보다 우선), FOLLOWUP 지시에 "답을 받았으니 확정해도 된다"를, VOTE 지시에
+// "추가 질문 답변: 없음이면 고민 중이던 임원은 처음 입장대로 표결(찬성 참가자면 반대표)"을
+// 더했다(VOTE_UNANSWERED_RULE, followUpAnswered가 false일 때만 붙는다). 요청 스키마에
+// followUpAnswered(round·vote 모두 선택 필드, 생략 시 기존 동작)를 추가했다. 응답 스키마는
+// 바뀌지 않았다. 전후 비교는 docs/eval/tuning-v12.md(mock 기준 요약, live 실측은 승인 후).
+// v13(2026-10-09, T114): 사용자 지시 "답하기 후 AI 임원들의 찬반 방향을 몰라야 결과가
+// 더 극적". 추가 질문에 답한 뒤(MOTION·VOTE)에는 화면이 임원 방향을 봉인하고 결과에서
+// 한 장씩 공개하므로, FOLLOWUP 지시에 "답변에 대한 평가·소회만 말하고 최종 찬반·표결
+// 방향을 문장으로 밝히지 말 것"(common.ts의 FOLLOWUP_NO_VERDICT_RULE)을 더했다. 응답
+// 스키마(stance 포함)는 그대로 — 화면에서만 가린다. 이 규칙 외 변경 없음.
+// 전후 비교 계획은 docs/eval/tuning-v13.md(live 실측은 사용자 승인 뒤).
+export const PROMPT_VERSION = 'v13';

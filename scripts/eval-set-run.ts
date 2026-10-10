@@ -1,4 +1,4 @@
-// T34 고정 평가 세트 실행기(T79에서 두 안건 기준으로 재작성). scripts/eval-set.json(16케이스 =
+// T34 고정 평가 세트 실행기(T79에서 두 안건 기준으로 재작성). scripts/eval-set.json(기본 16케이스 =
 // 안건 2개 × 네 경로(조건 없음·조건 보완·상충·요청형) × 참가자 발언 변형 2개)을
 // server/handlers/round.ts·vote.ts로 직접 실행해 라운드별 비교(전/후)에 쓸 원시 기록(jsonl)을
 // 만든다. 옛 세트(anon-board, 12케이스, 변형 3개, 경로명 '부정')는 T78 안건 교체로 더는 쓸 수
@@ -21,7 +21,7 @@ import { CONDITION_IDS, EXEC_ROLE_IDS, type ExecRoleId } from '../server/validat
 
 type ConditionId = (typeof CONDITION_IDS)[number];
 import { getScenarioMaterials } from '../server/scenario-data';
-import { handleRound, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
+import { handleRound, type FollowUpAuditEntry, type RoundRequest, type RoundRoleResult } from '../server/handlers/round';
 import { handleVote, type VoteRequest, type VoteRoleResult } from '../server/handlers/vote';
 import { handleProbe } from '../server/handlers/probe';
 import { MOCK_MODEL_ID, createMockProvider } from '../server/providers/mock';
@@ -32,6 +32,7 @@ import type {
   ModelProvider,
 } from '../server/providers/types';
 import { DEFAULT_MODEL_ID, PROMPT_VERSION } from '../server/config';
+import { countForbiddenWordOccurrences, readabilityStats } from '../server/prompts/plainLanguage';
 
 /** 평가 실행에 쓸 제공자·modelId. mock이면 서버(server/index.ts)와 같이 MODEL_ID와 무관하게 항상
  * MOCK_MODEL_ID다 — 예전에는 MODEL_ID 기본값(claude-sonnet-5)을 mock에도 넘겨 mock 실행의 모든
@@ -42,6 +43,7 @@ export function resolveEvalModel(env: NodeJS.ProcessEnv): { useMock: boolean; mo
   return { useMock, modelId: useMock ? MOCK_MODEL_ID : env.MODEL_ID?.trim() || DEFAULT_MODEL_ID };
 }
 import { systemClock, type Clock } from '../server/clock';
+import { findVerdictWords } from '../src/domain/verdictWords';
 
 const BUDGET_MS = 8000;
 
@@ -55,6 +57,11 @@ export interface EvalCase {
   variant: string;
   effectiveConditionIds: ConditionId[];
   participantOpinion: string;
+  /** T92: 참가자 입장. 생략하면(기존 16케이스) null과 같다 — 요청에 필드를 안 싣는다. */
+  participantStance?: 'FOR' | 'AGAINST';
+  /** T110(v12): 참가자가 추가 질문에 답했는지. 생략하면(기존 20케이스) 요청에 필드를 싣지 않아
+   * 답한 것과 같게 다룬다. false인 케이스만 "답하지 않고 넘어감"을 잰다. */
+  followUpAnswered?: boolean;
 }
 
 interface EvalSetFile {
@@ -76,7 +83,7 @@ export interface EvalRow {
   pathId: string;
   pathLabel: string;
   variant: string;
-  stage: 'OPINIONS' | 'REACTIONS' | 'VOTE';
+  stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP' | 'VOTE';
   roleId: ExecRoleId;
   status: 'answered' | 'failed';
   failReason?: string;
@@ -88,17 +95,31 @@ export interface EvalRow {
   concernCount?: number;
   /** T63: 발언 끝에 실린 stance(FOR/AGAINST/UNDECIDED). OPINIONS/REACTIONS 행에만 실린다. */
   stance?: string;
+  /** T92: 이 케이스의 참가자 입장(EvalCase.participantStance 그대로). --check 집계용. */
+  participantStance?: string;
+  /** T114(Codex 56차): FOLLOWUP 행만. 시도별 원문·위반 표현·형식 오류 사유(invalidReason: schema·role_mismatch·
+   * foreign_condition). 아래 두 필드는 이 배열에서 파생한 호환용 요약이다. */
+  followUpAttempts?: Array<{ text: string; violations: string[]; invalidReason?: string }>;
+  /** T114(Codex 54차): FOLLOWUP 행만. 시도별 원시 응답 문장(재시도·중립 대체 전 원문). */
+  followUpRawAttempts?: string[];
+  /** 시도별 방향 표현 건수(followUpRawAttempts와 같은 순서). */
+  followUpViolations?: number[];
+  /** 재시도 뒤에도 남아 중립 문장으로 대체됐는가(서버 로그 note followup_verdict_masked). */
+  followUpMasked?: boolean;
   latencyMs: number;
   modelId: string;
   promptVersion: string;
 }
 
-function toRoundRows(
+export function toRoundRows(
   results: RoundRoleResult[],
   evalCase: EvalCase,
-  stage: 'OPINIONS' | 'REACTIONS',
+  stage: 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP',
+  audit: FollowUpAuditEntry[] = [],
 ): EvalRow[] {
-  return results.map((result) => ({
+  return results.map((result) => {
+    const entry = stage === 'FOLLOWUP' ? audit.find((item) => item.roleId === result.roleId) : undefined;
+    return {
     caseId: evalCase.id,
     scenarioId: evalCase.scenarioId,
     pathId: evalCase.pathId,
@@ -113,10 +134,20 @@ function toRoundRows(
     referencedStatementIds: result.statement?.referencedStatementIds,
     concernCount: result.statement?.concerns.length,
     stance: result.statement?.stance,
+    participantStance: evalCase.participantStance,
+    ...(entry
+      ? {
+          followUpAttempts: entry.attempts,
+          followUpRawAttempts: entry.attempts.map((attempt) => attempt.text),
+          followUpViolations: entry.attempts.map((attempt) => attempt.violations.length),
+          followUpMasked: entry.masked,
+        }
+      : {}),
     latencyMs: result.latencyMs,
     modelId: result.modelId,
     promptVersion: result.promptVersion,
-  }));
+  };
+  });
 }
 
 // --- provider.complete() 계측: handleVote()는 라운드 핸들러와 달리 latencyMs를 돌려주지 않아
@@ -172,13 +203,20 @@ function instrumentProvider(base: ModelProvider, clock: Clock, sink: CallRecord[
   };
 }
 
-/** sink[fromIndex..] 가운데 역할별 마지막 호출 기록. */
+/** sink[fromIndex..] 가운데 역할별 호출 기록 — 마지막 호출의 내용(modelId 등)을 쓰되,
+ * latencyMs는 **그 역할의 모든 시도 시간을 합산**한다. T91 자동 재시도로 한 역할이 두 번
+ * 호출될 수 있는데 마지막 시도만 쓰면 실제 소요(첫 시도 4초 실패 + 재시도 3초 = 7초)가
+ * 3초로 집계된다(PR #20 Codex 24차 검토 P2). */
 export function callRecordsByRole(sink: CallRecord[], fromIndex: number): Map<string, CallRecord> {
   const byRole = new Map<string, CallRecord>();
   for (let i = fromIndex; i < sink.length; i += 1) {
     const record = sink[i];
     if (record?.roleId) {
-      byRole.set(record.roleId, record);
+      const previous = byRole.get(record.roleId);
+      byRole.set(record.roleId, {
+        ...record,
+        latencyMs: (previous?.latencyMs ?? 0) + record.latencyMs,
+      });
     }
   }
   return byRole;
@@ -210,6 +248,7 @@ export function toVoteRows(
     vote: result.ballot?.vote,
     reason: result.ballot?.reason,
     evidenceIds: result.ballot?.evidenceIds,
+    participantStance: evalCase.participantStance,
     latencyMs: calls.get(result.roleId)?.latencyMs ?? observedMs,
     modelId: calls.get(result.roleId)?.modelId || result.modelId,
     promptVersion: result.promptVersion,
@@ -254,6 +293,9 @@ async function runCase(
     stage: 'REACTIONS',
     transcript: { revision: 1, statements: opinionsStatements },
     participantOpinion: evalCase.participantOpinion,
+    participantStance: evalCase.participantStance,
+    // 첫 반응은 항상 "아직 답하기 전"이다(REACTIONS 단계 자체가 그 뜻이라 값은 영향이 없다).
+    followUpAnswered: false,
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -267,6 +309,28 @@ async function runCase(
       roleId: r.roleId,
       message: r.statement!.message,
     }));
+
+  // T114(v13): 추가 질문에 답한 케이스는 FOLLOWUP 라운드도 돌려 "방향을 문장으로 밝히지 말 것"
+  // 규칙을 검사한다(findFollowUpVerdictWords). VOTE 입력(transcript)은 v12 기준선과 비교할 수
+  // 있도록 그대로 두고, 이 라운드의 발언은 VOTE에 넘기지 않는다.
+  let followUpRows: EvalRow[] = [];
+  if (evalCase.followUpAnswered !== false) {
+    const followUpRequest: RoundRequest = {
+      sessionId,
+      requestId: randomUUID(),
+      mode: 'live',
+      stage: 'FOLLOWUP',
+      transcript: { revision: 2, statements: [...opinionsStatements, ...reactionsStatements] },
+      participantOpinion: evalCase.participantOpinion,
+      participantStance: evalCase.participantStance,
+      followUpAnswered: true,
+      scenarioId: evalCase.scenarioId,
+      budgetMs: BUDGET_MS,
+    };
+    const followUpAudit: FollowUpAuditEntry[] = [];
+    const followUpResults = await handleRound(followUpRequest, { provider, clock, followUpAudit });
+    followUpRows = toRoundRows(followUpResults, evalCase, 'FOLLOWUP', followUpAudit);
+  }
 
   const voteRequest: VoteRequest = {
     sessionId,
@@ -282,6 +346,8 @@ async function runCase(
       effectiveConditionIds: evalCase.effectiveConditionIds,
       executionMode: 'DEFAULT',
     },
+    participantStance: evalCase.participantStance,
+    followUpAnswered: evalCase.followUpAnswered,
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;
@@ -292,7 +358,7 @@ async function runCase(
   const voteObservedMs = clock.now() - voteStart;
   const voteRows = toVoteRows(voteResults, evalCase, sink, voteFrom, voteObservedMs);
 
-  return [...opinionsRows, ...reactionsRows, ...voteRows];
+  return [...opinionsRows, ...reactionsRows, ...followUpRows, ...voteRows];
 }
 
 function hasAnthropicCredential(): boolean {
@@ -466,6 +532,86 @@ export function findEvidenceIdMentions(rows: EvalRow[]): EvidenceIdMention[] {
   return mentions;
 }
 
+export interface FollowUpVerdictWord {
+  line: number;
+  caseId: string;
+  roleId: string;
+  word: string;
+  text: string;
+}
+
+/** T114: 답변 뒤 방향은 결과 화면에서 공개하므로 FOLLOWUP 발언(message)에 찬성·반대·가결·부결
+ * 같은 방향 단어가 있으면 안 된다(기준은 0건, 서버가 실제로 막는 검사와 같은 함수). 일반 명사로
+ * 쓴 문장은 사람이 읽어 판정한다. */
+export interface FollowUpVerdictStats {
+  /** 원문 시도가 1개 이상 남은 FOLLOWUP 행 수(최종 failed 포함, 원시 위반율·대체율의 분모). */
+  rows: number;
+  /** 첫 시도 원문에 방향 표현이 있던 행(프롬프트가 규칙을 못 지킨 비율의 분자). */
+  rawViolationRows: number;
+  rawViolationRate: number;
+  /** 모든 시도의 원시 위반 건수 합. */
+  rawViolationCount: number;
+  /** 재시도 뒤에도 남아 중립 문장으로 대체된 행. */
+  maskedRows: number;
+  maskedRate: number;
+  /** audit은 있지만 원문 시도가 하나도 없는 행(타임아웃·연결 오류 등 장애) — 분모에서 뺀다. */
+  noRawRows: number;
+  /** 형식 오류 시도의 사유별 건수. */
+  invalidReasons: Record<string, number>;
+}
+
+/** T114(Codex 54차): 서버가 재시도·중립 대체로 가린 뒤의 문장만 보면 위반이 0건으로 보이므로, 서버가
+ * 남긴 시도별 원문(followUpRawAttempts·followUpViolations)으로 "원시 위반율"과 "대체율"을 따로 센다. */
+export function followUpVerdictStats(rows: EvalRow[]): FollowUpVerdictStats {
+  // 최종 성공 여부와 무관하게 서버 audit(시도별 원문)이 남은 FOLLOWUP 행을 센다(Codex 55차). 다만 실제
+  // 원문(text가 비어 있지 않은 시도)이 하나라도 있는 행만 분모에 넣는다 — 타임아웃·연결 오류로 원문이
+  // 없는 행이 "위반 0건 정상 원문"으로 비율을 낮추지 않게 별도 건수(noRawRows)로 뺀다(Codex 56차).
+  const audited = rows.filter((row) => row.stage === 'FOLLOWUP' && row.followUpViolations !== undefined);
+  const attemptsOf = (row: EvalRow) =>
+    row.followUpAttempts ??
+    (row.followUpRawAttempts ?? []).map((text, i) => ({
+      text,
+      violations: new Array<string>(row.followUpViolations?.[i] ?? 0).fill(''),
+    }));
+  const withRaw = audited.filter((row) => attemptsOf(row).some((attempt) => attempt.text.length > 0));
+  const rawViolationRows = withRaw.filter((row) => (attemptsOf(row)[0]?.violations.length ?? 0) > 0).length;
+  const rawViolationCount = withRaw.reduce(
+    (sum, row) => sum + attemptsOf(row).reduce((a, attempt) => a + attempt.violations.length, 0),
+    0,
+  );
+  const maskedRows = withRaw.filter((row) => row.followUpMasked === true).length;
+  const invalidReasons: Record<string, number> = {};
+  for (const row of audited) {
+    for (const attempt of row.followUpAttempts ?? []) {
+      if (attempt.invalidReason) {
+        invalidReasons[attempt.invalidReason] = (invalidReasons[attempt.invalidReason] ?? 0) + 1;
+      }
+    }
+  }
+  const total = withRaw.length;
+  return {
+    rows: total,
+    rawViolationRows,
+    rawViolationRate: total === 0 ? 0 : rawViolationRows / total,
+    rawViolationCount,
+    maskedRows,
+    maskedRate: total === 0 ? 0 : maskedRows / total,
+    noRawRows: audited.length - withRaw.length,
+    invalidReasons,
+  };
+}
+
+export function findFollowUpVerdictWords(rows: EvalRow[]): FollowUpVerdictWord[] {
+  const found: FollowUpVerdictWord[] = [];
+  rows.forEach((row, index) => {
+    if (row.stage !== 'FOLLOWUP' || row.status !== 'answered' || !row.message) return;
+    for (const word of findVerdictWords(row.message)) {
+      found.push({ line: index + 1, caseId: row.caseId, roleId: row.roleId, word, text: row.message });
+    }
+  });
+  return found;
+}
+
 /** T63: OPINIONS 단계 stance 누락(schema가 필수라 실제로는 0건이어야 정상, answered 행 기준). */
 export function findMissingStance(rows: EvalRow[]): EvalRow[] {
   return rows.filter(
@@ -573,6 +719,89 @@ export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplem
   return { eligible, persuaded };
 }
 
+export interface PathVoteDistribution {
+  pathId: string;
+  participantStance: string;
+  yes: number;
+  no: number;
+  total: number;
+}
+
+/**
+ * T92(사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는 경향"): 경로(pathId)별 VOTE 표 분포.
+ * v9까지는 참가자 입장 자체가 없어 조건 보완 경로 16/16 YES·조건 없음 16/16 NO로 임원
+ * 4명이 함께 움직였다 — 이 함수는 모든 경로(새 반대 경로 포함)를 참가자 입장별로 나눠
+ * YES/NO 분포를 보여준다. 기준값을 정하지 않고 관측값만 남긴다(다른 --check 지표와
+ * 같은 원칙) — "네 임원이 매번 같은 쪽으로 움직이지 않는지"는 사람이 이 표를 보고
+ * 판단한다.
+ */
+export function voteDistributionByPath(rows: EvalRow[]): PathVoteDistribution[] {
+  const byKey = new Map<string, PathVoteDistribution>();
+  for (const row of rows) {
+    if (row.stage !== 'VOTE' || row.status !== 'answered' || !row.vote) continue;
+    const stanceKey = row.participantStance ?? '(없음)';
+    const key = `${row.pathId}\u0000${stanceKey}`;
+    const entry = byKey.get(key) ?? {
+      pathId: row.pathId,
+      participantStance: stanceKey,
+      yes: 0,
+      no: 0,
+      total: 0,
+    };
+    entry.total += 1;
+    if (row.vote === 'YES') entry.yes += 1;
+    if (row.vote === 'NO') entry.no += 1;
+    byKey.set(key, entry);
+  }
+  return [...byKey.values()];
+}
+
+export interface PlainLanguageStats {
+  /** message·reason을 가진 행 수(발언당 문장 수 집계의 분모). */
+  statementCount: number;
+  /** 모든 문장의 글자 수 평균(T93 "한 문장 25자 안팎" 목표 대비 관측값). */
+  avgCharsPerSentence: number;
+  /** 발언(행) 하나당 평균 문장 수(T93 "2~3문장" 목표 대비 관측값). */
+  avgSentencesPerStatement: number;
+  /** 금지 어휘(plainLanguage.ts FORBIDDEN_WORDS) 등장 총 횟수. */
+  forbiddenWordMentions: number;
+  /** 등장한 금지 어휘별 횟수(사람이 어떤 말이 새는지 보기 쉽게). */
+  forbiddenWordCounts: Record<string, number>;
+}
+
+/**
+ * T93: "발언당 평균 글자 수·문장 수, 금지 어휘 등장 횟수"를 message·reason 필드 전부에서
+ * 집계한다. 서버 검증에서 거절하지는 않는다(측정만, docs/TASKS.md T93).
+ */
+export function plainLanguageStats(rows: EvalRow[]): PlainLanguageStats {
+  let statementCount = 0;
+  let sentenceTotal = 0;
+  let charTotal = 0;
+  let forbiddenWordMentions = 0;
+  const forbiddenWordCounts: Record<string, number> = {};
+  for (const row of rows) {
+    for (const field of ['message', 'reason'] as const) {
+      const text = row[field];
+      if (!text) continue;
+      statementCount += 1;
+      const stats = readabilityStats(text);
+      sentenceTotal += stats.sentenceCount;
+      charTotal += stats.avgCharsPerSentence * stats.sentenceCount;
+      for (const [word, n] of Object.entries(countForbiddenWordOccurrences(text))) {
+        forbiddenWordMentions += n;
+        forbiddenWordCounts[word] = (forbiddenWordCounts[word] ?? 0) + n;
+      }
+    }
+  }
+  return {
+    statementCount,
+    avgCharsPerSentence: sentenceTotal > 0 ? charTotal / sentenceTotal : 0,
+    avgSentencesPerStatement: statementCount > 0 ? sentenceTotal / statementCount : 0,
+    forbiddenWordMentions,
+    forbiddenWordCounts,
+  };
+}
+
 function readRows(file: string): EvalRow[] {
   return readFileSync(file, 'utf-8')
     .split('\n')
@@ -588,23 +817,51 @@ function runCheck(files: string[]): void {
     const affectedRows = new Set(violations.map((v) => v.line)).size;
     const mentions = findEvidenceIdMentions(rows);
     const missingStance = findMissingStance(rows);
+    const verdictWords = findFollowUpVerdictWords(rows);
+    const verdictStats = followUpVerdictStats(rows);
     const agreement = stanceVoteAgreement(rows);
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
+    const distribution = voteDistributionByPath(rows);
+    const plainStats = plainLanguageStats(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
     console.log(
       `[eval-set-run] ${file} · promptVersion=${promptVersions} · ${rows.length}행` +
         ` · 비존댓말 종결 ${violations.length}건(해당 행 ${affectedRows}개)` +
         ` · 문장 속 자료 ID(E\\d) 잔존 ${mentions.length}건` +
         ` · stance 누락 ${missingStance.length}건` +
+        ` · FOLLOWUP 최종 발언 방향 표현 ${verdictWords.length}건` +
+        ` · 원시 위반율 ${verdictStats.rawViolationRows}/${verdictStats.rows}(${(verdictStats.rawViolationRate * 100).toFixed(1)}%)` +
+        ` · 대체율 ${verdictStats.maskedRows}/${verdictStats.rows}(${(verdictStats.maskedRate * 100).toFixed(1)}%)` +
+        ` · 원문 없음(장애) ${verdictStats.noRawRows}행` +
+        ` · 형식 오류 시도 ${Object.entries(verdictStats.invalidReasons).map(([k, v]) => `${k} ${v}`).join(', ') || '0'}` +
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
     );
+    // T93: 쉬운 말 가독성 지표(측정만, 거절하지 않음).
+    console.log(
+      `    [쉬운 말] 발언 ${plainStats.statementCount}건 · 문장당 평균 글자 수` +
+        ` ${plainStats.avgCharsPerSentence.toFixed(1)} · 발언당 평균 문장 수` +
+        ` ${plainStats.avgSentencesPerStatement.toFixed(2)} · 금지 어휘 ${plainStats.forbiddenWordMentions}건`,
+    );
+    for (const [word, count] of Object.entries(plainStats.forbiddenWordCounts)) {
+      console.log(`    [금지 어휘] ${word} × ${count}`);
+    }
+    // T92: 경로 × 참가자 입장별 VOTE 분포. 네 임원이 매번 같은 쪽으로 몰리는지는 사람이
+    // 이 줄들을 보고 판단한다(기준값 없음, 관측값만).
+    for (const d of distribution) {
+      console.log(
+        `    [표 분포] ${d.pathId} · 참가자 입장=${d.participantStance} · 찬성 ${d.yes} · 반대 ${d.no} / ${d.total}`,
+      );
+    }
     for (const r of openingByRole) {
       console.log(
         `    [OPINIONS 출발 성향] ${r.role} · FOR ${r.distribution.FOR} · AGAINST ${r.distribution.AGAINST}` +
           ` · UNDECIDED ${r.distribution.UNDECIDED} · 의도 일치 ${r.match}/${r.total}`,
       );
+    }
+    for (const w of verdictWords) {
+      console.log(`    [FOLLOWUP 방향 단어] ${w.line} ${w.caseId}/${w.roleId} '${w.word}': ${w.text}`);
     }
     for (const row of missingStance) {
       console.log(`    [stance 누락] ${row.caseId}/${row.roleId}/${row.stage}`);

@@ -208,6 +208,7 @@ BRIEFING~REACTIONS를 한 개의 스크롤 타임라인으로 그린다. 상단 
 | 결과 | 무대(표 배지만, 도장은 v1.1에서 오른쪽 종이 보고서로 옮겼다) + TALLY 패널 + 게이지 + 에필로그 + "체험 종료" + "회의록 전문 보기" | 결론·도장 칸 · 5석(3+2, live 근거 1줄/우려 1줄 클램프, 720 아바타 36px) · 이사회 한 장 요약(9절, 토글 시 회의록 전문) + 남은 과제·AI가 도운 일 | AI가 도운 일 1개(요약 상태) / 회의록 전문 목록(전문 상태) |
 
 - ~~명패 '나 · 특별 이사'는 왼쪽 열 무대 위 좌상단(무대 안 pill)으로 옮겨 세로 공간을 아낀다(testid 유지).~~(v1.2 T67에서 폐기 — 이 pill은 실제로는 헤더 좌측에 있었고, T67에서 헤더 명패 자체를 없앴다. 아래 v1.2 절 참고.)
+- ~~비서실장 패널은 오른쪽 열 위에 겹치는 드로어(position: absolute, 열 안)~~(T89에서 폐기 — EvidenceDialog와 같은 모달 팝업(DialogShell)으로 바꿨다. 아래 T89 절 참고.) ~~반응 | 무대 + 내 발언 인용 + 빠른 답 3 ↔ 직접 답하기(같은 자리 전환) | 후속 질문 + 임원 반응 2×2 답글~~(T89에서 REACTIONS를 "반응 듣기"·"다시 답하기" 두 화면으로 나눴다 — 아래 T89 절 참고.)
 - 검수: e2e에서 두 해상도 × 모든 단계에 대해 페이지 스크롤 없음을 단언한다. 스크린샷은 전체 화면 1장으로 각 단계가 다 보여야 한다.
 
 ### 7. 회의록 패널과 후속 대기 게이트 — 2026-09-20 (T41·T46)
@@ -266,7 +267,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 부스 개장 전 운영자가 "실제 임원 에이전트가 답하는가"를 화면에서 확인할 수 있어야 한다. 지금은 헤더 배지 LIVE가 "서버가 살아 있다"만 뜻하고, 키가 틀리면 임원 카드가 전부 "응답 지연·확인 필요"로 나올 때까지 알 수 없다(2026-09-11 실측 144회 전부 `provider_error`). AGENT_BOARDROOM_SPEC.md 6장 "장애 시 운영자가 별도 확인 후 세션을 초기화하고 scripted 모드로 새로 시작할 수 있다"를 화면으로 만든다.
 
 - 운영 메뉴 항목 추가(기존 새 체험·전체화면·닫기 유지): **모델 연결 확인**(`operator-probe`), **scripted로 새 체험**(`operator-restart-scripted`).
-- 모델 연결 확인 패널(`operator-probe-panel`): 누르면 서버 `POST /api/ops/probe`를 호출해 실제 제공자에 아주 짧은 호출 1회를 보낸다(응답 스키마 `{ ok: true }`, 8초 상한). 결과 줄: 성공 "연결됨 · {modelId} · {latencyMs}ms"(`operator-probe-ok`), 실패 "실패 · {error}"(`operator-probe-fail`) + 안내 "키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요". 아래에 서버 정보 한 줄 "provider {provider} · 모드 {mode} · 프롬프트 {promptVersion}"(`/api/health`에서). 확인 중에는 "확인 중…"(`operator-probe-pending`)과 버튼 비활성.
+- 모델 연결 확인 패널(`operator-probe-panel`): 누르면 서버 `POST /api/ops/probe`를 호출해 실제 제공자에 아주 짧은 호출 1회를 보낸다(응답 스키마 `{ ok: true }`, `ROUND_TIMEOUT_MS` 상한 — 기본 15초, T91). 결과 줄: 성공 "연결됨 · {modelId} · {latencyMs}ms"(`operator-probe-ok`), 실패 "실패 · {error}"(`operator-probe-fail`) + 안내 "키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요". 아래에 서버 정보 한 줄 "provider {provider} · 모드 {mode} · 프롬프트 {promptVersion}"(`/api/health`에서). 확인 중에는 "확인 중…"(`operator-probe-pending`)과 버튼 비활성.
 - scripted로 새 체험: 확인 대화상자(`operator-confirm-restart-scripted`) 뒤 **현재 `pathname`을 유지한 채** 쿼리만 `?mode=scripted`로 바꿔 이동한다(`scriptedRestartUrl(window.location.pathname)`, 세션 초기화 + 모드 고정, `mode.ts`의 기존 쿼리 규칙 재사용). 루트 고정 `/?mode=scripted`는 GitHub Pages(`/<repo>/` base, `pages.yml`)에서 앱을 벗어나 404로 가므로 쓰지 않는다(PR #10 Codex 9차 검토). live 도중 실패한 역할을 몰래 scripted로 바꾸지 않는다는 규칙은 그대로다 — 새 세션부터만 scripted.
 - 서버 `POST /api/ops/probe`: 접속 토큰 보호 대상(`isProtectedApiPath`에 `/api/ops/` 추가). 세션 상한·호출 상한을 소비하지 않는다. 남용 방지로 서버 전역 10초에 1회(초과 시 429 `probe_rate_limit`). 응답은 항상 200 JSON `{ ok, provider, modelId, latencyMs, error? }`(진단 결과이므로 실패도 200). mock 제공자는 즉시 ok.
 - 화면 문구는 운영자용이며 참가자 화면(대기·본문)에는 아무것도 추가하지 않는다. 720 운영 패널 폭 안에서 두 줄 이내.
@@ -395,7 +396,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - **왼쪽 열을 HUD 입력 상자로**: 무대(`StageBand`)는 그대로지만 그 아래는 더는 "나 · 특별 이사" 명패 + 일반 textarea가 아니라 시안의 HUD 패널(`discuss-screen__hud`, `#15171b` 배경 + 시안색(`--hud-line`) 1px 테두리) 하나로 묶는다. `DraftEditor`를 머리줄("MY STATEMENT · 내 발언" + "n / 300자", `--font-hud`)이 textarea *위*로 올라가도록 고쳤다(기존 글자 수 칩은 textarea 아래였다) — testid(`draft-editor-textarea`·`draft-editor-count`·`draft-editor-error`)는 그대로다. textarea는 시안대로 `resize:none`이고 `aria-label="내 발언"`을 더했다. `ConditionChips`의 라벨을 "확인할 조건"에서 시안 그대로 "CONDITIONS"로 바꾸고, 확정 칩은 배지가 아니라 라벨 끝에 붙는 "✓" 글자 + 시안색 테두리, 미확정은 회색 테두리다 — `ConditionChips`는 REACTIONS(T74 이전)도 같이 쓰므로 이 변경은 두 화면에 함께 적용된다(S4_Reactions 시안도 같은 CONDITIONS 라벨·배색을 쓴다).
 - **버튼 줄 크기만 이 화면 전용으로 덮어쓴다**: "AI 비서실장 열기"는 `AssistantPanel`의 공용 토글 버튼(다른 화면도 같은 컴포넌트를 쓴다)이라 전역 스타일은 바꾸지 않고, `.discuss-screen__submit-row .assistant-panel__toggle`·`.discuss-screen__submit-row .cta` 스코프 선택자로 이 화면에서만 시안 크기(보조 180×48/1280·225×60/1920, 주 CTA 200×56/1280·250×70/1920)를 덮어쓴다.
 - **오른쪽 열을 종이 한 장으로(OPINIONS와 같은 패턴)**: `discuss-screen__paper`(`--paper` 배경 + `--shadow-paper-main`)에 STEP 03 칩 + "내 의견 쓰기" 제목 + 우측 "추천 문구 · 여러 개 선택 가능" 라벨 → 안내 한 줄 → 추천 문구 6개 2열(`PhraseCard`를 시안의 숨긴 네이티브 체크박스 + 커스텀 사각 체크 박스(SVG 체크)로 다시 그렸다, 선택 시 배경 `#f3ead6` + `--label` 테두리) → 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼("근거 자료 보기"에서 문구 변경, testid `open-evidence`는 그대로) + "EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명" 안내 → STANCE 칩 4개(역할 코드 + 실제 stance, `exec-mood-label-<id>` testid는 그대로 옮겨왔다) 순서로 둔다. **임원 첫 의견 카드 2×2(옛 `discuss-screen__execs`)는 시안에 없어 뺐다** — 그 내용은 아래 팝업으로 옮겼다.
-- **EvidenceDialog를 BRIEFING·DISCUSS 공용으로 확장**: 좌상단 CASE 칩(`scenario.incident.caseLabel`의 숫자만 추출, ResultScreen의 caseTag 계산과 같은 규칙) + CONFIDENTIAL 도장을 더하고, 제목을 "근거 자료 · EXHIBIT A–D"에서 "근거 자료 · 임원 발언"으로 바꿨다. 본문을 1040×600(1280)/1300×750(1920) 고정 크기 종이 패널 안에서 2열로 나눈다 — 왼쪽 "EXHIBIT A–D · 판단에 참고할 자료"(`EvidenceGrid`, 카드를 태그+자료명 한 줄 라벨 + `insight` 본문 + `content` 메타 줄의 압축 3줄로 다시 그렸다 — BRIEFING 쪽도 같은 모양으로 바뀐다), 오른쪽 "STATEMENTS · 임원이 한 말(02 임원 의견)"(새 `EvidenceDialogStatementView[]` prop — live면 `transcript`의 OPINIONS 발언, scripted면 `scenario.initialOpinions`, `DiscussScreen`이 계산해 넘긴다). STATEMENTS 카드는 live의 pending/failed 상태(`statement-pending-<id>`·`statement-failed-<id>` testid, `LiveStatementCards.STATUS_TEXT`와 같은 문구)도 그대로 보여준다 — scripted 각본 문장은 이 testid 없이 보여준다(OpinionsScreen의 scripted 카드와 같은 관행). `BriefingScreen`은 아직 임원 의견이 없으므로 `statements={[]}`를 넘기고, 그 경우 오른쪽 열에 "STATEMENTS · 02 단계에서 임원이 말하면 여기에 쌓입니다" 빈 상태 한 줄만 보인다 — 열림/닫힘·포커스 트랩·스크롤 잠금은 T68 그대로다.
+- **EvidenceDialog를 BRIEFING·DISCUSS 공용으로 확장**: 좌상단 CASE 칩(`scenario.incident.caseLabel`의 숫자만 추출, ResultScreen의 caseTag 계산과 같은 규칙) + CONFIDENTIAL 도장을 더하고, 제목을 "근거 자료 · EXHIBIT A–D"에서 "근거 자료 · 임원 발언"으로 바꿨다. 본문을 1040×600(1280)/1300×750(1920) 고정 크기 종이 패널 안에서 2열로 나눈다 — 왼쪽 "EXHIBIT A–D · 판단에 참고할 자료"(`EvidenceGrid`, 카드를 태그+자료명 한 줄 라벨 + `insight` 본문 + `content` 메타 줄의 압축 3줄로 다시 그렸다 — BRIEFING 쪽도 같은 모양으로 바뀐다), 오른쪽 "STATEMENTS · 임원이 한 말(02 임원 의견)"(새 `EvidenceDialogStatementView[]` prop — live면 `transcript`의 OPINIONS 발언, scripted면 `scenario.initialOpinions`, `DiscussScreen`이 계산해 넘긴다). STATEMENTS 카드는 live의 pending/failed 상태(`statement-pending-<id>`·`statement-failed-<id>` testid, `LiveStatementCards.STATUS_TEXT`와 같은 문구)도 그대로 보여준다 — scripted 각본 문장은 이 testid 없이 보여준다(OpinionsScreen의 scripted 카드와 같은 관행). `BriefingScreen`은 아직 임원 의견이 없으므로 `statements={[]}`를 넘기고, 그 경우 오른쪽 열에 "STATEMENTS · 02 단계에서 임원이 말하면 여기에 쌓입니다" 빈 상태 한 줄만 보인다 — 열림/닫힘·포커스 트랩·스크롤 잠금은 T68 그대로다. **[2026-10-09 T105: 임원 발언(STATEMENTS) 열과 `EvidenceDialogStatementView`·단계 태그를 제거했다. 팝업 제목은 "근거 자료", 자료 4장이 팝업 폭 전체를 쓴다.]**
 - 접근성·테스트: `tests/components/DiscussScreen.test.tsx`의 live/scripted 발언 단언을 "근거 자료 보기" 팝업을 연 뒤로 옮겼다(화면에 상시 보이지 않는다). `tests/components/EvidenceDialog.test.tsx`에 새 prop(`caseTag`·`statements`)을 채웠다. `e2e/live.spec.ts`·`e2e/noscroll.spec.ts`의 DISCUSS `statement-card-CEO` 단언도 같은 이유로 팝업을 연 뒤로 옮겼다. `e2e/briefing.spec.ts`의 `.evidence-card__content` 셀렉터를 `.evidence-card__meta`로 갱신했다. `e2e/screenshots.spec.ts`의 `discuss.png`·`discuss-evidence.png`·`briefing-evidence.png`(두 해상도)를 새 레이아웃으로 갱신했다(다른 화면 스크린샷은 재인코딩 노이즈만 있어 되돌렸다).
 
 ### 5. 반응에 답하기(REACTIONS) — 시안 S4_Reactions (T74)
@@ -405,7 +406,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 - **추천 답변은 체크 카드로, 여러 개 선택 가능**: `scenario.followUp.options`(3개)를 `PhraseCard`에 그대로 먹인다(`PhraseCard`의 `phrase` prop을 `Pick<Phrase, 'id' | 'text'>`로 넓히고 `testId` override를 추가해, REACTIONS가 기존 `followup-option-<n>` testid를 그대로 유지하면서 공용 체크 카드 컴포넌트를 쓴다). 선택한 옵션들의 문구를 순서대로 이어 붙여 답변 textarea를 구성한다 — `domain/draft.ts`는 `scenario.phrases`에 매여 있어 그대로 못 쓰므로 같은 모양의 조합 로직을 `ReactionsScreen.tsx` 안에 다시 짰다(허용 경로가 `src/domain/followup*` 읽기 전용이라 domain을 건드리지 않았다). "앞서 전달한 의견을 유지하겠습니다"(`keepPrevious`) 카드는 조합에 끼지 않고 체크하자마자 기존과 같이 `onKeepPrevious`를 바로 부른다(KEEP_PREVIOUS 도메인 동작은 그대로다). 조건 제안·충돌·확정 규칙(`domain/conditions.ts`)은 전혀 바뀌지 않았다.
 - **오른쪽 종이 — 반응 카드 2×2**: `STEP 04` 칩 + 22px/1280(27.5px/1920) 제목 뒤에 반응 카드 2×2를 둔다. scripted는 새 `.reaction-card`(머리줄 = 직함 굵게 + stance 텍스트 + 우측 "유지"/"바뀜" 칩, 본문은 바뀐 반응이 있으면 그 문장들을 이어 붙이고 없으면 "기존 의견 유지 — <원안 문구>")다. live는 `LiveStatementCards`에 새 `variant='reaction'`을 더했다 — `.live-statement--grid`(OPINIONS와 같은 틀: 종이-2·1px 테두리·역할색 왼쪽 4px 띠)를 그대로 쓰되 코드 칩·아바타는 빼고(시안에 없다) 글자 크기를 줄였다. "유지/바뀜" 여부는 서버가 따로 안 주므로 같은 역할의 OPINIONS 발언과 이번 REACTIONS 발언 텍스트가 같은지(trim 비교)로 가른다 — 다르면 "바뀜", 같거나(혹은 비교할 OPINIONS 발언이 없으면) "유지"다. 실패 카드는 빨간 테두리 + "응답 지연·확인 필요" + "응답 없는 임원 다시 요청" 버튼을 **카드 안에** 그대로 그린다(시안 그대로 — 그리드 아래 공용 버튼이 아니다, `LiveStatementCards`가 `variant='reaction'`일 때 그 공용 버튼을 끄고 카드 안에서만 그려 같은 testid `retry-failed-roles`가 두 곳에 생기지 않게 했다). 처음엔 카드를 OPINIONS처럼 `flex:1`로 늘렸더니 2행으로 균등 분할된 행 높이가 실패 카드의 상태 문구+버튼을 담기엔 좁아 버튼이 카드 아래로 몇 px 넘쳤다(실측) — REACTIONS는 카드 아래 FOLLOW-UP 상자·추천 답변 목록이 이미 남는 세로 공간을 채우므로 그 `flex:1` 규칙을 REACTIONS에는 적용하지 않고 카드를 내용 높이 그대로 두어 해결했다.
 - **점선 FOLLOW-UP 상자 + 추천 답변**: "FOLLOW-UP · `{followUp.askedBy}`가 묻습니다"(시안 그대로 역할 코드, 직함 아님) + 질문 문장을 2px 점선 박스에 담는다(아바타는 시안에 없어 뺐다). 그 아래 타자기 안내("추천 답변 · 여러 개 선택 가능 · 고르면 왼쪽 내 답변에 이어 붙습니다") + 체크 카드 2열(위 항목) + 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼(testid `open-evidence` 그대로) + "EXHIBIT A–D + STATEMENTS" 안내(DISCUSS보다 짧은 시안 문구 그대로).
-- **EvidenceDialog 확장 — 단계 태그**: STATEMENTS 열이 02 임원 의견뿐 아니라 04 반응 발언도 함께 보여줘야 해서 `EvidenceDialogStatementView`에 선택적 `stage` 필드를 더했다 — 값이 있으면 항목 앞에 "02 임원 의견"/"04 반응" 태그를 붙이고 testid도 `statement-card-<id>-opinions`/`-reactions`처럼 단계별로 나눠 같은 임원이 두 번 나와도 testid가 겹치지 않는다(DISCUSS·BRIEFING은 `stage`를 안 넘기므로 태그·testid 변경이 전혀 없다). `statementsColumnLabel` prop도 새로 받아 REACTIONS만 "임원이 한 말(02 의견 + 04 반응)"으로 머리글을 바꾼다(기본값은 DISCUSS 문구 그대로).
+- **EvidenceDialog 확장 — 단계 태그**: STATEMENTS 열이 02 임원 의견뿐 아니라 04 반응 발언도 함께 보여줘야 해서 `EvidenceDialogStatementView`에 선택적 `stage` 필드를 더했다 — 값이 있으면 항목 앞에 "02 임원 의견"/"04 반응" 태그를 붙이고 testid도 `statement-card-<id>-opinions`/`-reactions`처럼 단계별로 나눠 같은 임원이 두 번 나와도 testid가 겹치지 않는다(DISCUSS·BRIEFING은 `stage`를 안 넘기므로 태그·testid 변경이 전혀 없다). `statementsColumnLabel` prop도 새로 받아 REACTIONS만 "임원이 한 말(02 의견 + 04 반응)"으로 머리글을 바꾼다(기본값은 DISCUSS 문구 그대로). **[2026-10-09 T105: 임원 발언(STATEMENTS) 열과 `EvidenceDialogStatementView`·단계 태그를 제거했다. 팝업 제목은 "근거 자료", 자료 4장이 팝업 폭 전체를 쓴다.]**
 - **2026-10-02 2차 검토(제로 이탈)**: "내 발언 인용" blockquote(`reactions-quote`)는 S4_Reactions 시안에 전혀 없는 요소였다 — 참가자 본인 발언은 이미 무대 참가자 말풍선(`StageBand`, `stage-bubble-PARTICIPANT`)이 보여주므로 중복이었다. 완전히 뺐다(`reactions-screen__quote` CSS도 지웠다) — 이제 REACTIONS는 요소 단위로 시안과 1:1이다. `e2e/stage.spec.ts`의 해당 단언은 `stage-bubble-PARTICIPANT` 쪽으로 옮기고, `e2e/reactions.spec.ts`의 2줄 클램프 테스트는 지웠다. 같은 차수에서 CONDITIONS 칩 cyan/앰버 구분을 실제로 확인하는 e2e(`condition-chip--accepted`·`condition-chip--new` 클래스, "✓"·"+ 새 조건" 문구)도 새로 추가했다.
 - 접근성·테스트: `e2e/reactions.spec.ts`를 새 체크 카드 흐름으로 다시 썼다(옛 "직접 답하기 열기" 토글 테스트 2건을 지우고 "체크 카드만으로 MOTION까지 도달" 1건으로 합쳤다). `e2e/a11y.spec.ts`의 키보드 전용 경로는 `followup-option-2`가 이제 네이티브 체크박스라 Enter 대신 Space로 토글한다(DISCUSS 추천 문구 카드와 같은 규칙). `e2e/flow-full.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/screenshots.spec.ts`의 "직접 답하기 열기" 관련 단언을 textarea 직접 조작으로 바꿨다. `tests/components/LiveStatementCards.test.tsx`를 `variant='reaction'`으로 다시 썼다(옛 `variant='reply'`는 더 쓰는 화면이 없어 타입에서 뺐다). `e2e/screenshots.spec.ts`의 `reactions.png`(두 해상도)를 새 레이아웃으로 갱신했다(다른 화면 스크린샷은 재인코딩 노이즈만 있어 되돌렸다). live mock(CISO 1명 실패)으로 카드 안 재요청 버튼이 잘리지 않는지 별도로 실측했다.
 
@@ -448,7 +449,7 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 배경(2026-10-02 사용자 지적): T70~T77이 S0~S6 7개 화면을 승인된 C안 시안대로 다시 썼지만, 이사회 입장 직후(BRIEFING)는 그 전 T68 배치(사건 eyebrow → 현재 상황/제안/미정 카드 → 특별 이사님이 할 일 카드 → "근거 자료 보기" 버튼 한 줄)에 머물러 있어 `docs/design/mockups/Main.html`(미리보기 `preview/Main.png`)과 어긋났다. 자료 영역만 사용자가 직접 결정했다: 전문을 다시 상시 펼치지 않고, 시안의 EXHIBIT 2×2 압축 요약 카드(자료명 타자기 라벨 + 해석 13px + 원문 12px, 각 1~2줄 클램프)를 두고 전문은 기존 T68 `EvidenceDialog` 팝업(STATEMENTS 빈 상태 줄 포함)으로 본다 — 팝업을 여는 "전문 보기" 버튼을 EXHIBIT 블록 머리줄 오른쪽에 작은 보조 버튼으로 두는 것이 시안에 없는 유일한 추가 요소다.
 
 - **오른쪽 종이를 시안 순서 그대로**: `BriefingScreen.tsx`를 다시 짰다 — CONFIDENTIAL 도장(절대 위치, 다른 조종석 화면과 같은 모양) → CASE 칩(`scenario.incident.caseLabel`의 숫자만, 기존 caseTag 계산 규칙 그대로) + 사건 한 줄(`incident.headline`, testid `chair-briefing`·`briefing-incident` 유지) → 결정 질문(`chairBriefing.question`, 시안 `<h1>` 자리에 다른 조종석 화면과 같은 이유로 `<h2>`를 쓴다, 글자 크기는 시안 값 그대로 42.5px/1920·34px/1280) → SITREP·PROPOSAL·UNKNOWN 상자(종이-2 + 갈색 왼쪽 띠, testid `briefing-status` 유지) → YOUR ORDERS 점선 상자("YOUR ORDERS · 특별 이사" 라벨 + `chairBriefing.role` 굵은 문장 + "FINAL CALL: 찬성 / 반대", testid `briefing-role` 유지, 찬성/반대 색은 시안 원본 `#1f8f5f` 대신 이미 다른 화면에서 대비 보정한 `--paper-vote-yes`·`--paper-vote-no`를 재사용) → EXHIBIT 블록. 옛 "현재 상황→제안→아직 정하지 않은 것" 3단 목록과 "특별 이사님이 할 일 + 최종 결정" 병기 문구는 시안에 없는 구성이라 걷어냈다(문구 소스는 그대로 `scenario.chairBriefing`·`scenario.motionBreakdown`를 쓴다 — 콘텐츠 자체는 바꾸지 않았다).
-- **UNKNOWN 먹칠은 마지막 항목에만**: `motionBreakdown.undecidedItems`를 `' · '`로 이어 붙이되, 시안의 먹칠(redaction)을 마지막 항목에만 건다 — 글자색을 배경(`--ink`)과 같게 해 시각적으로만 가리고 텍스트 자체는 DOM·스크린리더에 그대로 남긴다(새 클래스 `.briefing-screen__undecided-redacted`). 앞선 항목은 흐린 잉크색(`.briefing-screen__undecided-muted`)이다.
+- **UNKNOWN 먹칠은 마지막 항목에만**(**T81에서 제거** — 2026-10-07 사용자 지시로 먹칠 없이 전부 평문, 아래는 T80 당시 기록): `motionBreakdown.undecidedItems`를 `' · '`로 이어 붙이되, 시안의 먹칠(redaction)을 마지막 항목에만 건다 — 글자색을 배경(`--ink`)과 같게 해 시각적으로만 가리고 텍스트 자체는 DOM·스크린리더에 그대로 남긴다(새 클래스 `.briefing-screen__undecided-redacted`). 앞선 항목은 흐린 잉크색(`.briefing-screen__undecided-muted`)이다.
 - **EXHIBIT 2×2는 사용자 결정대로 압축 요약 + 팝업 공존**: `EvidenceGrid`에 `variant='compact'`를 더했다(기본값은 기존 `'dialog'`, 마크업은 완전히 같고 `evidence.css`가 치수만 덮어쓴다) — 해석(`insight`)·원문(`content`) 모두 `-webkit-line-clamp:2`로 묶어 종이 한 칸 안에 들어가게 한다. `variant='compact'`는 testid를 `evidence-summary-<id>`로 바꿔 `EvidenceDialog` 안의 `evidence-card-<id>`와 절대 겹치지 않는다 — 팝업이 열리면 배경의 압축 카드와 팝업 안 전문 카드가 동시에 DOM에 있어야 하기 때문이다. EXHIBIT 블록은 `flex:1`로 남는 세로 공간을 모두 흡수해 종이 바닥까지 채운다(카드 명시 "남는 높이 채움"). 머리줄("EXHIBIT A–D · 판단에 참고할 자료" 라벨 + "전문 보기" 버튼)은 시안에 없는 유일한 추가 요소라고 카드에 명시돼 있다 — 버튼은 공용 `.evidence-open-button`(DISCUSS가 그대로 쓰는 큰 종이 톤 보조 CTA)을 결합 선택자(`.evidence-open-button.briefing-screen__evidence-trigger`, `briefing.css`에서만 정의)로 작게 덮어써, DISCUSS 쪽 모양·`evidenceDialog.css`의 공용 규칙은 전혀 건드리지 않는다. `EvidenceDialog` 자체(열림/닫힘 세 경로, 포커스 트랩, 스크롤 잠금, STATEMENTS 빈 상태 줄)는 손대지 않았다 — `BriefingScreen`은 여전히 `statements={[]}`를 넘긴다.
 - **CTA·치수는 모두 시안 인라인 값 그대로**: `briefing.css`를 전면 재작성해 모든 치수를 Main.html의 1280 캔버스 값으로 두고(`@media max-width:1280px`), 1920 기본값은 그 1.25배(opinions.css·motion.css 등 T70~T77과 같은 비율)로 맞췄다. CTA "의견 듣기 ▶"는 240×56(1280)/300×70(1920, AttractScreen의 치수 override 패턴과 같다)이다. YOUR ORDERS 점선 테두리(2px)는 motion-screen의 CHAIR 점선 상자와 같은 이유로 해상도별로 다시 스케일하지 않는다.
 - **진행 스트립·무대·TRANSCRIPT는 바뀌지 않았다**: 왼쪽 열(무대·CTA·TRANSCRIPT)은 App.tsx가 `StageBand`·`MinutesPanel`로 그리는 공용 영역이라(T45·T77) 이 카드의 허용 경로 밖이다 — `BriefingScreen`은 여전히 CTA 하나만 `app-body__actions`에 둔다.
@@ -462,3 +463,706 @@ v0.9 B안(스크롤 타임라인)을 무스크롤 조종석에 맞게 다시 정
 
 검수(수정 후): `npm run check`(단위 406)·`npm run build`·`npx playwright test -c playwright.local.config.ts`(138건) 모두 통과. `docs/screenshots/{desktop-1080,desktop-720}/briefing.png`를 다시 갱신(EXHIBIT 카드가 더 작아졌을 뿐 구성·순서는 그대로)했고, `briefing-evidence.png`는 팝업 자체가 바뀌지 않아 픽셀 단위로 그대로다.
 
+## T83: 영문 라벨 전부 한국어화 (2026-10-07)
+
+배경(2026-10-07 사용자 결정): "화면 문구에 영어 단어가 섞여 있어 어색하고 AI스럽다. 사람이 쓰는 것처럼 자연스럽게." 승인 시안(C안, "기밀 작전실" — T64) 콘셉트의 서류·조종석 장식 라벨은 대부분 영문(SITREP·EXHIBIT·CONFIDENTIAL 등)이었다. **전부 한국어로** 바꾼다 — 예외로 유지한 것은 역할 약자(CEO·CFO·CAIO·CISO, 명패·아바타 이니셜), 타이틀 `BOARDROOM 2026`, 'AI' 두 글자뿐이다. 안건 문구의 `AI Agent`도 `AI 에이전트`로 통일했다.
+
+- **구조 변경 없음, 문구만 교체**: 레이아웃·CSS 치수·testid·컴포넌트 구조는 전혀 건드리지 않았다(글자 수가 줄어든 경우 — 예 CONFIDENTIAL→대외비 — 가 대부분이라 폭 초과 위험이 없다). `--font-label`(Special Elite)·`--font-hud`(Share Tech Mono)는 한글 글리프가 없어 시스템 모노스페이스로 떨어지지만, 이미 같은 span 안에 영문과 한글이 섞여 쓰이던 사례(예 옛 "YOUR ORDERS · 특별 이사")가 정상적으로 렌더되고 있었으므로 font-family는 바꾸지 않았다 — 두 해상도 스크린샷으로 실제 렌더를 확인했다(아래).
+- **사건 칩 계산 단순화**: `BriefingScreen`·`DiscussScreen`·`ReactionsScreen`·`ResultScreen`이 각자 `scenario.incident.caseLabel`에서 정규식으로 숫자만 뽑아 `CASE ${n}` 영문 태그를 다시 만들던 코드를 걷어냈다 — `caseLabel` 자체가 이미 "사건 01"/"사건 02" 형식이므로 그대로 쓴다.
+- **내부 식별자는 유지**: `SessionStage`(`BRIEFING`·`OPINIONS`·`DISCUSS`·`REACTIONS`·`MOTION`·`VOTE`·`RESULT`·`ATTRACT`·`SELECT`)·`RoleStatus`·`Ballot['vote']`(`YES`·`NO`·`UNCAST`) 같은 TypeScript 리터럴·enum 값은 코드 식별자라 바꾸지 않았다 — 화면에 **글자로 찍히는 값만** 한국어로 바꿨다.
+
+### 대응표(영문 → 한국어)
+
+| 위치 | 영문 | 한국어 |
+| --- | --- | --- |
+| ATTRACT | `LIVE · 실제 임원 에이전트 · 4분 이사회` | `실시간 · 실제 임원 에이전트 · 4분 이사회` |
+| ATTRACT·SELECT·StageBand | `CAM 01 · 회의실 A` | `회의실 A`(PR 검토 — "1번 카메라 · 회의실 A"는 폭이 늘어 REACTIONS 말풍선과 겹쳐 더 짧게 축약) |
+| ATTRACT | `STANDBY` | `대기 중` |
+| ATTRACT | `TOP SECRET` | `극비` |
+| ATTRACT | `CASE FILE No. 02 · 특별 이사 1석 공석` | `사건 02 · 특별 이사 1석 공석` |
+| SELECT | `STANDBY · 안건 대기` | `안건 대기 중` |
+| SELECT | `CASE SELECTION · 안건 선택` | `안건 선택` |
+| SELECT | `CASE 01`/`CASE 02`(카드 칩) | `사건 01`/`사건 02` |
+| SELECT | `CONFIDENTIAL`(카드 도장) | `대외비` |
+| SELECT | `OPEN FILE · 선택하면 이사회에 입장합니다` | `열람 가능 · 선택하면 이사회에 입장합니다` |
+| SELECT | `FILE SEALED · 다음 안건을 준비하고 있습니다` | `봉인됨 · 다음 안건을 준비하고 있습니다` |
+| BRIEFING·OPINIONS·VOTE·EvidenceDialog | `CONFIDENTIAL` | `대외비` |
+| BRIEFING | `SITREP` | `상황` |
+| BRIEFING | `PROPOSAL` | `제안` |
+| BRIEFING | `UNKNOWN` | `미정` |
+| BRIEFING | `YOUR ORDERS · 특별 이사` | `특별 이사의 임무` |
+| BRIEFING | `FINAL CALL: 찬성 / 반대` | `최종 선택: 찬성 / 반대` |
+| BRIEFING·EvidenceDialog | `EXHIBIT A–D · 판단에 참고할 자료` | `자료 ①~④ · 판단에 참고할 자료` |
+| EvidenceGrid | `EXHIBIT A`/`B`/`C`/`D`(카드 태그) | `자료 ①`/`②`/`③`/`④` |
+| OPINIONS | `STEP 02` | `2단계` |
+| OPINIONS | `...전문은 왼쪽 TRANSCRIPT에 쌓입니다.` | `...전문은 왼쪽 발언 흐름에 쌓입니다.` |
+| DISCUSS | `STEP 03` | `3단계` |
+| DISCUSS | `EXHIBIT A–D · 4장 + STATEMENTS · 임원 4명` | `자료 4장`(T105) |
+| DISCUSS | `STANCE`(칩 라벨) | `입장` |
+| REACTIONS | `STEP 04` | `4단계` |
+| REACTIONS | `MY REPLY · 내 답변`(DraftEditor 라벨) | `내 답변` |
+| REACTIONS | `FOLLOW-UP · {역할}가 묻습니다` | `추가 질문 · {역할}가 묻습니다` |
+| REACTIONS | `EXHIBIT A–D + STATEMENTS` | `자료 ①~④`(T105) |
+| DiscussScreen(기본값) | `MY STATEMENT · 내 발언`(DraftEditor 라벨) | `내 발언` |
+| MOTION | `DRAFT`(도장) | `초안` |
+| MOTION | `STEP 05 · 1/2` | `5단계 · 1/2` |
+| MOTION | `MOTION ON THE TABLE · {원안/수정안}` | `표결 안건 · {원안/수정안}` |
+| MOTION | `CONDITIONS · 반영된 조건 N` | `반영된 조건 N` |
+| MOTION | `NOT INCLUDED · 빠진 것` | `빠진 것` |
+| MOTION | `CHAIR · 의장` | `의장` |
+| MOTION | `FREEZE MOTION · 조건 확정` | `조건 확정` |
+| ConditionChips(DISCUSS·REACTIONS 공용) | `CONDITIONS` | `조건` |
+| VOTE | `BALLOTS · 임원 표` | `임원 표` |
+| VOTE | `CONFIDENTIAL` | `대외비` |
+| VOTE | `STEP 05 · 2/2` | `5단계 · 2/2` |
+| VOTE | `MOTION`(안건 라벨) | `표결 안건` |
+| VOTE | `APPROVE`/`REJECT`(도장 캡션) | `찬성`/`반대` |
+| RESULT | `TALLY · 5석 과반` | `집계 · 5석 과반` |
+| RESULT | `DEBRIEF 02` | `결과 보고` |
+| RESULT | `YOUR CONDITIONS · 반영 조건` | `반영 조건` |
+| RESULT | `YOUR WORDS · 내 원문` | `내 원문` |
+| RESULT | `APPROVED`/`REJECTED`(도장 메타) | `가결`/`부결` |
+| RESULT | `BONUS`(설득 도장) | `보너스` |
+| RESULT | `BONUS 미획득` | `보너스 미획득` |
+| RESULT | `VERDICTS · 임원별 판단` | `임원별 판단` |
+| RESULT | `+6 MONTHS` | `6개월 후` |
+| RESULT·AttractScreen·Header | `실시간(LIVE) 임원 에이전트 판단입니다.` 등 `LIVE` 모드 배지 | `실시간` |
+| Header | `CASE FILE No. {N} · SESSION {code}` | `사건 {N} · 세션 {code}` |
+| MinutesPanel | `TRANSCRIPT · 발언 흐름` | `발언 흐름` |
+| MinutesPanel | `N ENTRIES · 스크롤`/`1 ENTRY` | `N건 · 스크롤`/`1건` |
+| StageBand | `REC ●` | `녹화중`(같은 폭 문제로 공백·● 없이 축약) |
+| StageBand | `CLASSIFIED` | `기밀` |
+| EvidenceDialog | `STATEMENTS · {라벨}` | `{라벨}`(접두 제거) |
+| ResultScreen(TALLY 패널) | `YES {n} / NO {n}` | `찬성 {n} / 반대 {n}` |
+
+**T87(2026-10-07 사용자 결정)에서 붉은 사각 도장류만 영문으로 되돌렸다** — "붉은 색 상자 안의 글씨들은 영어로 나오는 게 좀 더 비밀요원스럽다." 위 표의 ATTRACT `TOP SECRET`/`극비`, SELECT `CONFIDENTIAL`/`대외비`(카드 도장), BRIEFING·OPINIONS·VOTE·EvidenceDialog `CONFIDENTIAL`/`대외비`, MOTION `DRAFT`/`초안`(도장), StageBand `CLASSIFIED`/`기밀` 여섯 행은 화살표 방향이 실제로는 반대다(한국어 → 영문). 다른 모든 행(SITREP·PROPOSAL·YOUR ORDERS·EXHIBIT·TRANSCRIPT 등 도장이 아닌 장식 라벨)은 그대로 한국어다. CSS(`--font-label`·letter-spacing 등)는 T83에서 전혀 바뀌지 않았으므로 되돌릴 것도 없었다 — 문구만 되돌렸다. `e2e/no-stray-english.spec.ts`는 이 여섯 도장 요소를 DOM에서 지운 뒤 나머지 텍스트만 검사하도록 좁혔다(도장 요소에 한정, 다른 자리의 새 영문은 그대로 잡아낸다).
+
+**T86·T95·T100에서 대체된 행(2026-10-08 규칙 점검)** — 위 대응표는 T83 시점의 기록이라 아래 행은 지금 화면과 다르다. 현재 문구는 각 화면 코드가 기준이다.
+
+- **T86에서 대체**: 모드 배지 행(ATTRACT·RESULT·Header의 `실시간`)은 모드 표시 제거로 화면에 없다. BRIEFING·EvidenceGrid의 `자료 ①~④` 카드 태그는 요약 카드 상시 노출을 걷어내면서 팝업 안에서만 쓴다.
+- **T95에서 대체**: BRIEFING `특별 이사의 임무`·`최종 선택: 찬성 / 반대` 점선 상자는 INTRO와 중복이라 뺐다.
+- **T100에서 대체**: `사건 {N}` → `안건 {N}`(ATTRACT·SELECT 칩·Header·결과 보고), Header `세션 {code}` → `회의 {code}`, SELECT `열람 가능 · 선택하면 …` → `골라서 들어가기`, `봉인됨 · …` → `준비 중 · …`, MOTION `표결 안건 · {원안/수정안}` → `표결할 안건 · {처음 안/조건을 붙인 안}`, VOTE `표결 안건` → `표결할 안건`, RESULT `집계 · 5석 과반` → `표 세기 · 5석 중 3석`, `보너스`·`보너스 미획득` → `설득 도장`·`설득 도장은 다음 기회에`, MinutesPanel `N건 · 스크롤` → `N건`, BRIEFING `미정` 라벨은 유지하되 임원 입장 값 UNDECIDED의 라벨만 `고민 중`으로 구분한다.
+
+### 유지한 영문(예외)
+
+- 역할 약자 `CEO`·`CFO`·`CAIO`·`CISO`(명패·아바타 이니셜·`MEMBER_LABELS`의 괄호 표기) — 실제 직함 약칭이라 번역 대상이 아니다.
+- 타이틀 `BOARDROOM 2026`.
+- `AI` 두 글자(`AI 비서실장`·`AI 에이전트`·`AI가 도운 일` 등) — 사용자가 명시한 예외.
+- 운영자 전용 `OperatorMenu`의 `MODEL_PROVIDER`(환경변수 이름)·`scripted`(모드 식별자) — 참가자가 보는 "주요 화면"이 아니라 현장 운영자만 여는 기술 메뉴이고, 두 단어 모두 실제 설정값을 가리키는 코드 수준 용어라 카드 범위(화면 장식 라벨) 밖으로 판단했다.
+- Header의 세션 코드(`sessionId.slice(0,4).toUpperCase()`) — `crypto.randomUUID()`의 앞 4자를 그대로 보여주는 장식용 임의 코드라 영문·숫자가 섞일 수 있다(역할 약자와 같은 "코드" 성격).
+- `EvidenceDialog` 팝업 안내("Esc · 닫기 버튼 · 바깥 클릭으로 닫힘")의 `Esc` — 물리 키보드 키 이름 표기라 한국어 UI에서도 흔히 그대로 쓴다(디자인 장식 라벨이 아니다).
+
+### 회귀 방지
+
+`e2e/no-stray-english.spec.ts`(신설): ATTRACT→SELECT→BRIEFING(+근거 자료 팝업)→OPINIONS→DISCUSS→REACTIONS→MOTION→VOTE→RESULT(+회의록 전문)를 scripted로 순서대로 지나며 매 화면 `document.body.innerText`(운영 메뉴·헤더 세션 코드는 DOM에서 제거)에서 위 예외(역할 약자·`BOARDROOM 2026`·`AI`)를 뺀 라틴 알파벳 2자 이상 연속이 없는지 확인한다.
+
+### 검수
+
+`npm run check`(단위 506)·`npm run build`·`npx playwright test -c playwright.local.config.ts` 모두 통과. 두 해상도 스크린샷을 전부 재생성해 라벨 길이 변화(대부분 더 짧아짐)로 인한 줄바꿈·잘림이 없는지 육안으로 확인했다.
+## v1.4 — UX 카피·대기 상태·스타일 다듬기 (T85, 2026-10-07)
+
+배경: Opus 5.5 UX 검토(`opus-ux-review.md`, 항목 #1~#25)와 직접 걸어 본 발견(`my-ux-findings.md`)에서 번역투·운영자 말투·게임 용어·일관성 없는 비활성 버튼 스타일을 다수 지적했다. 화면 구조를 바꾸는 항목(유지 카드, 안건 문장 동적화, 결과 버튼 재배치, 결과 6개월 카드 승격, 카드 클릭 입장, OPINIONS CTA 잠금, 후속 선택지 숨김)은 T84가 맡고, 이 카드는 그 나머지 — 문구·대기 상태·비활성 스타일·줄바꿈·사소한 레이아웃 보정만 다룬다.
+
+### 비활성 CTA(공통 스타일 + 안내 한 줄)
+
+`shell.css`의 `.cta:disabled`를 진한 남색 채움(`--panel-active`)에서 투명 배경 + 점선 테두리(`--border`) + 흐린 글자(`--text-muted`) + `opacity:0.55`로 바꿨다 — 활성 버튼과 뚜렷이 구분된다. 새 공용 클래스 `.cta-disabled-hint`(`shell.css`)를 만들어 비활성일 때만 버튼 옆에 조건부 안내를 보여준다: DISCUSS·REACTIONS "추천 문구를 고르거나 직접 써 주세요", SELECT "안건 카드를 골라 주세요", VOTE "찬성 또는 반대 도장을 먼저 눌러 주세요"(`data-testid="discuss-cta-hint"`·`reactions-cta-hint`·`select-cta-hint`·`vote-cta-hint`). MOTION은 이미 전용 대기 문구(`motion-screen__waiting`)가 있어 추가하지 않았다. 종이 배경(VOTE·MOTION) 위에서는 `--text-muted`(어두운 HUD용 밝은 회청색)가 크림 종이와 대비가 떨어져 `vote.css`·`motion.css`가 `--ink-muted`·`--paper-border`로 덮어쓴다. SELECT는 무대 사진 위라 기존 `select-screen__selected-label`과 같은 톤(`#8f8a80`)으로 맞췄다.
+
+### VOTE 확정 후 대기(#7)
+
+확정 버튼을 누르면(`submitted`) 라벨이 "임원 표를 모으는 중…" + 점 세 개 애니메이션(`vote-screen__confirm-dots`, `stage.css`의 `stage-dot-bounce` 키프레임 재사용, `prefers-reduced-motion`은 기존 전역 규칙으로 자동 정지)으로 바뀐다. BALLOTS 패널 안내는 "임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다"에서 "임원 네 명이 표를 정하고 있습니다 · 곧 결과가 공개됩니다"로 — 내부 타이밍 규칙(8초·1회)은 참가자 화면에서 뺐다(운영 가이드·코드 주석에는 남겨 뒀다).
+
+### live 실패·재시도 문구(#6)
+
+`LiveStatementCards.tsx`·`EvidenceDialog.tsx`의 공용 `STATUS_TEXT`를 "판단 중…"/"응답 지연·확인 필요"에서 "생각을 정리하고 있습니다…"/"이번에는 답을 받지 못했습니다"로 바꿨다. 재시도 버튼은 어느 화면(`LiveStatementCards`·`MotionScreen`·`VoteScreen`)이든 "응답 없는 임원 다시 요청"/"미표결 임원 다시 요청" → "다시 물어보기", 누른 뒤에는 "다시 요청함 · …은 회의록에 남습니다" → "다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다"로 통일했다. `minutes.ts`의 회의록 실패 항목 텍스트("응답 없음")도 같은 문구로 맞췄다.
+
+### MOTION NOT INCLUDED(#4) · 안건 문장 조사(my#1)
+
+`MotionScreen.tsx`의 "은(는)" 템플릿 조사(받침 유무에 안 맞는 기계식 표기)를 없앴다. 빠진 조건이 있으면 "이번 안건에서 빠진 조건: ○○, ○○. 조건이 실제로 효과가 있는지는 운영하면서 확인합니다.", 없으면 "제안하신 조건이 모두 들어갔습니다."로 바꿨다. 저장소 전체에서 "은(는)" 템플릿은 이 한 곳뿐이었다.
+
+### 결과 화면(#15·#16·#20, my#4)
+
+- VERDICTS 참가자 행: 내 표가 결정적이지 않을 때 "결과는 임원 표만으로 정해졌습니다"(참가자를 배제한 듯 들림) 대신 결론과 같은 방향으로 투표했으면 "다수 의견과 같은 판단을 내렸습니다", 반대 방향이면 "소수 의견으로 회의록에 남았습니다"(`ResultScreen.tsx`의 `participantAgreesWithOutcome`).
+- 설득 도장 근거 줄은 왼쪽 TALLY 한 곳(`data-testid="result-tally-caption"`)만 남기고 VERDICTS 쪽 중복 문단(`persuasion-summary`)은 뺐다 — 오른쪽 "도장 칸"(스탬프 비주얼)이 이미 접근 가능한 텍스트로 "설득 성공"/"BONUS 미획득"을 보여주므로 정보 손실은 없다. 문구는 "이사님 표 찬성 · 같은 표 5석 → 추가 도장"(게임 용어) → "이사님 표 찬성 · 같은 표 5석 — 결과를 바꾼 한 표입니다"(획득) / "… · 3석부터 설득 도장을 받습니다"(미획득)로 자연문화했다.
+- "DEBRIEF 02"가 안건과 무관하게 고정돼 있던 것을 선택한 안건의 `caseDigits`(incident.caseLabel 숫자)로 바꿨다 — 안건①은 "DEBRIEF 01", 안건②는 "DEBRIEF 02". ATTRACT의 "CASE FILE No. 02"는 아직 안건을 고르기 전(SELECT 이전) 보여주는 장식 문구라 특정 안건에 묶을 수 없어 그대로 뒀다(안건 선택 뒤에는 헤더 CASE FILE No.가 이미 선택값을 따른다, T78).
+
+### 표결 이유 문구(#14)
+
+`aiApproval.ts`·`experienceFirst.ts`의 `voteRules[*].reason`을 번역투("~가 있어 찬성", "~이 갖춰지기 전이라 찬성할 수 없어 반대")에서 1인칭 회의 발언투("…한다니 그러면 찬성합니다", "…해 반대합니다")로 다시 썼다. 판단 순서·조건 매핑은 그대로이고, 숫자·퍼센트는 쓰지 않는다(`NUMERIC_COPY_PATTERN` 테스트 유지). `docs/SCENARIO_AI_APPROVAL.md`·`SCENARIO_EXPERIENCE_FIRST.md`의 표결 우선순위 표도 같은 문구로 맞췄다.
+
+### 그 밖의 문구·레이아웃
+
+- `AssistantPanel.tsx`: 제목 "AI 비서실장(시연)" → "AI 비서실장", 열기 버튼 "AI 비서실장 열기" → "AI 비서실장에게 정리 맡기기", 실패 안내 "기본 안내로 전환했습니다." → "연결이 늦어 미리 준비한 정리를 보여 드립니다.", "근거: E1, E2"(T52 위반 재발) → 자료명으로(#17).
+- `ConditionChips.tsx`: 자유 입력에서 조건을 못 찾았을 때 안내를 "말씀은 회의 기록에 남깁니다. 반영할 조건이 있으면 선택해 주세요" → "조건으로 잡힌 내용은 없습니다. 추천 문구를 고르면 조건이 붙습니다."(#11).
+- `ReactionsScreen.tsx`·`minutes.ts`: scripted 반응이 없을 때 "기존 의견 유지 — <원안 전문 반복>" → "앞서 말씀드린 입장 그대로입니다."(#13) — 같은 문장을 두 번 보여주던 것을 줄였다.
+- `MinutesPanel.tsx`: 시각을 모르는 행(scripted 각본 문구)은 "[--:--]"를 지어내지 않고 역할 코드만 보여준다(#12). "나" 항목·live 응답은 그대로 세션 시작 기준 실측 `mm:ss`다(T77에서 이미 구현돼 있었다).
+- `App.tsx`의 `chairLineFor`: MOTION 단계 의장 말풍선을 고정 문구("이 조건으로 안건을 고정합니다")에서 실제 반영 조건 수·첫 조건명을 말하는 문장(조건 없으면 "원안 그대로 표결에 부칩니다", 1개면 "<라벨> 조건을 달아 표결에 부칩니다", 2개 이상이면 "<첫 라벨> 등 조건 N개를 달아 표결에 부칩니다")으로 바꿨다(#19) — scripted 후속 답변 뒤 무대가 아무 반응도 안 하는 것처럼 보이던 문제. TRANSCRIPT 패널의 같은 항목(`minutes.ts` chair-motion)은 그대로 둬 회의록 표기는 바뀌지 않는다.
+- `OpinionsScreen.tsx`: 장식 "발언" 칩(버튼처럼 보임)을 지우고, 안내 두 문장("같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.")을 첫 문장만 남겼다(#25).
+- `StageBand.tsx`: RESULT 단계에서만 참가자 좌석에 "나" 명패를 더했다(다른 단계는 기존 결정대로 명패 없음, #24).
+- `ProgressStrip.tsx`: RESULT에서 탭 5개 모두 완료(✓) 표시로 바꿨다(이전에는 "05 표결"에 `aria-current`만 남아 여정이 안 끝난 것처럼 보였다, #24).
+- `base.css`: 전역 `word-break: keep-all; overflow-wrap: break-word;`로 한국어 단어 중간 줄바꿈("경험/일까요?" 등)을 막았다(#9).
+- `evidenceDialog.css`의 `.evidence-open-hint`(크림 종이 위 "EXHIBIT A–D + STATEMENTS" 힌트) 색을 대비가 약한 `--text-muted`(약 1.6:1)에서 `--ink-muted`로(#18). `EvidenceDialog.tsx` 팝업 하단 안내를 "Esc · 닫기 버튼 · 바깥 클릭으로 닫힘" → "Esc나 바깥을 누르면 닫힙니다"로 자연문화.
+- `reactions.css`: 답을 시작하기 전에도 CONDITIONS 칩 자리를 미리 비워 둬(`reactions-screen__conditions-slot`, min-height 예약), 칩이 생기는 순간 "답변 전달" 버튼이 밀려 내려가던 레이아웃 점프를 줄였다(my#10).
+- `reaction-card__text`·`opinion-card__text`에 4줄 클램프 + 말줄임을 더해, 바깥 패널의 `overflow:hidden`(무스크롤 규칙)이 문장을 중간에서 말없이 자르던 것을 줄임표로 바꿨다(my#8). BRIEFING EXHIBIT 압축 카드(T80 `evidence-card--compact`)는 이미 2줄 클램프가 있어 손대지 않았다 — 1568×777에서 카드가 작아 보이는 문제는 치수(패딩·높이) 쪽 원인이라 이 카드 범위 밖으로 남겨 둔다.
+
+### 확인
+
+`npm run check`(단위 506, 전부 통과)·`npx playwright test -c <로컬 scratchpad 설정>`(142건, 두 해상도 모두 통과) 확인. `UPDATE_SCREENSHOTS=1`로 `docs/screenshots/{desktop-1080,desktop-720}/*.png` 24장을 전부 갱신하고 1280 스크린샷을 육안 확인했다 — MOTION 의장 말풍선·NOT INCLUDED 새 문구, RESULT의 DEBRIEF 01·진행 탭 5개 완료·참가자 "나" 명패·TALLY 새 문구, REACTIONS의 비활성 CTA 안내·AI 비서실장 버튼 라벨이 모두 의도대로 보이고 잘림·겹침은 없다. BRIEFING EXHIBIT 압축 카드의 세로 여백 문제(my#8 일부)와 AssistantPanel "열기" 버튼의 scripted 무반응 의심(my#11)은 이 카드에서 재현/확인하지 못해 손대지 않았다.
+
+## T84 — 참가자 흐름·화면 구조 다듬기 (2026-10-07)
+
+Opus 5.5 UX 검토 반영. 세부는 `docs/TASKS.md` T84 행. 바뀐 동작: 안건 카드 클릭 즉시 입장(SELECT), live 응답 대기 중 CTA 잠금(OPINIONS), 후속 "유지" 카드→보조 버튼 "답하지 않고 넘어가기"(REACTIONS), 안건 문장을 확정 조건 반영해 동적 구성(MOTION·VOTE·RESULT, `motionDisplay.ts`), 결과 화면 주 버튼 "회의록 전문 보기" + "처음 화면으로" 확인 단계, "6개월 뒤" 카드 승격(RESULT).
+
+## T86 — BRIEFING 자료 버튼 복원·참가자 버튼 색상 통일·모드 표시 제거 (2026-10-07)
+
+**자료 버튼 복원(사용자 지시, 8787 시연 중):** "근거 자료가 버튼 클릭하면 나오는 게 아니고 바로 보이고 '전문 보기'로 바뀌었네 → 예전처럼 버튼으로." T80이 넣은 BRIEFING EXHIBIT 2×2 요약 카드 상시 노출(`EvidenceGrid variant='compact'`, testid `evidence-summary-<id>`) + "전문 보기" 보조 버튼을 걷어내고, `DiscussScreen`·`ReactionsScreen`과 같은 패턴(종이 아래쪽 버튼 "근거 자료 보기 · 자료 4장" 하나 → `EvidenceDialog` 팝업)으로 되돌렸다(`BriefingScreen.tsx`). `EvidenceGrid`의 `variant='compact'`는 더 이상 쓰는 화면이 없어졌지만(다른 곳에서 안 써도 되는 코드라 카드가 허용한 대로) 지우지 않고 남겼다. 요약 카드가 빠지며 생긴 종이 아래 여백은 그대로 종이 바탕으로 둔다(`briefing.css`의 `.briefing-screen__exhibit`를 `flex:1` 채움에서 `flex-shrink:0`로).
+
+**참가자 버튼 색상·모양 통일(사용자 지시 "버튼 색상을 체험 시작과 동일하게, 모든 버튼은 통일"):** `shell.css`의 `.cta.cta--secondary`를 앰버 테두리만 있는 outline 모양에서 `.cta`(주 CTA)와 같은 앰버 채움·검정 글자·`--font-display`·깎인 모서리로 바꾸고, 최소 높이·패딩·글자 크기·그림자만 작게 줄여 위계를 구분한다(비활성 모양은 `.cta:disabled`를 그대로 물려받는다). 이 공용 클래스로 통일한 버튼: "근거 자료 · 임원 발언 보기"/"근거 자료 보기 · 자료 4장"(BRIEFING·DISCUSS·REACTIONS, 이전에는 흰 종이 톤 알약 `.evidence-open-button`), "AI 비서실장에게 맡기기"/"숨기기"·패널 안 "닫기"·기능 3버튼(요약/비교/정리)·정리 결과 선택 2버튼(`AssistantPanel`, 이전에는 투명 외곽선), 근거 자료 팝업 "닫기"(`EvidenceDialog`, 이전에는 원형 아이콘 버튼), "선택 문구로 다시 구성"(`RebuildConfirm`), "돌아가기"(`EndSessionConfirm`). 이미 `.cta`/`.cta--secondary`를 쓰던 버튼(의견 전달·답변 전달·답하지 않고 넘어가기·이 안건으로 표결·최종 투표 확정·다시 물어보기·회의록 전문 보기·처음 화면으로·결과 계속 보기·직접 쓴 내용 유지)은 새 보조 CTA 모양을 자동으로 물려받는다. **제외**(버튼이 아니라 선택 입력): 찬성/반대 도장 라디오, 추천 문구·추천 답변 체크 카드(`PhraseCard`), CONDITIONS 토글 칩(`ConditionChips`, 체크 카드와 같은 토글 성격), SELECT 화면의 안건 선택 카드(`scenario-card`, 선택 입력). **제외**(운영자용): 헤더 운영 메뉴 버튼·운영 메뉴 안 버튼(모드 배지는 아래 문단에서 완전히 제거).
+
+**모드 표시 제거(사용자 지시, 두 차례):** 1차 "실시간 표시는 제거해줘"에 이어 2차 "사전 구성 시뮬레이션 표시도 빼줘" — 결국 live·scripted를 가리지 않고 참가자 화면에서 모드 표시를 전부 없앤다. 운영 메뉴(운영자용, "모델 연결 확인" 패널의 "모드 {live/scripted}")는 그대로 둔다. 헤더 모드 배지(`Header.tsx`)는 두 모드 모두 그리지 않는다(`<span data-testid="mode-badge">` 자체를 삭제, `App.tsx`가 넘기던 `mode` prop도 걷어냈다). ATTRACT 부제(`AttractScreen.tsx`)는 모드와 무관한 고정 문구 "4분 이사회" 하나로(`mode` prop 자체를 없앰). RESULT 모드 안내 줄(`result-mode-notice`, `ResultScreen.tsx`)은 완전히 제거. AssistantPanel 결과 캡션(`assistant-panel__badge`, `AssistantPanel.tsx`)도 완전히 제거. 죽은 CSS(`.mode-badge*`·`.result-screen__mode-notice`·`.assistant-panel__badge`)도 함께 지웠다.
+
+영향받은 테스트: `tests/components/BriefingScreen.test.tsx`(요약 카드 단언 제거, 팝업 열기 전/후 확인으로 단순화), `tests/components/Header.test.tsx`(`mode-badge` 부재 확인으로 변경), `e2e/briefing.spec.ts`(같은 방향), `e2e/live.spec.ts`·`e2e/retry.spec.ts`·`e2e/reactions.spec.ts`·`e2e/stance.spec.ts`·`e2e/noscroll.spec.ts`·`e2e/assistant.spec.ts`·`e2e/operations.spec.ts`(`mode-badge` 항상 부재 확인, scripted 전환은 동작 기반 확인 — `.opinion-card` 4장 vs live 발언 카드 0건 — 으로 교체), `e2e/viewport-fit.spec.ts`(헤더 곁다리 확인을 `operator-menu-button`으로 교체). `e2e/noscroll.spec.ts`·`e2e/screenshots.spec.ts`의 BRIEFING 자료 단언은 기존 testid(`open-evidence`·`evidence-card-<id>`·`evidence-dialog`) 그대로라 수정 없이 통과한다.
+
+## T89 — REACTIONS 추천 답변도 DISCUSS와 같은 입장 선택 구조로 (2026-10-07)
+
+**사용자 지시**: "반응에 답하기에서는 기존에 사용했던 옵션은 '답하지 않고 넘어가기'로 충분하니, 추천 답변을 내 의견에서와 마찬가지로 선택할 수 있도록 해줘." T87이 DISCUSS에 넣은 입장 선택(찬성 쪽/반대 쪽 → 그 쪽 추천 문구만 보여주기)을 REACTIONS 추천 답변에도 그대로 적용한다.
+
+**콘텐츠**: `FollowUpOption`에 `side?: 'FOR' | 'AGAINST' | 'BOTH'`를 추가했다(`Phrase.side`와 같은 선택값·같은 기본값 규칙 — 값이 없는 과거 시나리오는 'FOR'로 본다). `aiApproval.ts`·`experienceFirst.ts`의 `followUp.options`를 입장별 3개씩(FOR·AGAINST) + BOTH 1개(순서: FOR 0~2, AGAINST 3~5, BOTH 6)로 다시 썼다 — FOR 세 문구는 각각 기존 Phrase(P2·P4·P5 또는 P1·P3·P5) 문장을 그대로 재사용해 조건 키워드 일치를 보장했고, AGAINST 세 문구는 "이대로는 반대하지만 ~라면 다시 생각해 보겠습니다" 꼴로 조건 키워드를 **부정 없이** 담는다(`proposeFromText(option.text)`가 선언한 `proposeConditionId`와 정확히 같은 값을 돌려줘야 하는 기존 콘텐츠 테스트가 신규 옵션 14개를 전수 검사한다). 옛 `keepPrevious` 선택지("앞서 전달한 의견을 유지하겠습니다")는 T84 #1부터 보조 버튼 "답하지 않고 넘어가기"가 그 역할을 대신하므로 데이터에서 아예 뺐다.
+
+**입장 state 공유**: T87은 `sidePick`을 `DiscussScreen` 로컬 state로 뒀다. REACTIONS도 같은 state를 봐야 하므로 `App.tsx`의 `StageRouter`로 끌어올렸다(도메인 `session`에는 넣지 않는다 — `roundLog`와 같은 이유로 서버 페이로드·해시에 영향이 없어야 하는 화면 쪽 부기라 `useState`로 둔다). `DiscussScreen`·`ReactionsScreen` 모두 `side: 'FOR' | 'AGAINST' | null`·`onChooseSide` 컨트롤드 props를 받는다 — DISCUSS에서 고른 쪽이 REACTIONS까지 기본값으로 이어지고, 참가자가 REACTIONS에서 다시 고를 수도 있다. `session.sessionId`가 바뀌면(리셋) `sidePick`도 함께 `null`로 돌아간다.
+
+**ReactionsScreen UI**: DISCUSS와 같은 입장 선택 두 버튼(`aria-pressed`, testid `reactions-side-for`/`reactions-side-against`) — 공용 CSS(`.side-select`·`.side-select__btn`·`.side-select__hint`·`.side-select__guide`)를 `discuss.css`에서 `shell.css`로 옮겨 두 화면이 함께 쓴다. `side === null`이면(DISCUSS에서 아직 입장을 고르지 않고 직접 입력만으로 넘어온 경우) 선택지 그리드 대신 안내("먼저 입장을 골라 주세요. 직접 써도 됩니다.")만 보인다. 선택지 그리드는 고른 쪽(+BOTH)만, 그리고 T84 #23이 "(앞서 제안함)" 잠금 표시로 두던 "이미 확정된 조건을 다시 제안하는 옵션"은 완전히 숨긴다(그 역할은 "답하지 않고 넘어가기"로 충분하다는 사용자 판단). 입장을 바꾸면 체크된 추천 답변을 해제한다 — 직접 쓴 텍스트(dirty)는 유지, 대기 중인 RebuildConfirm 선택(`pendingOptionIndex`)도 함께 취소한다(DiscussScreen의 PR #20 Codex 7차 검토 규칙과 같다).
+
+영향받은 테스트: `tests/components/DiscussScreen.test.tsx`·`tests/components/ReactionsScreen.test.tsx`(App.tsx StageRouter 자리를 흉내 내는 `ControlledDiscuss`/`ControlledReactions` 테스트 래퍼 추가), `tests/content/aiApproval.test.ts`·`tests/content/experienceFirst.test.ts`(기존 범용 검증 루프가 신규 옵션을 그대로 통과), `e2e/stance.spec.ts`·`e2e/screenshots.spec.ts`(조건을 제안하지 않는 옵션 인덱스를 새 BOTH 인덱스 6으로 갱신). REACTIONS를 지나는 다른 spec(`reactions.spec.ts`·`live.spec.ts`·`minutes.spec.ts`·`retry.spec.ts`·`viewport-fit.spec.ts`·`no-stray-english.spec.ts` 등)은 DISCUSS에서 이미 `discuss-side-for`를 클릭해 입장을 고른 채 REACTIONS로 들어오므로 대부분 무수정 통과했다(인덱스 0이 가리키는 조건이 기존과 같거나, 테스트가 특정 조건을 요구하지 않는 경우).
+
+### T89 2차 — REACTIONS를 "반응 듣기"·"다시 답하기" 두 화면으로, AI 비서실장을 팝업으로 (2026-10-07, 같은 날 추가 지시)
+
+**사용자 지시 1**: "화면이 부족할 수 있으니 임원들의 의견을 듣고 다시 답하는 화면을 만들어서 내 의견과 동일한 구성으로 진행하게 해줘." 위 1차 작업(입장 선택 추천 답변)을 뒤엎지 않고, `ReactionsScreen` 하나를 **서브스텝 두 개**로 나눈다 — 도메인 `session.stage`는 두 서브스텝 모두 그대로 `'REACTIONS'`다(서버 페이로드·해시·회의록 영향 없음). 서브스텝 state(`'listen' | 'answer'`)는 `App.tsx`의 `SessionProvider`가 들고(`reactionsStep`·`setReactionsStep`, `SessionContextValue`에 추가) `useSession()`으로 `AppShell`·`StageRouter` 둘 다에서 읽는다 — `AppShell`이 "반응 듣기"일 때만 OPINIONS와 같은 규칙으로 `MinutesPanel`(발언 흐름)을 보여줘야 해서 `StageRouter` 로컬이 아니라 Provider 레벨에 둔다. `session.stage !== 'REACTIONS'`가 되는 순간(다음 단계로 넘어가거나 리셋) `'listen'`으로 되돌린다.
+
+- **1/2 반응 듣기**(`ReactionsScreen`의 `step === 'listen'`): 왼쪽 열은 OPINIONS와 같은 단일 CTA 줄(`reactions-advance` testid, "답하기 ▶") + 보조 "답하지 않고 넘어가기"(`keep-previous-answer`, 기존 그대로)뿐이고, 추천 답변·입력창은 없다. 오른쪽 종이는 임원 반응 카드 2×2(기존 `.reaction-card` 그대로, 다만 추천 답변·입력창이 빠져 공간이 남으므로 `.reaction-card__text--full`로 4줄 클램프를 풀어 전문을 보여준다) + 기존 "FOLLOW-UP" 점선 상자(`followup-question` testid 그대로, 두 서브스텝 모두 쓴다)뿐이다. heading 문구("이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다")는 다수 e2e가 "REACTIONS 진입" 신호로 쓰므로 그대로 두고, "1/2 반응 듣기" 라벨은 그 위 STEP 칩(`reactions-screen__step`)에만 추가했다. live에서는 OpinionsScreen의 `allExecsSettled`와 같은 규칙으로 임원 네 명이 REACTIONS 라운드에 응답하거나 실패로 끝날 때까지 "답하기 ▶"를 "임원 반응을 듣는 중…"으로 잠근다(`listenLocked`). scripted는 영향받지 않는다.
+- **2/2 다시 답하기**(`step === 'answer'`): **DiscussScreen과 같은 구성**(사용자 지시 그대로) — 왼쪽 열은 기존 `.reactions-screen__hud`(DraftEditor+ConditionChips) + 제출 줄([AI 비서실장에게 맡기기][답하지 않고 넘어가기][답변 전달 ▶], 1차 작업분과 동일, 손대지 않았다)이고, 오른쪽 종이는 **`discuss.css`의 `discuss-screen__paper`·`__head`·`__step`·`__title`·`__phrase-hint`·`__guide`·`__phrase-list`·`__evidence-row` 클래스를 그대로 재사용**(최대한 공유, 새 CSS를 만들지 않았다)해 "4단계 · 2/2" + "다시 답하기" 제목 + 추가 질문 한 줄(`followUp.question`, `discuss-screen__guide`에 얹는다) + 입장 선택 두 버튼(1차 작업의 `side-select`) + 그 쪽(+BOTH) 추천 답변 그리드(`discuss-screen__phrase-list`에 `PhraseCard` 재사용, 1차 작업의 side·alreadyProposed 필터 그대로) + "근거 자료 보기" 버튼이다. 뒤로 가기 버튼은 두지 않는다(요원 혼란 방지, 사용자 지시) — 상단에 질문이 항상 다시 보이므로 충분하다고 판단했다.
+- `AppShell`의 `showMinutes` 조건에 `session.stage === 'REACTIONS' && reactionsStep === 'listen'`을 더했다(기존 `MINUTES_STAGES` — BRIEFING·OPINIONS·MOTION·VOTE — 와 OR). "다시 답하기"는 입력이 왼쪽 열을 이미 채우는 기존 DISCUSS·REACTIONS 규칙 그대로 보여주지 않는다.
+
+**사용자 지시 2**: "AI 비서실장의 경우 팝업창을 근거 자료 팝업과 동일한 디자인으로 변경해줘." `AssistantPanel`의 오른쪽 열 위에 겹치는 인라인 드로어(`.assistant-panel__body`, `position:absolute`, `role="dialog"`도 포커스 트랩도 없었다)를 걷어내고, `EvidenceDialog`(T68)의 껍데기(딤 배경·종이 패널·우상단 도장·좌상단 eyebrow·제목·닫기 버튼·Esc/바깥 클릭/닫기 세 경로·포커스 트랩·복귀·배경 스크롤 잠금·하단 안내 두 줄)를 **공용 컴포넌트 `DialogShell`**(`src/components/parts/DialogShell.tsx` + `dialogShell.css`, 신규)로 뽑아 `EvidenceDialog`·`AssistantPanel` 둘 다 그 위에 본문(children)만 다르게 채운다. `EvidenceDialog`는 동작·testid가 전혀 바뀌지 않았다(`evidence-dialog`·`evidence-dialog-backdrop`·`evidence-dialog-close` 그대로, 본문 EXHIBIT·STATEMENTS 2열만 남았다). `AssistantPanel`은 토글 버튼(`assistant-toggle`)이 더 이상 "숨기기" 상태를 갖지 않는다(늘 "AI 비서실장에게 맡기기", 열기만 한다) — 닫기는 팝업 자체의 닫기 버튼(`assistant-close`, DialogShell 제공)이 맡는다. DISCUSS·REACTIONS "다시 답하기" 둘 다에서 똑같이 열린다(둘 다 같은 `AssistantPanel` 인스턴스를 쓰므로 자동). 내용(원문/초안 비교, 적용/원문 유지, 요약·비교 결과, refine 실패 안내)과 draftRevision 폐기 규칙·세션당 요청 상한은 전혀 바뀌지 않았다. DISCUSS·REACTIONS가 드로어 시절부터 쓰던 `onOpenChange`+`inert`(오른쪽 열을 숨겨 Tab이 가려진 버튼에 닿지 않게 하던 보강)는 팝업이 이제 전체 화면 딤 + 포커스 트랩으로 이미 배경을 막으므로 사실상 중복이지만, 기존 e2e·단위 테스트(`info.hasAttribute('inert')` 단언)를 그대로 통과시키기 위해 코드는 그대로 남겼다.
+
+영향받은 파일: `src/app/App.tsx`(SessionContextValue·SessionProvider·AppShell·StageRouter), `src/components/screens/ReactionsScreen.tsx`(두 서브스텝 분기), `src/components/parts/DialogShell.tsx`(신규)·`src/components/parts/EvidenceDialog.tsx`·`src/components/parts/AssistantPanel.tsx`, `src/styles/screens/dialogShell.css`(신규)·`evidenceDialog.css`(본문만 남김)·`assistant.css`(드로어 규칙 삭제)·`reactions.css`(`.reaction-card__text--full`). 영향받은 테스트: `tests/components/DiscussScreen.test.tsx`(비서실장 팝업 닫기를 `assistant-close`로), `tests/components/ReactionsScreen.test.tsx`(`step`·`onAdvanceStep` prop 추가, 반응 카드 배지 테스트는 `step="listen"`). e2e는 REACTIONS를 지나는 거의 모든 spec에 `reactions-advance` 클릭 한 줄을 추가했다(`reactions.spec.ts`의 두 헬퍼, `stage.spec.ts`의 `enterReactions`, `minutes.spec.ts`·`retry.spec.ts`·`viewport-fit.spec.ts`·`no-stray-english.spec.ts`·`flow-full.spec.ts`의 개별 테스트) — "답하지 않고 넘어가기"만 쓰는 spec(대부분의 완주 경로)은 그 버튼이 "반응 듣기"에도 그대로 있어 무수정 통과했다. 비서실장 드로어 관련 e2e(`reactions.spec.ts`·`viewport-fit.spec.ts`·`noscroll.spec.ts`)는 "AI 비서실장 숨기기" 역할 이름 클릭을 `assistant-close` testid 클릭으로 바꿨다. `screenshots.spec.ts`는 `reactions.png`(반응 듣기)에 더해 `reactions-answer.png`(다시 답하기)를 새로 캡처한다.
+
+## T99 — BRIEFING 가독성 (2026-10-08)
+
+**사용자 지시** "브리핑 화면의 글씨 크기와 중요 단어들이 눈에 확 들어오도록", "상황 파악의 근거 자료 글씨가 너무 많아서 쉬운 문장 톤으로 통일".
+
+- **핵심 말 강조**: `Scenario.highlightTerms`(안건당 6개)와 같은 글자를 `HighlightText`(`src/components/parts/HighlightText.tsx`, 순수 함수 `splitByTerms`)가 `<mark class="key-term">`로 감싼다. 상황·제안·미정 줄에만 쓰고 제목(h2)은 제외. 겹치면 긴 말이 우선, 일치하지 않는 말은 건너뛴다. 스타일은 붉은 박스 없이 진한 잉크 굵게(800) + 연한 종이색 바탕(`--paper-mark`) + 갈색 밑줄이고 `mark` 기본 노랑은 덮어쓴다.
+- **글자 크기**: 상황·제안·미정 본문 1080 20→24px, 720 16→19px(줄 간격 1.4), 라벨 15→18px·12→14px.
+- **근거 자료**: 두 안건 E1~E4 `content`를 문장 2개 이하·문장당 45자 이하로 다시 썼다(숫자·사실 그대로). 카드에는 제목 + `insight` 한 문장 + 관련 임원 한 줄만 보이고(`content`는 카드에서 뺐다, 데이터·프롬프트용으로 유지) `insight`를 크게(1080 16→19px 굵게, 720 13→15px) 보인다. 쉬운 문장으로 다시 쓴 `content`는 서버 프롬프트·자료 데이터에서 그대로 쓰인다. `server/scenario-data.ts`의 같은 자료 문장도 함께 맞췄다(동기화 테스트는 없고 프롬프트 버전은 올리지 않았다).
+- 검사: `tests/content/{aiApproval,experienceFirst}.test.ts`에 자료 문장 수·길이·금지어와 highlightTerms 일치 검사, `tests/components/{HighlightText,BriefingScreen}.test.tsx`.
+
+## T97 — DISCUSS 비서실장 필수 사용 (2026-10-08)
+
+> **T109에서 1개 이상으로 완화**: 아래 "세 기능 한 번씩"·"N/3" 표기는 "한 기능 이상"으로 바뀌었다(`assistantDone = assistantUsed.size >= 1`). 입장·문구 잠금은 그대로다.
+
+> **T103에서 코치로 대체**: 버튼 잠금(게이팅)과 팝업 안 소개·체크(`assistant-intro`)는 그대로다. 화면에 눈에 보이던 힌트 문장(`cta-disabled-hint`)과 `data-guide` 맥동은 없어졌고, 잠금 이유는 화면 읽기용 문장(sr-only, `aria-describedby`)으로만 남는다. 다음에 누를 버튼은 코치 5단계가 밝힌다.
+
+
+**사용자 지시**: "추천문구들을 고르고나서 AI비서실장을 필수적으로 사용하게끔. 첫 AI비서실장에서 제공되는 기능들을 간략하게 소개하고 한번씩 사용하게하여 의견 전달을 할 수 있도록 가이드라인이나 버튼활성화/비활성화. 순서는 추천문구 선택 -> AI비서실장 기능활용 -> 의견전달 순."
+
+**순서와 게이팅**: DISCUSS의 "의견 전달 ▶"은 (1) 문구가 있고(추천 문구 선택 또는 직접 입력) (2) 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 이번 세션에서 각각 한 번 이상 썼을 때만 열린다(`DiscussScreen`의 `canSubmit = draftReady && assistantDone`). 사용 여부는 순수 함수 `assistantFeaturesUsed(session.assistantActions, 'DISCUSS')`(`src/domain/assistantLog.ts`)가 세션 기록에서 가른다. 다시 답하기(REACTIONS)는 게이팅 없이 선택 사항 그대로다.
+
+| 상태 | 비활성 사유 문구(`discuss-cta-hint`) | `data-guide="next"` 하이라이트 |
+| --- | --- | --- |
+| 입장 미선택 | (입장 안내 `discuss-side-guide`) | 찬성/반대 선택 영역 |
+| 문구 없음 | 추천 문구를 고르거나 직접 써 주세요 | 추천 문구 목록 |
+| 문구 있음, 비서실장 N/3 | AI 비서실장을 먼저 써 보세요 (N/3) | 비서실장 열기 버튼(`assistant-toggle`) |
+| 문구 있음, 비서실장 3/3 | (힌트 없음) | 의견 전달 버튼 |
+
+(T98에서 오른쪽 종이의 안내 한 줄 `discuss-assistant-tip`은 진행 단계 안내판으로 바뀌었다.)
+
+**팝업 첫 화면(`AssistantPanel`의 `requiredFeatures`, DISCUSS만 넘긴다)**: 결과 영역 위에 소개 블록(`assistant-intro`) — 제목 "AI 비서실장이 도와드립니다 — 세 가지를 한 번씩 눌러 보세요"와 기능 세 줄(체크 `assistant-check-*` ☐/☑ + 이름 + 쉬운 말 한 문장). 사용한 기능 버튼에는 "· 완료"가 붙고, 아직 안 쓴 첫 기능 버튼에 하이라이트가 걸린다. 결과(또는 오류)가 생기면 블록이 한 줄(`assistant-intro--compact`, "☑ 의견 한눈에 보기 ☐ 조건 추천 ☐ 내 발언 정리")로 줄어든다. 세 개가 다 되면 "이제 팝업을 닫고 의견을 전달하세요"(`assistant-intro-done`)가 뜨고 팝업 닫기 버튼에 하이라이트가 걸린다(`DialogShell`의 `closeGuide`). 1280×720에서는 소개·기능 버튼이 줄지 않고 결과 영역(`assistant-panel__results`)만 안쪽 스크롤한다. 색은 종이 톤 토큰만 쓰고 붉은 박스는 쓰지 않는다.
+
+**실패·연결 지연도 사용으로 센다**: 막히는 참가자가 없게, 결과를 렌더했을 때뿐 아니라 오류·시간 초과 안내(`assistant-error`)를 본 경우도 같은 유형을 `failed:true`로 기록한다. 정리한 초안을 화면에 보인 것도 `DRAFT_REFINE`(`applied:false`)로 기록한다. 결과 화면 "AI가 도운 일"은 바뀌지 않는다 — `failed` 기록과 `applied:false`인 정리는 줄을 만들지 않고, "조건 추천 N회" 집계도 `failed`는 세지 않는다.
+
+영향받은 파일: `src/domain/assistantLog.ts`, `src/components/parts/{AssistantPanel,DialogShell}.tsx`, `src/components/screens/DiscussScreen.tsx`, `src/app/App.tsx`, `src/styles/screens/assistant.css`, `e2e/helpers/assistant.ts`(`tryAllAssistantFeatures`), `e2e/assistant-gate.spec.ts`.
+
+## T113 — 다음 할 일 점선 (2026-10-09)
+
+화면마다 "지금 눌러야 할 것" **하나**에 요소 바깥 7px, 2px 점선 테두리를 그리고 1.6초 주기로 밝아졌다 어두워지게(opacity 1↔0.25, 시안 A안 "숨쉬는 점선") 시선을 이끈다. 코치(T104)와 같은 원칙으로 안내만 하며, 버튼 활성/비활성 규칙(T97·T109)과 코치 문구는 바꾸지 않는다. 덮개·스포트라이트·클릭 막음이 없다.
+
+- **구현**: 규칙은 `src/domain/nextStep.ts`(화면별 매핑·시작 지연), 연결은 `src/components/parts/focusRing.ts`(`useFocusGate`·`nextStepAttr`), 그림은 `src/styles/screens/focus.css`. 고른 요소에만 `data-next-step` 속성이 붙고, 점선은 `::after`(pointer-events none, 레이아웃 불변)다. z-index 1로 코치(35)·팝업(40)보다 낮다.
+- **시작 지연**: 화면(또는 단계)에 들어온 뒤 6초 동안 아무것도 누르지 않으면 점선이 시작한다. 클릭이나 키 입력이 한 번이라도 있으면 지연 없이 바로 다음 할 일로 옮겨 간다. `prefers-reduced-motion`이면 깜빡이지 않고 점선만 보인다.
+- **끄기**: `?focus=off`(`?coach=off`와 독립). 운영 메뉴 토글은 없다.
+- **숨김 규칙**: 화면에 동시에 1개 이하. 팝업(`role="dialog"`)이 열려 있으면 화면 본문의 점선은 0개다. 예외로 AI 비서실장 팝업 안에서는 아직 안 쓴 첫 기능 버튼 하나에 붙는다(로딩 중에는 없음). 잠긴(disabled) 버튼에는 붙이지 않는다. RESULT·ATTRACT·SELECT에는 없다.
+- **색**: 네이비 바탕은 `--accent`, 종이 바탕은 진한 호박색(버튼은 잉크색 `#1b1a17`).
+
+| 화면 | 다음 할 일 순서 (한 번 한 것은 빠짐) |
+| --- | --- |
+| INTRO | 확인 버튼 |
+| BRIEFING | 근거 자료 보기 → 의견 듣기(자료를 본 뒤) |
+| OPINIONS | 내 의견 쓰러 가기(의견이 다 나와 열린 뒤) |
+| DISCUSS | 입장 선택 묶음(미선택 시) → 추천 문구 첫 카드(글이 아직 없을 때) → AI 비서실장 열기 → 팝업 안 첫 기능 버튼(한 가지도 안 썼을 때) → 의견 전달(열린 뒤) |
+| REACTIONS 1/2 | 답하러 가기(열린 뒤) |
+| REACTIONS 2/2 | 입장 선택 묶음(미선택 시) → 추천 답변 첫 카드(글이 아직 없을 때) → 답변 전달(열린 뒤) |
+| MOTION | 이 안건으로 표결(열린 뒤) |
+| VOTE | 찬성·반대 도장 묶음(미선택 시) → 표결 확정 |
+
+## T109 — 비서실장 한 가지만 써도 의견 전달 (2026-10-09)
+
+**사용자 지시**: "AI 비서실장에서 하나만 사용해도 의견 전달 버튼이 활성화되도록 변경해 줘."
+
+- 판정: 입장 선택 + 문구 1개 이상 + 비서실장 기능 1개 이상 사용(실패·연결 지연 안내도 사용) → 전달 활성. 비서실장 버튼 잠금(문구 전)은 그대로.
+- 힌트(sr-only `discuss-cta-hint`): 문구 있음·비서실장 0회 → "AI 비서실장을 한 번 써 보세요". (N/3) 표기는 없다.
+- 팝업 소개 제목: "AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)". 체크 3줄은 유지, 완료 문구(`assistant-intro-done`)는 1개 이상 쓰면 표시.
+- 코치 DISCUSS ③: "AI 비서실장을 열어 한 가지 이상 써 봅니다(셋 다 써도 좋아요)."
+
+## T98 — 진행 단계 안내판 (2026-10-08)
+
+> **T103에서 코치로 대체**: 번호 칩 안내판(StepGuide)·`domain/stepGuide.ts`·`stepGuide.css`는 삭제됐다. 같은 순서를 진행 도우미가 화면당 말풍선 하나로 안내한다(T104). REACTIONS 비활성 전달 버튼의 `cta--outline`은 그대로 유지한다.
+
+
+**사용자 지시**: "반응에 답하기에 의견 전달하는 버튼이 없어. 화면 안에서 추천문구 선택 -> AI비서실장 -> 비서실장 기능1,2,3 수행 -> 의견전달이 자연스럽게 이루어질 수 있도록 좀더 명확한 가이드를 줘야 할 것 같아. 문장 한 줄보다는 좀더 포커싱해서 눈에 확 들어오게 하고 어떤 순서로 하면 좋은지 권고안."
+
+**안내판(`StepGuide`, `src/components/parts/StepGuide.tsx`, `stepGuide.css`)**: 오른쪽 종이 제목("내 의견 쓰기"·"다시 답하기") 바로 아래 가로 한 줄 번호 칩이다. 상태 계산은 순수 함수 `stepGuideState({ side, draftReady, featuresUsed, requireAssistant })`(`src/domain/stepGuide.ts`)가 하고, 컴포넌트는 그리기만 한다. 현재 칩은 "아직 끝나지 않은 첫 칩"이라 앞 칩이 안 끝났으면 뒤 칩을 먼저 채워도 현재가 되지 않는다.
+
+| 칩 | DISCUSS(4칩) | REACTIONS(3칩) | 끝남 조건 |
+| --- | --- | --- | --- |
+| ① | 입장 고르기 | 입장 고르기 | 입장을 골랐다 |
+| ② | 추천 문구 고르기 | 추천 답변 고르기 | 문구가 있고 확인 대기가 아니다 |
+| ③ | AI 비서실장 세 가지(체크 3개) | 답변 전달 | 세 기능을 한 번씩 썼다(T97 `assistantFeaturesUsed`와 같은 값) |
+| ④ | 의견 전달 | (없음) | 끝나지 않음(마지막) |
+
+REACTIONS는 비서실장을 선택 사항으로 두므로 칩에서 빼고 오른쪽 끝에 "AI 비서실장은 선택" 꼬리표만 둔다. 게이팅은 더하지 않는다.
+
+**칩 상태**: `done`(체크 표시·흐림), `current`(크고 진하게, 종이색 배경, 앰버 테두리와 그림자, `data-guide="next"` 맥동 테두리), `upcoming`(흐림). 현재 칩 아래에 지시 문장 한 줄이 나온다 — ① "찬성/반대 중 하나를 고르세요" ② "마음에 드는 문구를 눌러 담으세요(여러 개 가능)" ③ "왼쪽 아래 'AI 비서실장에게 맡기기'를 열어 세 가지를 한 번씩 써 보세요" ④ "왼쪽 아래 '의견 전달'을 누르세요". ③ 칩의 체크 3개(한눈에 보기·조건 추천·발언 정리)는 팝업 `assistant-intro`의 체크와 같은 상태다. 같은 현재 칩이 가리키는 실제 조작 대상(입장 버튼 줄 → 문구 카드 영역 → 비서실장 열기 버튼 → 전달 버튼)에도 `data-guide="next"`를 함께 건다.
+
+**정리한 한 줄 안내**: DISCUSS의 `discuss-guide-hint`·`discuss-assistant-tip`과 REACTIONS의 `reactions-guide-hint`는 안내판이 대신하므로 지웠다. 왼쪽 열 CTA 아래 `cta-disabled-hint`("AI 비서실장을 먼저 써 보세요 (N/3)")는 그대로다.
+
+**REACTIONS 전달 버튼 가시성**: 비활성 "답변 전달 ▶"이 점선·흐림이라 없어 보였다. 비활성일 때 `cta cta--outline`(`shell.css`)을 써서 종이색 굵은 실선 테두리와 선명한 종이색 글자의 빈 버튼으로 보이게 했고, 활성되면 기존 주황 CTA다. 아래 힌트(`reactions-cta-hint`)는 "문구를 고르거나 직접 쓰면 전달할 수 있습니다"로 키웠다(`cta-disabled-hint--strong`). `답하지 않고 넘어가기`는 세 버튼 중 가장 작은 보조 버튼 그대로다. MOTION·VOTE 버튼 스타일은 바꾸지 않았다.
+
+**1280×720 규칙**: 칩은 한 줄을 유지하고 글자만 줄인다(칩 12px, 현재 칩 14px, 지시 문장 14px). 지시 문장은 현재 칩 것 하나만 보인다. 안내판이 늘어난 만큼 한 줄 안내 두 개를 뺐으므로 오른쪽 종이의 문구 카드와 근거 자료 버튼이 밀려 잘리지 않아야 하며, `noscroll.spec.ts`가 안내판과 CTA가 뷰포트 안에 보이는지 확인한다. 색은 종이 톤 토큰만 쓰고 붉은 박스·영문 문구는 쓰지 않는다.
+
+영향받은 파일: `src/domain/stepGuide.ts`, `src/components/parts/StepGuide.tsx`, `src/styles/screens/{stepGuide,shell}.css`, `src/components/screens/{DiscussScreen,ReactionsScreen}.tsx`, `tests/components/{StepGuide,DiscussScreen,ReactionsScreen}.test.tsx`, `e2e/{assistant-gate,reactions,noscroll}.spec.ts`.
+
+## T101 — 스타일·집계 일관성 (2026-10-08)
+
+Opus 규칙 점검에서 나온 CSS 누수·720 겹침·현황판 기본값·설득 숫자 어긋남을 고쳤다. 표결 규칙과 시나리오 문장은 바꾸지 않았다.
+
+- **CSS 누수**: `.discuss-screen__submit-row .cta`·`.reactions-screen__submit-row .cta`가 줄 안에 그려지는 비서실장 팝업(DialogShell)의 닫기·기능 버튼과 "AI 비서실장에게 맡기기" 토글까지 키웠다. 선택자를 직계(`> .cta`, `> .reactions-screen__keep-previous`)로 좁혀 팝업 버튼은 근거 자료 팝업과 같은 크기, 토글은 의도값(1080 225px·21px, 720 DISCUSS 180px·17px, REACTIONS 140px·15px)으로 돌아왔다. T98의 `cta--outline`은 `> .cta` 안에서 그대로 동작한다.
+- **720 규칙**: "넘어가기"(옛 "답하지 않고 넘어가기", 읽어 주는 이름은 `aria-label`로 유지) 15px 이상. 결과(부결) 설득 도장 칸을 원 아래로 늘려 "미획득" 상자가 도장 원과 겹치지 않는다. 임원 판단 줄은 두 줄까지 보인다. DISCUSS 입력칸은 칸을 쓰는 중이 아닐 때 항상 맨 위 줄부터 보인다(`DraftEditor`). 발언 흐름은 위로 읽을 내용이 있을 때 위쪽 가장자리를 옅게 흐려 잘린 첫 줄이 제목에 가려진 것처럼 보이지 않게 한다(`MinutesPanel`, `minutes.css`).
+- **입장 미선택(DISCUSS side=null)**: 설득 현황판은 "입장을 고르면 설득 목표가 보입니다" 한 줄만 보이고, 조건 추천(`buildConditionRecommendation`)은 찬성을 목표로 가정하지 않고 빈 결과와 안내 한 줄을 돌려준다. 비서실장 버튼은 T97대로 잠긴다. REACTIONS는 이전 입장을 그대로 쓴다.
+- **설득 숫자 통일**: `computePersuasionTally`(`src/components/persuasionSummary.ts`) 한 곳에서 센다. 처음부터(첫 의견 때) 참가자와 같은 편이고 지금도 그 편인 임원은 "처음부터 같은 편"으로 표시하고 "설득한 임원 N/M"의 분모에서 뺀다. 모두 그런 경우는 숫자 대신 "모두 처음부터 같은 편". 설득 현황판, 결과 제목 줄("이사님 표 찬성 · 나를 포함해 같은 표 N석 · 설득한 임원 N/M"), 설득 도장 칸의 "같은 표 N석", 소개 화면 성공 기준("나를 포함해 같은 표가 3석 이상")이 같은 숫자를 쓴다. 불변식은 같은 편 좌석(나 포함) = 1 + 처음부터 같은 편 + 설득한 임원, 분모 = 4 − 처음부터 같은 편이며 `tests/components/persuasionSummary.test.ts`가 두 안건·두 입장·모든 조건 조합에서 확인한다. scripted·live 모두 `openingStanceOf` 기준이다. 도장 판정(나 포함 3석)은 그대로다.
+- **발언 흐름 유지 문구**: `minutes.ts`의 "앞서 말씀드린 입장 그대로입니다."는 `scenario.holdReasons`가 없을 때만 쓰고, 있으면 반응 카드와 같은 역할별 유지 이유를 쓴다.
+- **AI가 도운 일**: "조건 추천 1회 · 결재 금액 한도, 승인 사유 기록 → 2개 반영"처럼 추천한 조건 이름(세 개까지, 넘으면 "외 N개")과 그중 최종안에 남은 반영 개수를 한 줄로 보인다. 조건 추천 사용 기록(`CONDITION_RECOMMEND_VIEW`)의 `evidenceIds`에 추천한 조건 id를 담는다.
+
+- **결과 제목 통일(검토 반영)**: 결과 상단 한 줄도 `buildPersuasionResult`(`persuasionSummary.ts`)가 같은 tally의 `persuaded`로 만든다. 조건 N≥1·M≥1 "이사님의 조건 N개로 임원 M명이 이사님 편이 됐습니다", 조건 0·M≥1 "이사님의 발언으로 …", M=0 "이번엔 임원의 입장을 바꾸지 못했습니다"(scripted는 다음에 붙일 조건 추천 유지). live는 조건 인과 없이 "발언으로"만 쓴다. 옛 "조건 뺀 기준 표와 비교" 계산은 결과 화면에서 쓰지 않는다.
+
+영향받은 파일: `src/styles/screens/{discuss,reactions,result,minutes}.css`, `src/components/parts/{PersuasionBoard,AssistantPanel,DraftEditor,MinutesPanel}.tsx`, `src/components/{persuasionSummary,conditionRecommendation,minutes}.ts`, `src/domain/assistantLog.ts`, `src/components/screens/{Result,Intro,Reactions}Screen.tsx`.
+
+## T102 — 발언 표시 역할 분담 (2026-10-08)
+
+사용자 지시("발언 흐름과 옆의 임원 의견, 이미지 위 대화가 너무 중복")로 같은 임원 발언이 세 곳에 보이던 것을 역할로 나눴다. 발언 전문 데이터는 바꾸지 않았다.
+
+| 곳 | 역할 | 보이는 단계 |
+| --- | --- | --- |
+| 오른쪽 종이 카드 | 임원 발언 **전문**을 읽는 유일한 곳 | OPINIONS, REACTIONS |
+| 무대 말풍선 | "지금 누가 어떤 기류인지" **핵심 한 구절**(최대 18자)과 입장 배지 | OPINIONS, REACTIONS |
+| 지금까지 발언(옛 발언 흐름) | 복습용. 오른쪽에 발언 카드가 없는 화면에서만 | MOTION, VOTE |
+
+- **말풍선 한 구절**: scripted는 `InitialOpinion.bubble`·`Reaction.bubble`(두 활성 안건 모든 발언, 18자 이하). live는 서버 변경 없이 `bubbleLineOf`(`src/components/bubbleText.ts`)가 첫 문장을 쉼표·마침표 앞에서 끊고 18자를 넘으면 "…"을 붙인다. BRIEFING·MOTION 의장 말풍선은 그대로다. REACTIONS의 참가자 본인 말풍선도 `bubbleLineOf`로 같은 규칙(최대 18자, 넘으면 17자+"…")을 쓴다. 쉼표·마침표 양옆이 숫자("12,345원")면 끊지 않고, 끊은 뒤 짝 없는 여는 따옴표는 뗀다.
+- **패널 위치**: `App.tsx`의 `MINUTES_STAGES`는 MOTION·VOTE만 둔다. BRIEFING은 오른쪽 "상황" 문장과 같은 한 줄뿐이라 뺐다. OPINIONS·REACTIONS·DISCUSS에서는 렌더하지 않는다. RESULT는 기존 "회의 기록 전체 보기"를 쓴다. 패널 제목은 "지금까지 발언"이다.
+- **빈자리**: OPINIONS 왼쪽 열은 무대와 CTA만 두고 CTA 아래에 "임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요" 한 줄을 둔다(18px, 720 15px). REACTIONS 1/2는 무대, 설득 현황판, CTA만 둔다.
+- **INTRO 강조**: 목적·성공 기준·팁을 `HighlightText`와 `INTRO_HIGHLIGHT_TERMS`로 강조한다(기존 `.key-term`, 붉은 박스 없음). 목적·성공 기준 글자는 1080 20px·720 16px, 성공 기준 줄은 굵게.
+
+영향받은 파일: `src/components/{bubbleText.ts,parts/{StageBand,MinutesPanel}.tsx,screens/{Intro,Opinions}Screen.tsx}`, `src/app/App.tsx`, `src/content/{types.ts,scenarios/{aiApproval,experienceFirst}.ts}`, `src/styles/screens/{intro,opinions}.css`.
+
+## T96 — 설득 가시화·AI 비서실장 조건 추천 (2026-10-08)
+
+**사용자 지시**: "내가 의견을 내고 어떤 조건을 붙여야 AI 임원을 설득할 수 있는지 표현되고, 내 발언에 따라 임원 입장이 변하는 것이 잘 보이게. 이 게임의 목표가 '내 의견과 조건으로 임원을 설득하는 것'임을 참가자가 따라 하고 느끼게. AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을 고르는 데 큰 도움이 된다고 느끼게."
+
+**설득 현황판(`PersuasionBoard`)**: DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열(`app-body__actions`) 맨 위에 공통으로 두는 작은 상자다. 임원 4명을 1줄씩 보여준다 — 이름(역할 코드) · "첫 의견 → 지금" 입장(바뀌었으면 `찬성 → 반대`처럼 화살표, `moodLabel.ts`의 `SHORT_STANCE_LABEL`) · 아직 설득되지 않았으면 "움직일 조건"(`domain/voting.ts`의 `requiredConditionsFor` — scripted voteRules에서 YES가 되는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) · 위쪽 "설득한 임원 N/4"(참가자 입장이 AGAINST면 목표를 AGAINST로 바꿔 센다, `persuasionStamp`의 "참가자 표와 같은 쪽" 전제와 같다). 참가자가 반대 쪽이면 같은 데이터를 "이 조건을 넣지 않아야 반대로 남습니다"로 뒤집어 보여준다 — 반대 참가자의 목표는 임원을 NO에 묶어 두는 것이지 YES로 보내는 것이 아니기 때문이다. live 모드는 scripted 규칙표가 실제 결정권이 없으므로(LLM이 자유롭게 답한다) 문구 끝에 "· 참고"를 붙인다. "첫 의견" 입장은 `scenario.initialOpinions[].openingStance`를 그대로 쓰며(`src/components/openingStance.ts` 신규, PersuasionBoard·persuasionSummary 공유), voteRules의 `always` 분기(판단 기준)와는 다른 개념이라는 기존 전제(T63 stance.ts 주석)를 그대로 따른다.
+
+**REACTIONS 반응 카드 "바뀜 → 왜 바뀌었는지"**: 기존 "유지"/"바뀜" 배지를 `SHORT_STANCE_LABEL` 전후 비교("반대 → 찬성")로 바꾸고, 그 아래 원인 조건 한 줄을 더했다(`src/components/reactionsFor.ts`의 `changeCauseLabel` — `reactionsFor`가 고른 반응 문구들의 `conditionId`를 라벨로 바꿔 "이사님의 '라벨' 조건으로"를 만든다. 일치하는 조건이 없으면(순수 반대 응답 등) "이사님 의견을 듣고"). "유지" 카드의 빈 대사("앞서 말씀드린 입장 그대로입니다")는 새 시나리오 필드 `Scenario.holdReasons?: Record<ExecMemberId,string>`(두 안건 각 4문장씩)로 대체한다 — 조건별이 아니라 역할별 1문장이며, `tests/content/{aiApproval,experienceFirst}.test.ts`의 "쉬운 말(T93)" 검사에 함께 포함했다(금지 어휘 0건).
+
+**결과 화면 요약·"한 끗 차이"**: `src/components/persuasionSummary.ts`(신규) — `countVotesChangedFromOpening`(첫 의견 때 입장과 최종 표가 다른 임원 수, scripted는 `openingStanceOf`·live는 첫 OPINIONS 발언의 stance와 비교, UNCAST는 세지 않는다)로 상단에 "이사님의 조건 N개가 임원 M명의 표를 바꿨습니다"를 보여준다(조건 0개인데도 "미정"이던 임원이 표결로 입장을 정한 경우는 "조건 0개가 바꿨다"는 말이 어색해 "이사님 의견을 듣고 임원 M명이 입장을 정했습니다"로 따로 문구를 쓴다). M이 0이면 `nextTrySuggestionLabel`로 "다음엔 '라벨' 조건을 붙여 보세요"를 덧붙인다. 부결(NO)한 임원 행에는 `oneStepAwayNote`(scripted voteRules 기준, 미확정 조건이 1~2개뿐일 때만)로 "'사람 표본 재검토' 하나만 더 있었으면 찬성" pill을 더했다 — live에는 voteRules가 적용되지 않아 보여주지 않는다. 기존 `resultSummary.ts`의 `execRows.changed`(조건이 하나도 없는 안건 기준 게이지, T43)는 기준이 달라 손대지 않고 그대로 둔다.
+
+**AI 비서실장 "조건 추천"**: `FEATURE_LABELS.compare`의 라벨을 "조건 비교하기"→"조건 추천"으로 바꾸고(내부 feature key·testid는 `compare` 그대로), 결과 영역 맨 위에 규칙 기반 추천을 추가했다(`src/components/conditionRecommendation.ts`의 `buildConditionRecommendation` — scripted·live 공통이며 `adapter.compareConditions` 응답과 무관하게 `requiredConditionsFor`만으로 즉시 계산한다). 아직 찬성이 아닌 임원 코드를 모아 "지금 반대인 CFO·CISO를 움직이려면 '결재 금액 한도'가 필요합니다" 한 줄을 만들고, 그 아래 조건별로 "움직이는 임원 · 푸는 걱정"(걱정 문구는 새로 짓지 않고 `scenario.reactions`의 해당 조건 문구를 그대로 재사용) + "적용" 버튼을 둔다. "적용"은 `AssistantPanel`의 새 prop `onRecommendCondition(conditionId)`를 불러 `DiscussScreen`·`ReactionsScreen`이 그 조건과 연결된 추천 문구(FOR/BOTH 쪽, 아직 선택 안 된 것)를 체크한다 — 입력창은 참가자가 늘 보던 자기 발언 그대로 유지된다. `domain/assistantLog.ts`에 `CONDITION_RECOMMEND_VIEW`(조건 추천을 열어 확인할 때마다)·`CONDITION_RECOMMEND_APPLY`(적용을 누를 때마다, `evidenceIds[0]`에 조건 id를 담아 재사용)를 추가하고, 기존 "마지막 1건만 보여주는" `describeAdditionalHelp` 모델과 달리 `countConditionRecommendation`으로 "몇 번·몇 개"를 세어 "조건 추천 N회"·"추천 조건 N개 반영" 두 줄을 결과 화면 "AI가 도운 일"에 덧붙인다(옛 `CONDITION_COMPARE` 기록은 같은 버튼이 두 줄로 중복되지 않도록 더 남기지 않는다). DISCUSS의 입장 선택 뒤 안내문에 "비서실장에게 조건 추천을 받아 보세요" 한 줄을 비강제로 더했다(`data-guide` 강조는 없다, T95 가이드와는 별개).
+
+영향받은 파일: `src/domain/voting.ts`(`requiredConditionsFor`)·`assistantLog.ts`, `src/content/types.ts`(`Scenario.holdReasons`)·`scenarios/{aiApproval,experienceFirst}.ts`(holdReasons), `src/components/openingStance.ts`·`persuasionSummary.ts`·`conditionRecommendation.ts`(신규), `src/components/reactionsFor.ts`(`changeCauseLabel`)·`moodLabel.ts`(`SHORT_STANCE_LABEL`), `src/components/parts/PersuasionBoard.tsx`(신규)·`AssistantPanel.tsx`, `src/components/screens/{DiscussScreen,ReactionsScreen,MotionScreen,VoteScreen,ResultScreen}.tsx`, `src/styles/screens/{persuasionBoard.css(신규),reactions.css,result.css,assistant.css}`. 영향받은 테스트: `tests/domain/voting.test.ts`, `tests/components/{PersuasionBoard,persuasionSummary,conditionRecommendation}.test.ts`(신규)·`ReactionsScreen.test.tsx`(전후 배지·원인·holdReasons)·`tests/content/{aiApproval,experienceFirst}.test.ts`(holdReasons 쉬운 말 검사). e2e는 기존 discuss·reactions·noscroll·no-stray-english·flow-full·opposition·stance·a11y·assistant 스위트로 회귀만 확인했다 — 설득 경로·부결 한 끗 차이를 직접 검증하는 전용 e2e와 `UPDATE_SCREENSHOTS=1` 스크린샷 재생성은 카드 크기(L, 실제로는 XL)와 시간 제약으로 다음 라운드로 미뤘다(`docs/TASKS.md` T96 카드 참고).
+
+## T95 — 소개 화면(INTRO)과 화면별 진행 가이드·게이팅 (2026-10-08)
+
+> **T103에서 코치로 대체**: INTRO의 진행 5단계·팁 블록, `GuideHint` 한 줄, 화면별 `data-guide` 맥동 테두리, 비활성 CTA 안내 문장, MOTION 2초 뒤 강조 전환, RESULT 회의 기록 1회 강조는 모두 코치로 대체돼 지웠다. 버튼 잠금(게이팅)은 그대로다.
+
+
+**사용자 지시**: "참석자가 진행할 때 어떤 걸 먼저 보고 진행해야 하는지 가이드/하이라이트, 또는 필수로 보고 넘어가도록 버튼 활성/비활성을 넣어 자연스럽고 매끄럽게. 첫 페이지 다음, 안건 선택 전에 게임의 목적과 어떻게 해야 성공하는지 소개 한 장. 안건 선택 후에는 앞과 중복되는 내용을 제거하고 상황 파악에 집중."
+
+**소개 화면(INTRO)**: `SessionStage`에 `'INTRO'`를 ATTRACT와 SELECT 사이에 추가한다(`session.ts`: START는 ATTRACT→INTRO, NEXT_STAGE는 INTRO→SELECT). 서버 요청의 `stage`(`StatementStage` — OPINIONS/REACTIONS/FOLLOWUP)와는 이름만 같을 수 있는 전혀 다른 타입이라 서버 쪽에는 영향이 없다. `IntroScreen`(신규)은 아직 `scenario`가 없어 조종석 배치(StageBand)를 쓸 수 없으므로 SelectScreen의 배경 장식(`select-screen__stage` 등)을 그대로 재사용하고, 가운데 종이 한 장(`intro-screen__paper`)에 2열(목적·성공 기준 / 진행 5단계·팁)로 본문을 담아 1280×720에서도 스크롤 없이 다 보이게 했다. 문구는 모두 T93 쉬운 말 규칙을 따른다(금지 어휘 0건). 헤더 진행 스트립(`ProgressStrip`)은 `STAGE_TO_STEP`에 INTRO가 없어 ATTRACT·SELECT와 똑같이 빈 채로 남는다(수정 불필요). 운영 메뉴 "새 체험"·결과 화면 "처음 화면으로"는 `OPERATOR_RESET`으로 `createInitialSession`이 만드는 ATTRACT로 돌아가므로, 참가자가 다시 "체험 시작"을 누르면 자연히 INTRO를 다시 거친다.
+
+**BRIEFING 중복 제거**: "특별 이사의 임무 … 최종 선택: 찬성/반대" 점선 상자(옛 `briefing-screen__role`·`__role-text`·`__final-decision`·`__final-yes`/`__final-no`, testid `briefing-role`)를 뺐다 — 같은 내용(목적·성공 기준)을 INTRO가 이미 보여주므로 BRIEFING은 사건 머리줄 + 결정 질문 + 상황·제안·미정 + 근거 자료 버튼만 남겨 "상황 파악"에 집중한다. 빈 세로 공간은 `.briefing-screen__status`(상황·제안·미정 상자)의 글자 크기·여백을 한 단계 키워(17.5→20px/14→16px) 채웠다 — 레이아웃 구조·클래스 이름은 그대로다. `e2e/briefing.spec.ts`·`screenshots.spec.ts`의 `briefing-role` 단언은 "더 이상 없다"(`toHaveCount(0)`)로 바꿨다.
+
+**공용 `GuideHint`**(`src/components/parts/GuideHint.tsx`): 오른쪽 종이 패널 상단에 한 줄 안내를 보여주는 아주 작은 컴포넌트. 다음 행동 요소에는 `data-guide="next"`를 붙여 `shell.css`의 전역 규칙(`[data-guide='next']`, 앰버 테두리 `guide-pulse` 1.6s 맥동)으로 강조한다 — `prefers-reduced-motion`이면 애니메이션 없이 정적 테두리만 남는다(미디어 쿼리 자체가 처리하므로 컴포넌트 쪽에서 분기할 필요가 없다).
+
+**화면별 가이드·게이팅**:
+
+| 화면 | 가이드 문구 | 게이팅 |
+| --- | --- | --- |
+| BRIEFING | "먼저 근거 자료 4장을 열어 보세요"(자료 버튼에 하이라이트) | 자료 팝업을 한 번 열어 닫기 전까지 "의견 듣기 ▶" 비활성(`.cta-disabled-hint`로 "근거 자료를 먼저 확인해 주세요"). 닫으면(닫기 버튼·Esc·딤 클릭 모두) CTA로 하이라이트 이동 |
+| OPINIONS | "임원 네 명의 의견을 읽어 보세요" | scripted는 카드 4장이 0.8초 간격으로 차례로 나타나고(`reduced-motion`이면 즉시) 다 나올 때까지 CTA 비활성. live는 기존 `allExecsSettled` 잠금 그대로 |
+| DISCUSS·REACTIONS(다시 답하기) | 미선택 "먼저 입장을 골라 주세요"(기존 문구) → 선택 뒤 "문구를 고르거나 직접 써 주세요" → 텍스트 생기면 전달 버튼 하이라이트 | 기존 CTA 비활성 규칙(`isSubmittable`/`canSubmit`) 그대로, 추가 게이팅 없음 — 하이라이트만 이동 |
+| REACTIONS(반응 듣기) | "임원들의 반응을 읽고 답해 보세요" | 반응이 다 모이면(scripted는 즉시, live는 `listenLocked` 해제 시) "답하기 ▶" 하이라이트 |
+| MOTION | "표결할 문장을 확인하세요" → 2초 뒤 CTA로 전환 | 게이팅 없음(시간 기반 하이라이트 전환뿐) |
+| VOTE | "찬성 또는 반대 도장을 고르세요" → 선택 뒤 CTA 하이라이트 | 기존 비활성 규칙 그대로 |
+| RESULT | "회의록 전문도 볼 수 있습니다"(처음 한 번만) | 게이팅 없음, 누르면 다시 보여주지 않음 |
+
+가이드 문구는 `docs/FACILITATOR_GUIDE.md`의 요원 안내 문구와 맞춘다. 영향받은 파일: `src/domain/types.ts`·`session.ts`·`publicPayload.ts`(STAGE_ORDER), `src/components/screens/{IntroScreen(신규),BriefingScreen,OpinionsScreen,DiscussScreen,ReactionsScreen,MotionScreen,VoteScreen,ResultScreen}.tsx`, `src/components/parts/GuideHint.tsx`(신규), `src/styles/screens/{intro.css(신규),shell.css}`. 영향받은 테스트: `tests/domain/session.test.ts`·`publicPayload.test.ts`·`liveMode.test.ts`·`tests/components/minutes.test.ts`·`tests/services/{orchestrator,live}.test.ts`(START 뒤 NEXT_STAGE로 INTRO를 지나가게 헬퍼 수정), `tests/components/{IntroScreen,GuideHint,OpinionsScreen,BriefingScreen}.test.tsx`(신규/수정). e2e는 전체 spec에 ATTRACT→INTRO 전환 클릭(공용 패턴)과 BRIEFING 자료 팝업 열고 닫는 단계를 추가했고, `screenshots.spec.ts`에 `intro.png`를 새로 캡처한다.
+## T94 — 안건 상황·제안·결과 문구 쉬운 말 (2026-10-08)
+
+T93(임원 발언)에 이어 **사용자 지시** "상황·제안·미정 문장도 같은 톤으로". 두 안건(ai-approval·experience-first)의 `chairBriefing.situation`·`incident.headline`·`incident.hook`을 중학생이 한 번에 읽을 짧은 문장으로 다시 썼다(의미·판단 방향은 그대로, hook은 숫자를 하나만 남겼다). `MotionScreen.tsx` 의장 말풍선의 "문안"(화면 다른 곳은 전부 "안건")을 "안건"으로 바꿨다. `subtitle`·`motionBreakdown`(proposal·undecidedItems)·`chairBriefing.question`·`role`은 손대지 않았다 — `subtitle`은 "원안을 그대로 쪼갠" 구조적 문구이고 `chairBriefing.question`과 단어 선택이 묶여 있어, question을 그대로 두면서 subtitle만 바꾸면 한 화면 안에서 같은 개념("중요한 의사결정" 등)을 다른 말로 부르게 된다. `remainingTasks`·`resultCopy`는 이미 금지 어휘 없고 문장이 짧아 검사만 추가하고 손대지 않았다.
+
+`tests/content/aiApproval.test.ts`·`experienceFirst.test.ts`에 "쉬운 말(T94)" describe를 추가해 구조적 문구(subtitle·motionBreakdown, 금지 어휘만)와 발언형 문구(situation·role·headline·hook·remainingTasks·resultCopy, 금지 어휘+문장당 글자 수 상한 50자)를 자동 검사한다. `server/scenario-data.ts`는 이 필드들을 갖지 않아(`originalMotionText`·`evidence`·`conditions`만) 동기화 대상이 아니다. `docs/SCENARIO_AI_APPROVAL.md`·`SCENARIO_EXPERIENCE_FIRST.md`의 사건·SITREP 줄을 함께 갱신했다. `npm run check`(단위 596 전부 통과) 확인.
+
+## T103 — 튜토리얼 코치 (2026-10-09)
+
+**사용자 지시**: "참석자가 프로그램을 처음 접하는 것이기 때문에 게임 튜토리얼처럼 가이드를 해 주는 게 좋을 것 같아. 기존에 추가했던 것과 중복되는 것이 있다면 제거하고 게임 튜토리얼같이 흐름을 잡아 줘. A안으로 해 줘." 시안(A안 스포트라이트, 사용자 승인): https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4
+
+**원칙**(T104에서 개정): 코치는 흐름을 끌고 가지 않고 **화면 사용법만** 알려 준다. 화면에 들어오면 그 화면을 어떻게 쓰는지 2~4줄로 한 번 알려 주고 끝이다. 같은 화면은 한 세션에서 한 번만 나온다. 버튼 잠금(게이팅)은 코치와 무관하게 그대로다 — 코치를 꺼도 진행이 막히지 않는다. 처음 만든 스포트라이트·10단계 추적형(어두운 덮개·클릭 막음·단계 이동)은 폐기했다.
+
+**6화면 안내**(문구 원본은 `src/content/coach.ts`, 표시 규칙은 `src/domain/coach.ts`). 머리는 "안내 N/6".
+
+| N | 화면 | 제목 | 줄 |
+|---|---|---|---|
+| 1 | BRIEFING | 상황을 읽고 자료를 열어 보세요 | ① 상황·제안·미정 세 줄을 읽습니다 ② '근거 자료 보기'로 자료 4장을 봅니다 ③ 그다음 '의견 듣기'가 열립니다 |
+| 2 | OPINIONS | 임원 네 명의 말을 읽어 보세요 | 누가 찬성·반대·고민 중인지 보세요 / 다 읽으면 '내 의견 쓰러 가기' |
+| 3 | DISCUSS | 내 의견은 이렇게 씁니다 | ① 찬성·반대를 고릅니다 ② 추천 문구를 여러 개 담거나 직접 씁니다 ③ AI 비서실장을 열어 세 가지를 한 번씩 써 봅니다 ④ 의견 전달을 누릅니다 |
+| 4 | REACTIONS 1/2 | 임원들이 답했습니다 | 입장이 바뀐 임원을 확인하세요(live는 카드마다 지금 입장) / 답하러 가거나 그냥 넘어갈 수 있습니다 |
+| 5 | VOTE | 마지막 표결입니다 | 찬성·반대 도장 중 하나를 고르고 확정합니다 / 같은 표가 3석 이상이면 설득 도장 |
+| 6 | RESULT | 결과를 확인하세요 | 제목 줄과 도장, 임원별 판단을 봅니다 / 회의 기록 전체도 볼 수 있습니다 |
+
+MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 없다.
+
+**스타일**(`src/styles/screens/coach.css`, 컴포넌트 `src/components/parts/Coach.tsx`)
+- 카드 한 장: 종이색 `#fbf7ee`, 검은 2px 테두리, 6px 오프셋 그림자. 머리 "안내 N/6"(12px 굵게, 갈색 `#8a5a12`), 제목 22px 굵게(핵심 말은 `.key-term`), 줄 15px(둘 이상이면 번호 목록), "알겠어요 ▶"(주황 `#e3a53f`, 검은 테두리, 높이 44px). 720 이하는 제목 18px·줄 13px.
+- 자리: 왼쪽 열 맨 위 **무대 사진 위**(`[data-testid="stage-band"]`, 장식이라 가려도 무방)에 12px 안쪽으로 얹는다. 모든 안내 화면이 무대를 가진다. 720에서는 왼쪽 열 아래에 빈 자리가 없어 이 자리를 쓴다. 문서 body로 portal해 화면 맞춤 축소의 영향을 받지 않고, 위치는 프레임마다 읽어 따라간다.
+- 강제 없음: 덮개·스포트라이트·클릭 막음이 없다. 카드 바깥은 클릭이 그대로 통과(`pointer-events`는 카드 자체에만)한다. 팝업 안에는 코치가 없다.
+- 닫힘: "알겠어요 ▶", 또는 그 화면의 **첫 조작**(버튼·링크·입력·라벨 클릭, 클릭이 끝난 뒤 기록)이면 자동으로 사라진다. 카드 안 클릭·운영 메뉴·빈 곳 클릭은 조작으로 세지 않는다.
+
+**상태**(`Session.coachEnabled` 기본 true, `Session.coachDismissed: number[]` = 이미 본 화면 번호 1~6, 액션 `COACH_SET_ENABLED`·`COACH_DISMISS`)
+- INTRO의 시작 버튼은 "확인" 하나이고 코치는 켠 채 시작한다(T104). 끄는 길은 운영 메뉴 "안내 끄기/켜기"와 `?coach=off`뿐이다 — 켜면 지금 화면의 아직 안 본 안내부터 나온다. 새 체험(`OPERATOR_RESET`)은 켬·기록 없음으로 초기화한다(`?coach=off`면 꺼진 채 유지).
+- `CoachHost`가 `coachStep(session, ui)`로 지금 화면 안내를 받아 그린다. 규칙은 도메인에 있고 컴포넌트에는 없다. 화면이 코치에게 알리는 상태는 REACTIONS의 `listen`/`answer` 하나뿐이다(옛 `useCoachReport`·`data-coach` 대상 속성은 모두 제거).
+
+**제거한 기존 가이드**: `GuideHint`(BRIEFING·OPINIONS·MOTION·VOTE·RESULT·REACTIONS 반응 듣기) 컴포넌트·테스트, `StepGuide`(T98 칩)·`domain/stepGuide.ts`·`stepGuide.css`·테스트, 비활성 CTA 옆 안내 문장(`cta-disabled-hint`, 화면 읽기용 sr-only 문장으로 대체), `[data-guide='next']` 맥동 규칙과 모든 `data-guide` 속성(→ 코치 대상 `data-coach`), MOTION 2초 뒤 CTA 전환, RESULT 회의 기록 1회 강조, INTRO "진행 5단계·약 4분"과 "팁". **유지**: 버튼 잠금 전부, 상단 진행 표시, 설득 현황판, 비서실장 팝업 소개·체크, REACTIONS 비활성 전달 버튼 `cta--outline`, T102의 말풍선·발언 흐름 역할 분담.
+
+## T104 — 코치를 화면 사용법 안내로·INTRO 버튼·안내 카드 확대 (2026-10-09)
+
+**사용자 지시**: "상황 파악 시 근거 자료를 무조건 먼저 보게 되어 있어서 상황판 확인 후 근거 자료를 볼 수 있도록. 체험 전 안내에서는 무조건 안내 받을 수 있도록 버튼을 하나만 해 주고, 팝업 크기를 여유 있게 키워 줘." 이어서 "튜토리얼을 어떻게 사용하는지만 가이드해 주고 강제로 흐름을 끌고 가지 않았으면 해."
+
+- **코치 개정**: T103의 단계 추적형(스포트라이트·덮개·단계 이동)을 화면당 말풍선 하나의 사용법 안내로 바꿨다(위 T103 단락). BRIEFING 안내 하나 안에 상황 읽기가 먼저, 근거 자료가 그다음으로 적혀 자료를 먼저 보라고 끌지 않는다.
+- **INTRO 버튼 하나**: "안내 없이 시작"을 없애고 버튼을 **"확인"** 하나만 둔다. 코치를 끄는 길은 운영 메뉴 "안내 끄기"와 URL `?coach=off`(운영·테스트용; 첫 세션과 새 체험 리셋 뒤에도 유지) 두 가지다.
+- **안내 카드 확대**(`intro.css`): 1080 폭 940→1180px, 패딩 26/34→48/56px, 제목 28→34px, 목적·성공 기준 20→22px. 720 이하는 폭 760→880px, 패딩 30/40px, 제목 26px, 본문 18px. 720에서 버튼·강조 줄이 잘리지 않는다(viewport-fit·noscroll e2e).
+
+## T106 — 코치 안내를 아이콘으로 다시 열기 (2026-10-09)
+
+**사용자 지시**: "안내 팝업이 '알겠어요'를 누르면 사라져서 한 번 보고 사라지는 게 아니라 아이콘 형태로 해서 다시 볼 수 있으면 좋겠어."
+
+- **아이콘**: 말풍선이 닫히면(알겠어요·첫 조작) 같은 자리(무대 사진 왼쪽 위 안쪽)에 `coach-icon`이 남는다. 지름 44px 둥근 버튼, 종이색 바탕, 검은 2px 테두리, 안에 한글 "안내"(영문·물음표 아이콘 없음). `aria-label="안내 다시 보기"`, 키보드 포커스 가능. 코치가 있는 6개 화면에만 나오고, 코치가 꺼져 있거나(운영 메뉴·`?coach=off`) 안내 없는 화면(INTRO·SELECT·MOTION·다시 답하기)에는 없다.
+- **다시 열기**: 누르면 그 화면 말풍선이 같은 모양("안내 N/6")으로 열리고 버튼은 "닫기 ▶"(처음 자동 표시는 "알겠어요 ▶"). 참가자가 일부러 연 것이므로 첫 조작으로는 닫히지 않고 "닫기 ▶"와 Esc로만 닫힌다.
+- **상태**: "처음 자동 표시 여부"(`coachDismissed`, 세션)와 별개로 `CoachHost`의 화면 안 상태 `reopened`만 쓴다. 세션에 저장하지 않으며 화면이 바뀌면 비운다. 도메인 규칙(`coachStep`)은 그대로다.
+- 강제 흐름·버튼 잠금은 바뀌지 않았다. 아이콘은 말풍선과 같은 앵커(무대 사진)를 따라가 720에서도 사진 밖으로 나가지 않는다.
+
+## T112 — 안내 드래그 (2026-10-09)
+
+**사용자 지시**: "안내 버튼이 이미지를 가려서 마우스 드래그로 이동시키게끔 해줘."
+
+- **끌기**: 안내 아이콘과 말풍선 머리(제목 줄 "안내 N/6" 전체, 커서 `grab`)를 Pointer Events(`setPointerCapture`)로 끌어 옮긴다. 마우스·터치 같은 코드(`touch-action: none`). 이동 4px 미만이면 끌기가 아니라 클릭(아이콘 열기)이고, 끌고 난 직후의 click은 열기로 세지 않는다. 화면 밖으로는 못 나가며(여백 8px) 끄는 동안 글자 선택이 안 된다. 전환 효과는 없다.
+- **기억**: 옮긴 자리는 뷰포트 비율(x, y)로 `sessionStorage`의 `coach-pos`에 저장한다. 화면이 바뀌어도, 말풍선↔아이콘이 바뀌어도 같은 왼쪽 위 자리를 쓴다(말풍선이 더 커서 넘치면 화면 안으로 밀린다). 창 크기가 바뀌면 비율로 다시 계산해 조인다. 새 체험(`sessionId` 변경)이면 지우고 무대 사진 위 기본 자리로 돌아간다. 저장 실패는 무시한다. 코드는 `coachPosition.ts`, 기본 자리·팝업 중 숨김(Codex 44차)은 그대로다.
+- **되돌리기·키보드**: 아이콘이나 말풍선 머리를 더블클릭하면 기본 자리로 돌아간다(별도 버튼 없음). 아이콘에 포커스한 뒤 화살표 키로 16px씩 옮긴다. 아이콘 `aria-label`은 "안내 다시 보기, 끌어서 옮길 수 있음".
+- 더블클릭의 첫 클릭은 아이콘을 눌러 말풍선을 열 수 있다. 이때 두 번째 클릭이 머리에 닿아 자리만 돌아가고 말풍선은 열려 있다.
+
+## T107 — 버튼 라벨 테이프 (2026-10-09)
+
+> T108(2026-10-09)에서 D안 '밀랍 봉인 봉투'로 대체됐다. 아래는 이력으로만 남긴다.
+
+"비밀 요원이 쓸 법한" 버튼. 서류 가방에 붙인 라벨 테이프 모양이다. 시안 캔버스 E 보드: https://claude.ai/artifact/JwwGvecMegnPz3HnnNwzFp . 색 체계(주황 `--amber`·먹색·종이)와 버튼 높이·720 레이아웃은 T86 그대로이고 모양만 바뀐다. 규칙은 `src/styles/screens/shell.css`의 `.cta` 계열 한 곳에 있다.
+
+| 종류 | 클래스 | 모양 |
+|---|---|---|
+| 주 버튼 | `.cta` | 주황 바탕·먹색 글자, 테두리 없이 위아래 2px 먹색 선, 양끝 사선 컷(`clip-path`, 12px), 양끝 안쪽 7px 먹색 펀치 구멍(`::before/::after`), 좌우 패딩 36px, 자간 0.08em, `:active` 1px 아래로 |
+| 보조 버튼 | `.cta--secondary` | 투명 바탕, 2px 주황 테두리·주황 글자, 컷 10px, 구멍 없음 |
+| 종이 위·팝업 안 주 버튼 | `.cta--solid`, 팝업(`.dialog-shell`) 안 `.cta--secondary`, 선택된 입장 탭 | 주황 바탕 + 위아래 2px 먹색(#1b1a17) 선 + 컷 10px, 구멍 없음. 근거 자료 보기·팝업 닫기·비서실장 기능 버튼 |
+| 종이 위 선택 안 된 입장 탭 | `.side-select__btn` | 보조 모양, 글자만 진한 주황 #8a5f12 |
+| 잠긴 버튼 | `:disabled`, `.cta--outline` | 투명 바탕, 2px 점선 회색(#7a766d) 테두리·글자, 컷 유지, 구멍 없음. REACTIONS 빈 답변 전달 버튼도 같은 모양 |
+| 코치 "알겠어요"·"닫기" | `.coach__ack` | 종이 위 주 버튼 소형(컷 8px, 구멍 없음) |
+
+- 1280×720: 높이·글자 크기는 그대로, 컷 8px·구멍 5px·좌우 패딩 24px(보조·종이 위 18px)로 줄인다.
+- 바꾸지 않은 것: 건너뛰기 밑줄 글자, 조건 칩, 안내 아이콘, 운영 버튼, 임원 표 도장.
+- `clip-path`는 `box-shadow`를 잘라내므로 그림자·글로우는 쓰지 않는다. 호버는 `filter: brightness(1.1)`(보조는 연한 주황 바탕)이다.
+- 접근성: 포커스 링은 `outline`을 끄고 안쪽 `box-shadow inset`으로 그린다(`:focus-visible`만). 주 버튼·종이 위 버튼은 먹색 3px, 어두운 바탕 위 보조 버튼은 연한 주황(#f4d79a) 2px로 컷 밖으로 나가지 않는다.
+- 사선 변 테두리: `clip-path`가 좌우 테두리를 잘라내므로 보조·잠긴 버튼은 위아래만 `border-block`으로 두고, 사선 변은 `::before`·`::after`가 2.4px 띠로 덧그린다(색 `--cta-line`). 잠긴 버튼은 위아래 점선, 사선 변은 실선이다.
+
+## T111 — 버튼 요원 장비 패널 (2026-10-09)
+
+사용자 지시("버튼은 B디자인에 E색상으로 변경해줘"). 시안 B 보드의 모양(이중 테두리·네 모서리 꺾쇠·넓은 자간)에 청록 대신 주황(--amber #e0a34a)을 쓴다. T108의 봉인·안쪽 점선·폭 조정은 없앴다(토글 225/180/150, 전달 250/200으로 복귀). 버튼 높이는 T86 값 그대로, 붉은색·영문·기호 글리프 없음.
+
+| 종류 | 바탕 | 글자 | 테두리(2px) | 바깥 이중 테두리 | 꺾쇠 | 자간 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 주 버튼(.cta) | #e0a34a | #0b0d10 | #e0a34a | 4px #0b0d10 + 6px #8a5f12 | 12px 주황 L자 4개 | 0.16em |
+| 보조(.cta--secondary) | #0f1620 | #e0a34a | #e0a34a | 없음 | 없음 | 0.12em |
+| 잠김(:disabled, .cta--outline) | #0f1620 | #7a766d | #4a4540 | 없음 | 없음 | 0.16em |
+| 종이 위 주 버튼(.cta--solid), 팝업 안 보조, 코치 알겠어요 | #1b1a17 | #ece7dc | #1b1a17 | 3px #ece7dc + 5px #1b1a17 | 없음 | 0.14em |
+| 입장 탭 선택됨 | #1b1a17 | #e0a34a | #1b1a17 | 없음 | 없음 | 0.1em |
+| 입장 탭 미선택 | 투명 | #1b1a17 | #1b1a17 | 없음 | 없음 | 0.1em |
+
+- 꺾쇠는 `::before` 하나에 선형 그라디언트 8개로 그린다(버튼 둘레 10px 밖). 주 버튼에만 있다. 이 장식이 버튼의 scrollHeight를 늘리므로 `e2e/noscroll.spec.ts`의 내부 넘침 검사는 `.cta`를 제외한다.
+- `:active`는 아래 홈(어두운 주황 / 종이 위는 먹색)을 없앤다. 포커스는 `outline` 3px(주 버튼 #f0c27a offset 9px, 종이 위 #e0a34a offset 7px).
+- 이중 테두리가 바깥 5~6px, 꺾쇠가 10px 나오므로 이웃 버튼과 간격 14px 이상(비서실장 팝업 기능 버튼 간격 14px). "건너뛰기"는 밑줄 글자 그대로("[ ]" 기호 없음).
+- 1280×720: 꺾쇠 10px(바깥 8px), 이중 테두리 3/5px, 패딩 20px(보조 16px, 종이 위 18px). REACTIONS 세 버튼은 한 줄.
+- 변경하지 않는 것: 조건 칩, 안내 아이콘, 운영 버튼.
+
+## T108 — 버튼 밀랍 봉인 봉투 (2026-10-09)
+
+> T111에서 B안 모양 + E안 색으로 대체됐다(아래 T111 단락). 이 단락은 이력이다.
+
+사용자 재선택("버튼 D안으로 변경해줘"). 시안 D 보드. T107의 사선 컷·펀치 구멍·사선 띠는 모두 제거했다. 붉은색은 봉인 장식에만 쓰고 글자·테두리에는 쓰지 않는다. 봉인 안에 글자는 넣지 않는다. 버튼 높이는 T86 값 그대로.
+
+| 종류 | 바탕 | 글자 | 테두리(2px 실선) | 안쪽 점선(2px) | 봉인 |
+| --- | --- | --- | --- | --- | --- |
+| 주 버튼(.cta) | #141413 | #ece7dc | #ece7dc | #7a766d, 안쪽 8px | 30px 붉은색 |
+| 보조(.cta--secondary) | #141413 | #ece7dc | #ece7dc | #7a766d, 안쪽 7px | 없음(좌우 20px) |
+| 잠김(:disabled, .cta--outline) | #141413 | #7a766d | #4a4540 | #3a3631 | 회색 원, 그림자 없음 |
+| 종이 위 주 버튼(.cta--solid) | #fbf7ee | #1b1a17 | #1b1a17 | #a8a194, 안쪽 7px | 24px 붉은색 |
+| 팝업 안 보조·코치 알겠어요/닫기 | #fbf7ee | #1b1a17 | #1b1a17 | #a8a194 | 없음 |
+| 입장 탭 선택됨 | #1b1a17 | #ece7dc | #1b1a17 | 없음 | 없음 |
+| 입장 탭 미선택 | 투명 | #1b1a17 | #1b1a17 | #a8a194, 안쪽 7px | 없음 |
+
+- 봉인은 `::before`(붉은 #b23b3b, 안쪽 링 #8f2d2d), 봉인과 글자 사이 14px, 좌 패딩 16px·우 26px, 자간 0.06em. `:active`에서 봉인이 `scale(0.9)`.
+- 포커스: `:focus-visible`에 주황 글로우 `box-shadow: 0 0 0 3px #e0a34a`(안쪽 점선은 그대로).
+- 1280×720: 높이·글자 크기 유지, 봉인 24px, 점선 안쪽 6px, 좌우 패딩 12/18px, 간격 10px. REACTIONS 세 버튼은 한 줄.
+- 변경하지 않는 것: 건너뛰기 밑줄, 조건 칩, 안내 아이콘, 운영 버튼.
+
+## T105 — 근거 자료·임원 발언 카드 핵심 말 강조 (2026-10-09)
+
+- 사용자 지시: "근거 자료와 임원 의견들에 중요한 단어는 강조표시해." 브리핑(T99)과 같은 `HighlightText`·`.key-term`(굵은 잉크+연한 종이색, 붉은 박스 없음)을 쓴다. 새 문구·문장 변경 없음.
+- 적용 위치: 근거 자료 카드의 해석 한 문장(제목 제외), OPINIONS 의견 카드, REACTIONS 반응 카드 본문과 추가 질문, live 발언 카드(`LiveStatementCards`). 반응 카드의 "이사님의 '…' 조건으로" 줄, 무대 말풍선, 회의 기록(MinutesPanel·RESULT 전체 보기)·자료 팝업의 발언 열은 적용하지 않는다.
+- 고르는 규칙은 `src/components/highlightTerms.ts`(순수 함수)에 있다. 후보는 시나리오의 `highlightTerms`·`evidenceHighlightTerms`·`statementHighlightTerms`, 조건 이름(`conditions[].label`), 숫자+단위 자동 추출이다. 텍스트에 실제로 나오는 것만 쓰고 긴 말을 먼저 잡는다.
+- 밀도 규칙: 카드 한 장의 강조 표시는 4곳 이하(`MAX_HIGHLIGHTS`). 넘으면 짧은 말부터 뺀다. 두 안건 모두 자료용·발언용 핵심 말은 각 6~10개이며 문장에 실제로 들어 있는지 테스트로 확인한다.
+- **임원 발언 열 제거(2026-10-09 추가 지시)**: "근거 자료 및 임원 발언에서 임원 발언은 아예 제거해 주고 근거 자료만 보여 주게끔 해." `EvidenceDialog`는 자료 4장(2×2)만 그리고 `statements` 입력이 없다. BRIEFING·DISCUSS·REACTIONS의 "근거 자료 보기" 버튼 옆 설명은 "자료 4장"이다. 임원 발언은 OPINIONS·REACTIONS 종이 카드와 발언 흐름에서만 본다.
+
+## T110 — 두 단계 설득 (2026-10-09)
+
+사용자 지시: "처음 추천문구를 선택해서 의견전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을 해줘." 설득은 **첫 의견 → 고민 중 → 추가 질문 답변 → 확정** 두 단계로 완성된다.
+
+| 시점 | 조건이 맞은 임원(처음부터 같은 편이 아닌 임원) | 처음부터 같은 편인 임원(①②의 CEO) |
+| --- | --- | --- |
+| OPINIONS·DISCUSS | 출발 성향 그대로(반대·미정) | 출발 성향 그대로 |
+| REACTIONS 1/2 반응 듣기 | **고민 중**(배지 "반대 → 고민 중", 처음부터 미정이던 CAIO는 "고민 중 유지"). 반응 문구는 `pendingText`("조건은 좋습니다. 하나만 더 묻겠습니다" 톤) | 찬성 유지 |
+| 답변 전달(SUBMIT_FOLLOWUP) 뒤 MOTION·VOTE | **찬성**("고민 중 → 찬성") | 찬성 |
+| 답하지 않고 넘어가기(KEEP_PREVIOUS) 뒤 | **반대**(표결도 NO) | 찬성 |
+
+- **규칙(scripted)**: `session.followUpAnswered`(SUBMIT_FOLLOWUP true, KEEP_PREVIOUS false, 초기 false)를 `VoteContext.followUpAnswered`로 넘긴다. 값이 명시적으로 `false`일 때만 게이트가 켜져, 규칙표상 참가자가 노리는 표(찬성 참가자면 YES, 반대 참가자면 NO)인데 조건 없는 표와 다른 임원을 조건 없는 표로 되돌린다. 목표 반대 방향으로 움직이는 조건(예: 찬성 참가자의 FULL_AUTO)은 게이트가 없다. 값을 생략하면 규칙표 그대로라 조건 추천·필요 조건 계산(`requiredConditionsFor`)은 영향이 없다.
+- **표정(scriptedStances)**: 게이트에 걸린 임원은 REACTIONS(아직 답하지도 넘기지도 않음)에서 UNDECIDED, 답을 전달하면 규칙표 그대로, 넘어가면 표결과 같은 값이다. `membersAwaitingAnswer`가 "답만 남은 임원"을 돌려준다.
+- **화면**: 반응 카드와 무대 말풍선은 `pendingText`·`pendingBubble`을 쓴다. 설득 현황판 행은 "조건은 충분 · 답변 뒤 찬성"(반대 참가자는 "답변 뒤 반대"). AI 비서실장 조건 추천은 답만 남은 임원을 "더 필요한 조건"에서 빼고 "조건은 맞으니 추가 질문에 답하면 찬성입니다"로 따로 말한다. 코치 4번에 "'찬성 쪽'으로 기울어진 임원은 답해야 확정됩니다."(T118에서 문구 갱신) 한 줄을 더했다. 1/2의 "답하러 가기 ▶"가 주 버튼, "넘어가기"가 보조 버튼인 구조는 그대로다(버튼 모양은 T111).
+- **결과**: 답하지 않아 돌아간 표의 판단 이유는 "조건은 좋았지만 추가 질문에 답이 없어 마음을 정하지 못하고 반대합니다"이고, "한 끗 차이"는 "조건은 맞았으니 추가 질문에 답했다면 찬성"(조건이 모자라면 "'…'와 추가 질문 답변이 있었으면 찬성")이다. 아무도 못 움직였는데 답했다면 움직였을 임원이 있으면 제목이 "조건은 맞았지만 추가 질문에 답하지 않아 임원의 마음을 바꾸지 못했습니다 — 다음엔 답하러 가 보세요"다.
+- **live(프롬프트 v12)**: REACTIONS 지시에 "조건이 충분해도 stance는 UNDECIDED까지만, 확정은 추가 질문에 답한 뒤"(`REACTIONS_FIRST_PASS_RULE`, 기존 stance 지침보다 우선), FOLLOWUP 지시에 "답을 받았으니 확정해도 된다", VOTE 지시에 `followUpAnswered`가 false일 때 "고민 중이던 임원은 처음 입장대로 표결"을 더했다. 요청 스키마(round·vote)에 `followUpAnswered` 선택 필드가 있다.
+
+
+## T118 — 기울어진 방향 (2026-10-10)
+
+사용자 지시: "내 의견을 한번 전달했을 때는 AI 임원들의 찬반이 변경되었는지 알 수 있게 해 주고, 반응에 답하고 마지막 표결 전에만 가리게 해 줘." 첫 의견 뒤 REACTIONS에서 조건이 맞아 답변만 남은 임원(T110의 "고민 중")을 **기울어진 방향**으로 보인다. 순수 클라이언트 계산(`domain/stance.ts leaningStances`: 규칙표 + 확정 조건)이며 프롬프트(v13)·서버 교정·표결 규칙(T110 게이트)·봉인/공개 연출은 바꾸지 않는다. 표결에 쓰는 stance 값은 그대로 UNDECIDED이고 표시만 바뀐다.
+
+기울음 기준: scripted는 `membersAwaitingAnswer`, live는 모델 stance가 UNDECIDED이면서 규칙표로 조건이 충족된(조건 없이는 목표 표가 아닌) 임원. 이미 찬성·반대로 말한 임원은 모델 말을 따른다. 참가자 목표 방향(찬성 참가자→찬성 쪽, 반대 참가자→반대 쪽)으로만 기운다.
+
+| 단계 | 현황판 | 무대 표정 | 반응 카드·안내 |
+| --- | --- | --- | --- |
+| OPINIONS·DISCUSS | 첫 입장(변화 없음) | 첫 입장 | 해당 없음 |
+| REACTIONS 1/2·2/2 | 입장 열 "반대 → 찬성 쪽"(점선 테두리), 비고 "답변하면 확정"(반대 참가자는 "답변하면 반대로 확정"), 집계 "설득한 임원 N/M (기울음 K)" | 목표 방향 표정의 점선 변형 + 캡션 "찬성 쪽 · 미확정" | 배지 "반대 → 찬성 쪽", 카드 한 줄 "답변하면 확정됩니다", 비서실장 "…는 찬성 쪽으로 기울었습니다 · 추가 질문에 답하면 확정됩니다" |
+| MOTION·VOTE | 봉인("가림", T114) | 중립 표정(T114) | 입장 봉인(T114) |
+| RESULT | 순차 공개(T114) | 표 배지 | 결과 요약 |
+
+코치 4번(scripted)은 "'찬성 쪽'으로 기울어진 임원은 답해야 확정됩니다.", live(linesLive)는 "고민 중이거나 기울어진 임원은 답해야 입장을 정합니다."로 맞춘다.
+
+2/2에서 입장·조건을 바꾸면 무대 표정도 같은 기준으로 다시 계산한다(`ReactionsScreen`이 `onLeaningChange`로 App에 올린다).
+
+기울음은 확정이 아니므로 채움 대신 점선 테두리·연한 색을 쓰고 문구는 "찬성 쪽"("찬성"이 아니다). 집계 N은 기울음을 세지 않는다.
+
+## T114 — 봉인과 순차 공개 (2026-10-09)
+
+사용자 지시: "마지막에 반응에 답하기 후 AI 임원들의 찬반 방향이 어떻게 될지 몰라야 투표하고 나서 결과가 더 극적일 것 같아." 추가 질문에 답한 뒤(MOTION·VOTE)에는 임원이 어느 쪽으로 기울었는지 어떤 경로로도 알 수 없고, RESULT에서 임원 표를 한 장씩 뒤집어 공개한다. **답변 전 단계(OPINIONS·REACTIONS·DISCUSS)의 표시·규칙과 표결 규칙표(`domain/voting`·`stance`)는 바꾸지 않았다.** "답변 전 힌트도 중립화"는 사용자가 고르지 않았다. 봉인 단계는 `stage`가 MOTION·VOTE인 동안이다(두 단계는 SUBMIT_FOLLOWUP 또는 KEEP_PREVIOUS 뒤에만 열린다).
+
+### 새던 경로 4개와 막은 방법
+
+| # | 새던 경로 | 막은 방법 |
+| --- | --- | --- |
+| 1 | MOTION·VOTE 설득 현황판의 입장 열("반대 → 찬성")·비고("설득 완료"/"움직일 조건")·집계("설득한 임원 N/M", "○○ 남음") | `PersuasionBoard`에 `sealed`. 입장 열은 임원 표와 같은 점선 `?` 원 + "가림", 비고는 "답변을 들었습니다 · 결과에서 공개", 집계는 "임원 방향 봉인"·"결과에서 공개". 처음부터 같은 편 임원은 이미 아는 사실이라 "처음부터 같은 편" 그대로. 봉인이면 `stances`를 읽지 않는다 |
+| 2 | 무대 표정 배지·캡션(`StageBand`)과 스크린리더 목록(`ExecStanceList`) | `App`이 MOTION·VOTE에서 `StageBand`에 네 명 모두 "고민 중" 중립 `stances`를 준다. `ExecStanceList`는 `sealed`면 "입장 봉인"만 읽는다 |
+| 3 | live FOLLOWUP 2차 발언 문장("찬성합니다" 류)과 입장 라벨 | 프롬프트 v13: FOLLOWUP 지시에 "답변에 대한 평가·소회만 말하고 최종 찬반·표결 방향을 문장으로 밝히지 말 것"(`FOLLOWUP_NO_VERDICT_RULE`). 스키마의 `stance`는 그대로 받되 MOTION·VOTE 화면 어디에도 그리지 않는다(회의록 `MinutesPanel`은 발언 텍스트만 보여 주고 입장 라벨이 없다). mock FOLLOWUP 문장도 방향 없는 문장 |
+| 4 | 비서실장·의장·안내 문구 | MOTION 의장 한 줄(`chairMotionLine`)은 조건 수·이름만 말한다. 답변 뒤 방향을 말하는 문구는 찾지 못했다. 답변 전 단계 문구("조건은 충분 · 답변 뒤 찬성")는 답변 전이라 그대로 둔다 |
+
+### 결과 순차 공개 타이밍
+
+상수는 `src/components/resultStamp.ts` 한 곳이다. `setTimeout` 없이 CSS `animation-delay`로만 구현해 Clock 규칙과 무관하다.
+
+| 시각(초) | 일어나는 일 |
+| --- | --- |
+| 0 | 임원 네 장이 봉인(`?`)으로 시작. 좌측 TALLY 막대 4칸은 회색, 우측 판단 행은 직함만 보임, 결론 제목·집계·설득 요약은 숨김. 참가자 표 배지는 처음부터 보임 |
+| 0.9 / 1.8 / 2.7 / 3.6 | CEO → CFO → CAIO → CISO 순서(`EXEC_MEMBER_ORDER`)로 한 장씩 뒤집힘(0.5초). 무대 표 배지·좌측 막대·우측 판단 행이 같은 시각에 열린다 |
+| 4.1 | 마지막 장이 다 열림. 이때 집계 숫자("찬성 N / 반대 N"·"같은 표 N석")·결론 제목·설득 요약에 더해, **결과에 따라 문장이 달라지는 나머지 요소**("6개월 뒤" 카드, 남은 과제·AI 비서실장 줄, 참가자 행의 다수·소수 의견 문구, 일부 미표결 안내, 도장 칸 스크린리더 텍스트)도 함께 나타남. 그 전에는 opacity 0 + `aria-hidden`(`useResultReveal`이 같은 시각에 푼다) |
+| 4.2 | 가결·부결 도장(`STAMP_DELAY_SECONDS`) |
+| 4.6 | 성공·실패 도장(`PERSUASION_STAMP_DELAY_SECONDS`) |
+
+- **줄이기**: `prefers-reduced-motion`이면 `base.css` 전역 규칙이 지연을 0으로 만들어 봉인 없이 즉시 전부 공개. 운영자 skip(결과 화면 클릭·키 입력)은 `<html data-result-skip="true">`를 켜 같은 효과(무대는 결과 화면 밖 DOM이라 속성으로 전달).
+- **접근성**: 봉인 표시는 `aria-hidden`. 표 배지·판단 행의 텍스트는 처음부터 DOM에 있어 스크린리더에는 결과가 바로 읽힌다(시각 연출만 지연).
+- **스크린샷**: `motion.png`·`vote.png`·`result.png`를 갱신했다. result는 모든 공개가 끝난 상태다.
+
+### FOLLOWUP 원문 방어 (T114, Codex 53차)
+
+프롬프트 규칙(v13)을 모델이 어길 수 있어 두 겹으로 막는다. 기준 함수는 `src/domain/verdictWords.ts`(`findVerdictWords`: 찬성·반대·가결·부결)이고 평가 스크립트도 같은 함수를 쓴다.
+
+- **서버**(`server/handlers/round.ts`, FOLLOWUP 단계만): 응답 문장에 방향 단어가 있으면 `invalid_response`로 보고 기존 재시도 경로를 한 번 탄다. 재시도에서도 남거나 재시도 예산이 없으면 그 임원 발언만 역할별 중립 문장("이사님 답변은 들었습니다. … 제 판단은 표결에서 밝히겠습니다.")으로 바꿔 내려보내고(`stance`·근거는 유지, 캐시 토큰은 두 시도 합산) 로그 `note`에 `followup_verdict_masked`를 남긴다.
+- **화면**(`buildMinutes`): MOTION·VOTE 회의록은 방향 단어가 든 FOLLOWUP 행을 "(답변을 들었습니다 · 결과에서 공개)"로 바꾼다. RESULT 이후는 원문이고, 결과 화면의 회의 기록 전문도 순차 공개가 끝나기 전에는 같은 방식으로 가린다.
+
+## T117 — 반응에 답하기 HUD 버튼 잘림 수정 + 조건 칩 한 줄 (2026-10-10)
+
+사용자 보고(T116 배포 뒤): "여전히 반응에 답하기에서는 버튼이 잘려서 보여. 내 발언의 조건들이 한 줄 안에 나올 수 있도록 수정 검토해 줘." 뷰포트를 알 수 없어 여섯 크기에서 REACTIONS 2/2에 조건 5개 + 300자 + 충돌 안내 상태로 들어가 제출 줄 `[답변 전달]`의 아래 끝(boundingBox.bottom)을 쟀다(Chrome, 브라우저 UI 제외 높이).
+
+**원인.** 화면 맞춤 축소는 뷰포트가 1200×700 이상이면 `natural`이라 1366×768·1440×900·1536×864에서는 켜지지 않는다(축소 모드 자체는 정상, 960~1200 폭 근처에서만 동작). 치수 규칙은 폭만 본다. 폭이 1280을 넘으면 1080용(제출 버튼 70px, 칩 2줄 칸 88px, 입력 상자 116px)이 그대로 적용되는데, 무대 높이는 폭의 40%(16:9)라 폭이 큰 노트북 화면(세로 768~900)에서는 왼쪽 열이 모자란다. 왼쪽 열 내용은 넘쳐도 줄지 않아(T116은 고정 px) 제출 줄이 `.app-shell`의 `overflow: hidden`에 잘렸다.
+
+| 뷰포트 | 이전 제출 줄 아래 끝 | 이전 결과 | 이후 아래 끝 | 이후 입력 상자 보이는 높이 | 현황판 |
+| --- | --- | --- | --- | --- | --- |
+| 1920×1080 | 1020 | 통과 | 984 | 116px | 펼침 |
+| 1600×900 | - | - | 860 | 78px | 펼침 |
+| 1536×864 | 934 | **70px 잘림** | 824 | 57px | 펼침 |
+| 1440×900 | 998 | **98px 잘림** | 860 | 114px | 펼침 |
+| 1366×768 | 982 | **214px 잘림** | 720 | 116px(1차 수정은 44px에 칩과 겹침) | 접힘 |
+| 1280×720 | 703 | 통과(17px) | 625 | 96px | 접힘 |
+
+**측정 조건.** "이후"는 새 페이지로 연 뒤(뷰포트를 먼저 정하고 `goto`; 현황판 기본 펼침/접힘과 무대 열 폭이 첫 렌더 크기로 정해지므로 1920에서 열고 크기만 바꾸면 다르다) REACTIONS 2/2에서 조건 5개 + 300자 + 충돌 안내 상태, 화면 배율 1(전부 `natural`)로 쟀다. 입력 상자는 `clientHeight`(보이는 높이), 제출 줄은 세 버튼 중 가장 아래 끝이다. 현황판이 펼침(폭 >1280이고 높이 >800)이면 그만큼 입력 상자가 줄어든다(1600×900 78px, 1536×864 57px). 이후 아래 끝의 "여유"(뷰포트 높이 - 아래 끝)는 캔버스 바닥 패딩 포함이라 입력 상자가 쓸 수 있는 높이가 아니다. 1280×720의 이전 703 대 이후 625는 레이아웃 변화가 아니라 현황판 펼침/접힘과 버튼 줄바꿈 차이다.
+
+이전 값은 T116 고정 칸(칩 칸 88px·입력 상자 116px)이라 충돌 안내 유무와 무관하게 같다. 1440·1366에서는 [AI 비서실장] 버튼이 윗줄로 줄바꿈돼 윗줄 아래 끝이 907·891이었다.
+
+**수정.**
+- **남는 높이를 채우는 입력 상자.** `.draft-editor`를 grid(머리줄 / `minmax(0, var(--hud-textarea-h))`)로 바꿨다. 입력 상자는 `height: auto`, 최소 44px(`--hud-input-min`), 여유가 있어도 최대 116px(1080)·96px(≤1280폭)까지다. 넘치는 글은 안쪽 스크롤, `resize: none` 그대로다. HUD는 `flex: 0 1 auto`라 열이 모자라면 줄어들고, 제출 줄(`flex: none`)은 열 바닥에 남는다. **검토 뒤 보강(겹침 방지).** 1차 수정에서는 편집기가 입력 상자 최소 높이 밑으로 줄어 1366×768에서 입력 상자(44px)가 편집기 박스(29px) 밖으로 넘쳐 조건 칩 줄과 겹쳤다. 이제 `.draft-editor`의 `min-height`가 머리줄(`--hud-head-h` 20px, ≤1280폭 16px) + 간격 + 최소 입력 상자 44px이라 구조적으로 겹칠 수 없다.
+- **세로 예산 확보(낮고 넓은 화면).** 겹침을 막는 것만으로는 44px가 어디서도 보장되지 않아 낮은 화면의 위쪽 높이를 줄였다. (1) `tokens.css`: 높이 ≤800·폭 >1280에서 무대 열 폭을 `min(40vw, 60vh)`로 묶는다(1366×768에서 폭 461px·높이 약 259px로 720과 같은 무대, 546px→461px로 약 47px 절약). (2) `PersuasionBoard`: 기본 펼침 조건을 폭 >1280에 높이 >800을 더했다(1366×768은 접힌 채 시작, 약 80px 절약). 낮은 화면에서 직접 펼쳐도 행 목록은 최대 52px 안쪽 스크롤이라 입력 상자 자리를 뺏지 않는다. 충돌 안내를 아이콘+툴팁으로 옮기는 안은 쓰지 않았다(제출을 막는 이유라 글로 보이는 쪽이 낫고, 위 두 가지로 예산이 충분하다).
+- **조건 칩 한 줄.** 칩 줄은 `flex-flow: row nowrap`, 칩 높이 24px(≤1280폭 22px), 글자 12px(≤1280폭 11px), 안쪽 여백 9px(8px). 5개가 폭에 안 들어가면 칩 줄만 가로 스크롤(얇은 스크롤바, 포커스가 가면 브라우저가 자동 스크롤). macOS 오버레이 스크롤바는 힌트를 주지 못하므로 오른쪽에 가려진 칩이 있으면(칩과 목록의 `getBoundingClientRect` 차이로 센다. `offsetLeft`는 목록 밖 기준이라 쓰지 않는다) 칩 줄 오른쪽 끝을 28px 페이드하고 옆에 "+N"(가려진 칩 수, title에 안내)을 보인다. "✓"·"+ 새 조건" 꼬리는 `aria-hidden`(선택 상태는 `aria-pressed`가 전한다). 라벨은 최대 14em에서 말줄임이고 전체 이름은 `title`, "✓"·"+ 새 조건" 꼬리는 항상 보인다. 이전의 2줄 높이·`--hud-chip-rows`·`data-scrollable`·`--hud-chip-gap`은 없앴다.
+- **충돌 안내 한 줄 고정.** 칩 줄 아래 16px 한 줄(길면 말줄임, 전체 문장은 `title`)이다. 충돌쌍이 둘 이상이면 " · "로 한 줄에 이어 붙인다. 칩 줄을 줄여 안내 자리를 만들던 `condition-chips--conflict` 규칙은 필요 없어졌다. 여섯 뷰포트 모두에서 말줄임 없이 읽힌다(e2e 단언).
+- **조건 칸 높이.** `--hud-chips-h` = 칩 24px + 스크롤바 여백 8px + 간격 3px + 안내 16px = 51px(≤1280폭은 칩 22px이라 49px). 이전 88px/70px에서 37px/21px 줄었다. 칩·안내가 없어도 같은 높이를 예약해 제출 줄이 움직이지 않는다(T85·T116 규칙 유지).
+- **키 작은 화면의 버튼 치수.** 제출 줄 버튼 규칙 4곳(`discuss.css`·`reactions.css`)의 `@media (max-width: 1280px)`에 `(max-height: 900px)`를 더했다. 1366×768·1440×900에서 세 버튼이 한 줄에 들어간다(버튼 모양·T111 장식은 그대로, 치수만 기존 ≤1280폭 값).
+- DISCUSS(내 의견) HUD는 같은 CSS 클래스를 쓰므로 같은 구조다(e2e가 두 화면 모두 여섯 크기에서 확인).
+- 안 바꾼 것: 조건 제안·확정 규칙(`domain/conditions`), 칩 선택/해제·키보드 접근성, 버튼 모양(T111), 입장 선택·추천 카드.
+- 한계: 아래 끝의 "여유"는 캔버스 바닥 패딩이라 입력 상자가 쓸 수 있는 높이가 아니다(그래서 표에는 입력 상자 보이는 높이를 쓴다). 칩 5개는 한 줄에 다 안 들어가(라벨 8~12자 + 꼬리, 1366폭에서 칩 약 618px 대 보이는 폭 약 479px) 가로 스크롤 + 페이드 + "+N"이 기본이다. 사용자가 낮은 화면에서 현황판을 펼치면 입력 상자는 최소 44px로 줄 수 있다(겹치지 않음).
+- 검증: `e2e/noscroll.spec.ts`의 새 테스트(일곱 뷰포트(여섯 + 1600×900), 크기마다 새 페이지로 열고 × 조건 5개 + 300자 + 충돌 안내, DISCUSS·REACTIONS 각각, 제출 줄이 캔버스 안·칩이 한 줄·칩 컨테이너 높이가 칩 두 줄 미만·충돌 안내 말줄임 없음·입력 상자 ≥44px·입력 상자 아래 끝 ≤ 조건 칸 위 끝·편집기 높이 ≥ 머리줄 + 입력 상자·조건 칸과 칩이 HUD 박스 안·제출 줄이 HUD 박스 아래·페이지 스크롤 없음). `tests/components/DraftEditor.test.tsx`의 CSS 규칙 점검은 새 구조(최소 44px, 남는 높이)에 맞췄다. 스크린샷은 `discuss.png`·`reactions-answer.png` 두 해상도만 갱신.
+
+## T116 — HUD 고정 높이 (2026-10-09)
+
+사용자 지적: 내 답변에 조건 칩이 붙으면 아래 버튼 줄이 밀린다. 내 답변(REACTIONS 2/2)과 같은 HUD를 쓰는 내 의견(DISCUSS)에 같은 규칙을 적용한다. 규칙은 `discuss.css` 맨 위 변수 한 곳이다.
+
+| 항목 | 1080 | 720 |
+| --- | --- | --- |
+| 입력 상자 높이 (`--hud-textarea-h`) | 116px | 96px |
+| 조건 칩 높이 (`--hud-chip-h`) | 28px (글자 13px) | 24px (글자 11px) |
+| 조건 칩 줄 사이 (`--hud-chip-gap`) | 6px | 4px |
+| 조건 칸 높이 (`--hud-chips-h`) | 88px | 70px |
+| 충돌 안내에 남는 높이 (칩 1줄 + 스크롤바 여백 뒤) | 약 48px | 약 34px |
+
+- **입력 상자**: 높이 고정, `overflow-y: auto`, `resize: none`, 자동 늘어나기 없음. 600자도 상자 안에서 스크롤된다.
+- **조건 칸**(`.hud-conditions-slot`): 칩이 없어도, 있어도, 충돌 안내가 떠도 높이가 같다. 안은 위에서 아래로 "라벨 + 칩 줄(최대 2줄)", 그 아래 충돌 안내. **충돌 안내가 있으면 칩 줄을 1줄로 줄여**(`.condition-chips--conflict`) 안내에 한 줄 이상(720 ≥16px, 1080 ≥20px)을 남긴다. 안내가 더 길면 안쪽 스크롤.
+- **구조**: 카드의 `grid-template-rows: auto 1fr auto` 대신 flex + 고정 높이 슬롯을 썼다. 제출 줄이 HUD 바깥 형제 요소라 HUD 높이만 변하지 않으면 되고, 슬롯 높이가 변수 하나라 두 화면이 같은 값을 공유한다.
+- **스크롤바 여백**: 칩 줄에 가로 스크롤이 실제로 생겼을 때만(`data-scrollable`) 8px을 더한다.
+- **칩이 2줄을 넘으면 가로 스크롤**을 택했다. 칩 줄을 세로 방향 줄바꿈(`flex-flow: column wrap`)으로 두면 2줄 높이에서 넘친 칩이 오른쪽 열로 이어진다. "+N 접기"는 접힌 칩을 열 방법이 하나 더 필요하고 키보드 순서가 꼬이지만, 가로 스크롤은 칩이 모두 DOM 순서대로 남고 포커스가 가면 저절로 보인다. 시나리오 조건은 최대 5개라 실제로는 대부분 2줄에 다 들어간다.
+- **오류 줄**("300자를 넘었습니다")은 입력 상자 아래가 아니라 머리줄 가운데로 옮겼다. 아래에 끼면 버튼 줄이 밀린다.
+- 칩 선택/해제·제안 표시·키보드 접근성·조건 규칙(`domain/conditions`)과 버튼 모양(T111)은 그대로다.
+- 검증: `e2e/noscroll.spec.ts`의 HUD 단언(조건 5개 + 600자 입력에서 제출 줄 y·입력 상자 높이가 빈 상태와 같고 페이지 스크롤 없음, 1080·720). 스크린샷은 `discuss.png`·`reactions.png` 두 해상도.
+
+## T115 — 추천 방향 일치 규칙 (2026-10-09)
+
+사용자 보고: "AI 비서실장의 조건 추천이 AI 임원들의 찬성/반대와 정반대로 알려주는 경우가 있어." 화면·입장이 특정되지 않아 원인 가설 6개를 단위 테스트로 먼저 재현했다.
+
+**조사 결과.** scripted(사전 구성)에서는 추천이 뒤집히는 경로를 재현하지 못했다. `tests/components/recommendDirection.test.ts`와 `persuasionBoardDirection.test.tsx`가 안건 2개 × 참가자 입장 2개 × 확정 조건 부분집합 전수 × 답변 전·후를 돌려, 비서실장이 추천한 조건(행·묶음)을 적용하면 규칙표상 그 임원이 참가자 목표 표로 움직이고, 이미 목표 쪽이거나 답을 기다리는 임원에게는 추천이 없고, 현황판 비고(설득 완료·움직일 조건·답변 뒤 찬성/반대·반대로 남습니다)가 입장과 목표 방향에 맞음을 확인했다.
+
+**고친 것(live 전용 2건).** `PersuasionBoard`의 `buildRow`:
+1. 임원이 앞서 제안한 조건을 참가자가 이미 확정했는데도 "움직일 조건"에 다시 나왔다. 확정된 조건은 제안 목록에서 뺀다(AssistantPanel의 조건 추천은 이미 빼고 있었다).
+2. live에서 규칙표는 이미 찬성인데 발언 입장은 아직 반대일 때 "움직일 조건 · "(찬성 목표)·"'' 조건이 빠지면 반대로 남습니다"(반대 목표)처럼 조건 이름이 빈 문장이 나왔다. 보여줄 조건이 없으면 각각 "조건으로는 설득이 어렵습니다"·"조건과 무관하게 반대를 유지합니다"로 돌린다.
+
+**불변식.** (1) 추천 조건은 적용하면 규칙표상 참가자 목표 쪽으로 움직이는 조건만이다. (2) 목표 쪽 임원·답을 기다리는 임원에게는 조건을 추천하지 않는다. (3) 찬성 목표에서 반대 방향 안내, 반대 목표에서 "움직일 조건"·"설득 완료"가 나오지 않는다. (4) 조건 이름이 빈 비고는 없다. 표결 규칙표와 프롬프트는 바꾸지 않았다.
+
+**검토 뒤 추가(원인 후보 3건).** 사용자가 본 "정반대"를 scripted에서 재현하지 못해, 가능성이 높은 경로를 더 막았다.
+1. **live 발언 문장↔stance 불일치(가능성 높음).** 임원 발언 문장은 "반대합니다"인데 구조화된 stance는 찬성이면, 표정·현황판·비서실장 추천은 stance를 쓰고 참가자는 문장을 읽으므로 서로 정반대로 보인다. `src/domain/verdictWords.ts`의 `declaredDirection(text, participantStance)`가 문장이 선언한 방향을 뽑는다(찬성·가결·승인하겠·통과시키 등은 FOR, 반대·부결·반려·기각·거부 등은 AGAINST; 같은 편·동의·지지는 참가자 입장에 상대적이라 입장을 알 때만; 조건·의문·부정·유보 문장과 양쪽이 함께 있으면 null). `server/handlers/round.ts`는 OPINIONS·REACTIONS 응답에서 문장 방향과 stance가 명백히 반대이거나 고민 중(UNDECIDED)인데 방향을 선언하면 `invalid_response`로 보고 기존 재시도를 1회 탄다. 재시도에서도 어긋나면 참가자가 읽는 문장을 기준으로 stance를 문장 방향에 맞춰 내려보내고 로그 note에 `stance_text_mismatch_corrected`를 남긴다. 방향이 불분명하면 검사하지 않고, FOLLOWUP은 기존 방향 단어 검사가 맡는다. mock 제공자와 두 안건의 시나리오 문장은 방향을 선언하지 않아 영향이 없다.
+2. **비서실장 결과가 옛 내용으로 남음.** "처음 안과의 차이·남은 확인 사항"이 조건 추천을 연 시점의 스냅샷이라 "적용"으로 조건이 바뀐 뒤에도 "지금까지 확정한 조건이 없습니다"가 남았다. 지금 확정한 조건으로 다시 계산해 그린다. live 요약은 요청 시점의 `transcript.revision`을 기억해 기록이 바뀌면 비운다. 화면 전환 시에는 패널이 새로 만들어져 실제 앱에서 드물게 드러나지만 컴포넌트 단위로는 재현됐다.
+3. **반대 참가자 현황판 문구.** "'X' 조건이 빠지면 반대로 남습니다"는 X가 이미 빠진 듯 읽혀 "'X' 조건을 넣지 않아야 반대로 남습니다"로 바꿨다.
+
+**검증(2026-10-09).** `npm run check` 통과(84개 파일). e2e discuss·reactions·stance·flow-full·live: desktop-1080 33/33 통과, desktop-720 33/33 통과(두 번 모두 러너가 종료 때 멈춰 요약 줄 대신 실패 표시 0과 마지막 인덱스 33/33으로 확인).
+
+**Codex 68차 보완(declaredDirection).** (1) 명사와 서술 결합 사이 공백은 있어도 없어도 같은 방향이다("찬성 쪽입니다"). (2) 결과 명사(찬성·반대·가결·부결·승인·통과·반려·기각·거부)는 뒤가 실제 서술 꼴일 때만 방향으로 센다. 부정어(않·못·없·어렵·힘들·불가·곤란·아니·안 됩)가 이어지면 방향을 뒤집고("가결은 어렵습니다"는 반대, "반대하지 않겠습니다"는 찬성), 단순 언급("가결 여부를 보겠습니다")은 null이다. 교정은 명백한 경우만 한다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 69차 보완(declaredDirection).** 방향 꼬리는 한 글자·접두가 아니라 활용 어미까지 쓴 완결 어절만 센다. "불가피"는 그 방향이 피할 수 없다는 긍정("찬성은 불가피합니다"는 찬성, "반대는 불가피합니다"는 반대)이고 "불가합니다·불가입니다"는 부정 서술이다. "불가결·불가역"은 해당이 없다. "합의·합리·입장"의 한 글자는 선언이 아니고, 결과 명사 뒤에 다른 명사가 이어지거나 중간에 다른 말이 끼면("찬성 입장은 아직 아닙니다") null로 두어 교정하지 않는다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 70차 보완(declaredDirection).** (1) "불가피"는 활용 어미까지 본다: "찬성은 불가피합니다"는 찬성, "불가피하지 않습니다·불가피한 것은 아닙니다"는 방향 반전(전자는 반대, "반대가 불가피한 것은 아닙니다"는 찬성). "찬성하지 않을 수 없습니다"처럼 이중 부정은 그 방향의 긍정이다. (2) 조건 어미 "-면" 판정에서 명사 끝 음절(전면·측면·표면·정면·평면·국면·직면·당면·화면·장면·단면·외면·후면·양면·반면)은 제외한다. "전면 찬성합니다"는 찬성, "조건이 붙으면 찬성합니다"는 null이다. 용언 어간도 되는 지·내·이는 일부러 거르지 않아 조건으로 본다(교정 안 함 쪽). 의문 표지가 "…?"처럼 부호 묶음 뒤에 오는 경우도 질문으로 본다. 기존 중립 문장 전수는 모두 null임을 테스트로 확인한다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 71차 보완(declaredDirection).** (1) 이중 부정은 조사 선택형으로 일반화했다: "찬성하지 않을 수가/는/도 없습니다·반대하지 않을 리가 없습니다·찬성 안 할 수가 없습니다·찬성하지 않으면 안 됩니다"는 그 방향의 긍정이며 단일 부정보다 먼저 본다("않으면 안 됩"은 조건절 판정에서 뺀다). (2) 조건 어미 "-면"은 명사 목록만이 아니라 실제 조건절 판별로 바꿨다. 앞 음절이 으·다·라·하·되·이·시·려·거·니 또는 ㄹ받침이면 조건, 명사 끝 음절(전면·화면 등)은 명사, 그 밖의 모음 어간은 뒤 어절이 명사·조사 결합(으로·의·회의·의견·관계 등)이면 명사("서면 의견으로", "지면 관계상"), 아니면 조건이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 72차 보완(declaredDirection).** (1) 이중 부정을 "-지 않을 수/리/수밖에/밖에/도리가/길이/방법이 없다" 한 묶음으로 일반화했다("찬성하지 않을 수밖에 없습니다"는 찬성). 단일 긍정 "찬성할 수밖에 없습니다"도 그 방향의 선언이다. (2) "-면" 뒤 어절 규칙(서면 의견으로·지면 관계상)은 2음절 어절에만 쓴다. 3음절 이상(남기면·검토하면·확인되면)은 항상 조건절이고, 2음절이라도 흔한 동사 어간(가·오·보·주 등)에 앞 어절이 을·를·에·로·서로 끝나면("자료를 보면") 조건이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 73차 보완(declaredDirection).** (1) "-면" 판별을 길이 대신 음운 규칙으로 바꿨다. 면 앞 음절이 ㄹ이 아닌 자음 받침이면 명사(다방면·전면·국면), ㄹ받침이거나 으·다·라·하·되·이·시·려·거·니면 조건이다. 받침 없는 음절은 앞 어절이 을·를·에·로·서·게·히로 끝나면 조건, 동사 어간 음절의 3음절 이상 어절(남기면·느려지면)이면 조건, 나머지(서면·대면·지면·화면·비대면)는 뒤 어절이 명사·조사 결합일 때만 명사다. (2) "없다·않다·못하다·어렵다" 꼬리는 종결 활용일 때만 센다. "찬성할 수밖에 없는지는 더 검토해야 합니다·찬성하지 않을 수 없는지 보겠습니다·없다면"은 유보·의문이라 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 74차 보완(declaredDirection).** (1) 없다·않다·못하다·어렵다·힘들다·곤란 꼬리의 종결 어미를 한 집합으로 일반화해 기본형(찬성하지 않다)·평서형(않았다)·존대형을 모두 받는다. 유보·의문형(없는지·없다면·않는지)은 어미가 맞지 않아 빠진다. (2) "-면" 모음 음절 분기의 규칙 순서: ① 2음절 동사 어간(가·오·보·주·쓰·두·내·자·타·사·나·차·피·치)이고 앞 어절이 을·를·에·로·서·게·히로 끝나면 조건, ② 3음절 이상이고 동사 어간 음절이면 조건, ③ 뒤 어절이 명사·조사 결합이면 앞 어절과 무관하게 명사, ④ 그 밖은 조건. 앞 어절 단서는 현재 어절이 2음절 동사 어간일 때만 쓰므로 "전적으로 비대면 회의에"는 명사다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 75차 보완(declaredDirection).** (1) "-면" 규칙 0번을 추가했다: 2음절 어절 앞 어절이 을·를로 끝나면 동사 목록과 무관하게 조건이다("로그를 켜면", "기능을 끄면"). 목록은 로·에·서·게·히 단서에만 쓴다. (2) 종결 어미 집합과 평서 선언 꼬리(합니다·하겠습니다·한다·입니다 등)에 어절 경계(선택적 '만')를 요구한다. 인용·연결 어미(않다고·않다는·반대한다고)는 어절이 이어져 종결이 아니므로 null이며, 인용은 교정하지 않는다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 76차 보완(declaredDirection).** (1) 모든 방향 꼬리(긍정·부정·이중 부정·수밖에 없다, 단일·다어절)가 어절 끝 경계(선택적 '만')로 끝나야 하고 바깥에서 어절 나머지를 삼키지 않는다. "찬성해야 한다고 했습니다·찬성하기로 했다고 들었습니다·찬성할 수밖에 없다고 봅니다"는 인용·유보라 null이다. (2) "-면" 규칙 -1번: 동사 활용과 같은 꼴의 알려진 명사(서면·대면·지면·화면·외면·후면·수면·노면·도면·액면·정면·전면·측면·국면·당면·직면·장면·단면·양면·반면·비대면·다방면)는 앞뒤 어절과 무관하게 명사다("이 안건을 서면 결의로 승인합니다"는 찬성). 목록은 동사 활용과 형태가 같은 명사를 가르는 유일한 수단이라 의도적으로 둔다. '내면'은 "돈을 내면"과 구분할 수 없어 목록에서 뺐다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 77차 보완(declaredDirection).** (1) 알려진 "-면" 명사 목록은 명사 문맥(뒤 어절이 명사·조사 결합)일 때만 명사로 확정하고, 앞 어절이 처격(에·에서)으로 끝나면 목록에 있어도 조건으로 넘긴다("협상에서 지면 반대하겠습니다"·"그 편에 서면 찬성하겠습니다"는 null). 뒤 어절 명사 목록에 결의·결정·협의·논의·투표·표결을 더했다. 목록이 없는 문맥은 받침·을/를 단서 등 기존 순서를 따른다. (2) 다어절 선언 꼬리(시키기로·하기로·하는 것으로·하는 쪽으로·해야)의 마지막 어절은 하다 활용군(합니다·하겠습니다·했습니다·한다·했다·하죠·해요·했어요 등) 하나로 모았다. "부결시키기로 하겠습니다"는 반대, "찬성하기로 했다고 들었습니다"는 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 78차 보완(declaredDirection).** "-면" 규칙 순서를 확정했다. (-2) 3음절 이상 알려진 명사(비대면·다방면)는 동사 활용이 불가능해 항상 명사. (-1) 2음절 알려진 명사(서면·대면·지면·화면 등)는 앞 어절이 처격(에·에서)이면 뒤 어절이 명사 결합이어도 조건이고("협상에서 지면 의견을 바꿔 반대하겠습니다"는 null), 그렇지 않고 뒤 어절이 명사 결합이면 명사다("이 안건을 서면 결의로"는 앞 어절이 '을'이어도 이 조합만 명사). (0) 2음절 어절 앞이 을·를이면 조건 확정. (1) 2음절 동사 어간+앞 어절 단서, (2) 3음절 이상+동사 어간은 조건, (3) 뒤 어절 명사 결합은 명사, (4) 그 밖은 조건. 판정이 나면 뒤 규칙은 보지 않는다. "회의에서 비대면 방식으로 찬성합니다"는 비대면이 항상 명사라 찬성이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 79차 보완(declaredDirection) — 설계 원칙.** declaredDirection은 보수적 분류기다: 모호하면 null(교정 안 함)이 정답이며, 놓침(null)은 허용하고 잘못된 방향 판정(오교정)만 결함으로 본다. 이후 Codex 지적은 이 기준으로 가른다. 2음절 동형어(서면·대면·지면·화면·외면·후면·수면·노면·도면·액면)는 "회의에서 서면 결의로"(명사)와 "협상에서 지면 의견을 바꿔"(조건)가 통사적으로 같은 꼴이라 문맥 규칙으로 가를 수 없다. 그래서 명사별 연어 사전(서면→결의·의견·보고 …, 지면→관계·광고 …, 화면→설계·구성 …)으로만 명사를 확정한다. 뒤 어절이 연어면 앞 어절과 무관하게 명사, 아니면 조건이다. 3음절 이상(비대면·다방면)은 항상 명사다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 80차 보완(declaredDirection).** 2음절 동형어(서면·대면·지면·화면 등)는 앞 어절이 보어 단서(처격 에·에서, 목적격 을·를, 부사격 로·으로)로 끝나면 연어와 무관하게 조건이다("협상에서 지면 관계를 재검토하고 반대하겠습니다"는 null). 연어 사전은 앞 어절이 보어 단서가 아닐 때만 명사 확정에 쓴다. 그 결과 다음 두 문장은 **허용된 놓침**이다(오교정보다 놓침을 택한다): "회의에서 서면 결의로 승인합니다"와 "이 안건을 서면 결의로 승인합니다"는 null이다. 3음절 이상 명사(비대면)는 그대로 항상 명사라 "회의에서 비대면 방식으로 찬성합니다"는 찬성이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 81차 보완(declaredDirection).** 응답 단위로 합성한다. 문장마다 null·FOR·AGAINST·AMBIGUOUS를 매기고, 방향 단어가 있는데 조건·의문·유보·인용·과거 서술·동형어 보류로 확정하지 못한 문장은 AMBIGUOUS, 방향 단어가 없으면 null이다. 응답 전체는 AMBIGUOUS가 하나라도 있으면 null, FOR와 AGAINST가 섞여도 null, 모두 같은 방향일 때만 그 방향이다. 확정 못 한 문장을 버리고 나머지 문장의 방향만 내보내면 오교정이 되기 때문이다. 과거 서술("처음에는·원래·당초·지금까지는 …")은 현재 결론이 아니라 AMBIGUOUS이고, 한 문장 안에 "지금은·현재는·이제는"이 있으면 그 뒤만 본다("처음에는 반대했지만 지금은 찬성합니다"는 찬성). "처음에는 반대했습니다. 지금은 반대합니다."처럼 문장이 나뉜 과거 서술은 허용된 놓침(null)이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 82차 보완(declaredDirection).** (1) 문장 분류기는 방향 단어가 있는데 어떤 꼬리로도 확정하지 못하면 반드시 AMBIGUOUS를 돌려준다("찬성합니다. 반대 입장을 고수합니다."는 null). null은 방향 단어가 없는 문장과, 방향 명사가 모두 설명문("반대 이유는 …", "찬성 사유는 …"; 사유·이유·근거·배경·조건·기준·여부·의견·논거·자료·목소리)인 문장에만 쓴다. 그래서 "찬성합니다. 찬성 사유는 비용입니다."는 찬성이다. (2) 과거 표지를 일반화했다(과거·예전·이전·지난·작년·어제·그때·당시·초기·처음·원래·당초·애초·한때·전에는·까지는·까지만 해도·그동안·지금까지·이제까지·여태). 더 일반적으로 현재 표지(지금은·현재는·이제는·이번에는·오늘은·최종적으로·결론은)가 없는 과거형 종결(-았다·-었다·-했습니다·-않았다)은 AMBIGUOUS다. 결정 관용구("찬성하기로 했습니다", "반대하기로 결정했습니다", "~쪽으로 했다")는 현재 결정이라 예외다. "찬성하지 않았다"는 허용된 놓침(null)이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 83차 보완(declaredDirection).** (1) 문장 분류기가 문장 안의 모든 방향 명사 출현을 훑는다. 각 출현이 선언 꼬리로 해소되거나 설명문이거나 약한 방향어(승인·통과, 안건 용어라 꼬리가 없으면 방향 없는 언급)가 아니면 그 문장은 AMBIGUOUS다("찬성합니다만 최종적으로는 반대 입장을 고수합니다."는 null). 한 문장에서 해소된 방향이 FOR와 AGAINST 둘 다여도 AMBIGUOUS다. 문장 안의 현재 표지(지금은·현재는·이제는·이번에는·오늘은·최종적으로(는)·결론은) 뒤 말이 현재 결론이라 그 뒤만 본다("찬성합니다만 최종적으로는 반대합니다."는 반대). "반대할 이유가 없습니다"는 이중 부정으로 찬성이다. (2) 결정 관용구 예외는 방향 명사에 붙은 꼬리("찬성하기로 결정했습니다")에서만 적용하고, 문장 다른 곳의 "결정했습니다"는 과거형 판정에 영향이 없다("찬성하지 않았다만, 일정은 결정했습니다."는 null). "반대로 결정했습니다"는 부사 '반대로'와 동형이라 허용된 놓침(null)이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 84차 보완(declaredDirection).** 약한 방향어(승인·통과)를 문맥으로 나눈다. (a) 입장 구문: 뒤에 입장·쪽·편·태도·노선·의견·결론·방향이 붙으면 강한 방향어와 같이 취급해, 선언 꼬리가 없으면 미해소(AMBIGUOUS)다. 선언 꼬리에는 "입장·태도·노선·쪽·편을 고수·유지·견지합니다 / 굽히지 않겠습니다"를 더했다("반대 입장을 고수합니다"는 반대, "승인 입장을 고수합니다"는 찬성). 그래서 "일부 의견에는 반대합니다만 승인 입장을 고수합니다."는 한 문장에 양방향이라 null이다. (b) 안건 용어 결합(승인 방식·한도·사유·여부 등)과 꼬리 없는 단독 언급은 방향 없는 언급이라 무시한다("자동 승인 방식에 찬성합니다"는 찬성). 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 85차 보완(declaredDirection).** 띄어쓰기 없는 공간·대상 합성어(반대편·반대쪽·찬성쪽·찬성편·맞은편·건너편·오른편·왼편·한편·상대편·저편·이편·그편)는 방향 명사 출현으로 세지 않는다("화면 배치는 지금 반대편을 유지합니다"는 null). 입장 고수·유지·견지·굽히지 않음 꼬리는 입장·태도·노선·의견·결론에만 붙이고 쪽·편에는 붙이지 않는다(공간·배치 설명과 겹침). 띄어 쓴 "반대 편에 서겠습니다·찬성 쪽에 섭니다"만 방향 꼬리다. **허용된 놓침:** "반대쪽으로 가겠습니다"와 "찬성쪽입니다"는 공간으로도 읽혀 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 86차 보완(declaredDirection).** 방향 합성어(반대편·반대쪽·찬성쪽·찬성편)를 두 갈래로 나눈다. ① 입장 문맥: 합성어 바로 뒤가 서술격(입니다·이다·이에요 …)이거나 "으로 가·에 서·에 섭·으로 기울·로 돌아"이거나, 같은 절 앞에 입장 표지(입장은·결론은·태도는·생각은·저는·제·우리는·우리 측)가 있으면 방향을 말하는 것이라 AMBIGUOUS다("찬성합니다. 하지만 제 최종 입장은 반대쪽입니다."는 null). "제 입장은 반대쪽입니다." 단독은 AMBIGUOUS라 null이며, 해소하지 않는 것을 허용된 놓침으로 둔다. ② 공간 문맥: 그 밖의 합성어("반대편을 유지합니다", "반대편 의견", "반대쪽은 비용을 말합니다")는 방향 없음이다. 맞은편·건너편·오른편·왼편·한편·상대편·저편·이편·그편은 항상 방향 없음이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 87차 보완(declaredDirection).** 방향 합성어(반대편·반대쪽·찬성쪽·찬성편·상대편)의 기본값을 반전했다. 기본은 AMBIGUOUS(방향이 있을 수 있으나 미해소)이고, 바로 뒤가 명시적인 공간·대상 문맥(화이트리스트: "반대편을 유지·배치·이동·표시·확인·정렬·배열", "반대편 의견·주장·논거·진영·사람·임원·이사·말·목소리", "반대쪽은 … 말합니다" 류)일 때만 방향 없음으로 지운다. 입장 표현을 열거하는 방식은 계속 구멍이 나기 때문이다. 따라서 "찬성합니다. 하지만 최종적으로 반대쪽을 택하겠습니다."와 "찬성합니다. 반대쪽 자료도 보겠습니다."는 null이다. "반대쪽을 선택하겠습니다."는 해소하지 않기로 했고 허용된 놓침이다. 맞은편·건너편·오른편·왼편·한편·저편·이편·그편은 항상 방향 없음이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 88차 보완(declaredDirection).** 방향 합성어의 공간 화이트리스트는 **입장 서술과 절대 겹치지 않는 순수 공간 동사**(배치·이동·표시·정렬·배열·회전·확대·축소·스크롤·클릭)만 남긴다. 유지·확인·두·놓·고수·택·선택·고르·따르·지지는 "반대편을 유지하겠습니다"처럼 입장으로도 읽혀 제거했다. 대상 명사(의견·주장·논거·진영·사람·임원·이사·말·목소리)와 상대 진영 지칭("반대쪽은 … 말합니다")은 유지한다. **허용된 놓침:** "화면 배치는 지금 반대편을 유지합니다."는 AMBIGUOUS라 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 89차 보완(declaredDirection).** 공간 화이트리스트에서 선택·전환으로 읽힐 수 있는 동사를 모두 뺐다. 클릭("반대편을 클릭하겠습니다"=선택), 이동("반대편으로 이동하겠습니다"=입장 전환), 표시("반대편을 표시하겠습니다"=표 표시)를 제외했고, 남은 것은 배치·정렬·배열·회전·확대·축소·스크롤이다. 대상 명사와 상대 진영 지칭은 그대로다. 화면·레이아웃 명사 조건은 넣지 않았다(순수 공간 동사만으로 충분하다고 판단). 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 90차 보완(declaredDirection).** 방향 합성어 뒤의 대상 명사(의견·주장·논거·진영·사람·임원·이사·말·목소리)도 기본 AMBIGUOUS로 반전했다. 문장의 마지막 어절이 순수 수용·참고 동사(들었·듣·경청·검토·참고·정리·기록·요약·확인했·읽·살펴)일 때만 방향 없음으로 지운다. "반대편 의견을 지지하겠습니다·따르겠습니다·받아들이겠습니다"와 "의견을 듣고 지지하겠습니다"(마지막 어절이 입장 서술)는 null이다. 순수 공간 동사와 상대 진영 지칭("반대쪽은 … 말합니다")은 그대로다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 91차 보완(declaredDirection).** 대상 명사의 수용·참고 동사 목록에서 입장 확정으로도 읽히는 정리·기록·요약·확인했를 뺐다(남은 것: 들었·듣·경청·검토·참고·읽·살펴). 문장에 입장 명사(입장·결론·태도·노선·방향·생각·마음)가 있으면 합성어와 함께 방향이 있는 문장이라 수용·참고 예외를 적용하지 않고 AMBIGUOUS로 둔다("반대편 의견으로 제 입장을 정리하겠습니다"는 null). **허용된 놓침:** "반대편 의견을 정리했습니다."는 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 92차 보완(declaredDirection).** 조건·시점 절 표지를 일반형으로 넓혔다. 방향 선언 문장에 다음 표지가 있으면 조건부 선언이라 AMBIGUOUS다. ① 시점 조건: ㄹ받침 음절+때(에는·에·는·만·라도), 경우, 시(에는), 는 한, 이후·뒤에·후에·다음에·나서, 전에는·까지는. ② 전제·조건 명사: 전제(로·하에·라면), 조건(으로·이라면·이면·하에 …), 선에서·범위에서·한도에서, 이상이면, 기준으로, 보장·확보·충족·이행(되면·된다면·될 때·시·되어야). ③ 필요조건 연결: 되어야·돼야·있어야·넣어야·지켜야·갖춰야·맞아야·따라야·-져야, 거든·을수록·는 대로. "찬성해야 합니다" 같은 방향 동사 자체의 -해야는 선언이다. "조건이 충족될 때 찬성합니다·충족 시 승인하겠습니다·지키는 한 반대하지 않겠습니다·갖춰져야 찬성할 수 있습니다"는 null이다. **허용된 놓침:** "경우에 따라 다르지만 저는 찬성합니다."는 null이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 93차 보완(declaredDirection).** (1) 필요조건 연결을 어미 일반형으로 넓혔다. 어절이 -아야/-어야/-여야/-해야/-돼야 등(ㅏ·ㅐ·ㅓ·ㅔ·ㅕ·ㅘ·ㅙ·ㅝ·ㅞ 모음 + 야, 3자 이상, 뒤에 만·지 허용)으로 끝나면 조건 표지다("기록을 남겨야·검토를 마쳐야·확인해야 찬성합니다"는 null). 방향 동사 자체의 -해야("찬성해야 합니다", "반대해야만 합니다")는 선언이다. (2) 조사 없는 시점 표지를 넣었다: 이후·뒤·후(어절 경계 확인, 오후·전후·향후 제외 — "오후에 찬성합니다"는 찬성), 다음에, 끝난 뒤·끝나고·마치고·마친 뒤·지난 후. "검토 이후/후 찬성하겠습니다"는 null이다. **결정:** "향후 찬성합니다."는 미래 조건처럼 읽혀 null(허용된 놓침)이다. (3) 조건 표지 검사는 현재 표지로 잘린 뒷부분뿐 아니라 현재 표지 앞에도 적용한다("사람이 검토하는 한 현재는 찬성합니다", "조건이 붙으면 지금은 찬성합니다"는 null). 과거 표지와 현재 표지 대조("처음에는 반대했지만 지금은 찬성합니다")는 조건 표지가 없으므로 찬성이다. 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+**Codex 95차 보완(declaredDirection).** 필요조건 연결의 길이 제한을 없앴다. 한 음절 어간 축약 활용 해야·나야·가야·와야·봐야·써야·돼야·내야·사야 같은 2음절 "-야" 어절도 조건 표지다("보완을 해야 찬성합니다", "허가가 나야 반대하겠습니다"는 null). 선언으로 남기는 것은 방향 동사 자체의 -해야("찬성해야 합니다")와, 방향 명사 바로 뒤에 띄어 쓴 당위형 "찬성 해야 합니다"뿐이다. 단독 "야", 감탄 "아야", 서술격 "이야"(ㅣ 모음)는 조건 표지가 아니다("이것은 찬성이야."는 기존 종결 규칙에 따라 null). 검증: `npm run check` 통과, e2e live desktop-1080·720 각 5/5 통과.
+
+## T119 — 조건 커버리지 규칙 (2026-10-10)
+
+사용자 지시: 조건을 붙이려고 직접 써야 하는 건이 없게 한다. 첫 추천 문구는 조건을 1~2개 비운 채 주고, 2/2 화면의 추천 답변(추가 답변)이 그 입장에서 쓰이는 조건을 **전부** 제안한다. 직접 쓰기와 "+ 새 조건"은 남기지만 **필수 경로가 아니다**(첫 의견에서 안 고른 조건도, 첫 문구에서 빠진 조건도 추천 답변만으로 붙는다).
+
+**불변식 4개** (안건 × 참가자 입장 FOR·AGAINST마다, `tests/content/conditionCoverage.test.ts`):
+
+1. 규칙표(`voteRules`)가 쓰는 모든 조건은 첫 단계 추천 문구(그 입장 + 요청형 BOTH)와 추가 답변(그 입장 + BOTH)의 합집합에서 제안된다.
+2. 첫 단계 추천 문구만으로는 그 조건 중 정확히 1~2개가 빠진다. 찬성 입장에서는 빠진 조건에 후속 질문이 묻는 조건(안건 ① OWNER, 안건 ② DATA_VETO)이 들어 있다.
+3. 추가 답변은 그 입장에서 규칙표가 쓰는 **모든** 조건을 제안한다(첫 문구에서 빠진 것만이 아니다). 화면은 이미 확정한 조건의 답변을 숨기므로(T84) 보통 1~2장만 보이고, 첫 의견에서 조건 0개로 넘어온 최악 경우에만 전부 보인다.
+4. 추가 답변 문구는 `proposeFromText`가 선언한 조건과 정확히 같은 값을 돌려준다.
+
+**커버리지** (첫 문구 = 내 의견 추천 문구, 추가 답변 = 2/2 추천 답변, 빈칸은 공통 답변 제외):
+
+| 안건 | 입장 | 첫 문구 | 추가 답변 | 첫 문구에서 빠진 조건 |
+|---|---|---|---|---|
+| ① 결재권 | 찬성 | LIMIT·LOG·REVIEW | OWNER·LOG·LIMIT·REVIEW·FULL_AUTO | OWNER·FULL_AUTO |
+| ① 결재권 | 반대 | REVIEW·LOG·OWNER | LIMIT·REVIEW·LOG·OWNER·FULL_AUTO | LIMIT·FULL_AUTO |
+| ② 경험 우선 | 찬성 | SCOPE·RECORD·REVIEW | DATA_VETO·EXP_ONLY·SCOPE·RECORD·REVIEW | DATA_VETO·EXP_ONLY |
+| ② 경험 우선 | 반대 | DATA_VETO·RECORD·REVIEW | RECORD·REVIEW·DATA_VETO·SCOPE·EXP_ONLY | SCOPE·EXP_ONLY |
+
+찬성 쪽은 함정 조건(FULL_AUTO·EXP_ONLY)과 후속 질문이 묻는 조건(OWNER·DATA_VETO)을 첫 문구에서 뺐다. 첫 의견만으로는 전원을 설득할 수 없고(예: 안건 ①에서 책임자 지정이 없어 CISO는 반대 쪽 그대로), 추가 답변에서 그 조건을 골라야 마무리된다. 첫 의견에서 직접 써서 붙이는 것은 여전히 허용한다. 반대 쪽은 원래 첫 문구가 2개를 비우고 있어 추가 답변에 조건을 더했다.
+
+**화면 크기**: 최악 경우 추가 답변은 찬성 6장·반대 7장(공통 답변 포함)이다. 2열 그리드가 1280×720에서 3~4줄로 들어가 문서 스크롤·잘림이 없음을 `e2e/noscroll.spec.ts`(안건 × 입장 4가지, 조건 0개로 넘어온 경우)로 확인한다. 카드 높이·열 수는 바꾸지 않았다.
+
+**비서실장 안내**: 조건 추천 행과 "남은 확인 사항"에 "붙이는 곳"을 함께 보인다. 내 의견 화면에서는 "추천 문구 N번에서 고를 수 있습니다"(N은 그 입장에서 보이는 문구의 순서이며 카드 앞 번호와 같다), 첫 문구에 없으면 "다음 단계 추가 답변에서 고를 수 있습니다". 반응 답하기 화면에서는 "추가 답변에서 고를 수 있습니다". 추천 문구·추가 답변 어디에도 없는 조건은 추천 행과 남은 확인 사항에서 뺀다(불변식 덕에 보통 없다, 방어용). "처음 안과의 차이"는 이미 붙은 조건이라 안내를 붙이지 않는다. 구현은 `src/components/conditionSource.ts`.

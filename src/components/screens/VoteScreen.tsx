@@ -18,11 +18,15 @@
 
 import { ExecStanceList } from '../parts/ExecStanceList';
 import type { ExecMemberId } from '../../content/types';
-import type { RoleStatus, Stance } from '../../domain/types';
+import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { useState } from 'react';
+import { voteNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { Scenario } from '../../content/types';
 import type { Motion, PendingVote, SessionMode } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { buildMotionDisplay } from '../motionDisplay';
+import { PersuasionBoard } from '../parts/PersuasionBoard';
 import '../../styles/screens/vote.css';
 import '../../styles/screens/live.css';
 
@@ -34,12 +38,17 @@ export interface VoteScreenProps {
   execBallotsPending: boolean;
   /** 무대 표정 배지의 접근 가능한 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
+  /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). MOTION 상자 문구를 반대 입장에 맞게
+   * 바꾼다(buildMotionDisplay). */
+  participantStance?: 'FOR' | 'AGAINST' | null;
   /** 실패한 역할을 가려내 "미표결 임원 다시 요청" 버튼을 보여줄 때만 쓴다(T65). */
   roleStatus?: Record<ExecMemberId, RoleStatus>;
   onSelectVote: (vote: PendingVote) => void;
   onConfirmVote: () => void;
   /** 있으면 실패한 역할만 최종표를 다시 요청한다(T65 "미표결 임원 다시 요청", 1회). */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
+  /** live 회의 기록의 발언들 — 설득 현황판의 첫 의견 입장·제안 조건에 쓴다. */
+  statements?: Statement[];
 }
 
 const VOTE_ORDER: readonly PendingVote[] = ['YES', 'NO'];
@@ -49,19 +58,22 @@ const VOTE_LABELS: Record<PendingVote, string> = {
   NO: '반대',
 };
 
-/** 원형 도장 라디오 아래 타자기 캡션(시안 "APPROVE · 선택됨"/"REJECT"). */
+/** 원형 도장 라디오 아래 타자기 캡션(시안 "APPROVE · 선택됨"/"REJECT", T83에서
+ * 한국어화). */
 const VOTE_STAMP_LABELS: Record<PendingVote, string> = {
-  YES: 'APPROVE',
-  NO: 'REJECT',
+  YES: '찬성',
+  NO: '반대',
 };
 
 export function VoteScreen({
   scenario,
   stances,
+  statements,
   motion,
   pendingVote,
   mode,
   execBallotsPending,
+  participantStance = null,
   roleStatus,
   onSelectVote,
   onConfirmVote,
@@ -72,6 +84,8 @@ export function VoteScreen({
   const [submitted, setSubmitted] = useState(false);
   // 1회 제한(T65) — server/sessionLimit.ts의 호출 상한(vote: 2)이 최종 방어선이다.
   const [retryUsed, setRetryUsed] = useState(false);
+  const gate = useFocusGate('vote');
+  const nextStep = voteNextStep({ picked: pendingVote !== null, submitted });
 
   function handleConfirm() {
     if (pendingVote === null || submitted) {
@@ -91,6 +105,9 @@ export function VoteScreen({
   // 줄 자리를 재요청 버튼이 대신한다(시안 "실패 시 버튼이 이 줄 자리에").
   const showWaiting = mode === 'live' && execBallotsPending && !showRetry;
 
+  // 표결 안건 문장(T84, MotionScreen과 같은 이유) — motion.text 자체는 바뀌지 않는다.
+  const motionDisplay = buildMotionDisplay(scenario, motion.effectiveConditionIds, participantStance);
+
   function handleRetry() {
     if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
       return;
@@ -102,11 +119,20 @@ export function VoteScreen({
   return (
     <>
       <div className="app-body__actions screen vote-screen">
-        <ExecStanceList stances={stances} />
+        <PersuasionBoard
+          scenario={scenario}
+          confirmedConditionIds={motion.effectiveConditionIds}
+          participantStance={participantStance}
+          stances={stances}
+          mode={mode}
+          statements={statements}
+          sealed
+        />
+        <ExecStanceList stances={stances} sealed />
         <div className="vote-screen__ballots" data-testid="vote-ballots">
           <div className="vote-screen__ballots-head">
-            <span>BALLOTS · 임원 표</span>
-            <span className="vote-screen__ballots-privacy">참가자 확정 전 비공개</span>
+            <span>임원 표</span>
+            <span className="vote-screen__ballots-privacy">확정 전까지 가려 둡니다</span>
           </div>
           <div className="vote-screen__ballots-grid">
             {EXEC_MEMBER_ORDER.map((memberId) => (
@@ -120,13 +146,13 @@ export function VoteScreen({
                 <span className="vote-screen__ballot-seal" aria-hidden="true">
                   ?
                 </span>
-                <span className="vote-screen__ballot-seal-label">봉인</span>
+                <span className="vote-screen__ballot-seal-label">가림</span>
               </div>
             ))}
           </div>
           {showWaiting && (
             <p className="vote-screen__ballots-info" data-testid="vote-waiting-execs">
-              임원 판단을 기다리는 중… 최초 8초, 응답이 없으면 1회 다시 요청할 수 있습니다.
+              임원 네 명이 표를 정하고 있습니다 · 곧 결과가 공개됩니다
             </p>
           )}
           {showRetry && (
@@ -137,29 +163,31 @@ export function VoteScreen({
               disabled={retryUsed}
               onClick={handleRetry}
             >
-              {retryUsed ? '다시 요청함 · 미표결로 확정됩니다' : '미표결 임원 다시 요청'}
+              {retryUsed ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
             </button>
           )}
         </div>
       </div>
       <div className="app-body__content screen vote-screen__info">
         <div className="vote-screen__paper">
+          {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+              도장만 영문으로 되돌렸다. */}
           <span className="vote-screen__stamp" aria-hidden="true">
             CONFIDENTIAL
           </span>
           <div className="vote-screen__head">
-            <span className="vote-screen__step">STEP 05 · 2/2</span>
+            <span className="vote-screen__step">5단계 · 2/2</span>
             {/* 시안 원본은 <h1>이지만, 다른 조종석 화면과 같은 <h2> 위계를 쓴다(T72와
                 같은 이유) — 글자 크기·굵기는 시안 값 그대로다. */}
-            <h2 className="vote-screen__title">최종 투표 · 특별 이사 1표</h2>
+            <h2 className="vote-screen__title">최종 표결 · 이사님 1표</h2>
           </div>
           <div className="vote-screen__motion-card" data-testid="vote-motion-card">
-            <span className="vote-screen__motion-label">MOTION</span>
-            {/* 시안은 원안 문장만 한 줄로 보여준다 — motion.text는 domain/motion.ts
-                freezeMotion이 고정한 실제 안건 문구다(scenario.originalMotion.text와
-                항상 같은 값이지만, "지금 표결 중인 바로 그 안건"을 가리키는 쪽은
-                motion이다). */}
-            <span className="vote-screen__motion-text">{motion.text}</span>
+            <span className="vote-screen__motion-label">표결할 안건</span>
+            {/* T84: motion.text(domain/motion.ts freezeMotion이 고정한 실제 안건 문구,
+                해시·서버 검증용)는 그대로 두고, 화면에는 buildMotionDisplay가 지은
+                문장을 보여준다 — 조건을 붙여도 고정 "…절차는 미정이다."로 끝나던
+                문제를 고친다(Opus UX 검토 #3+my#2). */}
+            <span className="vote-screen__motion-text">{motionDisplay.sentence}</span>
             {/* PR #12 Codex 5차 검토(P1): 시안의 MOTION 한 줄 상자는 반영 조건을
                 문장에 녹여 쓰지만(문안 생성 규칙 변경 금지, motion.text는 항상 원안
                 그대로다), 반영 조건 자체가 화면에 안 보이면 투표자가 원안만 보고
@@ -171,7 +199,9 @@ export function VoteScreen({
                 그대로 읽으므로, 옛 sr-only 문단은 완전히 대체돼 뺐다. */}
             {motion.effectiveConditionIds.length > 0 && (
               <div className="vote-screen__motion-conditions" data-testid="vote-motion-conditions">
-                <span className="vote-screen__motion-conditions-label">반영 조건</span>
+                <span className="vote-screen__motion-conditions-label">
+                  {participantStance === 'AGAINST' ? '이사님이 요구한 조건' : '반영 조건'}
+                </span>
                 <ul className="vote-screen__motion-conditions-list">
                   {motion.effectiveConditionIds.map((id) => (
                     <li key={id}>
@@ -181,8 +211,17 @@ export function VoteScreen({
                 </ul>
               </div>
             )}
+            {motionDisplay.undecidedLabels.length > 0 && (
+              <p className="vote-screen__motion-undecided" data-testid="vote-motion-undecided">
+                아직 정하지 않은 것 · {motionDisplay.undecidedLabels.join(' · ')}
+              </p>
+            )}
           </div>
-          <fieldset className="vote-screen__choices" disabled={submitted}>
+          <fieldset
+            className="vote-screen__choices"
+            disabled={submitted}
+            {...nextStepAttr(gate.visible && nextStep === 'choice')}
+          >
             <legend className="vote-screen__sr-only">이사님의 최종 표를 선택해 주세요</legend>
             {VOTE_ORDER.map((vote) => (
               <label
@@ -216,15 +255,33 @@ export function VoteScreen({
               type="button"
               className="cta"
               disabled={pendingVote === null || submitted}
+              aria-describedby={pendingVote === null && !submitted ? 'vote-confirm-why' : undefined}
               onClick={handleConfirm}
               data-testid="confirm-vote"
+              {...nextStepAttr(gate.visible && nextStep === 'confirm')}
             >
-              최종 투표 확정 ▶
+              {submitted ? (
+                <>
+                  임원 표를 모으는 중
+                  <span className="vote-screen__confirm-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </>
+              ) : (
+                '표결 확정 ▶'
+              )}
             </button>
+            {pendingVote === null && !submitted && (
+              <span id="vote-confirm-why" className="sr-only">
+                찬성 또는 반대 도장을 먼저 고르세요
+              </span>
+            )}
             <p className="vote-screen__cta-note">
-              확정 버튼으로만 표가 성립합니다. 확정 후 임원 표가 공개되고 결과로 넘어갑니다.
+              확정을 눌러야 표가 들어갑니다. 확정하면 임원 표가 공개되고 결과로 넘어갑니다.
               <br />
-              5석 중 찬성 3표 이상이면 가결, 그 외는 부결.
+              5석 중 찬성이 3표 이상이면 통과합니다.
             </p>
           </div>
         </div>

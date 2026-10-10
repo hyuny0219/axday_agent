@@ -7,7 +7,11 @@
 import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
-import { reactionsFor } from './reactionsFor';
+import { SEALED_FOLLOWUP_TEXT, findVerdictWords } from '../domain/verdictWords';
+import { membersAwaitingAnswer } from '../domain/stance';
+import { reactionBodyText, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from './reactionsFor';
+import { chairMotionLine } from './chairMotionLine';
+import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
 /** 시간 표기를 알 수 없을 때 보여주는 자리표시(T77, 시안 TRANSCRIPT "[--:--]"). */
 export const TIME_UNKNOWN = '--:--';
@@ -31,6 +35,9 @@ export function formatElapsed(startedAt: number | null, occurredAt: number | und
 export interface MinutesEntry {
   id: string;
   speaker: MemberId;
+  /** 화자 칸에 덧붙일 짧은 표기(T92 참가자 입장 "찬성"/"반대" — 본문 꼬리표 "(이사님 입장: …)"는
+   * 회의록을 기계적으로 읽히게 해 Opus 2차 검토에서 화자 칸으로 옮겼다). */
+  speakerNote?: string;
   text: string;
   kind: 'speech' | 'pending' | 'failed' | 'mine';
   timeLabel: string;
@@ -104,14 +111,39 @@ function liveRoundResults(
       return { roleId, kind: 'speech' as const, text: statement?.text ?? '', createdAt: statement?.createdAt };
     }
     if (status === 'failed') {
-      return { roleId, kind: 'failed' as const, text: '응답 없음' };
+      return { roleId, kind: 'failed' as const, text: '이번에는 답을 받지 못했습니다' };
     }
     return { roleId, kind: 'pending' as const, text: '' };
   });
 }
 
-function scriptedReactionText(reactions: Reaction[]): string {
-  return reactions.length > 0 ? (reactions[0]?.text ?? '기존 의견 유지') : '기존 의견 유지';
+const NO_REACTION_TEXT = '앞서 말씀드린 입장 그대로입니다.';
+
+/** T92: 순수 반대(조건 없음) 전용 문구가 있으면 그 문구가 "none" 기본 반응(모든 입장에
+ * 같이 쓰이던 "말씀은 기록했습니다")보다 우선한다. 조건이 있으면(조건 기반 반응) 그대로
+ * 조건 반응이 우선이다 — opposition은 그 경우 undefined(reactionsFor.ts). */
+function scriptedReactionText(
+  reactions: Reaction[],
+  opposition: string | undefined,
+  holdReason: string | undefined,
+  pending: boolean,
+): string {
+  if (opposition !== undefined) {
+    return opposition;
+  }
+  // T110: 1차 반응에서 답을 기다리는 임원은 반응 카드와 같은 pendingText를 쓴다.
+  if (pending && reactions.length > 0) {
+    return reactionBodyText(reactions, true);
+  }
+  // T101: 입장을 유지하는 임원은 반응 카드와 같은 holdReasons(역할별 유지 이유)를 쓴다.
+  return reactions.length > 0 ? reactions[0]?.text ?? NO_REACTION_TEXT : holdReason ?? NO_REACTION_TEXT;
+}
+
+/** 참가자 발언 행에 입장을 덧붙인다(T92, "참가자 행에 이사님 입장이 보이게"). 입장을
+ * 고르지 않았으면 원문 그대로. */
+function stanceNote(stance: 'FOR' | 'AGAINST' | null | undefined): string | undefined {
+  if (!stance) return undefined;
+  return stance === 'FOR' ? '찬성' : '반대';
 }
 
 /**
@@ -123,7 +155,13 @@ export function buildMinutes(
   session: Session,
   scenario: Scenario,
   roundLog: RoundLogEntry[],
+  options: {
+    /** T114: FOLLOWUP 발언에 방향 단어가 있으면 본문을 가린다. 생략하면 MOTION·VOTE에서만
+     * 가리고 RESULT 이후에는 원문을 보여 준다(결과 화면의 순차 공개 전에는 호출부가 true). */
+    sealFollowUp?: boolean;
+  } = {},
 ): MinutesEntry[] {
+  const sealFollowUp = options.sealFollowUp ?? (session.stage === 'MOTION' || session.stage === 'VOTE');
   if (session.stage === 'ATTRACT' || session.stage === 'SELECT') {
     return [];
   }
@@ -174,6 +212,7 @@ export function buildMinutes(
       id: 'my-opinion',
       speaker: 'PARTICIPANT',
       text: firstOpinion.originalText,
+      speakerNote: stanceNote(firstOpinion.stance),
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, firstOpinion.createdAt),
     });
@@ -190,23 +229,41 @@ export function buildMinutes(
         });
       }
     } else {
+      const awaitingIds = membersAwaitingAnswer(scenario, {
+        stage: 'REACTIONS',
+        opinions: [firstOpinion],
+        followUpUsed: false,
+        followUpAnswered: false,
+      });
       for (const roleId of EXEC_MEMBER_ORDER) {
         const reactions = reactionsFor(scenario, roleId, firstOpinion.confirmedConditionIds);
+        const opposition = oppositionReactionText(
+          scenario,
+          roleId,
+          firstOpinion.stance ?? null,
+          firstOpinion.confirmedConditionIds,
+        );
         entries.push({
           id: `reaction-${roleId}`,
           speaker: roleId,
-          text: scriptedReactionText(reactions),
+          text: scriptedReactionText(reactions, opposition, scenario.holdReasons?.[roleId], awaitingIds.includes(roleId)),
           kind: 'speech',
           timeLabel: TIME_UNKNOWN,
         });
       }
     }
 
-    // 5. CAIO 질문(각본 문구, 도착 시각 없음)
+    // 5. 후속 질문(각본 문구, 도착 시각 없음). T93: 참가자 입장별로 묻는 임원·질문이
+    // 다를 수 있다(resolveFollowUpPrompt). 다시 답하기에서 입장을 바꿔 제출했으면 실제로
+    // 답한 질문은 둘째 의견의 입장 기준이다(PR #20 Codex 22차 검토 P2).
+    const followUpPrompt = resolveFollowUpPrompt(
+      scenario,
+      session.followUpStance ?? session.opinions[1]?.stance ?? firstOpinion.stance ?? null,
+    );
     entries.push({
       id: 'caio-question',
-      speaker: scenario.followUp.askedBy,
-      text: scenario.followUp.question,
+      speaker: followUpPrompt.askedBy,
+      text: followUpPrompt.question,
       kind: 'speech',
       timeLabel: TIME_UNKNOWN,
     });
@@ -218,7 +275,8 @@ export function buildMinutes(
     entries.push({
       id: 'my-followup',
       speaker: 'PARTICIPANT',
-      text: secondOpinion ? secondOpinion.originalText : '앞서 전달한 의견을 유지',
+      text: secondOpinion ? secondOpinion.originalText : '(답하지 않고 넘어갔습니다)',
+      speakerNote: secondOpinion ? stanceNote(secondOpinion.stance) : undefined,
       kind: 'mine',
       timeLabel: formatElapsed(startedAt, secondOpinion?.createdAt),
     });
@@ -228,7 +286,7 @@ export function buildMinutes(
         entries.push({
           id: `followup-${result.roleId}`,
           speaker: result.roleId,
-          text: result.text,
+          text: sealFollowUp && findVerdictWords(result.text).length > 0 ? SEALED_FOLLOWUP_TEXT : result.text,
           kind: result.kind,
           timeLabel: formatElapsed(startedAt, result.createdAt),
         });
@@ -238,7 +296,12 @@ export function buildMinutes(
     entries.push({
       id: 'chair-motion',
       speaker: 'CEO',
-      text: '이 조건으로 안건을 고정합니다',
+      // 무대 의장 말풍선과 같은 문장(PR #20 Codex 3차 검토 P2).
+      text: chairMotionLine(
+        scenario,
+        collectConfirmedConditionIds(session.opinions),
+        collectParticipantStance(session.opinions),
+      ),
       kind: 'speech',
       timeLabel: TIME_UNKNOWN,
     });

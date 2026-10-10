@@ -7,6 +7,7 @@
 // 열어 가장 내용이 많은 상태에서 단언한다(card "비서실장 드로어 열린 상태 포함").
 
 import { test, expect, type Page, type Route } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 /**
  * 문서 스크롤이 없어도 패널 안에서 내용이 잘릴 수 있다(T56: 회의록 최신 항목이 아래로
@@ -26,7 +27,10 @@ async function expectFullyVisible(page: Page, testId: string, label: string) {
     `${label}: ${testId}가 뷰포트를 벗어났다(top=${box.y}, bottom=${box.y + box.height}, viewport=${viewport.height})`,
   ).toBe(true);
   // 패널 자체가 안에서 잘리는 경우(자식이 넘침)도 잡는다.
-  const clipped = await page.getByTestId(testId).evaluate((el) => el.scrollHeight - el.clientHeight);
+  // T111: 버튼(.cta)은 바깥으로 나온 꺾쇠(::before, 장식)가 scrollHeight를 늘리므로 제외한다.
+  const clipped = await page
+    .getByTestId(testId)
+    .evaluate((el) => (el.classList.contains('cta') ? 0 : el.scrollHeight - el.clientHeight));
   expect(clipped <= 1, `${label}: ${testId} 내부 내용이 ${clipped}px 넘쳐 잘린다`).toBe(true);
 }
 
@@ -42,10 +46,11 @@ async function expectNoPageScroll(page: Page, label: string) {
 }
 
 test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한 화면에 보인다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await expectNoPageScroll(page, 'ATTRACT');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.
   await expect(
@@ -53,16 +58,12 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   ).toBeInViewport();
 
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
-  await expectFullyVisible(page, 'minutes-panel', 'BRIEFING');
   // 사건 표기 eyebrow(T47): 안건 제목 위 한 줄이 잘리지 않고 보인다.
   await expect(page.getByTestId('briefing-incident')).toBeInViewport();
-  // 회의록 패널(v1.0 7절, T41): BRIEFING·OPINIONS·MOTION·VOTE에서만 보이고, 왼쪽 열
-  // (무대·행동·회의록)이 잘리지 않는다.
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'BRIEFING');
+  // T102: BRIEFING에는 발언 흐름 패널이 없다(패널이 있는 화면은 MOTION·VOTE뿐).
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
   // T68: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있고, 남는
   // 세로 여유로 오른쪽 열의 나머지 카드(현재 상황·제안·미정·할 일)가 잘리지 않는다.
   await expect(page.getByTestId('open-evidence')).toBeVisible();
@@ -91,20 +92,22 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await page.keyboard.press('Escape');
   await expect(evidenceDialog).toHaveCount(0);
 
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 의견 듣기' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
-  await expectFullyVisible(page, 'minutes-panel', 'OPINIONS');
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'OPINIONS');
+  // T102: 임원 의견 전문은 오른쪽 종이에서만 읽는다 — 발언 흐름 패널은 없고 안내 한 줄이 있다.
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+  await expectFullyVisible(page, 'opinions-read-hint', 'OPINIONS');
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
-  // 추천 문구 4개(조건 4개, 시나리오 최대치)를 선택해 가장 내용이 많은 상태를 만든다.
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+  // 추천 문구 3개(조건 3개 — 책임자 지정은 추가 답변)를 선택해 가장 내용이 많은 상태를 만든다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
-  await expectNoPageScroll(page, 'DISCUSS(조건 4개 선택)');
+  await expectNoPageScroll(page, 'DISCUSS(조건 3개 선택)');
   // T69: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있다
   // (BRIEFING과 같은 동작). 팝업은 position:fixed 전체 화면 오버레이라 비서실장
   // 드로어(오른쪽 열 위에 겹치는 절대 위치 드로어, z-index 6)보다 위(evidence-dialog
@@ -112,7 +115,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // (오른쪽 열의 다른 카드와 같은 규칙) 드로어를 닫은 이 시점에 먼저 확인한다.
   const discussOpenEvidence = page.getByTestId('open-evidence');
   await expect(discussOpenEvidence).toBeVisible();
-  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 4개 선택)');
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 3개 선택)');
 
   await discussOpenEvidence.click();
   const discussEvidenceDialog = page.getByTestId('evidence-dialog');
@@ -126,11 +129,20 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(discussOpenEvidence).toBeFocused();
 
   // 비서실장 드로어를 연 상태도 스크롤이 없어야 한다(오른쪽 열 위에 겹치는 드로어).
+  // 문구를 고르기 전에는 비서실장 버튼이 잠겨 있으므로 먼저 추천 문구를 하나 고른다.
+  await page.locator('[data-testid^="phrase-card-"]').first().click();
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
 
+  // 2026-10-08 팀리드 지시: 설득 현황판(T96)이 더해지며 왼쪽 열이 세로로 넘쳐 하단
+  // CTA가 뷰포트 밖으로 밀렸는데도 문서 스크롤 자체는 없어(.app-body__actions가
+  // overflow:visible이라 안쪽 scrollHeight 검사로는 못 잡는다) expectNoPageScroll이
+  // 못 잡았다 — CTA 자체가 뷰포트 안에 보이는지 직접 단언한다.
+  await expectFullyVisible(page, 'submit-opinion', 'DISCUSS(CTA)');
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
@@ -138,7 +150,11 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-  await expectNoPageScroll(page, 'REACTIONS');
+  await expectNoPageScroll(page, 'REACTIONS(반응 듣기)');
+
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
+  await expectNoPageScroll(page, 'REACTIONS(다시 답하기)');
 
   // 직접 입력(가장 내용이 많은 경로)으로 조건 칩까지 노출한 상태도 확인한다.
   await page.getByTestId('followup-textarea').fill('잘못된 승인이 나오면 책임자가 확인할 수 있게 절차를 정합니다.');
@@ -146,9 +162,12 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'REACTIONS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectNoPageScroll(page, 'REACTIONS(비서실장 팝업 열림)');
+  await page.getByTestId('assistant-close').click();
 
+  // T96: DISCUSS와 같은 이유로 REACTIONS(다시 답하기)도 CTA가 뷰포트 안에 보이는지
+  // 직접 확인한다.
+  await expectFullyVisible(page, 'submit-followup', 'REACTIONS(다시 답하기 CTA)');
   const submitFollowup = page.getByTestId('submit-followup');
   await expect(submitFollowup).toBeEnabled();
   await submitFollowup.click();
@@ -158,6 +177,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectFullyVisible(page, 'minutes-panel', 'MOTION');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'MOTION');
+  // T96: MOTION 왼쪽 열도 같은 공용 설득 현황판을 쓰므로 함께 확인한다.
+  await expectFullyVisible(page, 'freeze-motion', 'MOTION(CTA)');
 
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
@@ -165,6 +186,10 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectFullyVisible(page, 'minutes-panel', 'VOTE');
   await expect(page.getByTestId('minutes-panel')).toBeVisible();
   await expectNoClip(page, '.app-body__minutes', 'VOTE');
+  // T96: VOTE도 함께 확인한다 — 찬성 라디오가 왼쪽 열(BALLOTS) 바로 아래 오른쪽
+  // 종이가 아니라 오른쪽 열 안에 있어 왼쪽 열 넘침과는 무관하지만, 왼쪽 열 자체
+  // (PersuasionBoard + BALLOTS)가 뷰포트를 넘지 않는지는 vote-ballots로 확인한다.
+  await expectFullyVisible(page, 'vote-ballots', 'VOTE(왼쪽 열)');
 
   // VOTE의 "발언 흐름" 항목 수를 기억해 둔다 — RESULT의 회의록 전문(T58 흡수)이
   // 같은 buildMinutes 계산을 쓰므로 항목 수가 같아야 한다(카드 완료 확인).
@@ -265,38 +290,40 @@ async function expectNoClip(page: Page, selector: string, label: string) {
 
 test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE가 잘리지 않고 스크롤도 없다', async ({ page }) => {
   await mockLongStatements(page);
-  await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await page.goto('/?coach=off');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await expectNoPageScroll(page, 'OPINIONS(live)');
   await expectNoClip(page, '.app-body__content', 'OPINIONS(live)');
-  await expect(page.getByTestId('minutes-panel')).toBeVisible();
-  await expectNoClip(page, '.app-body__minutes', 'OPINIONS(live)');
+  await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+  await expectFullyVisible(page, 'opinions-read-hint', 'OPINIONS(live)');
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언)');
   await expectNoClip(page, '.app-body__content', 'DISCUSS(live, 120자 발언)');
-  // "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS 열도 OPINIONS의 실제 120자 발언으로
-  // 바뀌었다(Codex 18차 검토 P2, T73에서 이 카드는 팝업 안으로 옮겼다). 줄 클램프를
-  // 걸지 않으므로 카드 높이가 늘어나도 팝업 안에서만 스크롤하고 페이지 스크롤은 없어야
-  // 한다.
+  // 근거 자료 팝업은 자료 4장만 보인다(T105: 임원 발언 열을 없앴다). 120자 발언이
+  // 있어도 팝업 안에 발언이 새지 않고 페이지 스크롤도 없어야 한다.
   const discussOpenEvidence = page.getByTestId('open-evidence');
   await discussOpenEvidence.click();
-  await expect(page.getByTestId('statement-card-CEO')).toHaveText(LONG_STATEMENT.slice(0, 120));
+  await expect(page.getByTestId('evidence-card-E1')).toBeVisible();
+  await expect(page.getByTestId('evidence-dialog').locator('[data-testid^="statement-card-"]')).toHaveCount(0);
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언, 팝업 열림)');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
-  // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
-  // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
+  // 조건 4개(P1~P3 + 추가 답변의 OWNER, 시나리오 최대치)를 모두 붙여 RESULT 요약의 "이사님이
+  // 붙인 조건" 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
   await expect(
@@ -308,8 +335,11 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // CAIO 후속 질문이 답글 카드 아래에서 잘리지 않고 보인다.
   await expect(page.getByTestId('followup-question')).toBeInViewport();
 
-  await page.getByTestId('followup-option-2').click();
-  await expect(page.getByTestId('motion-card')).toBeVisible();
+  // T119: 네 번째 조건(OWNER)은 추가 답변에서 붙인다.
+  await page.getByTestId('reactions-advance').click();
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE(live)');
@@ -338,3 +368,348 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // 빠지며 VERDICTS 행이 그 자리를 겸한다).
   await expect(page.getByTestId('result-seat-PARTICIPANT')).toBeInViewport();
 });
+
+// T116: 조건 칩이 붙고 답변이 길어져도 입력 상자는 고정이고 아래 버튼 줄(제출 줄)이 밀리지
+// 않는다. 시나리오 조건은 최대 5개라(칩 6개는 만들 수 없다) 다섯 개를 모두 붙이고, 서로 충돌하는
+// 두 조건(충돌 안내 줄 포함)과 600자 입력(300자 초과 오류 줄 포함)을 함께 건다.
+const ALL_CONDITIONS_TEXT =
+  '금액 한도를 정합니다. 승인 사유를 기록합니다. 일부를 다시 보도록 합니다. 책임자를 지정합니다. 전부 자동 승인도 합니다. ';
+
+function longDraft(): string {
+  return ALL_CONDITIONS_TEXT.repeat(10).slice(0, 600);
+}
+
+async function expectSubmitRowFixed(
+  page: Page,
+  label: string,
+  textareaId: string,
+  submitIds: string[],
+  fill: (text: string) => Promise<void>,
+) {
+  const readYs = async () => {
+    const ys: number[] = [];
+    for (const id of submitIds) {
+      const box = await page.getByTestId(id).boundingBox();
+      expect(box, `${label}: ${id} 요소를 찾지 못했다`).not.toBeNull();
+      ys.push(Math.round(box?.y ?? -1));
+    }
+    return ys;
+  };
+  const textareaHeight = async () =>
+    Math.round((await page.getByTestId(textareaId).boundingBox())?.height ?? -1);
+
+  const emptyYs = await readYs();
+  const emptyHeight = await textareaHeight();
+  await fill(longDraft());
+  await expect(page.getByTestId('condition-chips')).toBeVisible();
+  await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
+  await expectNoPageScroll(page, `${label}(칩 5개 + 600자)`);
+  expect(await readYs(), `${label}: 제출 줄 y가 빈 상태와 같아야 한다`).toEqual(emptyYs);
+  // 충돌하는 두 조건(검토·전부 자동)을 모두 확정하면 충돌 안내가 뜬다 — 안내가 잘리지 않고
+  // 읽히며(칸 안에 다 들어온다) 제출 줄도 움직이지 않는다.
+  for (const id of ['REVIEW', 'FULL_AUTO']) {
+    const chip = page.getByTestId(`condition-chip-${id}`);
+    if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+      await chip.click();
+    }
+  }
+  const conflicts = page.getByTestId('condition-chips-conflicts');
+  await expect(conflicts).toBeVisible();
+  const conflictFit = await conflicts.evaluate((el) => ({
+    clientHeight: el.clientHeight,
+    scrollHeight: el.scrollHeight,
+  }));
+  expect(conflictFit.clientHeight, `${label}: 충돌 안내가 최소 한 줄 높이를 가져야 한다`).toBeGreaterThanOrEqual(15);
+  expect(conflictFit.scrollHeight, `${label}: 충돌 안내가 잘리지 않아야 한다`).toBeLessThanOrEqual(
+    conflictFit.clientHeight + 1,
+  );
+  expect(await readYs(), `${label}: 충돌 안내가 떠도 제출 줄 y가 같아야 한다`).toEqual(emptyYs);
+  expect(await textareaHeight(), `${label}: 입력 상자 높이가 고정이어야 한다`).toBe(emptyHeight);
+  // 600자는 입력 상자 안에서 스크롤된다(상자가 늘어나지 않는다).
+  const scrolls = await page
+    .getByTestId(textareaId)
+    .evaluate((el) => el.scrollHeight > el.clientHeight);
+  expect(scrolls, `${label}: 긴 글은 입력 상자 안쪽에서 스크롤돼야 한다`).toBe(true);
+  await expectFullyVisible(page, submitIds[submitIds.length - 1], `${label}(제출 버튼)`);
+}
+
+test('내 의견·내 답변 HUD: 조건 칩 5개와 600자 입력에도 제출 줄 위치와 입력 상자 높이가 변하지 않는다', async ({
+  page,
+}) => {
+  await page.goto('/?mode=scripted&coach=off');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  const draft = page.getByTestId('draft-editor-textarea');
+  await expectSubmitRowFixed(
+    page,
+    'DISCUSS',
+    'draft-editor-textarea',
+    ['assistant-toggle', 'submit-opinion'],
+    (text) => draft.fill(text),
+  );
+
+  await draft.fill('');
+  await page.getByTestId('phrase-card-P1').click();
+  // 직접 쓴 글이 있었으므로 문구로 다시 구성할지 묻는다.
+  await page.getByRole('button', { name: '선택 문구로 다시 구성' }).click();
+  await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+
+  const followup = page.getByTestId('followup-textarea');
+  await expectSubmitRowFixed(
+    page,
+    'REACTIONS(다시 답하기)',
+    'followup-textarea',
+    ['assistant-toggle', 'keep-previous-answer', 'submit-followup'],
+    (text) => followup.fill(text),
+  );
+});
+
+// T117: 사용자가 "반응에 답하기에서 버튼이 여전히 잘린다"고 보고했다(뷰포트 미확정). 화면 맞춤
+// 축소는 1200×700 이상이면 'natural'이라 켜지지 않으므로, 1366×768·1440×900·1536×864처럼
+// 1080/720 사이 크기는 1080용 치수 그대로 세로가 모자랐다. 여섯 크기 모두에서 조건 5개 + 300자 +
+// 충돌 안내 상태의 제출 줄이 캔버스(축소 모드면 축소된 wrapper) 안에 들어오고, 조건 칩은 한 줄
+// (모든 칩의 top이 같고 칩 줄 높이가 칩 두 줄 미만)이며 충돌 안내가 말줄임 없이 읽혀야 한다.
+const HUD_VIEWPORTS: Array<[number, number]> = [
+  [1920, 1080],
+  [1680, 1050],
+  [1536, 864],
+  [1440, 900],
+  [1366, 768],
+  [1600, 900],
+  [1280, 720],
+];
+
+async function expectHudFits(
+  page: Page,
+  label: string,
+  textareaId: string,
+  submitIds: string[],
+  [width, height]: [number, number],
+) {
+  {
+    await page.setViewportSize({ width, height });
+    const where = `${label} ${width}×${height}`;
+    // 리사이즈 직후 레이아웃·맞춤 배율이 반영될 때까지 기다린다(시간 의존 아님: 제출 줄이 안정될 때까지 폴링).
+    await expect
+      .poll(async () => {
+        const data = await page.evaluate((ids) => {
+          const wrapper = document.querySelector('.app-scale-wrapper');
+          const canvasBottom = wrapper ? wrapper.getBoundingClientRect().bottom : innerHeight;
+          const limit = Math.min(canvasBottom, innerHeight);
+          return ids.map((id) => {
+            const el = document.querySelector(`[data-testid="${id}"]`);
+            return el ? el.getBoundingClientRect().bottom - limit : Number.POSITIVE_INFINITY;
+          });
+        }, submitIds);
+        return Math.max(...data) <= 1;
+      }, { message: `${where}: 제출 줄이 캔버스(뷰포트) 안에 들어와야 한다` })
+      .toBe(true);
+    const hud = await page.evaluate(
+      ({ ids, textarea }) => {
+        const chips = document.querySelector('[data-testid="condition-chips"]');
+        const list = chips?.querySelector('.condition-chips__list');
+        const chipEls = [...(chips?.querySelectorAll('.condition-chip') ?? [])];
+        const tops = chipEls.map((chip) => Math.round(chip.getBoundingClientRect().top));
+        const conflicts = document.querySelector('[data-testid="condition-chips-conflicts"]');
+        const area = document.querySelector(`[data-testid="${textarea}"]`);
+        return {
+          more: document.querySelector('[data-testid="condition-chips-more"]')?.textContent ?? null,
+          listMore: list?.getAttribute('data-more') ?? null,
+          listScrollWidth: list?.scrollWidth ?? 0,
+          listClientWidth: list?.clientWidth ?? 0,
+          chipCount: chipEls.length,
+          chipHeight: chipEls[0]?.getBoundingClientRect().height ?? 0,
+          sameRow: new Set(tops).size === 1,
+          listHeight: list?.getBoundingClientRect().height ?? 0,
+          conflictTruncated: conflicts ? conflicts.scrollWidth > conflicts.clientWidth + 1 : true,
+          textareaHeight: area?.getBoundingClientRect().height ?? 0,
+          geometry: (() => {
+            const hudEl = area?.closest('.discuss-screen__hud, .reactions-screen__hud');
+            const editor = area?.closest('.draft-editor');
+            const head = editor?.querySelector('.draft-editor__head');
+            const slot = hudEl?.querySelector('.hud-conditions-slot');
+            if (!area || !hudEl || !editor || !head || !slot) {
+              return null;
+            }
+            const r = (el: Element) => el.getBoundingClientRect();
+            const submitTops = ids.map((id) => {
+              const el = document.querySelector(`[data-testid="${id}"]`);
+              return el ? r(el).top : Number.NEGATIVE_INFINITY;
+            });
+            return {
+              textareaBottom: r(area).bottom,
+              textareaTop: r(area).top,
+              headBottom: r(head).bottom,
+              editorHeight: r(editor).height,
+              headHeight: r(head).height,
+              slotTop: r(slot).top,
+              slotBottom: r(slot).bottom,
+              hudTop: r(hudEl).top,
+              hudBottom: r(hudEl).bottom,
+              chipTop: chipEls[0] ? r(chipEls[0]).top : 0,
+              chipBottom: chipEls[0] ? r(chipEls[0]).bottom : 0,
+              minSubmitTop: Math.min(...submitTops),
+            };
+          })(),
+          submitCount: ids.filter((id) => document.querySelector(`[data-testid="${id}"]`)).length,
+        };
+      },
+      { ids: submitIds, textarea: textareaId },
+    );
+    expect(hud.chipCount, `${where}: 조건 칩 5개`).toBe(5);
+    // 가려진 칩 표시("+N")와 페이드는 칩 줄이 실제로 넘칠 때만 켜진다(칩이 전부 보이면 둘 다 없음,
+    // 넘치면 +N과 페이드가 있음). 칩 줄 안의 위치가 아니라 화면 좌표로 센 값이어야 한다.
+    if (hud.listScrollWidth <= hud.listClientWidth + 1) {
+      expect(hud.more, `${where}: 칩이 전부 보이는데 +N이 떠 있다`).toBe('');
+      expect(hud.listMore, `${where}: 칩이 전부 보이는데 페이드가 켜져 있다`).toBe('false');
+    } else {
+      expect(hud.more, `${where}: 칩이 넘치는데 +N이 없다`).toMatch(/^\+[1-5]$/);
+      expect(hud.listMore, `${where}: 칩이 넘치는데 페이드가 없다`).toBe('true');
+    }
+    if (width === 1920 && label === 'DISCUSS') {
+      // 1920 DISCUSS는 칩 5개가 전부 보인다(회귀 방지: 목록 왼쪽 오프셋이 +N을 부풀렸었다).
+      expect(hud.listScrollWidth, `${where}: 칩이 전부 보여야 한다`).toBeLessThanOrEqual(hud.listClientWidth + 1);
+    }
+    expect(hud.sameRow, `${where}: 조건 칩이 한 줄에 있어야 한다`).toBe(true);
+    expect(hud.listHeight, `${where}: 칩 컨테이너 높이가 칩 한 줄(두 줄 미만)`).toBeLessThan(hud.chipHeight * 2);
+    expect(hud.conflictTruncated, `${where}: 충돌 안내가 말줄임 없이 읽혀야 한다`).toBe(false);
+    expect(hud.textareaHeight, `${where}: 입력 상자 최소 44px`).toBeGreaterThanOrEqual(43);
+    expect(hud.submitCount, `${where}: 제출 줄 버튼`).toBe(submitIds.length);
+    // T117 검토: 입력 상자가 조건 칩 줄 위로 겹치거나 HUD 박스 밖으로 나가지 않아야 한다.
+    const g = hud.geometry;
+    expect(g, `${where}: HUD 구조를 찾지 못했다`).not.toBeNull();
+    if (g) {
+      expect(g.textareaBottom, `${where}: 입력 상자 아래 끝이 조건 칸 위 끝 이하`).toBeLessThanOrEqual(g.slotTop + 1);
+      expect(g.textareaTop, `${where}: 입력 상자가 머리줄 아래에서 시작`).toBeGreaterThanOrEqual(g.headBottom - 1);
+      expect(g.editorHeight, `${where}: 편집기 높이 ≥ 머리줄 + 입력 상자`).toBeGreaterThanOrEqual(
+        g.headHeight + hud.textareaHeight - 1,
+      );
+      expect(g.slotBottom, `${where}: 조건 칸이 HUD 박스 안`).toBeLessThanOrEqual(g.hudBottom + 1);
+      expect(g.chipTop, `${where}: 칩이 조건 칸 안`).toBeGreaterThanOrEqual(g.slotTop - 1);
+      expect(g.chipBottom, `${where}: 칩이 조건 칸 안`).toBeLessThanOrEqual(g.slotBottom + 1);
+      expect(g.minSubmitTop, `${where}: 제출 줄이 HUD 박스 아래`).toBeGreaterThanOrEqual(g.hudBottom - 1);
+    }
+    await expectNoPageScroll(page, where);
+  }
+}
+
+// 글을 쓴 직후에는 "새로 제안된 조건 자동 확정" 효과가 한 번 더 돌아 곧바로 누른 칩의 선택을
+// 되돌리는 경합이 있다(제품 쪽 별도 사안) — 충돌 안내가 보일 때까지 눌러 보는 재시도로 우회한다.
+async function makeFiveConditionsWithConflict(page: Page, fill: (text: string) => Promise<void>) {
+  await fill(longDraft().slice(0, 300));
+  await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(5);
+  // 글을 쓴 직후에는 자동 확정 효과가 한 번 더 돌 수 있어 충돌이 보일 때까지 눌러 본다.
+  await expect(async () => {
+    for (const id of ['REVIEW', 'FULL_AUTO']) {
+      const chip = page.getByTestId(`condition-chip-${id}`);
+      if ((await chip.getAttribute('aria-pressed')) !== 'true') {
+        await chip.click();
+      }
+    }
+    await expect(page.getByTestId('condition-chips-conflicts')).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 10_000 });
+}
+
+test('내 의견·내 답변 HUD: 일곱 뷰포트에서 조건 5개 + 300자 + 충돌 안내에도 제출 줄이 잘리지 않고 조건 칩은 한 줄이다', async ({
+  page,
+}) => {
+  // 크기마다 새로 연다: 설득 현황판 기본 펼침/접힘(높이 ≤800은 접힘)과 무대 열 폭은 첫 렌더 크기로
+  // 정해지므로, 1920에서 연 뒤 크기만 바꾸면 낮은 화면의 시작 상태를 못 본다.
+  test.setTimeout(300_000);
+  for (const viewport of HUD_VIEWPORTS) {
+    await page.setViewportSize({ width: viewport[0], height: viewport[1] });
+    await runHudCheck(page, viewport);
+  }
+});
+
+async function runHudCheck(page: Page, viewport: [number, number]) {
+  await page.goto('/?mode=scripted&coach=off');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  const draft = page.getByTestId('draft-editor-textarea');
+  await makeFiveConditionsWithConflict(page, (text) => draft.fill(text));
+  await expectHudFits(page, 'DISCUSS', 'draft-editor-textarea', ['assistant-toggle', 'submit-opinion'], viewport);
+
+  await draft.fill('');
+  await page.getByTestId('phrase-card-P1').click();
+  await page.getByRole('button', { name: '선택 문구로 다시 구성' }).click();
+  await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+
+  const followup = page.getByTestId('followup-textarea');
+  await makeFiveConditionsWithConflict(page, (text) => followup.fill(text));
+  await expectHudFits(
+    page,
+    'REACTIONS(다시 답하기)',
+    'followup-textarea',
+    ['assistant-toggle', 'keep-previous-answer', 'submit-followup'],
+    viewport,
+  );
+}
+
+// T119: 추가 답변은 그 입장에서 규칙표가 쓰는 모든 조건을 제안한다. 첫 의견에서 조건을 하나도
+// 붙이지 않고 넘어온 최악 경우(모든 카드가 보인다)에도 2/2 화면에서 마지막 추천 답변 카드와
+// "답변 전달" 버튼이 잘리지 않고 문서 스크롤이 없다(안건 × 입장 4가지). 비서실장의 조건
+// 추천에는 "붙이는 곳" 안내가 함께 보인다.
+// hintedConditionId: 추가 답변에서 고를 수 있다고 안내돼야 하는 조건. 찬성은 첫 문구에서 빠진
+// 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
+const T119_CASES = [
+  { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 7, hinted: 'FULL_AUTO' },
+  { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 7, hinted: 'SCOPE' },
+] as const;
+
+for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
+  test(`T119: 조건 0개로 넘어온 ${scenarioId} ${side === 'for' ? '찬성' : '반대'} 2/2 화면에 모든 추가 답변이 보여도 잘리거나 스크롤되지 않는다`, async ({
+    page,
+  }) => {
+    await page.goto('/?mode=scripted&coach=off');
+    await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '확인', exact: true }).click();
+    await page.getByTestId(`scenario-card-${scenarioId}`).click();
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId(`discuss-side-${side}`).click();
+    await page.getByTestId(`phrase-card-${phraseId}`).click();
+    await tryAllAssistantFeatures(page);
+    await page.getByTestId('submit-opinion').click();
+    await page.getByTestId('reactions-advance').click();
+
+    const options = page.locator('[data-testid^="followup-option-"]');
+    await expect(options).toHaveCount(cards);
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 2/2`);
+    // 카드 testid는 전체 옵션 중 순번이라(다른 입장 카드는 숨김) 보이는 카드 중 마지막을 읽는다.
+    const lastId = await options.last().getAttribute('data-testid');
+    expect(lastId).not.toBeNull();
+    await expectFullyVisible(page, lastId ?? '', `T119 ${scenarioId} ${side} 마지막 추천 답변`);
+    await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} ${side} 답변 전달 버튼`);
+
+    await page.getByTestId('assistant-toggle').click();
+    await page.getByTestId('assistant-action-compare').click();
+    await expect(page.getByTestId('assistant-recommend-opening')).toBeVisible();
+    await expect(page.getByTestId(`assistant-remaining-${hinted}`)).toContainText('추가 답변에서 고를 수 있습니다');
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 비서실장 열림`);
+  });
+}

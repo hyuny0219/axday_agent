@@ -5,8 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
+  findFollowUpVerdictWords,
+  followUpVerdictStats,
   findStyleViolations,
   resolveEvalModel,
+  toRoundRows,
   toVoteRows,
   type CallRecord,
   type EvalCase,
@@ -102,7 +105,9 @@ describe('findStyleViolations — 존댓말 종결', () => {
 // VOTE 행의 latencyMs가 전부 0으로 기록되던 문제(PR #10 Codex 18차 검토 P2): handleVote()는
 // 지연을 돌려주지 않으므로 provider.complete() 호출을 역할별로 계측해 넣는다.
 describe('callRecordsByRole — 표결 호출 계측', () => {
-  it('fromIndex 이후 기록만 역할별로 모으고 같은 역할은 마지막 기록을 쓴다', () => {
+  // PR #20 Codex 24차 검토 P2: T91 자동 재시도로 같은 역할이 두 번 호출되면 지연은 합산한다
+  // (첫 시도 실패 1800ms + 재시도 1900ms = 3700ms) — 마지막 시도만 쓰면 실제 소요가 과소 집계된다.
+  it('fromIndex 이후 기록만 역할별로 모으고 같은 역할은 시도 시간을 합산한다', () => {
     const sink: CallRecord[] = [
       { kind: 'round', roleId: 'CFO', latencyMs: 100, modelId: 'm' },
       { kind: 'vote', roleId: 'CFO', latencyMs: 2100, modelId: 'm' },
@@ -111,7 +116,7 @@ describe('callRecordsByRole — 표결 호출 계측', () => {
     ];
     const byRole = callRecordsByRole(sink, 1);
     expect(byRole.get('CFO')?.latencyMs).toBe(2100);
-    expect(byRole.get('CISO')?.latencyMs).toBe(1900);
+    expect(byRole.get('CISO')?.latencyMs).toBe(3700);
     expect(byRole.has('CEO')).toBe(false);
   });
 });
@@ -150,5 +155,111 @@ describe('resolveEvalModel — mock 실행의 modelId', () => {
   it('실제 제공자는 MODEL_ID(공백 제거), 없으면 DEFAULT_MODEL_ID를 쓴다', () => {
     expect(resolveEvalModel({ MODEL_ID: ' my-model ' })).toEqual({ useMock: false, modelId: 'my-model' });
     expect(resolveEvalModel({})).toEqual({ useMock: false, modelId: DEFAULT_MODEL_ID });
+  });
+});
+
+describe('findFollowUpVerdictWords — FOLLOWUP 발언 방향 단어(T114)', () => {
+  function followUp(message: string, status: 'answered' | 'failed' = 'answered'): EvalRow {
+    return { ...row(message), stage: 'FOLLOWUP', status };
+  }
+
+  it('FOLLOWUP 발언의 찬성·반대·가결·부결을 찾는다', () => {
+    const found = findFollowUpVerdictWords([
+      followUp('답변을 들으니 안심입니다.'),
+      followUp('이 안건에는 찬성합니다.'),
+      followUp('반대로 남겠습니다. 부결이 맞습니다.'),
+    ]);
+    expect(found.map((item) => item.word)).toEqual(['찬성', '반대', '부결']);
+    expect(found[0]?.line).toBe(2);
+  });
+
+  it('다른 단계 발언과 실패한 행은 보지 않는다', () => {
+    expect(findFollowUpVerdictWords([row('찬성합니다.'), followUp('찬성합니다.', 'failed')])).toEqual([]);
+  });
+});
+
+describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차)', () => {
+  function followUp(extra: Partial<EvalRow>): EvalRow {
+    return { ...row('답변을 잘 들었습니다.'), stage: 'FOLLOWUP', ...extra };
+  }
+
+  it('재시도로 깨끗해진 행도 첫 시도 원시 위반 1건으로 센다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ followUpRawAttempts: ['찬성합니다.', '답변을 들었습니다.'], followUpViolations: [1, 0], followUpMasked: false }),
+      followUp({ followUpRawAttempts: ['답변을 들었습니다.'], followUpViolations: [0], followUpMasked: false }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 1, maskedRows: 0 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+    // 최종 문장 검사는 0건이라 이 지표 없이는 위반이 사라져 보인다.
+    expect(findFollowUpVerdictWords([followUp({})])).toEqual([]);
+  });
+
+  it('중립 대체된 행은 대체율에 따로 잡힌다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ followUpRawAttempts: ['찬성합니다.', '반대표를 던지겠습니다.'], followUpViolations: [1, 2], followUpMasked: true }),
+      followUp({ followUpRawAttempts: ['들었습니다.'], followUpViolations: [0], followUpMasked: false }),
+      followUp({ status: 'failed' }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 3, maskedRows: 1 });
+    expect(stats.maskedRate).toBeCloseTo(0.5);
+  });
+
+  it('최종 실패(failed) 행도 audit이 있으면 원시 위반율 분모·분자에 들어간다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ status: 'failed', message: undefined, followUpRawAttempts: ['찬성합니다.'], followUpViolations: [1], followUpMasked: false }),
+      followUp({ followUpRawAttempts: ['답변을 들었습니다.'], followUpViolations: [0], followUpMasked: false }),
+      followUp({}),
+    ]);
+    // audit이 없는 행(구버전 기록)은 제외한다.
+    expect(stats).toMatchObject({ rows: 2, rawViolationRows: 1, rawViolationCount: 1 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+  });
+
+  it('원문이 하나도 없는 audit 행(장애)은 분모에서 빼고 따로 센다', () => {
+    const stats = followUpVerdictStats([
+      followUp({ status: 'failed', message: undefined, followUpAttempts: [], followUpRawAttempts: [], followUpViolations: [], followUpMasked: false }),
+      followUp({ followUpAttempts: [{ text: '찬성합니다.', violations: ['찬성'] }], followUpViolations: [1], followUpMasked: false }),
+      followUp({ followUpAttempts: [{ text: '들었습니다.', violations: [] }], followUpViolations: [0], followUpMasked: false }),
+    ]);
+    expect(stats).toMatchObject({ rows: 2, noRawRows: 1, rawViolationRows: 1 });
+    expect(stats.rawViolationRate).toBeCloseTo(0.5);
+  });
+
+  it('형식 오류 첫 시도의 invalidReason이 행에 보존되고 사유별로 집계된다', () => {
+    const stats = followUpVerdictStats([
+      followUp({
+        followUpAttempts: [
+          { text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' },
+          { text: '들었습니다.', violations: [] },
+        ],
+        followUpViolations: [1, 0],
+        followUpMasked: false,
+      }),
+    ]);
+    expect(stats.invalidReasons).toEqual({ schema: 1 });
+    expect(stats.rawViolationRows).toBe(1);
+  });
+
+  it('toRoundRows가 audit의 invalidReason을 JSONL 행에 그대로 싣는다', () => {
+    const evalCase = { id: 'c', scenarioId: 'ai-approval', pathId: 'p', pathLabel: 'p', variant: 'v' } as unknown as EvalCase;
+    const rows = toRoundRows(
+      [{ roleId: 'CFO', status: 'answered', latencyMs: 1, modelId: 'm', promptVersion: 'v13' } as never],
+      evalCase,
+      'FOLLOWUP',
+      [
+        {
+          roleId: 'CFO',
+          attempts: [
+            { text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' },
+            { text: '들었습니다.', violations: [] },
+          ],
+          masked: false,
+        },
+      ],
+    );
+    const serialized = JSON.parse(JSON.stringify(rows[0])) as EvalRow;
+    expect(serialized.followUpAttempts?.[0]).toEqual({ text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' });
+    expect(serialized.followUpViolations).toEqual([1, 0]);
+    expect(serialized.followUpMasked).toBe(false);
   });
 });

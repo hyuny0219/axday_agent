@@ -1,0 +1,58 @@
+/* 다음 할 일 점선(T113, 시안 A안 "숨쉬는 점선"). 화면마다 지금 눌러야 할 요소 하나에만
+   `data-next-step` 속성이 붙고, 그 요소의 바깥 7px에 2px 점선을 그려 1.6초 주기로 밝아졌다
+   어두워진다(opacity 1↔0.25). 점선은 ::after라 레이아웃을 바꾸지 않고 클릭도 막지 않는다.
+   z-index는 코치(35)·팝업(40)보다 낮다. 팝업이 열려 있는 동안 화면 본문의 점선은 속성
+   자체가 빠진다(components/parts/focusRing.ts). 색은 네이비 바탕에서 --accent, 종이 바탕에서
+   진한 호박색(버튼은 잉크색). */
+
+:where([data-next-step]) {
+  position: relative;
+}
+
+[data-next-step] {
+  --next-step-color: var(--accent);
+}
+
+/* 종이 바탕(오른쪽 내용 열, 소개 화면의 종이). */
+.app-body__content [data-next-step],
+.intro-screen__paper [data-next-step] {
+  --next-step-color: #b36b00;
+}
+
+.app-body__content .cta[data-next-step],
+.intro-screen__paper .cta[data-next-step] {
+  --next-step-color: #1b1a17;
+}
+
+/* 팝업 안(AI 비서실장 기능 버튼)은 팝업 바탕이 네이비다. */
+[role='dialog'] [data-next-step] {
+  --next-step-color: var(--accent);
+}
+
+[data-next-step]::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border: 2px dashed var(--next-step-color);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-next-step]::after {
+    animation: next-step-breathe 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes next-step-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.25;
+  }
+}

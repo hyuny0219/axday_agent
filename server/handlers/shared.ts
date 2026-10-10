@@ -8,6 +8,27 @@ import { ModelRefusalError, ProviderCallError } from '../providers/types';
 
 export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_error';
 
+/** 빠르게 실패한 호출(연결 오류·5xx·invalid_response/스키마 거절 등)만 한 번 더 시도할
+ * 가치가 있다(T91). timeout은 이미 전체 예산을 다 써서 재시도할 시간이 없으므로 뺀다.
+ * round.ts·vote.ts의 RoundRoleResult/VoteRoleResult는 failReason을 string으로 느슨하게
+ * 선언해 둬서(공개 응답 타입) 여기서도 string | undefined를 받는다. */
+export function isRetryableFailure(
+  failReason: string | undefined,
+  providerErrorClass?: ProviderErrorClass,
+): boolean {
+  if (failReason === undefined || failReason === 'timeout') return false;
+  // 인증·권한 오류(providerErrorClass 'auth')와 모델 거절(failReason 'refusal')은 같은 요청을
+  // 다시 보내도 성공할 수 없다 — 역할마다 헛된 호출을 한 번씩 더 만들 뿐이다(PR #20 Codex
+  // 26차 검토 P2). 연결·과부하·속도 제한·형식 오류(invalid_response)처럼 회복 가능한 것만.
+  if (failReason === 'refusal' || providerErrorClass === 'auth') return false;
+  return true;
+}
+
+/** 재시도를 허용할 남은 예산 하한(ms, T91). 이보다 적게 남았으면 재시도 대신 그대로
+ * failed로 돌려준다 — 2026-10-07 시연에서 CISO 응답이 8초 예산을 다 쓰고 provider_error로
+ * 끝난 사례를 보고, "빠르게 실패했고 남은 예산이 충분하면 1회만 더 시도"하는 규칙을 더했다. */
+export const MIN_RETRY_REMAINING_MS = 6000;
+
 /** logs/board-<날짜>.jsonl의 providerErrorClass 필드가 쓰는 값(T65 카드). */
 export type ProviderErrorClass =
   | 'timeout'
@@ -91,3 +112,11 @@ export const roleIdsSchema = z
   .min(1)
   .max(EXEC_ROLE_IDS.length)
   .refine((ids) => new Set(ids).size === ids.length, { message: 'roleIds must be unique' });
+
+/** 재시도 두 번의 캐시 토큰을 합친다(PR #20 Codex 36차 검토 P2 — 첫 시도가 응답까지 받았다가
+ * 검증에서 실패하고 두 번째가 성공하면, 마지막 시도만 기록해 비용·캐시 분석이 어긋났다).
+ * 둘 다 없으면 undefined, 하나만 있으면 그 값. */
+export function sumTokens(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined && b === undefined) return undefined;
+  return (a ?? 0) + (b ?? 0);
+}

@@ -1,5 +1,9 @@
-/* AI 비서실장 패널(T12·T31). DESIGN_SPEC.md 4장: secondary 버튼은 투명 패널+테두리,
-   주 동작(내 발언에 적용)은 시안 CTA. 원문/초안은 나란히 비교한다(v0.8 화면 추가 요구). */
+/* AI 비서실장 패널(T12·T31). T86(2026-10-07 사용자 — "버튼 색상을 체험 시작과 동일하게,
+   모든 버튼은 통일")에서 토글·닫기·기능 3버튼·정리 결과 선택 2버튼을 모두 shell.css의
+   공용 .cta/.cta--secondary 클래스로 바꿨다(색·글꼴·모서리는 다른 화면 CTA와 동일,
+   크기만 보조 CTA로 작게) — 이 파일에는 더 이상 버튼 자체의 색·테두리·모양 규칙을 두지
+   않고 레이아웃(아래 .assistant-panel__actions·.assistant-panel__refine-choices의
+   flex-wrap·gap, .assistant-panel__toggle의 정렬)만 남긴다. */
 
 .assistant-panel {
   display: flex;
@@ -7,117 +11,28 @@
   gap: var(--space-2);
 }
 
-.assistant-panel__toggle,
-.assistant-panel__close,
-.assistant-panel__actions button,
-.assistant-panel__refine-choices button {
-  min-height: var(--touch-min);
-  padding: 0 var(--space-3);
-  background-color: transparent;
-  border: 2px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: var(--fs-meta);
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    border-color var(--transition-fast) ease,
-    background-color var(--transition-fast) ease,
-    box-shadow var(--transition-fast) ease;
-}
-
 .assistant-panel__toggle {
   align-self: flex-start;
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.assistant-panel__toggle:hover,
-.assistant-panel__close:hover,
-.assistant-panel__actions button:hover:not(:disabled),
-.assistant-panel__refine-choices button:hover:not(:disabled) {
-  background-color: var(--panel-active);
-}
-
-.assistant-panel__actions button:disabled,
-.assistant-panel__refine-choices button:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-/* 주 동작: 내 발언에 적용 */
-.assistant-panel__refine-choices [data-testid='assistant-apply-refine'] {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
-.assistant-panel__refine-choices [data-testid='assistant-apply-refine']:hover:not(:disabled) {
-  background-color: var(--accent);
-  box-shadow: var(--glow-accent);
-}
-
-/* 오른쪽 열 위에 겹치는 드로어(DESIGN_SPEC.md v1.0 6절 "비서실장 패널은 오른쪽 열
-   위에 겹치는 드로어(position: absolute, 열 안)"). DOM 위치는 왼쪽 열(토글 옆) 그대로
-   지만, .app-body(position:relative, shell.css)가 위치 기준점이라 right/top/bottom은
-   .app-body 자체 padding과, left는 무대 열 폭+열 간격과 맞춰 정확히 오른쪽 "회의 정보"
-   grid 칸 위에 얹힌다. 열면 오른쪽 정보를 덮고, 닫으면(React가 body를 언마운트) 그
-   자리가 그대로 복귀한다. */
-.assistant-panel__body {
-  position: absolute;
-  z-index: 6;
-  top: var(--space-2);
-  right: var(--space-4);
-  bottom: var(--space-3);
-  left: calc(var(--stage-col-width) + var(--stage-col-gap));
-  overflow-y: auto;
-  padding: var(--space-3);
-  background-color: var(--panel-glass);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-}
-
-@media (max-width: 1280px) {
-  .assistant-panel__body {
-    top: var(--space-1);
-    right: var(--space-3);
-    bottom: var(--space-2);
-    padding: var(--space-2);
-  }
-}
-
-.assistant-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-2);
-}
-
-.assistant-panel__title {
-  margin: 0;
-  font-size: var(--fs-card);
-}
-
-.assistant-panel__badge {
-  padding: 2px var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
-  font-size: 13px;
   white-space: nowrap;
 }
+
+/* T89(2026-10-07 사용자 — "AI 비서실장의 팝업창을 근거 자료 팝업과 동일한 디자인으로"):
+   오른쪽 열 위에 겹치는 드로어(.assistant-panel__body, position:absolute)를 걷어내고
+   EvidenceDialog와 같은 모달 팝업(DialogShell, dialogShell.css)으로 바꿨다 — 패널
+   껍데기·머리글(제목+닫기)·하단 안내는 전부 DialogShell이 맡고, 이 파일에는 본문
+   내용(기능 3버튼·정리 결과 비교·근거 안내)만 남는다.
+
+   .assistant-panel__badge(모드 캡션)는 T86에서 "실시간 AI 응답"/"체험용 사전 구성"
+   표시 자체를 없애며 같이 지웠다. */
 
 .assistant-panel__actions,
 .assistant-panel__refine-choices {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
+  /* T111: 이중 테두리(바깥 5px)가 서로 겹치지 않게 간격을 넓힌다. */
+  gap: 14px;
+  margin-top: calc(var(--space-2) + 4px);
+  padding-left: 5px;
 }
 
 .assistant-panel__refine-compare {
@@ -143,15 +58,18 @@
 .assistant-panel__refine-original,
 .assistant-panel__refine-draft-wrap {
   padding: var(--space-2);
-  background-color: var(--panel);
-  border: 1px solid var(--border);
+  /* T89에서 팝업이 종이(DialogShell) 위로 옮겨졌다 — 어두운 --panel 배경에 종이용 --ink
+     글자가 상속돼 대비 1.2:1로 읽히지 않았다(PR #20 Codex 12차 검토 P2). 종이 토큰으로. */
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  color: var(--ink);
   border-radius: var(--radius-control);
   font-size: var(--fs-meta);
   line-height: 1.55;
 }
 
 .assistant-panel__refine-draft-wrap {
-  border-color: var(--accent);
+  border-color: var(--amber);
 }
 
 .assistant-panel__refine-draft {
@@ -159,21 +77,169 @@
   white-space: pre-wrap;
 }
 
+/* "조건 추천" 행(T96) — 조건 라벨 + 움직이는 임원 + 푸는 걱정 + 적용 버튼을 한 줄
+   묶음으로. */
+[data-testid='assistant-recommend-rows'],
+[data-testid='assistant-recommend-bundles'] {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+[data-testid^='assistant-recommend-row-'],
+[data-testid^='assistant-recommend-bundle-'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-control);
+}
+
+.assistant-panel__recommend-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.assistant-panel__recommend-moves,
+.assistant-panel__recommend-where,
+.assistant-panel__remaining-where,
+.assistant-panel__recommend-worry {
+  color: var(--ink-muted);
+  font-size: var(--fs-meta);
+}
+
+.assistant-panel__recommend-worry,
+.assistant-panel__recommend-where {
+  flex-basis: 100%;
+}
+
 .assistant-panel__evidence {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
   margin-top: var(--space-1);
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: 13px;
 }
 
 .assistant-panel [data-testid='assistant-error'] {
-  color: var(--vote-no);
+  /* 종이 팝업 위라 어두운 패널용 --vote-no(연분홍)는 대비가 안 나온다(PR #20 Codex 13차 검토 P2). */
+  color: var(--paper-vote-no);
   font-size: var(--fs-meta);
 }
 
 .assistant-panel [data-testid='assistant-loading'] {
-  color: var(--text-muted);
+  color: var(--ink-muted);
   font-size: var(--fs-meta);
+}
+
+/* T97(2026-10-08 사용자 지시 "AI 비서실장을 필수적으로 사용하게끔"): 팝업 본문을
+   세로로 나눈다 — 소개·기능 버튼은 줄지 않고, 결과 영역만 남는 높이 안에서 안쪽
+   스크롤을 허용한다(1280×720의 DialogShell 높이 안에 소개가 들어가게). 붉은 박스는
+   쓰지 않고 종이 톤 토큰만 쓴다(T89). */
+.assistant-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100%;
+  min-height: 0;
+}
+
+.assistant-panel__content > .assistant-panel__actions {
+  flex-shrink: 0;
+  margin-top: 0;
+}
+
+.assistant-panel__results {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.assistant-panel__done-mark {
+  font-size: var(--fs-meta);
+  color: var(--ink-muted);
+}
+
+.assistant-intro {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  background-color: var(--paper-2);
+  border: 1px solid var(--paper-border);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius-control);
+  color: var(--ink);
+}
+
+.assistant-intro__title {
+  margin: 0 0 var(--space-1);
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.assistant-intro__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assistant-intro__item {
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+}
+
+.assistant-intro__check {
+  display: inline-block;
+  width: 1.6em;
+  font-size: 1.15em;
+}
+
+.assistant-intro__desc {
+  color: var(--ink-muted);
+}
+
+.assistant-intro--compact {
+  padding: 4px var(--space-2);
+}
+
+.assistant-intro__compact-line {
+  margin: 0;
+  font-size: var(--fs-meta);
+}
+
+.assistant-intro__done {
+  margin: 4px 0 0;
+  font-weight: 700;
+  font-size: var(--fs-meta);
+  color: var(--ink);
+}
+
+@media (max-width: 1280px) {
+  .assistant-intro {
+    padding: 6px var(--space-1);
+  }
+
+  .assistant-intro__title {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .assistant-intro__item {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .assistant-panel__content > .assistant-panel__actions .cta {
+    padding: 0 var(--space-1);
+    font-size: 14px;
+  }
 }

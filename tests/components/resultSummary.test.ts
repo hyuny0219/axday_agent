@@ -44,6 +44,7 @@ describe('buildResultSummary — scripted', () => {
     };
     const session: Session = {
       ...createInitialSession(0, 's1'),
+      followUpAnswered: true,
       stage: 'RESULT',
       mode: 'scripted',
       scenarioId: scenario.id,
@@ -87,6 +88,7 @@ describe('buildResultSummary — scripted', () => {
     };
     const session: Session = {
       ...createInitialSession(0, 's2'),
+      followUpAnswered: true,
       stage: 'RESULT',
       mode: 'scripted',
       scenarioId: scenario.id,
@@ -152,6 +154,7 @@ describe('buildResultSummary — live', () => {
     ];
     const session: Session = {
       ...createInitialSession(0, 's3'),
+      followUpAnswered: true,
       stage: 'RESULT',
       mode: 'live',
       scenarioId: scenario.id,

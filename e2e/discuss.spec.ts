@@ -1,14 +1,18 @@
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 import { aiApprovalScenario } from '../src/content/scenarios/aiApproval';
 import { buildDraftText } from '../src/domain/draft';
 
 async function reachDiscuss(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 }
 
 test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다음 단계로 넘어간다', async ({
@@ -22,6 +26,7 @@ test('문구 2개를 선택하면 textarea에 조합되고, 의견 전달로 다
   const textarea = page.getByTestId('draft-editor-textarea');
   await expect(textarea).toHaveValue(buildDraftText(aiApprovalScenario, ['P1', 'P2']));
 
+  await tryAllAssistantFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();
@@ -35,6 +40,7 @@ test('문구를 고르지 않고 직접 입력만으로도 의견을 전달할 �
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill('작은 범위로 먼저 시작하고 결과를 확인한 뒤 넓히면 좋겠습니다.');
 
+  await tryAllAssistantFeatures(page);
   const submit = page.getByTestId('submit-opinion');
   await expect(submit).toBeEnabled();
   await submit.click();

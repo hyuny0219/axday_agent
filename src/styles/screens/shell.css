@@ -180,31 +180,10 @@
   gap: var(--space-1);
 }
 
-/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30). 세션 시작 전 고정된 값을 그대로
-   보여주고 세션 중에는 바뀌지 않는다(AGENT_BOARDROOM_SPEC.md 6장). T64: LIVE는 Main.html의
-   기울인 붉은 스탬프 칩으로 그린다(문구는 바꾸지 않는다 — e2e가 정확한 텍스트를 단언한다).
-   scripted는 칩 모양만 유지하고 회색 테두리로 눌러, LIVE 스탬프의 긴박함과 구분한다. */
-.mode-badge {
-  padding: 4px var(--space-1);
-  border-radius: 0;
-  border: 2px solid var(--border);
-  font-family: var(--font-label);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
-.mode-badge--live {
-  border-color: var(--stamp-red);
-  color: #e06b6b;
-  transform: rotate(-3deg);
-}
-
-.mode-badge--scripted {
-  border-color: var(--border);
-  color: var(--text-muted);
-}
+/* 진행 방식 배지(LIVE / 사전 구성 시뮬레이션, T30)는 T86(2026-10-07 사용자 — "실시간
+   표시는 제거해줘", 이어서 "사전 구성 시뮬레이션 표시도 빼줘")에서 헤더(Header.tsx)
+   자체를 없앴다 — 참가자 화면에는 모드를 전혀 드러내지 않고, 운영 메뉴(운영자용)에서만
+   확인한다. */
 
 .app-header__timer {
   color: var(--text-muted);
@@ -509,6 +488,17 @@
   gap: var(--space-2);
 }
 
+/* T96: 설득 현황판(PersuasionBoard)이 왼쪽 열 자식이 하나 더 늘며, 1280×720처럼
+   빠듯한 화면(REACTIONS "다시 답하기" 등)에서 자식 사이 간격(16px)이 하나 더 늘어난
+   것만으로도 하단 CTA가 뷰포트 밖으로 밀렸다(2026-10-08 팀리드 지시). 왼쪽 열은
+   세로 예산이 가장 빠듯한 열이라 1280px 이하에서만 간격을 좁힌다 — 오른쪽 열
+   (app-body__content)은 그대로 둔다. */
+@media (max-width: 1280px) {
+  .app-body__actions.screen {
+    gap: 10px;
+  }
+}
+
 /* 왼쪽 열(app-body__actions)에서는 .screen의 기본 애니메이션(opacity+transform)을
    완전히 끈다. transform이나 opacity를 애니메이션으로 참조하는 요소는 실행이 끝나
    fill-mode로 값만 유지 중이어도 그 자체로 새 stacking context/containing block이
@@ -566,67 +556,178 @@
   }
 }
 
-/* 주 CTA(T64, Main.html 의견 듣기 버튼): 앰버 채움 + 검정 글자 + 굵은 그림자
-   (6px 6px 0 #3a2a12) + 모서리 14px 깎기. 64px 높이·56px 최소 클릭 영역은 그대로
-   유지한다. focus-visible은 base.css 전역 규칙을 그대로 쓴다. */
+/* 버튼 "요원 장비 패널"(T111, 시안 B 보드 모양 + E안 주황): 주황 채움 + 2px 실선 + 바깥
+   이중 테두리(검은 틈 + 어두운 주황 홈) + 네 모서리 꺾쇠(::before 하나에 선형 그라디언트
+   8개) + 넓은 자간. 붉은색·영문·기호 글리프는 쓰지 않는다. 버튼 높이는 T86 그대로
+   (--cta-height). 꺾쇠가 바깥으로 10px 나오므로 버튼 사이 간격은 그보다 넓어야 한다. */
 .cta {
+  --cta-bracket: 12px;
+  --cta-bracket-out: 10px;
+  --cta-bracket-color: #e0a34a;
+  position: relative;
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--cta-height);
   min-width: var(--touch-min);
-  padding: 0 var(--space-4);
+  padding: 0 30px;
+  border: 2px solid #e0a34a;
   border-radius: 0;
-  border: none;
-  background-color: var(--amber);
+  background-color: #e0a34a;
   background-image: none;
   color: #0b0d10;
   font-family: var(--font-display);
   font-weight: 900;
   font-size: 18px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.16em;
+  /* 버튼 라벨은 짧은 한 줄 — 720 높이에서 '▶'만 둘째 줄로 떨어지지 않게. */
+  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 6px 6px 0 #3a2a12;
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-  transition:
-    box-shadow var(--transition-fast) ease,
-    transform var(--transition-fast) ease;
+  box-shadow: 0 0 0 4px #0b0d10, 0 0 0 6px #8a5f12;
+  transition: filter var(--transition-fast) ease;
+}
+
+/* 네 모서리 꺾쇠: 버튼 둘레에서 10px 떨어진 상자의 네 귀퉁이에 12px L자 2px 선. */
+.cta:not(.cta--secondary):not(.cta--solid):not(:disabled):not(.side-select__btn)::before {
+  content: '';
+  position: absolute;
+  inset: calc(-2px - var(--cta-bracket-out));
+  pointer-events: none;
+  background:
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) left top / var(--cta-bracket) 2px,
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) left top / 2px var(--cta-bracket),
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) right top / var(--cta-bracket) 2px,
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) right top / 2px var(--cta-bracket),
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) left bottom / var(--cta-bracket) 2px,
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) left bottom / 2px var(--cta-bracket),
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) right bottom / var(--cta-bracket) 2px,
+    linear-gradient(var(--cta-bracket-color), var(--cta-bracket-color)) right bottom / 2px var(--cta-bracket);
+  background-repeat: no-repeat;
 }
 
 .cta:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    6px 6px 0 #3a2a12,
-    0 0 24px rgba(224, 163, 74, 0.35);
+  filter: brightness(1.1);
 }
 
+/* 누르면 아래 홈(어두운 주황)이 사라져 눌린 듯 보인다. */
 .cta:active:not(:disabled) {
-  transform: translateY(1px);
+  box-shadow: 0 0 0 4px #0b0d10;
 }
 
-.cta:disabled {
-  background-color: var(--panel-active);
-  color: var(--text-muted);
+.cta:focus-visible {
+  outline: 3px solid #f0c27a;
+  outline-offset: 9px;
+}
+
+/* 보조 버튼: 어두운 바탕 + 주황 글자 + 2px 주황 실선, 꺾쇠·이중 테두리 없음. */
+.cta.cta--secondary {
+  padding: 0 22px;
+  min-height: var(--touch-min);
+  background-color: #0f1620;
+  color: #e0a34a;
   box-shadow: none;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+}
+
+/* 종이 위 주 버튼(근거 자료 보기·INTRO 확인·ATTRACT 체험 시작)과 팝업 안 보조 버튼
+   (닫기·비서실장 기능 버튼): 먹색 바탕 + 종이색 글자 + 종이색·먹색 이중 테두리, 꺾쇠 없음. */
+.cta.cta--solid,
+.dialog-shell .cta.cta--secondary:not(:disabled) {
+  padding: 0 24px;
+  background-color: #1b1a17;
+  color: #ece7dc;
+  border-color: #1b1a17;
+  box-shadow: 0 0 0 3px #ece7dc, 0 0 0 5px #1b1a17;
+  letter-spacing: 0.14em;
+}
+
+.cta.cta--solid {
+  min-height: var(--touch-min);
+  font-size: 15px;
+}
+
+.cta.cta--solid:active:not(:disabled),
+.dialog-shell .cta.cta--secondary:active:not(:disabled) {
+  box-shadow: 0 0 0 3px #ece7dc;
+}
+
+.cta.cta--solid:focus-visible,
+.dialog-shell .cta.cta--secondary:focus-visible {
+  outline: 3px solid #e0a34a;
+  outline-offset: 7px;
+}
+
+/* 입장 탭(DISCUSS·REACTIONS): 선택됨 = 먹색 바탕 + 주황 글자 + 2px 먹색,
+   미선택 = 투명 바탕 + 2px 먹색 테두리 + 먹색 글자. 이중 테두리·꺾쇠 없음. */
+.side-select__btn:not(:disabled) {
+  background-color: transparent;
+  color: #1b1a17;
+  border-color: #1b1a17;
+  box-shadow: none;
+  letter-spacing: 0.1em;
+}
+
+.side-select__btn[aria-pressed='true']:not(:disabled) {
+  background-color: #1b1a17;
+  color: #e0a34a;
+}
+
+.side-select__btn:not([aria-pressed='true']):not(:disabled):hover {
+  background-color: rgba(27, 26, 23, 0.08);
+  filter: none;
+}
+
+.side-select__btn:active:not(:disabled) {
+  box-shadow: none;
+}
+
+.side-select__btn:focus-visible {
+  outline: 3px solid #e0a34a;
+  outline-offset: 3px;
+}
+
+/* 잠긴 버튼(:disabled, .cta--outline): 어두운 바탕 + 회색 글자 + 2px 회갈색 실선. */
+.cta:disabled {
+  background-color: #0f1620;
+  border-color: #4a4540;
+  color: #7a766d;
+  box-shadow: none;
+  letter-spacing: 0.16em;
+  opacity: 1;
   cursor: not-allowed;
 }
 
-/* 보조 CTA(T64 item 4, Main.html "회의록 전문 보기"): 앰버 테두리만 — 채움·굵은
-   그림자는 주 CTA("체험 종료")만의 것으로 남겨 시각적 위계를 지킨다. 모양(깎인
-   모서리)·최소 크기는 .cta와 같다. */
-.cta.cta--secondary {
-  background-color: transparent;
-  color: var(--amber);
-  border: 2px solid var(--amber);
-  box-shadow: none;
-}
+@media (max-width: 1280px) {
+  /* 1280×720: 높이·글자 크기는 그대로, 꺾쇠 10px·이중 테두리 3/5px·패딩 20px로 줄여
+     REACTIONS 세 버튼이 한 줄에 들어가게 한다. */
+  .cta {
+    --cta-bracket: 10px;
+    --cta-bracket-out: 8px;
+    padding: 0 20px;
+    box-shadow: 0 0 0 3px #0b0d10, 0 0 0 5px #8a5f12;
+  }
 
-.cta.cta--secondary:hover:not(:disabled) {
-  background-color: rgba(224, 163, 74, 0.12);
-  box-shadow: none;
-}
+  .cta:active:not(:disabled) {
+    box-shadow: 0 0 0 3px #0b0d10;
+  }
 
-.cta.cta--secondary:disabled {
-  background-color: transparent;
-  border: 2px solid var(--border);
+  .cta.cta--secondary {
+    padding: 0 16px;
+    box-shadow: none;
+  }
+
+  .cta.cta--solid,
+  .dialog-shell .cta.cta--secondary:not(:disabled) {
+    padding: 0 18px;
+    box-shadow: 0 0 0 3px #ece7dc, 0 0 0 5px #1b1a17;
+  }
+
+  .side-select__btn:not(:disabled),
+  .cta:disabled {
+    box-shadow: none;
+  }
 }
 
 /* 진행 스트립(v0.9, T67에서 헤더 가운데로 이동): ① 상황 파악 → ⑤ 표결 5단계를
@@ -696,6 +797,58 @@
   gap: var(--space-2);
 }
 
+/* T96: REACTIONS(다시 답하기)는 비서실장·답하지 않고 넘어가기·답변 전달 세 버튼이
+   1280×720에서 두 줄로 줄바꿈된다(기존부터) — 줄 사이 간격을 줄여 세로 예산을
+   아낀다(2026-10-08 팀리드 지시, 버튼 자체의 최소 터치 높이는 그대로 둔다). */
+@media (max-width: 1280px) {
+  .screen__submit-row {
+    gap: 6px;
+  }
+}
+
 .placeholder-screen {
   color: var(--text-muted);
 }
+
+/* 입장 선택 두 버튼(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중" — DISCUSS에서
+   처음 만들었고, T89에서 REACTIONS도 같은 모양을 쓰게 되며 공용으로 옮겼다). 고른
+   쪽만 그 아래 추천 문구·추천 답변 그리드에 보인다. 선택됨·미선택 모양은 위
+   T108 입장 탭 규칙(먹색 채움 / 먹색 테두리+점선)이 정한다. */
+.side-select {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.side-select__hint {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.side-select__guide {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 16px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .side-select__hint {
+    font-size: 11px;
+  }
+
+  .side-select__guide {
+    font-size: 13px;
+  }
+}
+
+/* T103: 진행 가이드 한 줄(.guide-hint)과 다음 행동 맥동 테두리([data-guide])는 진행 도우미
+   (coach.css)의 화면당 말풍선 하나(T104 코치)로 대체돼 지웠다. */

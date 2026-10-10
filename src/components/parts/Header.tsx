@@ -16,41 +16,42 @@ import '../../styles/screens/shell.css';
 import { OperatorMenu } from './OperatorMenu';
 import { ProgressStrip } from './ProgressStrip';
 
-const MODE_BADGE_TEXT: Record<Session['mode'], string> = {
-  live: 'LIVE',
-  scripted: '사전 구성 시뮬레이션',
-};
+// T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
+// 표시도 빼줘"): live든 scripted든 참가자 화면에는 더 이상 모드 배지를 보여주지
+// 않는다(실제 임원처럼 느끼게 하려는 목적). 모드 확인은 운영 메뉴(운영자용, 이
+// 배지와 무관)에서만 한다.
 
 export interface HeaderProps {
   session: Session;
   scenario: Scenario | null;
   onOperatorReset: () => void;
+  coachEnabled?: boolean;
+  onToggleCoach?: () => void;
 }
 
-export function Header({ session, scenario, onOperatorReset }: HeaderProps) {
-  const caseDigits = scenario?.incident.caseLabel.match(/\d+/)?.[0];
+export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach }: HeaderProps) {
+  // 안건을 고르기 전에는 사건 번호를 숨긴다("사건 --"가 엉뚱해 보임, Opus 최종 검토 should 7).
+  const caseLabel = scenario?.incident.caseLabel;
   return (
     <header className="app-header">
       <div className="app-header__left">
-        <span className="app-header__brand">BOARDROOM 2026</span>
-        {/* "기밀 작전실" 타자기 라벨(T64, Main.html "CASE FILE No. 02 · SESSION 0042").
-            sessionId 앞 4자로 세션을 구분한다 — 장식용 코드라 sessionId 전체를
-            노출하지 않는다. */}
+        <span className="app-header__brand">BECOME A BOARD</span>
+        {/* "기밀 작전실" 타자기 라벨(T64, Main.html "CASE FILE No. 02 · SESSION 0042",
+            T83에서 한국어화). sessionId 앞 4자로 세션을 구분한다 — 장식용 코드라
+            sessionId 전체를 노출하지 않는다. */}
         <span className="app-header__case-file" aria-hidden="true">
-          CASE FILE No. {caseDigits ?? '--'} · SESSION {session.sessionId.slice(0, 4).toUpperCase()}
+          {caseLabel ? `${caseLabel} · ` : ''}회의 {session.sessionId.slice(0, 4).toUpperCase()}
         </span>
       </div>
       <div className="app-header__center">
         <ProgressStrip stage={session.stage} />
       </div>
       <div className="app-header__right">
-        <span
-          className={`mode-badge mode-badge--${session.mode}`}
-          data-testid="mode-badge"
-        >
-          {MODE_BADGE_TEXT[session.mode]}
-        </span>
-        <OperatorMenu onNewSession={onOperatorReset} />
+        <OperatorMenu
+          onNewSession={onOperatorReset}
+          coachEnabled={coachEnabled}
+          onToggleCoach={onToggleCoach}
+        />
       </div>
     </header>
   );

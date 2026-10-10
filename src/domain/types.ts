@@ -84,17 +84,30 @@ export interface Transcript {
 /** 임원 한 명의 현재 라운드 응답 상태. idle은 아직 호출 전, pending은 호출 중이다. */
 export type RoleStatus = 'idle' | 'pending' | 'answered' | 'failed';
 
+/** 참가자가 이 의견에서 밝힌 입장(T92, 사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는
+ * 경향"). DiscussScreen·ReactionsScreen이 이미 로컬 state(App.tsx `sidePick`, T87·T89)로
+ * 들고 있던 선택을 의견 제출 시 세션에 함께 싣는다. null은 입장을 고르지 않고 제출한
+ * 경우(과거 세션 fixture·테스트와 호환). */
+export type ParticipantStance = 'FOR' | 'AGAINST' | null;
+
 /** DISCUSS/REACTIONS 단계에서 참가자가 전달한 의견 한 건의 기록. */
 export interface Opinion {
   id: string;
   originalText: string;
   selectedPhraseIds: string[];
   confirmedConditionIds: string[];
+  /** 이 의견을 전달할 때 참가자가 고른 입장(T92). 선택값 — 생략하면(기존 fixture·테스트)
+   * null과 같게 다룬다. */
+  stance?: ParticipantStance;
   createdAt: number;
 }
 
 export type SessionStage =
   | 'ATTRACT'
+  /** 체험 시작과 안건 선택 사이의 소개 한 장(T95) — 목적·진행 5단계·성공 기준·팁을
+   * 보여준다. 서버 요청의 stage(StatementStage, round.ts)와는 이름이 겹치지 않는
+   * 별도 값이라 서버 쪽에는 영향이 없다. */
+  | 'INTRO'
   | 'SELECT'
   | 'BRIEFING'
   | 'OPINIONS'
@@ -119,6 +132,16 @@ export interface Session {
   draft: DraftState;
   opinions: Opinion[];
   followUpUsed: boolean;
+  /** 추가 질문에 실제로 답했는지(T110, 2026-10-09 사용자 지시 "처음 추천 문구를 선택해서
+   * 의견전달했을 때 전부 설득당하면 재의견을 내지 않아도 성공하기 때문에, 난이도 조절을
+   * 해줘"). SUBMIT_FOLLOWUP만 true로 만들고 KEEP_PREVIOUS("답하지 않고 넘어가기")는
+   * false로 둔다. 조건이 맞은 임원은 이 값이 true일 때만 참가자 편이 되고, false인 채
+   * 표결에 들어가면 처음 입장(조건 없을 때의 표)으로 돌아간다. */
+  followUpAnswered: boolean;
+  /** 후속 질문을 어느 입장 기준으로 보여 줬는지(T93 byStance). 답을 제출하면 둘째 의견의
+   * stance와 같고, "답하지 않고 넘어가기"로 건너뛰면 그때 화면에 보인 입장이 여기만 남는다
+   * — 회의록이 실제로 본 질문을 기록하기 위해(PR #20 Codex 23차 검토 P2). */
+  followUpStance: 'FOR' | 'AGAINST' | null;
   assistantActions: string[];
   /** live 모드 회의 기록. scripted 모드에서는 비어 있는 채로 둔다. */
   transcript: Transcript;
@@ -132,6 +155,11 @@ export interface Session {
   expiredWithoutMotion: boolean;
   /** CONFIRM_VOTE 전 참가자가 고른 값. 확정 전이므로 ballots에는 반영하지 않는다. */
   pendingVote: PendingVote | null;
+  /** 진행 도우미(튜토리얼 코치, T103)를 보여 줄지. INTRO의 두 시작 버튼이 정하고 운영
+   * 메뉴에서 바꾼다. 기본 true. */
+  coachEnabled: boolean;
+  /** 이미 보았거나 건너뛴 코치 단계 번호(1~9). 같은 세션에서는 다시 나오지 않는다. */
+  coachDismissed: number[];
   /** 직전 reduce 호출에서 잘못된 단계의 액션을 무시했을 때 남기는 경고. 매 호출마다 새로 채워진다. */
   warnings: string[];
 }

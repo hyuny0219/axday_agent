@@ -5,16 +5,32 @@
 // "근거 자료 보기" 버튼 + EvidenceDialog 팝업으로 바꿨다 — BriefingScreen.test.tsx와
 // 같은 형태의 테스트를 여기에도 둔다.
 import '@testing-library/jest-dom/vitest';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { DiscussScreen } from '../../src/components/screens/DiscussScreen';
-import { anonBoardScenario } from '../../src/content/scenarios';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { DiscussScreen, type DiscussScreenProps } from '../../src/components/screens/DiscussScreen';
+import { aiApprovalScenario, anonBoardScenario, experienceFirstScenario } from '../../src/content/scenarios';
 import type { ExecMemberId } from '../../src/content/types';
-import type { RoleStatus, Stance, Statement, Transcript } from '../../src/domain/types';
+import type { Stance, Transcript } from '../../src/domain/types';
+import { scriptedStances } from '../../src/domain/stance';
+import { encodeAssistantLogEntry, type AssistantActionType } from '../../src/domain/assistantLog';
 
 afterEach(() => {
   cleanup();
 });
+
+// T89: App.tsx StageRouter가 side state를 들고 DiscussScreen에 컨트롤드 props로
+// 내려준다 — 이 테스트 전체에서 그 자리를 흉내 내는 래퍼를 쓴다. 입장 선택과 무관한
+// 테스트는 initialSide를 비워 둬 기존(null) 동작 그대로다.
+function ControlledDiscuss(
+  props: Omit<DiscussScreenProps, 'side' | 'onChooseSide'> & {
+    initialSide?: 'FOR' | 'AGAINST' | null;
+  },
+) {
+  const { initialSide, ...rest } = props;
+  const [side, setSide] = useState<'FOR' | 'AGAINST' | null>(initialSide ?? null);
+  return <DiscussScreen {...rest} side={side} onChooseSide={setSide} />;
+}
 
 const scenario = anonBoardScenario;
 
@@ -28,123 +44,37 @@ const stances: Record<ExecMemberId, Stance> = {
 const noop = () => {};
 
 describe('DiscussScreen', () => {
-  it('live 모드는 임원 카드 본문에 transcript의 실제 OPINIONS 발언을 보여주고 각본 문장은 쓰지 않는다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'answered',
-      CFO: 'answered',
-      CAIO: 'pending',
-      CISO: 'failed',
-    };
-    const statements: Statement[] = [
-      {
-        id: 's-ceo',
-        roleId: 'CEO',
-        stage: 'OPINIONS',
-        text: '[live] CEO의 실제 발언입니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        source: 'live',
-        createdAt: 0,
-      },
-      {
-        id: 's-cfo',
-        roleId: 'CFO',
-        stage: 'OPINIONS',
-        text: '[live] CFO의 실제 발언입니다.',
-        evidenceIds: [],
-        referencedStatementIds: [],
-        concerns: [],
-        suggestedConditionIds: [],
-        source: 'live',
-        createdAt: 0,
-      },
-    ];
-    const transcript: Transcript = { revision: 1, statements };
-
+  it('근거 자료 팝업에는 자료 4장만 있고 임원 발언 열이 없다(T105)', () => {
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
-        transcript={transcript}
-        mode="live"
-        roleStatus={roleStatus}
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
       />,
     );
-
-    // T73: 임원 발언은 더 이상 화면에 상시 보이지 않고, "근거 자료 · 임원 발언 보기"
-    // 팝업의 STATEMENTS 열에서 본다.
     fireEvent.click(screen.getByTestId('open-evidence'));
-
-    // 실제 발언이 있고 answered인 임원은 그 발언 텍스트가 그대로 보인다(각본 문장 아님).
-    expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('[live] CEO의 실제 발언입니다.');
-    expect(screen.getByTestId('statement-card-CFO')).toHaveTextContent('[live] CFO의 실제 발언입니다.');
-
-    // 아직 응답 없는(pending) 임원은 각본 문장 대신 OPINIONS 화면과 같은 "판단 중…" 문구다.
-    expect(screen.getByTestId('statement-pending-CAIO')).toHaveTextContent('판단 중');
-
-    // 실패한 임원은 OPINIONS 화면과 같은 "응답 지연·확인 필요" 문구다.
-    expect(screen.getByTestId('statement-failed-CISO')).toHaveTextContent('응답 지연·확인 필요');
-
-    // scenario.initialOpinions의 각본 문구는 live 모드에서 화면에 나오면 안 된다.
+    const dialog = screen.getByTestId('evidence-dialog');
+    expect(dialog).toHaveTextContent('근거 자료');
+    expect(dialog).not.toHaveTextContent('임원이 한 말');
+    expect(screen.queryAllByTestId(/^statement-(card|pending|failed)-/)).toHaveLength(0);
     for (const opinion of scenario.initialOpinions) {
       expect(screen.queryByText(opinion.text)).not.toBeInTheDocument();
     }
   });
 
-  it('scripted 모드는 그대로 scenario.initialOpinions 각본 문장을 보여준다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
-    const transcript: Transcript = { revision: 0, statements: [] };
-
-    render(
-      <DiscussScreen
-        scenario={scenario}
-        sessionId="s1"
-        transcript={transcript}
-        mode="scripted"
-        roleStatus={roleStatus}
-        stances={stances}
-        onSubmit={noop}
-        onAssistantAction={noop}
-      />,
-    );
-
-    // T73: scripted 각본 문장도 "근거 자료 · 임원 발언 보기" 팝업의 STATEMENTS
-    // 열에서 본다(화면에 상시 보이지 않는다).
-    fireEvent.click(screen.getByTestId('open-evidence'));
-    for (const opinion of scenario.initialOpinions) {
-      expect(screen.getByText(opinion.text)).toBeInTheDocument();
-    }
-    // scripted 각본 문장은 live 전용 statement-card- testid를 쓰지 않는다(OpinionsScreen의
-    // scripted .opinion-card와 같은 규칙).
-    expect(screen.queryAllByTestId(/^statement-card-/)).toHaveLength(0);
-  });
-
   it('팝업을 열기 전에는 evidence-card가 없고, "근거 자료 보기" 클릭 시 4장이 나타나며 Esc로 닫으면 포커스가 버튼으로 돌아온다', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
     const transcript: Transcript = { revision: 0, statements: [] };
 
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
         mode="scripted"
-        roleStatus={roleStatus}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -172,20 +102,13 @@ describe('DiscussScreen', () => {
   });
 
   it('AI 비서실장 드로어가 열린 동안 오른쪽 열은 inert라 숨은 "근거 자료 보기"에 포커스가 가지 않는다(PR #11 Codex 31차)', () => {
-    const roleStatus: Record<ExecMemberId, RoleStatus> = {
-      CEO: 'idle',
-      CFO: 'idle',
-      CAIO: 'idle',
-      CISO: 'idle',
-    };
     const transcript: Transcript = { revision: 0, statements: [] };
     render(
-      <DiscussScreen
+      <ControlledDiscuss
         scenario={scenario}
         sessionId="s1"
         transcript={transcript}
         mode="scripted"
-        roleStatus={roleStatus}
         stances={stances}
         onSubmit={noop}
         onAssistantAction={noop}
@@ -193,9 +116,450 @@ describe('DiscussScreen', () => {
     );
     const info = screen.getByTestId('discuss-info');
     expect(info.hasAttribute('inert')).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 열기' }));
+    fireEvent.click(screen.getByTestId('discuss-side-for'));
+    fireEvent.click(document.querySelector('[data-testid^="phrase-card-"]') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장에게 맡기기' }));
     expect(info.hasAttribute('inert')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'AI 비서실장 숨기기' }));
+    // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글 라벨이 "숨기기"로 바뀌지
+    // 않고, 팝업 자체의 닫기 버튼(testid assistant-close)으로 닫는다.
+    fireEvent.click(screen.getByTestId('assistant-close'));
     expect(info.hasAttribute('inert')).toBe(false);
+  });
+
+  // T87(사용자 — "찬성/반대를 고르면 추천 문구가 뜨도록"): 입장을 고르기 전에는
+  // 추천 문구 대신 안내가 보이고, 입장을 고르면 그 side(+BOTH)만 보인다.
+  describe('입장 선택(T87)', () => {
+    const emptyTranscript: Transcript = { revision: 0, statements: [] };
+
+    it('입장을 고르기 전에는 추천 문구 그리드 대신 안내가 보인다', () => {
+      render(
+        <ControlledDiscuss
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      expect(screen.getByTestId('discuss-side-guide')).toHaveTextContent('먼저 입장을 골라 주세요');
+      expect(screen.queryByTestId('phrase-card-P1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('phrase-card-N1')).not.toBeInTheDocument();
+    });
+
+    it('찬성을 고르면 FOR·BOTH 문구만 보이고, 반대를 고르면 AGAINST·BOTH 문구만 보인다', () => {
+      render(
+        <ControlledDiscuss
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      expect(screen.getByTestId('phrase-card-P1')).toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-P6')).toBeInTheDocument(); // BOTH(요청형)
+      expect(screen.queryByTestId('phrase-card-N1')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.queryByTestId('phrase-card-P1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-N1')).toBeInTheDocument();
+      expect(screen.getByTestId('phrase-card-P6')).toBeInTheDocument();
+    });
+
+    it('입장을 바꾸면 체크된 문구가 해제된다', () => {
+      const phraseP1Text = aiApprovalScenario.phrases.find((phrase) => phrase.id === 'P1')!.text;
+      render(
+        <ControlledDiscuss
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      fireEvent.click(screen.getByTestId('phrase-card-P1'));
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue(phraseP1Text);
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('');
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      expect(screen.queryByText(phraseP1Text)).toBeInTheDocument();
+      // 다시 찬성으로 돌아와도 체크는 풀린 채로 시작한다(토글 input이 아직 checked가 아니다).
+      const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
+      expect(checkbox).not.toBeChecked();
+    });
+
+    // PR #20 Codex 7차 검토 P2: RebuildConfirm이 열린 채 입장을 바꾸면 대기 선택도 함께
+    // 취소돼야 한다 — 남겨 두면 확인 뒤 이전 입장의 숨은 문구가 다시 선택된다.
+    it('RebuildConfirm이 열린 채 입장을 바꾸면 확인 UI와 대기 중인 문구 선택이 함께 사라진다', () => {
+      render(
+        <ControlledDiscuss
+          scenario={aiApprovalScenario}
+          sessionId="s1"
+          transcript={emptyTranscript}
+          mode="scripted"
+          stances={stances}
+          onSubmit={noop}
+          onAssistantAction={noop}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      fireEvent.change(screen.getByTestId('draft-editor-textarea'), {
+        target: { value: '직접 쓴 의견입니다.' },
+      });
+      fireEvent.click(screen.getByTestId('phrase-card-P1'));
+      expect(screen.getByTestId('rebuild-confirm')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('discuss-side-against'));
+      expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+      // 직접 쓴 텍스트는 유지되고, 이전 입장의 문구는 어디에도 반영되지 않는다.
+      expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('직접 쓴 의견입니다.');
+      fireEvent.click(screen.getByTestId('discuss-side-for'));
+      const checkbox = screen.getByTestId('phrase-card-P1').querySelector('input[type="checkbox"]');
+      expect(checkbox).not.toBeChecked();
+    });
+  });
+});
+
+// T97: 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달.
+describe('비서실장 필수 사용 게이팅(T97)', () => {
+  const emptyTranscript: Transcript = { revision: 0, statements: [] };
+  const entry = (type: AssistantActionType, failed = false) =>
+    encodeAssistantLogEntry({ type, mode: 'scripted', evidenceIds: [], failed }, 0);
+
+  function renderDiscuss(assistantActions: string[]) {
+    return render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={assistantActions}
+        initialSide="FOR"
+      />,
+    );
+  }
+
+  it('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 보이며, 고르면 열린다(Codex 29차 P2)', () => {
+    renderDiscuss([]);
+    expect(screen.getByTestId('assistant-toggle')).toBeDisabled();
+    expect(screen.getByTestId('assistant-toggle-hint')).toHaveTextContent('먼저 추천 문구를 골라 주세요');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('assistant-toggle')).toBeEnabled();
+    expect(screen.queryByTestId('assistant-toggle-hint')).not.toBeInTheDocument();
+  });
+
+  it('문구가 없으면 전달이 막히고 힌트는 문구를 고르라고 하며', () => {
+    renderDiscuss([]);
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      '추천 문구를 고르거나 직접 써 주세요',
+    );
+  });
+
+  it('문구만 고르면 힌트가 비서실장을 한 번 써 보라고 바뀐다', () => {
+    renderDiscuss([]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      'AI 비서실장을 한 번 써 보세요',
+    );
+  });
+
+  it('한 기능만 써도 전달이 열리고 힌트가 사라진다(T109)', () => {
+    renderDiscuss([entry('OPINION_SUMMARY')]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
+    expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
+  });
+
+  it('한 기능만 실패 기록이어도 전달이 열린다(T109)', () => {
+    renderDiscuss([entry('DRAFT_REFINE', true)]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
+  });
+
+  it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 힌트가 사라진다', () => {
+    renderDiscuss([
+      entry('OPINION_SUMMARY'),
+      entry('CONDITION_RECOMMEND_VIEW', true),
+      entry('DRAFT_REFINE'),
+    ]);
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    expect(screen.getByTestId('submit-opinion')).toBeEnabled();
+    expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
+  });
+
+  it('입장을 고르지 않으면 직접 쓴 글과 세 기능이 있어도 전달·비서실장이 잠긴다(Codex 35차 P2-1)', () => {
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={emptyTranscript}
+        mode="scripted"
+        stances={stances}
+        onSubmit={noop}
+        onAssistantAction={noop}
+        assistantActions={[
+          entry('OPINION_SUMMARY'),
+          entry('CONDITION_RECOMMEND_VIEW'),
+          entry('DRAFT_REFINE'),
+        ]}
+      />,
+    );
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), {
+      target: { value: '작은 범위로 먼저 시작합시다.' },
+    });
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('assistant-toggle')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent('먼저 입장을 골라 주세요');
+    expect(screen.getByTestId('assistant-toggle-hint')).toHaveTextContent('먼저 입장을 골라 주세요');
+  });
+
+  it('비서실장을 다 써도 문구가 없으면 전달은 여전히 막힌다', () => {
+    renderDiscuss([
+      entry('OPINION_SUMMARY'),
+      entry('CONDITION_RECOMMEND_VIEW'),
+      entry('DRAFT_REFINE'),
+    ]);
+    expect(screen.getByTestId('submit-opinion')).toBeDisabled();
+    expect(screen.getByTestId('discuss-cta-hint')).toHaveTextContent(
+      '추천 문구를 고르거나 직접 써 주세요',
+    );
+  });
+
+  it('예전 한 줄 안내와 단계 칩은 없다(T103에서 코치로 대체)', () => {
+    renderDiscuss([]);
+    expect(screen.queryByTestId('discuss-assistant-tip')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('discuss-guide-hint')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('step-guide')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-guide]')).toBeNull();
+  });
+
+});
+
+// PR #20 Codex 28차 P2-1: 복합 추천 "모두 적용"은 조건 여러 개를 단일 상태 업데이트로 반영한다.
+describe('조건 추천 묶음 적용(Codex 28차 P2-1)', () => {
+  it('LIMIT+REVIEW 묶음을 적용하면 두 문구가 모두 체크되고 기록도 두 조건 모두 남는다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        stances={scriptedStances(aiApprovalScenario, { stage: 'DISCUSS', opinions: [] })}
+        onSubmit={noop}
+        onAssistantAction={(event) => actions.push(event)}
+        assistantActions={[]}
+        initialSide="FOR"
+      />,
+    );
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    fireEvent.click(await screen.findByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW', {}, { timeout: 2000 }));
+
+    await waitFor(() => {
+      expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY')).toHaveLength(2);
+    });
+    for (const id of ['P1', 'P3']) {
+      const checkbox = screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]');
+      expect(checkbox).toBeChecked();
+    }
+  });
+});
+
+describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 30차 P2)', () => {
+
+  function renderWith(
+    sc: typeof aiApprovalScenario,
+    initialSide: 'FOR' | 'AGAINST',
+    actions: { type: string; evidenceIds: string[] }[] = [],
+  ) {
+    return render(
+      <ControlledDiscuss
+        scenario={sc}
+        sessionId="s1"
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
+        onSubmit={noop}
+        onAssistantAction={(event) => actions.push(event)}
+        assistantActions={[]}
+        initialSide={initialSide}
+      />,
+    );
+  }
+
+  async function openCompare() {
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '직접 쓴 의견입니다.' } });
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+  }
+
+  it.each([
+    ['ai-approval', aiApprovalScenario, 'FULL_AUTO'],
+    ['experience-first', experienceFirstScenario, 'EXP_ONLY'],
+  ])('AGAINST + %s: 다음 단계 추가 답변에서만 고르는 조건은 직접 쓰라는 말 없이 출처만 안내한다(T119)', async (_name, sc, conditionId) => {
+    renderWith(sc, 'AGAINST');
+    await openCompare();
+    expect(screen.getByTestId(`assistant-recommend-row-${conditionId}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`assistant-recommend-apply-${conditionId}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`assistant-recommend-manual-${conditionId}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-where-${conditionId}`)).toHaveTextContent(
+      '다음 단계 추가 답변에서 고를 수 있습니다',
+    );
+  });
+
+  it('experience-first 찬성 · 조건 0개: DATA_VETO 행에 "직접 써 주세요" 없이 추가 답변 안내만 있다(T119)', async () => {
+    renderWith(experienceFirstScenario, 'FOR');
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-row-DATA_VETO')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-DATA_VETO')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-apply-DATA_VETO')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-DATA_VETO')).toHaveTextContent(
+      '다음 단계 추가 답변에서 고를 수 있습니다',
+    );
+  });
+
+  it('ai-approval 찬성 · 묶음에 후속 단계 조건이 섞이면 "지금 적용 가능 N개 + 추가 답변에서 M개"로 보인다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    await openCompare();
+    const bundleKey = 'LOG+OWNER';
+    const bundle = screen.getByTestId(`assistant-recommend-bundle-${bundleKey}`);
+    expect(bundle).toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-bundle-where-${bundleKey}`)).toHaveTextContent(
+      '지금 적용 가능한 조건 1개 + 추가 답변에서 1개',
+    );
+    expect(screen.queryByTestId(`assistant-recommend-manual-bundle-${bundleKey}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`assistant-recommend-apply-bundle-${bundleKey}`)).toHaveTextContent('지금 가능한 것 적용');
+  });
+
+  it('문구를 고른 뒤 칩을 해제하면 "직접 써 주세요" 없이 재확정 안내가 보이고, 적용 버튼이 칩을 다시 확정한다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).not.toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
+      '이미 고른 문구 2번의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
+    );
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+  });
+
+  it('문구를 고르지 않고 직접 쓴 조건을 해제하면 "이미 쓴 내용" 안내가 보이고 문구 번호는 말하지 않는다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '자동 승인마다 승인 사유를 기록합시다.' } });
+    // 자유 입력에서 찾은 조건은 칩을 눌러 확정하고, 한 번 더 눌러 해제한다.
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+    const where = screen.getByTestId('assistant-recommend-where-LOG');
+    expect(where).toHaveTextContent('이미 쓴 내용의 조건입니다 · 조건 칩을 다시 누르면 붙습니다');
+    expect(where).not.toHaveTextContent('문구');
+  });
+
+  it('묶음 추천에서도 해제된 조건은 지금 적용 가능으로 집계되어 함께 적용된다(T119)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    fireEvent.click(screen.getByTestId('condition-chip-LIMIT'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-bundle-LIMIT+REVIEW')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-bundle-where-LIMIT+REVIEW')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    expect(screen.getByTestId('condition-chip-LIMIT')).toHaveClass('condition-chip--accepted');
+    expect(screen.getByTestId('phrase-card-P3').querySelector('input[type="checkbox"]')).toBeChecked();
+  });
+
+  it('FOR에서는 기존대로 적용 버튼이 보인다', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-apply-LOG')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+  });
+
+  it('직접 쓴 뒤 묶음 적용 → 확인(다시 구성) 하면 두 문구가 모두 체크되고 기록도 2건이다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    fireEvent.click(await screen.findByTestId('rebuild-confirm-rebuild'));
+    // 확인 창이 뜨면 비서실장 팝업은 닫혀 있다(Codex 31차 P2-1).
+    expect(screen.queryByTestId('assistant-panel')).not.toBeInTheDocument();
+    for (const id of ['P1', 'P3']) {
+      expect(screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]')).toBeChecked();
+    }
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
+  });
+
+  // PR #20 Codex 37차 검토 P2: 묶음 확인 창이 떠 있는 동안 다른 추천 문구를 누르면 pendingPhraseId만
+  // 바뀌고 묶음이 우선 반영돼 마지막에 누른 문구가 무시됐다 — 확인 중에는 문구 카드를 잠근다.
+  it('묶음 확인 중에는 다른 추천 문구가 잠기고, 확인 뒤에는 묶음만 반영된다', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    await screen.findByTestId('rebuild-confirm-rebuild');
+    const other = screen.getByTestId('phrase-card-P2').querySelector('input[type="checkbox"]') as HTMLInputElement;
+    expect(other).toBeDisabled();
+    fireEvent.click(other);
+    fireEvent.click(screen.getByTestId('rebuild-confirm-rebuild'));
+    for (const id of ['P1', 'P3']) {
+      expect(screen.getByTestId(`phrase-card-${id}`).querySelector('input[type="checkbox"]')).toBeChecked();
+    }
+    expect(screen.getByTestId('phrase-card-P2').querySelector('input[type="checkbox"]')).not.toBeChecked();
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
+  });
+
+  it('직접 쓴 내용 유지를 골라도 선택 문구의 조건이 확정되므로 묶음 기록이 2건 남는다(Codex 32차 P2-1)', async () => {
+    const actions: { type: string; evidenceIds: string[] }[] = [];
+    renderWith(aiApprovalScenario, 'FOR', actions);
+    await openCompare();
+    fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
+    fireEvent.click(await screen.findByTestId('rebuild-confirm-keep'));
+    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
+    expect(screen.getByTestId('draft-editor-textarea')).toHaveValue('직접 쓴 의견입니다.');
+    expect(actions.filter((event) => event.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([
+      ['LIMIT'],
+      ['REVIEW'],
+    ]);
+  });
+
+  it('DISCUSS는 고른 문구의 조건이 본문을 고쳐도 제안으로 남아 적용 버튼이 그대로 보인다(Codex 31차 P2-3 확인)', async () => {
+    renderWith(aiApprovalScenario, 'FOR');
+    fireEvent.click(screen.getByTestId('phrase-card-P2'));
+    await openCompare();
+    expect(screen.getByTestId('assistant-recommend-opening')).toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
   });
 });

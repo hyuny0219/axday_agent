@@ -5,24 +5,34 @@
 // REACTIONS 후속 입력에서 이전에 확정한 조건과 새 제안이 충돌할 때 UI가 전달을
 // 막는지 확인한다(T25 만들 것 2: 누적 조건 충돌 재검사).
 import { test, expect, type Page, type Route } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function enterExperienceFirstReactions(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-experience-first').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 }
 
-/** P3 = DATA_VETO(데이터 경고 시 멈춤)를 확정한 채 첫 의견을 전달한다. */
+/** DATA_VETO(데이터가 경고하면 멈춤)를 확정한 채 첫 의견을 전달한다. T119: 이 조건은 첫 단계
+ * 추천 문구에서 빠져 있어(추가 답변에서만 제안) 직접 입력으로 확정한다. */
 async function reachReactionsWithDataVetoConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
-  await page.getByTestId('phrase-card-P3').click();
+  await page.getByTestId('draft-editor-textarea').fill('데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.');
+  // 자유 입력에서 찾은 조건은 칩을 눌러야 확인된다.
+  await page.getByTestId('condition-chip-DATA_VETO').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 /** P2 = RECORD(판단 근거 기록)를 확정한 채 첫 의견을 전달한다. followUp 체크 카드로
@@ -31,10 +41,13 @@ async function reachReactionsWithDataVetoConfirmed(page: Page) {
 async function reachReactionsWithRecordConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
   await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확정하려 하면 전달이 막힌다', async ({
@@ -49,10 +62,19 @@ test('DISCUSS에서 DATA_VETO 확정 후 REACTIONS에서 EXP_ONLY를 함께 확�
   const conflicts = page.getByTestId('condition-chips-conflicts');
   await expect(conflicts).toBeVisible();
   await expect(conflicts).toContainText(
-    "'데이터 경고 시 멈춤'와 '경험 판단 절대 우선' 중 하나만 선택해 주세요.",
+    "'데이터가 경고하면 멈춤'와 '언제나 경험 먼저' 중 하나만 선택해 주세요.",
   );
 
   await expect(page.getByTestId('submit-followup')).toBeDisabled();
+  // T98: 비활성이어도 화면에 보이는 빈 버튼이고 3칩 안내판이 현재 단계를 알려 준다.
+  await expect(page.getByTestId('submit-followup')).toBeVisible();
+  await expect(page.getByTestId('submit-followup')).toHaveClass(/cta--outline/);
+  await expect(page.getByTestId('step-optional-tag')).toHaveCount(0);
+  // T101: "넘어가기"는 720에서도 15px 이상이다.
+  const keepPrevious = page.getByTestId('keep-previous-answer');
+  await expect(keepPrevious).toHaveText('넘어가기');
+  const keepFontSize = await keepPrevious.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
+  expect(keepFontSize).toBeGreaterThanOrEqual(15);
 
   // EXP_ONLY 칩을 해제하면 충돌이 사라지고 다시 전달할 수 있다.
   await page.getByTestId('condition-chip-EXP_ONLY').click();
@@ -75,7 +97,7 @@ test('후속 질문에서 이전 조건을 그대로 유지하면 최종 안건�
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
   await expect(conditions).toContainText('판단 근거 기록');
-  await expect(conditions).toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('데이터가 경고하면 멈춤');
 });
 
 test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 안건에서 빠진다', async ({ page }) => {
@@ -96,7 +118,7 @@ test('후속 질문에서 이전에 확정한 조건 칩을 해제하면 최종 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
   await expect(conditions).not.toContainText('판단 근거 기록');
-  await expect(conditions).toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('데이터가 경고하면 멈춤');
 });
 
 // 후속 직접 답변에서 조건 키워드가 있어도 "-지 않-"으로 거부하면 제안되지 않고, 참가자가
@@ -107,11 +129,14 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
   await enterExperienceFirstReactions(page);
   // P1 = SCOPE만 확정한 채 첫 의견을 전달한다(DATA_VETO는 아직 없다).
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
 
   await page
     .getByTestId('followup-textarea')
-    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+    .fill('데이터가 경고해도 잠시 멈추지 않겠습니다.');
   await expect(page.getByTestId('condition-chip-SCOPE')).toBeVisible();
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
 
@@ -121,8 +146,8 @@ test('후속 직접 답변에서 "-지 않-"으로 거부한 조건은 제안되
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).toContainText('전례 없는 상황 한정');
-  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).toContainText('처음 겪는 상황에서만');
+  await expect(conditions).not.toContainText('데이터가 경고하면 멈춤');
 });
 
 test('추천 답변 체크 카드만으로(직접 입력 없이) MOTION까지 도달한다', async ({ page }) => {
@@ -195,7 +220,7 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
   // 않아야 한다.
   await page
     .getByTestId('followup-textarea')
-    .fill('데이터 경고 시에도 잠시 멈추지 않겠습니다.');
+    .fill('데이터가 경고해도 잠시 멈추지 않겠습니다.');
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toHaveCount(0);
   // DISCUSS에서 이미 확정한 RECORD는 체크 카드와 무관하므로 그대로 남는다.
   await expect(page.getByTestId('condition-chip-RECORD')).toBeVisible();
@@ -206,7 +231,7 @@ test('추천 답변 체크 뒤 그 조건을 부정하는 문장으로 고치면
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   const conditions = page.getByTestId('motion-conditions');
-  await expect(conditions).not.toContainText('데이터 경고 시 멈춤');
+  await expect(conditions).not.toContainText('데이터가 경고하면 멈춤');
   await expect(conditions).toContainText('판단 근거 기록');
 });
 
@@ -253,7 +278,7 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구
   await page.getByTestId('rebuild-confirm-rebuild').click();
   await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
   await expect(page.getByTestId('followup-textarea')).toHaveValue(
-    '데이터 경고 시 결정을 잠시 멈추고 재검토합시다.',
+    '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
   );
   // 다시 구성한 뒤에는(dirty가 풀렸으므로) 체크한 옵션의 조건이 다시 제안된다.
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toBeVisible();
@@ -278,9 +303,9 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
   const info = page.getByTestId('reactions-info');
   await expect(info).not.toHaveAttribute('inert', '');
 
-  // T74부터 "AI 비서실장 열기" 버튼은 편집기 토글 없이 늘 보인다.
+  // T74부터 "AI 비서실장에게 맡기기" 버튼은 편집기 토글 없이 늘 보인다.
   await page.getByTestId('followup-option-0').click();
-  const openAssistant = page.getByRole('button', { name: 'AI 비서실장 열기' });
+  const openAssistant = page.getByRole('button', { name: 'AI 비서실장에게 맡기기' });
   await openAssistant.click();
   await expect(info).toHaveAttribute('inert', '');
   // inert 안의 요소는 포커스를 받지 못한다.
@@ -291,7 +316,8 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
   });
   expect(focusedInside).toBe(false);
 
-  await page.getByRole('button', { name: 'AI 비서실장 숨기기' }).click();
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
   await expect(info).not.toHaveAttribute('inert', '');
 });
 
@@ -300,6 +326,16 @@ test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 iner
 // (문장이 완전히 다시 쓰여도) "유지"다.
 const REACTION_BADGE_EXEC_ROLE_IDS = ['CEO', 'CFO', 'CAIO', 'CISO'] as const;
 type ReactionBadgeExecRoleId = (typeof REACTION_BADGE_EXEC_ROLE_IDS)[number];
+
+// T82: server/providers/mock.ts와 같은 한국어 표기(영문은 서버 검증에서 거절된다,
+// validate.ts의 findStrayLatinRun) — 이 route 가로채기는 서버를 거치지 않지만 실제 mock
+// 응답과 모양을 맞춰 둔다.
+const STAGE_LABEL_KO: Record<string, string> = {
+  OPINIONS: '의견',
+  REACTIONS: '반응',
+  FOLLOWUP: '후속',
+  VOTE: '표결',
+};
 
 function reactionBadgeStatementEntry(
   roleId: ReactionBadgeExecRoleId,
@@ -311,7 +347,7 @@ function reactionBadgeStatementEntry(
     status: 'answered',
     statement: {
       roleId,
-      message: `[mock] ${roleId}의 ${stage} 발언(문구는 매번 다시 씁니다).`,
+      message: `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 발언(문구는 매번 다시 씁니다).`,
       evidenceIds: [],
       referencedStatementIds: [],
       concerns: [],
@@ -345,16 +381,20 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   page,
 }) => {
   await mockOpinionsAgainstThenReactionsFor(page);
-  await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await page.goto('/?coach=off');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 

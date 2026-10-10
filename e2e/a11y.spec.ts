@@ -3,46 +3,62 @@
 // CTA 도달. 세 검사 모두 mode=scripted로 강제해 live 서버 호출 여부와 무관하다.
 
 import { test, expect } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도달한다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   // ATTRACT
   await page.getByRole('button', { name: '체험 시작' }).focus();
   await page.keyboard.press('Enter');
 
-  // SELECT: 카드 선택도, 입장 CTA도 마우스 클릭 없이 포커스+Enter로만 조작한다.
-  await page.getByTestId('scenario-card-ai-approval').focus();
-  await page.keyboard.press('Enter');
-  const enterBoard = page.getByRole('button', { name: '이사회 입장' });
-  await expect(enterBoard).toBeEnabled();
-  await enterBoard.focus();
+  // INTRO(T95): 소개 한 장 — CTA에 포커스를 옮겨 Enter로 넘어간다.
+  await page.getByRole('button', { name: '확인', exact: true }).focus();
   await page.keyboard.press('Enter');
 
-  // BRIEFING
-  await page.getByRole('button', { name: '의견 듣기' }).focus();
+  // SELECT: 카드 자체가 버튼이라(T84 #10) 포커스+Enter만으로 바로 입장한다 —
+  // 별도 입장 CTA가 없다.
+  await page.getByTestId('scenario-card-ai-approval').focus();
+  await page.keyboard.press('Enter');
+
+  // BRIEFING: 근거 자료를 한 번 열어 닫기 전에는 "의견 듣기 ▶"가 잠겨 있다(T95).
+  await page.getByTestId('open-evidence').focus();
+  await page.keyboard.press('Enter');
+  const evidenceDialog = page.getByTestId('evidence-dialog');
+  await expect(evidenceDialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(evidenceDialog).toHaveCount(0);
+
+  const hearOpinions = page.getByRole('button', { name: '의견 듣기' });
+  await expect(hearOpinions).toBeEnabled();
+  await hearOpinions.focus();
   await page.keyboard.press('Enter');
 
   // OPINIONS
-  await page.getByRole('button', { name: '내 의견 말하기' }).focus();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).focus();
   await page.keyboard.press('Enter');
 
-  // DISCUSS: 추천 문구 체크박스는 Space로 토글한다(네이티브 checkbox 키보드 조작).
+  // DISCUSS: 입장을 먼저 고른다(T87, 네이티브 button이라 Enter로 누른다).
+  await page.getByTestId('discuss-side-for').focus();
+  await page.keyboard.press('Enter');
+
+  // 추천 문구 체크박스는 Space로 토글한다(네이티브 checkbox 키보드 조작).
   const phraseCheckbox = page.locator('[data-testid="phrase-card-P1"] input[type="checkbox"]');
   await phraseCheckbox.focus();
   await page.keyboard.press('Space');
   await expect(phraseCheckbox).toBeChecked();
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.focus();
   await page.keyboard.press('Enter');
 
-  // REACTIONS: '앞선 의견 유지' 체크 카드(T74, 네이티브 체크박스)로 후속 입력 없이
-  // 마무리한다 — 체크박스는 Space로 토글한다(DISCUSS 추천 문구 카드와 같은 규칙).
+  // REACTIONS: "답하지 않고 넘어가기" 보조 버튼(T84 #1, 네이티브 button)으로 후속
+  // 입력 없이 마무리한다 — 체크박스가 아니라 버튼이라 Space 대신 Enter로 누른다.
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  const keepPreviousCheckbox = page.locator('[data-testid="followup-option-2"] input[type="checkbox"]');
-  await keepPreviousCheckbox.focus();
-  await page.keyboard.press('Space');
+  const keepPreviousButton = page.getByTestId('keep-previous-answer');
+  await keepPreviousButton.focus();
+  await page.keyboard.press('Enter');
 
   // MOTION
   const freezeMotion = page.getByTestId('freeze-motion');
@@ -66,8 +82,9 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
 
 test('prefers-reduced-motion에서는 화면 전환에 애니메이션이 남지 않는다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
 
   const selectScreen = page.locator('.screen.select-screen');
   await expect(selectScreen).toBeVisible();
@@ -85,12 +102,15 @@ test('prefers-reduced-motion에서는 화면 전환에 애니메이션이 남지
 
 test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할 수 있다', async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 540 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   // 사용자가 실제로 쓰는 경로(마우스 휠)로만 스크롤한다 — scrollIntoView는
   // overflow:hidden 컨테이너도 프로그램적으로 움직여 잘림을 숨긴다(PR #6 Codex 4차 검토).
@@ -148,11 +168,12 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
   expect(layout.contentRight).toBeLessThanOrEqual(960);
 
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   const submitOpinion = await wheelUntilVisible('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
-  const keepPrevious = await wheelUntilVisible('followup-option-2');
+  const keepPrevious = await wheelUntilVisible('keep-previous-answer');
   await keepPrevious.click();
 
   const freezeMotion = await wheelUntilVisible('freeze-motion');

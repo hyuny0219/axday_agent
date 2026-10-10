@@ -9,8 +9,9 @@
 // 채운다 — 어댑터는 placeholder만 돌려준다.
 //
 // T50(2026-09-22 사용자 결정)에서 240초 세션 만료를 없앴다. 라운드 시간 예산은 더 이상
-// session.deadline에 묶이지 않고 항상 stage별 상한(boardAgents/live.ts, T65: OPINIONS·VOTE
-// 8초, REACTIONS·FOLLOWUP 12초)으로만 정해진다 — budgetMs는 그 값을 절대 깎지 않도록
+// session.deadline에 묶이지 않고 항상 stage별 상한(boardAgents/live.ts, T65: 기본값은
+// server/config.ts의 DEFAULT_ROUND_TIMEOUT_MS·DEFAULT_REACTION_TIMEOUT_MS, T91에서
+// 8000/12000 → 15000/20000으로 올렸다)으로만 정해진다 — budgetMs는 그 값을 절대 깎지 않도록
 // Infinity로 넘긴다.
 //
 // T65 "다시 요청": 실패한 역할만 다시 부르는 retryRound·retryFinalVotes를 추가했다. 표결
@@ -18,15 +19,15 @@
 // domain/session.ts의 FINALIZE_RESULT가 이미 하던 대로 확정 시점에 남은 미도착 역할을
 // fillMissingBallots로 채운다(domain은 건드리지 않는다). 그래서 재요청이 성공하면 확정 전
 // RECORD_EXEC_BALLOT으로 실제 표를 기록할 수 있고, 재요청을 안 쓰거나 실패해도 자동 확정
-// (awaitResult, 최대 8초)이 그대로 UNCAST로 끝맺어 기존 동작과 같다.
+// (awaitResult, 최대 finalVoteWaitMs())이 그대로 UNCAST로 끝맺어 기존 동작과 같다.
 //
 // PR #11 Codex 20차 P1: startFinalVotes()는 roundChain 뒤에 이어 붙기 때문에 REACTIONS·
 // FOLLOWUP이 아직 응답 전이면 실제 표 호출은 그 라운드가 끝날 때까지(최대
-// reactionTimeoutMs) 시작되지 않는다. 그런데 awaitResult()의 8초(FINAL_VOTE_WAIT_MS) 타이머는
+// reactionTimeoutMs) 시작되지 않는다. 그런데 awaitResult()의 FINAL_VOTE_WAIT_MS 타이머는
 // 참가자가 확정한 시점에 바로 시작됐었다 — 그래서 앞 라운드가 늦게 끝나면 표 호출이 시작되기도
-// 전에(혹은 시작 직후) 8초+유예가 다 지나가 실제로 도착한 표까지 UNCAST로 덮어썼다.
+// 전에(혹은 시작 직후) 그 대기+유예가 다 지나가 실제로 도착한 표까지 UNCAST로 덮어썼다.
 // voteRoundStarted 신호로 "앞 라운드가 끝나 표 호출이 실제로 시작된 시점"을 표시하고,
-// awaitResult()가 그 신호(또는 전체 settle)를 먼저 기다린 뒤에야 8초 타이머를 시작하게
+// awaitResult()가 그 신호(또는 전체 settle)를 먼저 기다린 뒤에야 그 타이머를 시작하게
 // 고쳤다 — 이 첫 대기는 roundChain 자체의 stage별 상한에 갇혀 있어 별도 delay 없이도
 // 무한히 늘어나지 않는다.
 
@@ -44,12 +45,12 @@ import type {
 } from '../boardAgents/types';
 import { getRoundTimeouts, TRANSPORT_MARGIN_MS } from '../transport/roundTimeouts';
 
-/** 최종표 대기 상한의 기본값(문서·호환용, AGENT_BOARDROOM_SPEC.md 6장 "8초를 넘지 않는다" —
- * getRoundTimeouts().roundTimeoutMs의 기본값과 같다). 실제 대기는 finalVoteWaitMs()가 매번
- * 현재 캐시된 값으로 계산한다: 운영자가 ROUND_TIMEOUT_MS를 8초보다 크게 잡으면(DEPLOY.md)
- * live 어댑터의 표 요청 자체도 그만큼(+ TRANSPORT_MARGIN_MS) 더 걸릴 수 있는데, 이 상수를
- * 그대로 썼다면 유효한 표 응답이 도착하기 전에 UNCAST로 확정해버렸다(PR #11 Codex 25차 P2). */
-export const FINAL_VOTE_WAIT_MS = 8000;
+/** 최종표 대기 상한의 기본값(문서·호환용 — getRoundTimeouts().roundTimeoutMs의 기본값(T91,
+ * 15000)과 같다). 실제 대기는 finalVoteWaitMs()가 매번 현재 캐시된 값으로 계산한다: 운영자가
+ * ROUND_TIMEOUT_MS를 이 값보다 크게 잡으면(DEPLOY.md) live 어댑터의 표 요청 자체도 그만큼
+ * (+ TRANSPORT_MARGIN_MS) 더 걸릴 수 있는데, 이 상수를 그대로 썼다면 유효한 표 응답이
+ * 도착하기 전에 UNCAST로 확정해버렸다(PR #11 Codex 25차 P2). */
+export const FINAL_VOTE_WAIT_MS = 15000;
 
 /** 최종표 최초 대기 = 서버 VOTE 타임아웃(roundTimeoutMs, /api/health로 갱신) + 클라이언트
  * 전송 여유(TRANSPORT_MARGIN_MS) — boardAgents/live.ts의 fetch abort 타이머와 정확히 같은
@@ -153,7 +154,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
   // 표결 라운드가 실제로(roundChain을 다 드레인한 뒤) 시작됐다는 신호(PR #11 Codex 20차
   // P1). startFinalVotes()가 새 표결을 예약할 때마다 새로 만들고, startFinalVotesNow()가
   // 앞 라운드를 기다리고 세션 유효성 검사까지 통과한 바로 그 시점에 resolve한다.
-  // awaitResult()는 8초 타이머를 시작하기 전에 이 신호(또는 전체 settle)부터 기다린다.
+  // awaitResult()는 finalVoteWaitMs() 타이머를 시작하기 전에 이 신호(또는 전체 settle)부터 기다린다.
   let voteRoundStarted: Promise<void> = new Promise(() => undefined);
   let resolveVoteRoundStarted: () => void = () => undefined;
 
@@ -274,7 +275,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       return;
     }
 
-    // 여기부터가 "표결 라운드가 실제로 시작"하는 시점이다 — awaitResult()의 8초 타이머가
+    // 여기부터가 "표결 라운드가 실제로 시작"하는 시점이다 — awaitResult()의 finalVoteWaitMs() 타이머가
     // 이 신호를 기다렸다가 시작된다.
     resolveVoteRoundStarted();
     resetVoteRetrySignal();
@@ -397,7 +398,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     }
 
     // 표결 라운드가 실제로 시작되기 전(앞선 REACTIONS·FOLLOWUP이 roundChain을 드레인하는
-    // 동안)에는 8초 타이머를 시작하지 않는다(PR #11 Codex 20차 P1). voteRoundStarted가
+    // 동안)에는 finalVoteWaitMs() 타이머를 시작하지 않는다(PR #11 Codex 20차 P1). voteRoundStarted가
     // resolve되면 실제 표 호출이 막 시작된 것이고, startFinalVotesNow가 세션 유효성 검사에
     // 걸려 표를 아예 부르지 않았다면 finalVotesSettled가 먼저 끝나 대신 깨운다 — 어느 쪽이든
     // 이 대기는 roundChain 자체의 stage별 상한(reactionTimeoutMs)에 갇혀 있다.

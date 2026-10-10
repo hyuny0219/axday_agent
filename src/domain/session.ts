@@ -13,6 +13,7 @@ import { freezeMotion } from './motion';
 import type {
   Ballot,
   Opinion,
+  ParticipantStance,
   PendingVote,
   RoleStatus,
   Session,
@@ -30,6 +31,8 @@ import {
 
 export type SessionAction =
   | { type: 'START' }
+  | { type: 'COACH_SET_ENABLED'; enabled: boolean }
+  | { type: 'COACH_DISMISS'; step: number }
   | { type: 'SELECT_SCENARIO'; scenarioId: string }
   | { type: 'NEXT_STAGE' }
   | {
@@ -37,14 +40,17 @@ export type SessionAction =
       originalText: string;
       selectedPhraseIds: string[];
       confirmedConditionIds: string[];
+      /** 참가자가 고른 입장(T92, App.tsx sidePick). 생략하면 null과 같다. */
+      stance?: ParticipantStance;
     }
   | {
       type: 'SUBMIT_FOLLOWUP';
       originalText: string;
       selectedPhraseIds: string[];
       confirmedConditionIds: string[];
+      stance?: ParticipantStance;
     }
-  | { type: 'KEEP_PREVIOUS' }
+  | { type: 'KEEP_PREVIOUS'; stance?: 'FOR' | 'AGAINST' | null }
   | { type: 'FREEZE_MOTION'; scenario: Scenario; confirmedConditionIds: string[] }
   | { type: 'SELECT_VOTE'; vote: PendingVote }
   | { type: 'CONFIRM_VOTE' }
@@ -102,6 +108,8 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     draft: EMPTY_DRAFT_STATE,
     opinions: [],
     followUpUsed: false,
+    followUpAnswered: false,
+    followUpStance: null,
     assistantActions: [],
     transcript: { revision: 0, statements: [] },
     roleStatus: { ...IDLE_ROLE_STATUS },
@@ -111,6 +119,8 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     outcome: null,
     expiredWithoutMotion: false,
     pendingVote: null,
+    coachEnabled: true,
+    coachDismissed: [],
     warnings: [],
   };
 }
@@ -143,7 +153,20 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       if (session.stage !== 'ATTRACT') {
         return ignore(session, '체험 시작은 ATTRACT 단계에서만 가능합니다.');
       }
-      return withNoWarnings({ ...session, stage: 'SELECT' });
+      // T95: ATTRACT 다음은 곧바로 SELECT가 아니라 소개 한 장(INTRO)이다 — "안건
+      // 고르러 가기"를 눌러야 NEXT_STAGE로 SELECT에 닿는다.
+      return withNoWarnings({ ...session, stage: 'INTRO' });
+    }
+
+    case 'COACH_SET_ENABLED': {
+      return withNoWarnings({ ...session, coachEnabled: action.enabled });
+    }
+
+    case 'COACH_DISMISS': {
+      if (session.coachDismissed.includes(action.step)) {
+        return withNoWarnings(session);
+      }
+      return withNoWarnings({ ...session, coachDismissed: [...session.coachDismissed, action.step] });
     }
 
     case 'SELECT_SCENARIO': {
@@ -159,6 +182,9 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     }
 
     case 'NEXT_STAGE': {
+      if (session.stage === 'INTRO') {
+        return withNoWarnings({ ...session, stage: 'SELECT' });
+      }
       if (session.stage === 'BRIEFING') {
         return withNoWarnings({ ...session, stage: 'OPINIONS' });
       }
@@ -177,6 +203,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         originalText: action.originalText,
         selectedPhraseIds: [...action.selectedPhraseIds],
         confirmedConditionIds: [...action.confirmedConditionIds],
+        stance: action.stance ?? null,
         createdAt: now,
       };
       return withNoWarnings({
@@ -196,6 +223,7 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         originalText: action.originalText,
         selectedPhraseIds: [...action.selectedPhraseIds],
         confirmedConditionIds: [...action.confirmedConditionIds],
+        stance: action.stance ?? null,
         createdAt: now,
       };
       return withNoWarnings({
@@ -204,6 +232,8 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         opinions: [...session.opinions, opinion],
         draft: EMPTY_DRAFT_STATE,
         followUpUsed: true,
+        followUpAnswered: true,
+        followUpStance: opinion.stance ?? session.followUpStance,
       });
     }
 
@@ -215,6 +245,8 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
         ...session,
         stage: 'MOTION',
         followUpUsed: true,
+        followUpAnswered: false,
+        followUpStance: action.stance ?? session.followUpStance,
       });
     }
 
@@ -242,7 +274,8 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
           execBallotsPending: true,
         });
       }
-      const ballots = decideBoard(action.scenario, finalMotion);
+      const participantStance = session.opinions[session.opinions.length - 1]?.stance ?? null;
+      const ballots = decideBoard(action.scenario, finalMotion, participantStance, session.followUpAnswered);
       return withNoWarnings({
         ...session,
         stage: 'VOTE',
@@ -318,10 +351,13 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
     }
 
     case 'SET_MODE': {
-      // 세션 시작 전(ATTRACT/SELECT)에만 live/scripted를 고정한다(지시서 6장
-      // "세션 시작 전에 live/scripted 모드를 고정하고 화면에 표시한다").
-      if (session.stage !== 'ATTRACT' && session.stage !== 'SELECT') {
-        return ignore(session, '진행 방식 설정은 ATTRACT·SELECT 단계에서만 가능합니다.');
+      // 세션 시작 전(ATTRACT/INTRO/SELECT)에만 live/scripted를 고정한다(지시서 6장
+      // "세션 시작 전에 live/scripted 모드를 고정하고 화면에 표시한다"). T95로 ATTRACT와
+      // SELECT 사이에 INTRO가 끼었지만, App.tsx는 이미 ATTRACT에서 모드 확인이 끝나야
+      // "체험 시작"을 누를 수 있게 해 실제로는 INTRO에서 SET_MODE가 들어오지 않는다 —
+      // 그래도 가드는 "시작 전"이라는 의도를 그대로 넓혀 둔다.
+      if (session.stage !== 'ATTRACT' && session.stage !== 'INTRO' && session.stage !== 'SELECT') {
+        return ignore(session, '진행 방식 설정은 ATTRACT·INTRO·SELECT 단계에서만 가능합니다.');
       }
       return withNoWarnings({ ...session, mode: action.mode });
     }
@@ -330,7 +366,12 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
       // revision 불일치(동시에 다른 라운드가 먼저 반영됨 등)는 조용히 무시하고 경고만
       // 남긴다. action.stage는 호출자가 붙이는 태그일 뿐 검증하지 않지만, 이미 끝난 세션
       // (RESULT)이나 시작 전 세션에는 늦게 온 발언을 붙이지 않는다.
-      if (session.stage === 'RESULT' || session.stage === 'ATTRACT' || session.stage === 'SELECT') {
+      if (
+        session.stage === 'RESULT' ||
+        session.stage === 'ATTRACT' ||
+        session.stage === 'INTRO' ||
+        session.stage === 'SELECT'
+      ) {
         return ignore(session, '진행 중이 아닌 세션에는 발언을 반영하지 않습니다.');
       }
       if (action.baseRevision !== session.transcript.revision) {

@@ -8,12 +8,17 @@
 // 규칙은 유지). 라운드는 App.tsx가 이 단계에 들어올 때 자동으로 시작하므로 이 화면은
 // 상태만 그린다.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { opinionsNextStep } from '../../domain/nextStep';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
+import { useMatchMedia } from '../useMatchMedia';
+import { statementHighlightTerms } from '../highlightTerms';
+import { HighlightText } from '../parts/HighlightText';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import '../../styles/screens/opinions.css';
 
@@ -44,7 +49,7 @@ function stanceSummaryLine(stances: Record<ExecMemberId, Stance>): string {
   for (const roleId of EXEC_MEMBER_ORDER) {
     tally[stances[roleId]] += 1;
   }
-  return `찬성 ${tally.FOR} · 반대 ${tally.AGAINST} · 미정 ${tally.UNDECIDED}`;
+  return `찬성 ${tally.FOR} · 반대 ${tally.AGAINST} · 고민 중 ${tally.UNDECIDED}`;
 }
 
 /** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52). 시안은 "근거 · <자료명>" pill 하나만
@@ -71,6 +76,26 @@ export function OpinionsScreen({
   // 한 번 누르면 버튼을 잠가 재요청 의도를 분명히 한다.
   const [retryUsed, setRetryUsed] = useState(false);
 
+  // scripted 카드 순차 노출(T95, 2026-10-08 사용자 — "필수로 보고 넘어가도록"): 네 카드가
+  // 0.8초 간격으로 차례로 나타나고, 다 나올 때까지 CTA를 잠근다. prefers-reduced-motion이면
+  // 즉시 다 보여준다(live는 roleStatus 기반 allExecsSettled 잠금을 그대로 쓰므로 영향 없음).
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  const totalCards = scenario.initialOpinions.length;
+  const [revealedCount, setRevealedCount] = useState(mode === 'live' || reducedMotion ? totalCards : 0);
+  useEffect(() => {
+    if (mode === 'live' || reducedMotion) {
+      setRevealedCount(totalCards);
+      return;
+    }
+    setRevealedCount(0);
+    const timers = Array.from({ length: totalCards }, (_, index) =>
+      setTimeout(() => setRevealedCount((count) => Math.max(count, index + 1)), (index + 1) * 800),
+    );
+    return () => timers.forEach(clearTimeout);
+    // scenario가 바뀔 때만 다시 돈다(mode·reducedMotion도 바뀌면 처음부터).
+  }, [scenario.id, mode, reducedMotion, totalCards]);
+  const allCardsRevealed = mode === 'live' || revealedCount >= totalCards;
+
   function handleRetry() {
     const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
     if (failedRoleIds.length === 0 || !onRetryFailedRoles) {
@@ -80,11 +105,39 @@ export function OpinionsScreen({
     onRetryFailedRoles(failedRoleIds);
   }
 
+  // live에서 임원이 아직 판단 중일 때도 CTA가 열려 있던 문제(T84, Opus UX 검토 #21).
+  // scripted는 initialOpinions가 항상 즉시 다 있으므로 영향받지 않는다(always
+  // unlocked). live는 4명 전원이 answered·failed로 settle될 때까지 잠근다 — 라운드
+  // 타임아웃 상한·1회 재요청은 기존 roleStatus·onRetryFailedRoles 규칙(T65) 그대로다.
+  const allExecsSettled = EXEC_MEMBER_ORDER.every(
+    (roleId) => roleStatus[roleId] === 'answered' || roleStatus[roleId] === 'failed',
+  );
+  const locked = mode === 'live' ? !allExecsSettled : !allCardsRevealed;
+  const gate = useFocusGate('opinions');
+  const nextStep = opinionsNextStep({ locked });
+
   const actions = (
     <div className="app-body__actions screen opinions-screen">
-      <button type="button" className="cta" onClick={onNext}>
-        내 의견 말하기 ▶
+      <button
+        type="button"
+        className="cta"
+        onClick={onNext}
+        disabled={locked}
+        data-testid="opinions-next"
+        {...nextStepAttr(gate.visible && nextStep === 'next')}
+        aria-describedby={locked ? 'opinions-next-why' : undefined}
+      >
+        {locked ? '임원 의견을 듣는 중…' : '내 의견 쓰러 가기 ▶'}
       </button>
+      {/* T102: 발언 흐름 패널을 뺀 세로 여백에 "읽는 곳은 오른쪽"이라는 안내 한 줄. */}
+      {locked && (
+        <span id="opinions-next-why" className="sr-only">
+          임원 의견이 다 나오면 열립니다
+        </span>
+      )}
+      <p className="opinions-screen__read-hint" data-testid="opinions-read-hint">
+        임원 네 명의 의견을 오른쪽에서 읽고 넘어가세요
+      </p>
     </div>
   );
 
@@ -92,18 +145,20 @@ export function OpinionsScreen({
   // 타자기 집계. live·scripted 모두 같은 머리를 쓰고 카드 그리드만 달라진다.
   const paperHead = (
     <>
+      {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+          도장만 영문으로 되돌렸다. */}
       <span className="opinions-screen__stamp" aria-hidden="true">
         CONFIDENTIAL
       </span>
       <div className="opinions-screen__head">
-        <span className="opinions-screen__step">STEP 02</span>
+        <span className="opinions-screen__step">2단계</span>
         {/* 시안 원본은 <h1>이지만, 이 화면은 ATTRACT의 페이지 <h1>("BOARDROOM 2026")
             아래 중첩되는 화면 제목이라 다른 조종석 화면(BRIEFING·MOTION·VOTE 등)과
             같은 <h2> 위계를 쓴다 — 글자 크기·굵기는 시안 값 그대로다. */}
-        <h2 className="opinions-screen__title">임원 네 명의 첫 의견</h2>
+        <h2 className="opinions-screen__title">임원 의견 듣기</h2>
       </div>
       <div className="opinions-screen__meta">
-        <span>같은 자료를 읽고 각자의 관점에서 말합니다. 전문은 왼쪽 TRANSCRIPT에 쌓입니다.</span>
+        <span>같은 자료를 읽고 각자의 관점에서 말합니다.</span>
         <span className="opinions-screen__tally">{stanceSummaryLine(stances)}</span>
       </div>
     </>
@@ -138,7 +193,7 @@ export function OpinionsScreen({
         <div className="opinions-screen__paper">
           {paperHead}
           <div className="opinions-screen__cards">
-            {scenario.initialOpinions.map((opinion) => {
+            {scenario.initialOpinions.slice(0, revealedCount).map((opinion) => {
               const stance = stances[opinion.memberId];
               const evidenceLabel = lastEvidenceLabel(scenario, opinion.evidenceIds);
               return (
@@ -157,14 +212,10 @@ export function OpinionsScreen({
                     >
                       {STANCE_LABEL[stance]}
                     </span>
-                    {/* "발언" 칩(시안): scripted는 항상 이미 도착한 의견만 보여주므로
-                        live의 판단 중/응답 없음 상태가 없다 — 장식이라 접근 가능한
-                        문구는 위 opinion-card__mood·본문이 전담한다. */}
-                    <span className="opinion-card__chip" aria-hidden="true">
-                      발언
-                    </span>
                   </div>
-                  <p className="opinion-card__text">{opinion.text}</p>
+                  <p className="opinion-card__text">
+                    <HighlightText text={opinion.text} terms={statementHighlightTerms(scenario, opinion.text)} />
+                  </p>
                   {evidenceLabel && <span className="opinion-card__evidence">근거 · {evidenceLabel}</span>}
                 </article>
               );

@@ -18,6 +18,7 @@
 // 기본값은 false라 DISCUSS 호출부는 바뀌지 않는다.
 
 import type { Phrase } from '../../content/types';
+import { nextStepAttr } from './focusRing';
 
 export interface PhraseCardProps {
   phrase: Pick<Phrase, 'id' | 'text'>;
@@ -25,15 +26,18 @@ export interface PhraseCardProps {
   onToggle: () => void;
   testId?: string;
   disabled?: boolean;
+  /** T113: 지금 눌러야 할 다음 할 일이면 점선 테두리(`data-next-step`)를 붙인다. */
+  nextStep?: boolean;
 }
 
-export function PhraseCard({ phrase, selected, onToggle, testId, disabled = false }: PhraseCardProps) {
+export function PhraseCard({ phrase, selected, onToggle, testId, disabled = false, nextStep = false }: PhraseCardProps) {
   return (
     <label
       className={`phrase-card${selected ? ' phrase-card--selected' : ''}${
         disabled ? ' phrase-card--disabled' : ''
       }`}
       data-testid={testId ?? `phrase-card-${phrase.id}`}
+      {...nextStepAttr(nextStep)}
     >
       <input
         type="checkbox"

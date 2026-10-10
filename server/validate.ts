@@ -39,8 +39,36 @@ export const VOTE_VALUES = ['YES', 'NO'] as const;
 /** 발언 끝에 임원이 지금 기울어 있는 쪽(T63, src/domain/stance.ts의 Stance와 값이 같다). */
 export const STANCE_VALUES = ['FOR', 'AGAINST', 'UNDECIDED'] as const;
 
+/** 참가자가 지금 기울어 있는 입장(T92, src/domain/types.ts의 ParticipantStance 중 null이
+ * 아닌 값과 같다). null은 입장을 고르지 않음이며 요청 스키마에서는 필드 생략으로 표현한다. */
+export const PARTICIPANT_STANCE_VALUES = ['FOR', 'AGAINST'] as const;
+
 const evidenceIdSchema = z.enum(EVIDENCE_IDS);
 const conditionIdSchema = z.enum(CONDITION_IDS);
+
+/**
+ * T82: 조건 ID(LOG, OWNER, SCOPE 등)가 전부 라틴 문자 2자 이상의 연속이라, "응답 스키마
+ * 필드에만 ID를 쓰라"는 프롬프트 가드레일(prompts/common.ts)을 모델이 어겨도 같은 모양으로
+ * 잡힌다 — CONDITION_IDS를 따로 나열하지 않고, 사람이 보는 문장에 남은 라틴 문자 연속
+ * 자체를 거절한다(새 조건을 추가해도 자동으로 걸러진다). 예외: "AI" 두 글자(가드레일에서
+ * 허용한 유일한 영문 표기), 임원 역할 ID(이름이 없는 가상 인물이 서로를 가리킬 다른
+ * 방법이 없다 — live 실측에서 "CISO·CFO 의견에 동의합니다" 같은 쓰임을 확인했다, T82
+ * 조사). 숫자·단위(62%, 2.8일)는 라틴 문자가 아니라 원래부터 걸리지 않는다.
+ */
+const STRAY_LATIN_EXCEPTIONS = new Set<string>(['AI', ...EXEC_ROLE_IDS]);
+
+/** 문장에서 예외가 아닌 라틴 문자 2자 이상 연속을 찾아 처음 걸린 것을 돌려준다(없으면
+ * undefined). statementResponseSchema·voteResponseSchema·assistantResponseSchema가 사람이
+ * 보는 필드(message·reason·draftText)에 붙여 쓴다. */
+export function findStrayLatinRun(text: string): string | undefined {
+  // 라틴 2자 이상 연속, 또는 라틴 문자와 숫자·밑줄이 붙은 토큰(자료 ID `E1`, `FULL_AUTO`
+  // 같은 내부 식별자 — 영문자만 2자 이상 세면 `E1`이 빠져 "E1 자료에 따르면"이 그대로
+  // 노출됐다, PR #20 Codex 3차 검토 P2).
+  // 한 글자짜리("A안을 택하겠습니다"·"X 조건")도 금지 대상이다(PR #20 Codex 8차 검토 P2) —
+  // 라틴 문자를 하나라도 포함한 영숫자·밑줄 토큰 전부를 보고 예외 목록만 뺀다.
+  const matches = text.match(/[A-Za-z0-9_]*[A-Za-z][A-Za-z0-9_]*/g);
+  return matches?.find((word) => !STRAY_LATIN_EXCEPTIONS.has(word));
+}
 
 /** 모든 엔드포인트 요청 본문에 공통으로 들어가는 메타 필드. */
 export const requestMetaSchema = z.object({
@@ -70,7 +98,17 @@ export function statementResponseSchema(knownStatementIds: readonly string[] = [
       suggestedConditionIds: z.array(conditionIdSchema),
       stance: z.enum(STANCE_VALUES),
     })
-    .strict();
+    .strict()
+    .superRefine((data, ctx) => {
+      const stray = findStrayLatinRun(data.message);
+      if (stray) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['message'],
+          message: `발언에 허용되지 않는 영문 표현이 남아 있습니다: ${stray}`,
+        });
+      }
+    });
 }
 export type StatementResponse = z.infer<ReturnType<typeof statementResponseSchema>>;
 
@@ -86,7 +124,17 @@ export function voteResponseSchema(opts: { motionId: string; motionHash: string 
       evidenceIds: z.array(evidenceIdSchema),
       remainingConcerns: z.array(z.string()),
     })
-    .strict();
+    .strict()
+    .superRefine((data, ctx) => {
+      const stray = findStrayLatinRun(data.reason);
+      if (stray) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['reason'],
+          message: `판단 근거에 허용되지 않는 영문 표현이 남아 있습니다: ${stray}`,
+        });
+      }
+    });
 }
 export type VoteResponse = z.infer<ReturnType<typeof voteResponseSchema>>;
 
@@ -99,7 +147,17 @@ export function assistantResponseSchema(opts: { draftRevision: number }) {
       evidenceIds: z.array(evidenceIdSchema),
       suggestedConditionIds: z.array(conditionIdSchema),
     })
-    .strict();
+    .strict()
+    .superRefine((data, ctx) => {
+      const stray = findStrayLatinRun(data.draftText);
+      if (stray) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['draftText'],
+          message: `정리된 발언에 허용되지 않는 영문 표현이 남아 있습니다: ${stray}`,
+        });
+      }
+    });
 }
 export type AssistantResponse = z.infer<ReturnType<typeof assistantResponseSchema>>;
 

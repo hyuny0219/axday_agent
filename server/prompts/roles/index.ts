@@ -6,6 +6,7 @@ import { buildRolePrompt as buildCeoPrompt } from './ceo';
 import { buildRolePrompt as buildCfoPrompt } from './cfo';
 import { buildRolePrompt as buildCaioPrompt } from './caio';
 import { buildRolePrompt as buildCisoPrompt } from './ciso';
+import { PLAIN_LANGUAGE_RULE } from '../plainLanguage';
 
 /** round.ts(OPINIONS/REACTIONS/FOLLOWUP)·vote.ts(VOTE)가 공통으로 넘기는 단계 구분.
  * assistant.ts(refine·summarize)는 ROLE_PROMPT_BUILDERS를 쓰지 않으므로 이 타입과 무관하다. */
@@ -23,17 +24,40 @@ export const EXEC_STYLE_RULE =
   ' 종결도 쓰지 마십시오.';
 
 /**
+ * T93(2026-10-07 사용자 지시 "AI 임원들이 의견을 내는 것을 초중학생이 봐도 이해할 수 있는
+ * 수준으로"): 문장 길이·용어 난이도 규칙은 EXEC_STYLE_RULE(존댓말)과 겹치지 않는 별도
+ * 규칙이라 server/prompts/plainLanguage.ts에 상수(PLAIN_LANGUAGE_RULE)로 두고, 그 파일의
+ * 금지 어휘 목록을 eval-set-run.ts --check·콘텐츠 테스트와 공유한다. 공통 가드레일이 아니라
+ * 임원 전용으로 두는 이유는 EXEC_STYLE_RULE·EXEC_DECISION_RULE과 같다 — 비서실장
+ * refine·summarize는 참가자 원문을 다시 쓰면 안 되므로 이 규칙을 받지 않는다(prompts/
+ * assistant.ts 참고).
+ */
+
+/**
  * 임원 프롬프트에만 붙는 판단 규칙(T62 표결 두 갈래, T63 stance). 공통 가드레일에 두면
  * refine·summarize(비서실장)에도 전달돼 "찬성·반대 중 하나를 고르라"는 지시가 참가자 원문
  * 정리·회의 요약에까지 번진다(PR #11 Codex 10차 P2). round·vote 핸들러가 모두
  * ROLE_PROMPT_BUILDERS를 쓰므로 여기 붙이면 임원 호출 전부에 들어간다.
+ *
+ * T92(v10, 사용자 지적 "반대 의견을 작성해도 AI 임원들 및 프로그램 진행이 찬성 쪽으로
+ * 몰고 가는 경향"): v9까지는 "붙은 조건 유무"로만 판단해 참가자의 찬성·반대 자체는
+ * 프롬프트에 없었다 — 실측(v9)에서 조건 보완 경로 16/16 YES, 조건 없음 16/16 NO로 네
+ * 임원이 참가자 논리와 무관하게 함께 움직였다. v10은 참가자 주장을 판단의 출발점으로
+ * 바꾼다: 조건은 "참가자의 요구"일 뿐이라 그 조건이 실제로 우려를 해소하는지는 각자
+ * 판단하고, 네 임원이 매번 같은 결론으로 함께 움직이지 않도록 자기 관점(role_lens)에서
+ * 독립적으로 답한다.
  */
 export const EXEC_DECISION_RULE =
-  '찬성(YES)·반대(NO) 중 하나를 실제 근거로 고르십시오. 안건에 붙은 확정 조건은 실행 전에' +
-  ' 반드시 지켜야 하는 약속입니다. 그 조건이 지금 현실에서 이미 갖춰졌는지가 아니라, 조건이' +
-  ' 지켜진다는 전제에서 이 안건을 받아들일 수 있는지로 판단하십시오. 조건이 당신의 우려를' +
-  ' 해소하면 찬성하고, 조건이 있어도 해소되지 않는 우려가 남으면 반대하며, 그 이유를 제공된' +
-  ' 근거와 남은 우려에 따라 적으십시오. 무조건 찬성하거나 무조건 반대하는 답변은 금지합니다.' +
+  '참가자의 입장과 그 근거를 먼저 평가하십시오. meeting_record의 참가자 입장이 반대라면,' +
+  ' 그 반대 근거가 제공된 자료에 비춰 타당한지를 따져 답하고, 타당하다고 판단되면 반대로' +
+  ' 기울어도 됩니다. 안건에 붙은 확정 조건은 참가자의 요구입니다 — 조건이 붙어 있다는' +
+  ' 사실만으로 찬성하지 말고, 그 조건이 당신의 우려를 실제로 해소할 때만 찬성 근거로' +
+  ' 삼으십시오. 조건이 우려를 해소하지 못하면 조건이 있어도 반대하고, 참가자의 반대 근거가' +
+  ' 자료에 비춰 타당하지 않다면 반대 입장이어도 찬성할 수 있습니다 — 참가자의 입장을' +
+  ' 그대로 따르거나 무조건 반대로 맞서는 답변 둘 다 금지합니다. 당신의 관점(role_lens)에서' +
+  ' 독립적으로 판단하십시오 — 다른 임원도 같은 결론을 낼 것이라고 가정하지 말고, 네 명이' +
+  ' 매번 같은 쪽으로 한꺼번에 움직이지 않아도 됩니다. 그 이유를 제공된 근거와 참가자 주장에' +
+  ' 대한 당신의 평가로 적으십시오. 무조건 찬성하거나 무조건 반대하는 답변은 금지합니다.' +
   '\n' +
   '발언마다 지금 기울어 있는 쪽을 stance 필드로 적으십시오. 첫 의견부터 방향을 밝히십시오 —' +
   ' 우려가 남아 있어도 지금 표결한다면 어느 쪽인지 정해 찬성(YES) 쪽이면 FOR, 반대(NO) 쪽이면' +
@@ -85,7 +109,7 @@ function withExecStyle(
   roleId: ExecRoleId,
 ): (materials: ScenarioMaterials, stage: ExecPromptStage) => string {
   return (materials: ScenarioMaterials, stage: ExecPromptStage) => {
-    const parts = [buildRolePrompt(), EXEC_STYLE_RULE, EXEC_DECISION_RULE];
+    const parts = [buildRolePrompt(), EXEC_STYLE_RULE, PLAIN_LANGUAGE_RULE, EXEC_DECISION_RULE];
     const lens = materials.roleLenses?.[roleId];
     if (lens) {
       parts.push(buildRoleLensBlock(materials, lens));

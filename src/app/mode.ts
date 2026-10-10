@@ -26,6 +26,14 @@ function forcedScriptedByQuery(): boolean {
   return new URLSearchParams(window.location.search).get('mode') === 'scripted';
 }
 
+/** 운영·테스트용 `?coach=off` — 첫 세션의 진행 도우미(T103)를 끄고 시작한다(T104). */
+export function coachOffByQuery(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return new URLSearchParams(window.location.search).get('coach') === 'off';
+}
+
 async function checkServerMode(timeoutMs: number): Promise<'live' | 'scripted'> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

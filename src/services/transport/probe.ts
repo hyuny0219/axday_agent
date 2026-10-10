@@ -18,11 +18,11 @@ export interface HealthInfo {
   promptVersion: string;
 }
 
-/** 클라이언트 쪽 대기 상한. 서버는 제공자 호출을 8초로 끊지만, 연결 자체가 블랙홀이면
- * 그 8초가 시작되지도 않아 fetch가 영원히 대기한다 — 그동안 패널의 닫기가 비활성이라 운영자가
- * 실패를 보지도, scripted 대안으로 돌아가지도 못했다(PR #10 Codex 9차 검토 P2). 서버 상한
- * 8초 + 왕복 여유로 12초, 보조 정보(health)는 5초. */
-export const PROBE_TIMEOUT_MS = 12_000;
+/** 클라이언트 쪽 대기 상한. 서버는 제공자 호출을 ROUND_TIMEOUT_MS(기본 15초, T91)로 끊지만,
+ * 연결 자체가 블랙홀이면 그 타이머가 시작되지도 않아 fetch가 영원히 대기한다 — 그동안
+ * 패널의 닫기가 비활성이라 운영자가 실패를 보지도, scripted 대안으로 돌아가지도 못했다
+ * (PR #10 Codex 9차 검토 P2). 서버 상한 15초 + 왕복 여유로 20초, 보조 정보(health)는 5초. */
+export const PROBE_TIMEOUT_MS = 20_000;
 export const HEALTH_TIMEOUT_MS = 5_000;
 
 export interface ProbeOptions {

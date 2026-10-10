@@ -11,8 +11,34 @@
    줄을 하나의 패널로 묶는다 — transcript-bg·transcript-border는 이미 TRANSCRIPT
    패널(minutes.css)이 쓰는 같은 HUD 어두운 판 톤이지만 테두리는 시안색(hud-line)으로
    강조한다. */
+/* T117: 입력 상자는 고정 px가 아니라 열의 남는 높이를 채운다(--hud-textarea-h는 여유가 있을
+   때의 최대 높이일 뿐, 모자라면 44px까지 줄고 글은 안쪽 스크롤). 조건 칩은 한 줄(가로 스크롤)
+   + 아래 충돌 안내 한 줄을 늘 예약해(--hud-chips-h) 칩·안내가 생겨도 제출 줄이 움직이지 않는다.
+   두 HUD(.discuss-screen__hud·.reactions-screen__hud)가 같은 변수를 쓴다. */
+.discuss-screen__hud,
+.reactions-screen__hud {
+  --hud-textarea-h: 116px;
+  --hud-chip-h: 24px;
+  --hud-chip-scroll: 8px;
+  --hud-head-h: 20px;
+  --hud-input-min: 44px;
+  --hud-conflict-h: 16px;
+  --hud-chips-h: calc(var(--hud-chip-h) + var(--hud-chip-scroll) + 3px + var(--hud-conflict-h));
+}
+
+@media (max-width: 1280px) {
+  .discuss-screen__hud,
+  .reactions-screen__hud {
+    --hud-textarea-h: 96px;
+    --hud-chip-h: 22px;
+    --hud-head-h: 16px;
+  }
+}
+
 .discuss-screen__hud {
   box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -29,8 +55,12 @@
 }
 
 .draft-editor {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  flex: 1 1 auto;
+  /* 머리줄 / 입력 상자(남는 높이, 여유 시 최대 --hud-textarea-h). T117: 상자 최소 44px와 머리줄이
+     들어갈 높이는 항상 확보해(min-height) 입력 상자가 아래 칩 줄 위로 겹치지 않는다. */
+  min-height: calc(var(--hud-head-h) + 10px + var(--hud-input-min));
+  grid-template-rows: auto minmax(0, var(--hud-textarea-h));
   gap: 10px;
 }
 
@@ -43,8 +73,10 @@
 /* 머리줄 "MY STATEMENT · 내 발언" + "n / 300자"(시안). */
 .draft-editor__head {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+  height: var(--hud-head-h);
   font-family: var(--font-hud);
   font-size: 14px;
   letter-spacing: 0.18em;
@@ -74,9 +106,11 @@
 /* 3줄 높이(시안 64px/720) — resize는 시안대로 막는다(HUD 입력 상자가 고정 높이다). */
 .draft-editor__textarea {
   width: 100%;
-  min-height: 80px;
+  height: auto;
+  min-height: var(--hud-input-min);
   box-sizing: border-box;
   resize: none;
+  overflow-y: auto;
   padding: 10px 12.5px;
   background-color: var(--skin-bg);
   border: 1px solid var(--transcript-border);
@@ -88,8 +122,11 @@
 
 @media (max-width: 1280px) {
   .draft-editor__textarea {
-    min-height: 64px;
-    padding: 8px 10px;
+    /* T96: 설득 현황판이 더해진 왼쪽 열의 세로 예산을 조금 더 벌어 둔다(2026-10-08
+       팀리드 지시 — 3줄 높이를 2.5줄 정도로 살짝 줄여도 textarea는 그대로 늘어난다,
+       resize는 여전히 막아 둔다). REACTIONS(다시 답하기)가 DISCUSS보다 조건 칩
+       2줄(ConditionChips)까지 더 겹쳐 세로 예산이 더 빠듯해 한 번 더 줄인다. */
+    padding: 6px 10px;
     font-size: 13px;
   }
 }
@@ -99,10 +136,25 @@
   outline-offset: 2px;
 }
 
+/* T116: 머리줄 가운데(높이 고정). 길면 말줄임. */
 .draft-editor__error {
+  flex: 1;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0;
   color: var(--vote-no);
-  font-size: var(--fs-meta);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+@media (max-width: 1280px) {
+  .draft-editor__error {
+    font-size: 11px;
+  }
 }
 
 .rebuild-confirm {
@@ -126,16 +178,8 @@
   flex-wrap: wrap;
 }
 
-.rebuild-confirm__rebuild {
-  min-height: var(--touch-min);
-  padding: 0 var(--space-2);
-  background: transparent;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-control);
-  color: var(--text);
-  cursor: pointer;
-  font-family: inherit;
-}
+/* "선택 문구로 다시 구성"은 T86에서 공용 .cta.cta--secondary(shell.css)로 바꿔 이
+   파일에는 더 이상 버튼 자체의 색·모양 규칙이 없다. */
 
 /* CONDITIONS 칩 줄(시안 — DISCUSS·REACTIONS 공용, ConditionChips.tsx). 확정 칩은
    시안색 테두리 + 라벨 끝에 붙는 "✓"(배지가 아니라 글자), 미확정은 회색. */
@@ -153,22 +197,70 @@
   }
 }
 
+/* T117: 조건 칩은 한 줄(nowrap)이다. 5개가 폭에 안 들어가면 칩 줄만 가로로 스크롤하고
+   (포커스가 가면 브라우저가 칩을 보이는 곳으로 자동 스크롤한다), 라벨이 길면 말줄임
+   (전체 이름은 title). 슬롯 높이는 칩 줄 + 충돌 안내 한 줄로 고정이라 칩·안내가 생겨도
+   아래 제출 줄이 움직이지 않는다. */
+.hud-conditions-slot {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  height: var(--hud-chips-h);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.condition-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  height: 100%;
+  min-height: 0;
+}
+
+.condition-chips__row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.condition-chips__row .condition-chips__label {
+  flex: 0 0 auto;
+  line-height: var(--hud-chip-h);
+}
+
 .condition-chips__list {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+  flex: 1;
+  flex-flow: row nowrap;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  height: calc(var(--hud-chip-h) + var(--hud-chip-scroll));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .condition-chip {
-  min-height: var(--touch-min);
-  padding: 5px 12.5px;
-  border-radius: 18px;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  max-width: 14em;
+  height: var(--hud-chip-h);
+  min-height: 0;
+  padding: 0 9px;
+  border-radius: 12px;
   border: 1px solid #4a4d55;
   background: transparent;
   color: #8f8a80;
   cursor: pointer;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
   transition:
     border-color var(--transition-fast) ease,
     color var(--transition-fast) ease;
@@ -176,10 +268,37 @@
 
 @media (max-width: 1280px) {
   .condition-chip {
-    padding: 4px 10px;
-    border-radius: 14px;
-    font-size: 12px;
+    padding: 0 8px;
+    border-radius: 11px;
+    font-size: 11px;
   }
+}
+
+/* 가려진 칩이 있으면 오른쪽 끝을 페이드하고 옆에 "+N"을 둔다(스크롤바가 안 보이는 환경 대비). */
+.condition-chips__list[data-more='true'] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.condition-chips__more {
+  flex: 0 0 auto;
+  min-width: 26px;
+  line-height: var(--hud-chip-h);
+  color: var(--hud-warn);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* 라벨만 말줄임 — "✓"·"+ 새 조건" 꼬리는 항상 보인다. */
+.condition-chip__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.condition-chip__tail {
+  flex: 0 0 auto;
 }
 
 .condition-chip--accepted {
@@ -195,14 +314,46 @@
   color: var(--hud-warn);
 }
 
+/* 충돌 안내는 칩 줄 아래 한 줄 고정(길면 말줄임, 전체 문장은 title). */
 .condition-chips__conflicts {
-  margin: var(--space-1) 0 0;
-  padding-left: var(--space-2);
+  flex: 0 0 auto;
+  height: var(--hud-conflict-h);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
   color: var(--vote-no);
+  font-size: 12px;
+  line-height: var(--hud-conflict-h);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.condition-chips__conflicts li {
+  display: inline;
+}
+
+/* 충돌쌍이 둘 이상이면 한 줄에 이어 붙인다(말줄임이면 전체는 title). */
+.condition-chips__conflicts li + li::before {
+  content: ' · ';
+}
+
+@media (max-width: 1280px) {
+  .condition-chips__conflicts {
+    font-size: 11px;
+  }
 }
 
 .condition-chips__hint {
+  margin: 0;
   color: #9fb6cc;
+  font-size: 13px;
+}
+
+@media (max-width: 1280px) {
+  .condition-chips__hint {
+    font-size: 11px;
+  }
 }
 
 /* [AI 비서실장 열기][의견 전달 ▶](시안 — amber 보조 버튼 + amber 채움 주 CTA).
@@ -210,28 +361,22 @@
    줄바꿈된다. 두 버튼 모두 이 화면에서만 쓰는 크기라 .assistant-panel__toggle·.cta의
    공용 규칙(다른 화면이 함께 쓴다)을 덮어쓰지 않고 이 행 안에서만 덮어쓴다. */
 .discuss-screen__submit-row {
+  flex: none;
   align-items: center;
 }
 
+/* T86 버튼 통일: 외곽선(검정 바탕·주황 글자)이던 비서실장 토글도 "체험 시작"과 같은
+   주황 채움(.cta 공용 색·글꼴·모서리)으로 — 크기만 이 줄에 맞춘다. */
 .discuss-screen__submit-row .assistant-panel__toggle {
   min-height: 60px;
   width: 225px;
   padding: 0;
-  background-color: transparent;
-  border: 2px solid var(--amber);
-  border-radius: 0;
-  color: var(--amber);
-  font-family: var(--font-display);
   font-size: 21px;
   letter-spacing: 0.04em;
-  box-shadow: 4px 4px 0 #3a2a12;
 }
 
-.discuss-screen__submit-row .assistant-panel__toggle:hover {
-  background-color: rgba(224, 163, 74, 0.12);
-}
-
-@media (max-width: 1280px) {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
   .discuss-screen__submit-row .assistant-panel__toggle {
     min-height: 48px;
     width: 180px;
@@ -239,14 +384,15 @@
   }
 }
 
-.discuss-screen__submit-row .cta {
+.discuss-screen__submit-row > .cta {
   min-height: 70px;
   width: 250px;
   font-size: 25px;
 }
 
-@media (max-width: 1280px) {
-  .discuss-screen__submit-row .cta {
+/* T117: 키 작은 화면(1366×768 등)도 같은 작은 버튼 치수 */
+@media (max-width: 1280px), (max-height: 900px) {
+  .discuss-screen__submit-row > .cta {
     min-height: 56px;
     width: 200px;
     font-size: 20px;
@@ -344,6 +490,9 @@
     font-size: 13px;
   }
 }
+
+/* 입장 선택 두 버튼은 DISCUSS·REACTIONS 공용 .side-select*(T87→T89, shell.css)로
+   옮겼다 — 이 화면은 아래 추천 문구 그리드만 맡는다. */
 
 /* 추천 문구 6개 2열(시안 — 열 높이를 채운다). */
 .discuss-screen__phrase-list {
@@ -450,9 +599,25 @@
   color: var(--ink);
 }
 
-/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼·안내 자체
-   스타일(.evidence-open-button·.evidence-open-hint)은 evidenceDialog.css의 공용
-   규칙이고, 여기서는 점선 위 경계 + 배치만 맡는다. */
+/* T119: 추천 문구 카드 앞 번호. 비서실장이 "추천 문구 N번"이라고 안내하므로 DISCUSS
+   목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(::before 내용이라 접근성 이름에는 "1. "처럼 번호가 앞에 붙어 읽힌다). */
+.discuss-screen__phrase-list--numbered {
+  counter-reset: phrase-no;
+}
+
+.discuss-screen__phrase-list--numbered .phrase-card {
+  counter-increment: phrase-no;
+}
+
+.discuss-screen__phrase-list--numbered .phrase-card__text::before {
+  content: counter(phrase-no) '. ';
+  font-weight: 700;
+  color: var(--label);
+}
+
+/* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼은 T86에서
+   공용 .cta.cta--secondary(shell.css)로 바뀌었고, 안내 한 줄(.evidence-open-hint)만
+   evidenceDialog.css의 공용 규칙이다 — 여기서는 점선 위 경계 + 배치만 맡는다. */
 .discuss-screen__evidence-row {
   flex-shrink: 0;
   display: flex;

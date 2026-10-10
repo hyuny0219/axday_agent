@@ -1,10 +1,10 @@
 // server/handlers/round.ts: 임원 4명 병렬 호출, mock 장애(timeout/invalid) 처리, 지연 예산
 // 준수, 참가자 발언 프롬프트 주입 격리. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleRound, roundRequestSchema, type RoundRequest } from '../../server/handlers/round';
 import { createMockProvider } from '../../server/providers/mock';
-import type { ModelProvider } from '../../server/providers/types';
+import { ProviderCallError, type ModelProvider } from '../../server/providers/types';
 import { PROMPT_VERSION } from '../../server/prompts/version';
 
 function baseRoundInput(overrides: Partial<RoundRequest> = {}): RoundRequest {
@@ -151,7 +151,7 @@ describe('handleRound with the mock provider', () => {
     expect(results.every((r) => r.status === 'answered')).toBe(true);
   });
 
-  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 12000)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 8000)를 쓴다(T65)', async () => {
+  it('REACTIONS·FOLLOWUP은 REACTION_TIMEOUT_MS(기본 20000, T91)를, OPINIONS는 ROUND_TIMEOUT_MS(기본 15000, T91)를 쓴다(T65)', async () => {
     const timeoutsSeen: number[] = [];
     const fakeProvider: ModelProvider = {
       async complete(req) {
@@ -181,7 +181,7 @@ describe('handleRound with the mock provider', () => {
       { provider: fakeProvider },
     );
 
-    expect(timeoutsSeen).toEqual([8000, 12000]);
+    expect(timeoutsSeen).toEqual([15000, 20000]);
   });
 
   it('deps.timeouts로 상한을 바꿀 수 있다(T65)', async () => {
@@ -225,6 +225,23 @@ describe('roundRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
     expect(roundRequestSchema.safeParse({ ...base, roleIds: [] }).success).toBe(false);
     expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CFO', 'CAIO'] }).success).toBe(true);
     expect(roundRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO'] }).success).toBe(true);
+  });
+});
+
+// T92: 참가자 입장(사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는 경향"). 생략하면
+// 기존 요청과 동일하게 통과한다 — 새 필드가 선택값임을 고정한다.
+describe('roundRequestSchema participantStance(T92)', () => {
+  const base = baseRoundInput({ requestId: 'req-stance' });
+
+  it('생략하면(기존 요청) 그대로 통과한다', () => {
+    expect(roundRequestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('FOR·AGAINST는 통과하고, 그 밖의 값은 거부한다', () => {
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'FOR' }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'AGAINST' }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: 'UNDECIDED' }).success).toBe(false);
+    expect(roundRequestSchema.safeParse({ ...base, participantStance: null }).success).toBe(false);
   });
 });
 
@@ -305,4 +322,291 @@ describe('안건별 suggestedConditionIds 검증(PR #13 Codex 1차 검토 P2)', 
       expect(results.every((r) => r.status === 'answered')).toBe(true);
     },
   );
+});
+
+// T91: 빠르게(timeout 외 이유로) 실패했고 남은 예산이 충분하면 1회 재시도한다.
+describe('callRole의 1회 재시도(T91)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('연결 오류로 빠르게 실패해도 남은 예산이 충분하면 1회 재시도해 성공으로 끝난다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        if (calls === 1) {
+          throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+        }
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-success', budgetMs: 8000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(2);
+    expect(results[0]?.status).toBe('answered');
+  });
+
+  it('timeout으로 실패하면 예산이 남아도 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        const err = new Error('aborted');
+        err.name = 'AbortError';
+        throw err;
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-timeout', budgetMs: 999_999, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+    expect(results[0]?.failReason).toBe('timeout');
+  });
+
+  it('남은 예산이 MIN_RETRY_REMAINING_MS(6000)보다 적으면 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-budget', budgetMs: 5000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+  });
+
+  // PR #20 Codex 17차 검토 P2: 재시도 잔여 시간은 클라이언트 budgetMs가 아니라 서버 상한(timeoutMs)
+  // 기준이다 — budgetMs가 상한보다 커도 역할 하나의 총 소요가 상한을 넘지 않는다.
+  it('budgetMs가 서버 상한보다 커도 재시도 잔여 시간은 서버 상한 기준으로 계산한다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+      },
+    };
+    // 서버 상한 5000ms < MIN_RETRY_REMAINING_MS(6000) → budgetMs가 120초여도 재시도하지 않는다.
+    const input = baseRoundInput({ requestId: 'req-retry-cap', budgetMs: 120_000, roleIds: ['CEO'] });
+    const results = await handleRound(input, {
+      provider: fakeProvider,
+      timeouts: { roundTimeoutMs: 5000, reactionTimeoutMs: 5000 },
+    });
+    expect(results[0]?.status).toBe('failed');
+    expect(calls).toBe(1);
+  });
+
+  // PR #20 Codex 26차 검토 P2: 인증 오류(401)는 다시 보내도 성공할 수 없으니 재시도하지 않는다.
+  it('인증 오류(401)는 예산이 남아도 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('invalid x-api-key', { httpStatus: 401, errorType: 'authentication_error' });
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-no-retry-auth', budgetMs: 8000, roleIds: ['CEO'] });
+    const results = await handleRound(input, { provider: fakeProvider });
+    expect(results[0]?.status).toBe('failed');
+    expect(calls).toBe(1);
+  });
+
+  // PR #20 Codex 36차 검토 P2: 첫 시도가 응답까지 받았다가 검증에서 떨어지고 두 번째가 성공하면
+  // 캐시 토큰은 두 시도를 합쳐 기록한다(마지막 시도만 남기면 비용·캐시 분석이 어긋난다).
+  it('재시도하면 두 시도의 캐시 토큰을 합쳐 로그에 남긴다', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        if (calls === 1) {
+          // 스키마에 맞지 않는 응답(stance 누락 등) → invalid_response로 분류돼 재시도 대상이 된다.
+          return { json: { roleId: envelope.roleId, message: 123 }, modelId: 'fake-model', usage: { cacheReadInputTokens: 100, cacheCreationInputTokens: 10 } };
+        }
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+          usage: { cacheReadInputTokens: 200, cacheCreationInputTokens: 5 },
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-cache', budgetMs: 8000, roleIds: ['CEO'] });
+    await handleRound(input, { provider: fakeProvider });
+    const line = consoleSpy.mock.calls[0]?.[0] as string;
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    expect(parsed.attempts).toBe(2);
+    expect(parsed.status).toBe('answered');
+    expect(parsed.cacheReadTokens).toBe(300);
+    expect(parsed.cacheWriteTokens).toBe(15);
+  });
+
+  it('재시도 여부를 로그 한 줄의 attempts 필드로 남긴다', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        if (calls === 1) {
+          throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+        }
+        const envelope = JSON.parse(req.user) as { roleId: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            message: '재시도 후 정상 응답입니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'FOR',
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseRoundInput({ requestId: 'req-retry-log', budgetMs: 8000, roleIds: ['CEO'] });
+    await handleRound(input, { provider: fakeProvider });
+    const line = consoleSpy.mock.calls[0]?.[0] as string;
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    expect(parsed.attempts).toBe(2);
+    expect(parsed.status).toBe('answered');
+  });
+});
+
+// T110(프롬프트 v12): 두 단계 설득 — 첫 반응은 고민 중까지, 후속에서 확정.
+describe('두 단계 설득 프롬프트(T110, v12)', () => {
+  function captureSystems(): { systems: string[]; provider: ModelProvider } {
+    const systems: string[] = [];
+    const provider: ModelProvider = {
+      async complete(req) {
+        systems.push(req.system);
+        return createMockProvider('mock-model').complete(req);
+      },
+    };
+    return { systems, provider };
+  }
+
+  it('프롬프트 버전이 v13이다', () => {
+    expect(PROMPT_VERSION).toBe('v13');
+  });
+
+  it('요청 스키마가 followUpAnswered(불리언, 선택)를 받고 다른 타입은 거절한다', () => {
+    const base = {
+      sessionId: 's',
+      requestId: 'r',
+      mode: 'live',
+      stage: 'REACTIONS',
+      transcript: { revision: 0, statements: [] },
+      scenarioId: 'ai-approval',
+      budgetMs: 8000,
+    };
+    expect(roundRequestSchema.safeParse(base).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, followUpAnswered: false }).success).toBe(true);
+    expect(roundRequestSchema.safeParse({ ...base, followUpAnswered: 'no' }).success).toBe(false);
+  });
+
+  it('REACTIONS 지시에 "조건이 충분해도 고민 중(UNDECIDED)까지만, 확정은 추가 질문 답변 뒤"가 들어간다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-r', stage: 'REACTIONS', followUpAnswered: false }), { provider });
+    expect(systems).toHaveLength(4);
+    for (const system of systems) {
+      expect(system).toContain('UNDECIDED(고민 중)까지만');
+      expect(system).toContain('추가 질문에 답한 뒤');
+      expect(system).not.toContain('추가 질문 답변:');
+    }
+  });
+
+  it('FOLLOWUP 지시에는 답을 받았으니 확정해도 된다는 말이 들어가고, 회의 기록에 답변 있음이 실린다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-f', stage: 'FOLLOWUP', followUpAnswered: true }), { provider });
+    for (const system of systems) {
+      expect(system).toContain('참가자가 추가 질문에 답했습니다');
+      expect(system).toContain('추가 질문 답변: 있음');
+      expect(system).not.toContain('UNDECIDED(고민 중)까지만');
+    }
+  });
+
+  it('FOLLOWUP 지시에는 최종 찬반·표결 방향을 문장으로 밝히지 말라는 규칙이 들어가고 다른 단계에는 없다(T114, v13)', async () => {
+    const followUp = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t114-f', stage: 'FOLLOWUP', followUpAnswered: true }), {
+      provider: followUp.provider,
+    });
+    expect(followUp.systems.length).toBeGreaterThan(0);
+    for (const system of followUp.systems) {
+      expect(system).toContain('최종 찬반이나 표결 방향을 문장으로 밝히지 마십시오');
+      expect(system).toContain('"찬성합니다"');
+      expect(system).toContain('지지·동의·같은 편·표를 보탠다');
+      expect(system).toContain('남은 우려');
+    }
+    for (const stage of ['OPINIONS', 'REACTIONS'] as const) {
+      const other = captureSystems();
+      await handleRound(baseRoundInput({ requestId: `req-t114-${stage}`, stage }), { provider: other.provider });
+      for (const system of other.systems) {
+        expect(system).not.toContain('최종 찬반이나 표결 방향을 문장으로 밝히지 마십시오');
+      }
+    }
+  });
+
+  it('mock 제공자의 FOLLOWUP 발언 문장에는 찬성·반대 단어가 없다(T114)', async () => {
+    const provider = createMockProvider('mock-model');
+    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      const result = await provider.complete({
+        system: 's',
+        user: JSON.stringify({ kind: 'statement', roleId, stage: 'FOLLOWUP' }),
+        schema: {},
+        maxTokens: 200,
+        timeoutMs: 100,
+      });
+      const message = (result.json as { message: string }).message;
+      expect(message).not.toMatch(/찬성|반대/);
+    }
+  });
+
+  it('OPINIONS 지시에는 두 단계 설득 문구가 붙지 않는다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleRound(baseRoundInput({ requestId: 'req-t110-o' }), { provider });
+    for (const system of systems) {
+      expect(system).not.toContain('UNDECIDED(고민 중)까지만');
+      expect(system).not.toContain('참가자가 추가 질문에 답했습니다');
+    }
+  });
+});
+
+describe('초기·첫 반응 프롬프트에는 미답변 기록이 없다(Codex 48차 P2)', () => {
+  it('OPINIONS·REACTIONS에 followUpAnswered:false가 와도 "추가 질문 답변" 줄이 없다', async () => {
+    for (const stage of ['OPINIONS', 'REACTIONS'] as const) {
+      const systems: string[] = [];
+      const provider: ModelProvider = {
+        async complete(req) {
+          systems.push(req.system);
+          return createMockProvider('mock-model').complete(req);
+        },
+      };
+      await handleRound(baseRoundInput({ requestId: `req-48-${stage}`, stage, followUpAnswered: false }), { provider });
+      for (const system of systems) expect(system).not.toContain('추가 질문 답변:');
+    }
+  });
 });

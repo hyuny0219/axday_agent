@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { findConflicts, proposeFromText } from '../../src/domain/conditions';
 import type { ExecMemberId, Predicate } from '../../src/content/types';
+import {
+  MAX_SENTENCE_CHARS,
+  findForbiddenWords,
+  sentenceCharLengths,
+} from '../../server/prompts/plainLanguage';
 
 const scenario = aiApprovalScenario;
 
@@ -20,10 +25,19 @@ describe('aiApprovalScenario 기본 구조', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
-  it('자료 카드가 4개, 추천 문구가 6개, 조건이 5개다', () => {
+  it('자료 카드가 4개, 추천 문구가 8개(찬성 3·반대 4·요청 1, T119: 찬성 쪽 2개는 추가 답변으로), 조건이 5개다', () => {
     expect(scenario.evidence).toHaveLength(4);
-    expect(scenario.phrases).toHaveLength(6);
+    expect(scenario.phrases).toHaveLength(8);
     expect(scenario.conditions).toHaveLength(5);
+  });
+
+  it('추천 문구의 side가 FOR/AGAINST/BOTH 중 하나이고, AGAINST가 정확히 4개다(T87)', () => {
+    for (const phrase of scenario.phrases) {
+      expect(['FOR', 'AGAINST', 'BOTH']).toContain(phrase.side);
+    }
+    expect(scenario.phrases.filter((p) => p.side === 'AGAINST')).toHaveLength(4);
+    expect(scenario.phrases.filter((p) => p.side === 'FOR')).toHaveLength(3);
+    expect(scenario.phrases.filter((p) => p.side === 'BOTH')).toHaveLength(1);
   });
 
   it('phrases·reactions·followUp의 조건 참조가 모두 존재한다', () => {
@@ -95,13 +109,13 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       'LIMIT',
     ]);
     expect(proposeFromText(scenario, '자동 승인마다 승인 사유를 기록합시다.')).toEqual(['LOG']);
-    expect(proposeFromText(scenario, '승인 뒤 사람이 표본 재검토를 하도록 합시다.')).toEqual([
+    expect(proposeFromText(scenario, '승인 뒤 사람이 일부를 다시 보도록 합시다.')).toEqual([
       'REVIEW',
     ]);
     expect(
       proposeFromText(scenario, '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.'),
     ).toEqual(['OWNER']);
-    expect(proposeFromText(scenario, '사람 검토를 전면 생략하고 전부 자동 승인합시다.')).toEqual([
+    expect(proposeFromText(scenario, '사람 확인을 빼고 전부 자동 승인합시다.')).toEqual([
       'FULL_AUTO',
     ]);
   });
@@ -120,7 +134,7 @@ describe('조건 키워드 격리(proposeFromText)', () => {
   });
 
   it('"검토 없이 공유"류 부정문은 REVIEW를 제안하지 않는다(기존 부정 규칙이 그대로 적용된다)', () => {
-    expect(proposeFromText(scenario, '표본 재검토 없이 바로 넘깁시다.')).not.toContain('REVIEW');
+    expect(proposeFromText(scenario, '일부를 다시 보지 않고 바로 넘깁시다.')).not.toContain('REVIEW');
   });
 
   // PR #13 Codex 1차 검토 P1: OWNER 키워드가 '책임자' 한 단어였을 때 정보성 질문에도
@@ -139,8 +153,8 @@ describe('조건 키워드 격리(proposeFromText)', () => {
     const informationalQuestions = [
       '금액 한도가 얼마입니까?',
       '승인 사유가 무엇인지 알려 주세요.',
-      '표본 재검토는 누가 합니까?',
-      '전면 생략이 무슨 뜻입니까?',
+      '일부를 다시 보는 건 누가 합니까?',
+      '전부 맡기기가 무슨 뜻입니까?',
     ];
     for (const text of informationalQuestions) {
       expect(proposeFromText(scenario, text), text).toEqual([]);
@@ -163,9 +177,9 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       '승인 사유를 기록하는 이유가 무엇인지 설명해 주십시오.',
       '승인 사유를 기록할지 고민입니다.',
       '승인 사유를 기록하는 기준이 궁금합니다.',
-      // REVIEW: 키워드 2개 — '표본 재검토를 하'·'사람이 다시 보도록'
-      '표본 재검토를 하는 기준이 무엇입니까?',
-      '표본 재검토를 할지 고민입니다.',
+      // REVIEW: 키워드 2개 — '일부를 다시 보도록'·'사람이 다시 보도록'
+      '일부를 다시 보도록 하는 기준이 무엇입니까?',
+      '일부를 다시 보도록 할지 고민입니다.',
       '사람이 다시 보도록 하는 절차가 무엇입니까?',
       '사람이 다시 보도록 하는 방법을 알려 주세요.',
       // OWNER: 키워드 2개 — '책임자를 지정'·'결재 규칙 책임자'
@@ -173,9 +187,9 @@ describe('조건 키워드 격리(proposeFromText)', () => {
       '책임자를 지정할지 고민입니다.',
       '결재 규칙 책임자가 누구인지 알려 주세요.',
       '결재 규칙 책임자를 정하는 방법이 무엇입니까?',
-      // FULL_AUTO: 키워드 2개 — '검토를 전면 생략'·'전부 자동 승인'
-      '검토를 전면 생략하는 기준이 무엇입니까?',
-      '검토를 전면 생략할지 고민입니다.',
+      // FULL_AUTO: 키워드 2개 — '확인을 빼고 전부 자동'·'전부 자동 승인'
+      '확인을 빼고 전부 자동으로 하는 기준이 무엇입니까?',
+      '확인을 빼고 전부 자동으로 할지 고민입니다.',
       '전부 자동 승인하는 기준이 무엇입니까?',
       '전부 자동 승인하는 방법을 설명해 주십시오.',
     ];
@@ -264,7 +278,7 @@ describe('조건 키워드 격리(proposeFromText)', () => {
     for (const text of [
       '승인 사유를 기록하는 방식은 어떻게 정해요',
       '금액 한도는 누가 정해요',
-      '표본 재검토를 하는 주기는 얼마나 돼요',
+      '일부를 다시 보도록 하는 주기는 얼마나 돼요',
       '결재 규칙 책임자를 왜 따로 둬요',
     ]) {
       expect(proposeFromText(scenario, text), text).toEqual([]);
@@ -324,5 +338,139 @@ describe('findConflicts', () => {
       ['REVIEW', 'FULL_AUTO'],
     ]);
     expect(findConflicts(scenario, ['REVIEW', 'LIMIT'])).toEqual([]);
+  });
+});
+
+// T93(2026-10-07 사용자 지시 "초중학생이 봐도 이해할 수 있는 수준으로"): scripted 임원
+// 발언(initialOpinions·reactions·oppositionReactions·voteRules reason·followUp.question)
+// 전부가 금지 어휘를 쓰지 않고, 문장당 글자 수 상한을 넘지 않는지 검사한다. 추천
+// 문구(phrases)·후속 추천 답변(followUp.options)은 참가자 말이라 범위 밖이다(T93 카드).
+describe('쉬운 말(T93)', () => {
+  const execStatements: string[] = [
+    ...scenario.initialOpinions.map((o) => o.text),
+    ...scenario.reactions.map((r) => r.text),
+    ...Object.values(scenario.oppositionReactions ?? {}),
+    // T96: REACTIONS "유지" 카드의 빈 대사 대신 쓰는 역할별 유지 이유도 임원 발언이다.
+    ...Object.values(scenario.holdReasons ?? {}),
+    ...Object.values(scenario.voteRules).flatMap((rules) => rules.map((r) => r.reason ?? '')),
+    scenario.followUp.question,
+    ...(scenario.followUp.byStance
+      ? [scenario.followUp.byStance.FOR.question, scenario.followUp.byStance.AGAINST.question]
+      : []),
+  ];
+
+  it('금지 어휘를 쓰지 않는다', () => {
+    for (const text of execStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+    }
+  });
+
+  it(`문장당 글자 수가 ${MAX_SENTENCE_CHARS}자를 넘지 않는다`, () => {
+    for (const text of execStatements) {
+      for (const length of sentenceCharLengths(text)) {
+        expect(length, text).toBeLessThanOrEqual(MAX_SENTENCE_CHARS);
+      }
+    }
+  });
+});
+
+// T94(2026-10-08 사용자 지시 "상황·제안·미정 문장도 같은 톤으로"): 상황 파악·안건 분해·
+// 결과 문구에도 금지 어휘가 없는지 검사한다. subtitle·motionBreakdown은 "원안을 그대로
+// 쪼갠" 구조적 문구라 발언형 문장 길이 상한은 적용하지 않는다(위 쉬운 말(T93) 블록과
+// 같은 이유로 조건 라벨·추천 문구·질문(question)은 범위 밖).
+describe('쉬운 말(T94)', () => {
+  const structuralStatements: string[] = [
+    scenario.subtitle,
+    scenario.motionBreakdown.proposal,
+    ...scenario.motionBreakdown.undecidedItems.map((item) => item.text),
+  ];
+  const conversationalStatements: string[] = [
+    scenario.chairBriefing.situation,
+    scenario.chairBriefing.role,
+    scenario.incident.headline,
+    scenario.incident.hook,
+    ...scenario.remainingTasks.map((item) => item.text),
+    scenario.resultCopy.pass,
+    scenario.resultCopy.reject,
+    scenario.resultCopy.sixMonthsLater.pass,
+    scenario.resultCopy.sixMonthsLater.passOriginal,
+    scenario.resultCopy.sixMonthsLater.reject,
+  ];
+
+  it('구조적 문구(subtitle·motionBreakdown)에 금지 어휘가 없다', () => {
+    for (const text of structuralStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+    }
+  });
+
+  it('상황·결과 문구에 금지 어휘가 없고 문장당 글자 수 상한을 넘지 않는다', () => {
+    for (const text of conversationalStatements) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+      for (const length of sentenceCharLengths(text)) {
+        expect(length, text).toBeLessThanOrEqual(MAX_SENTENCE_CHARS);
+      }
+    }
+  });
+});
+
+describe('근거 자료 content는 쉬운 짧은 문장이다(T99)', () => {
+  it('문장 수가 2개 이하이고 문장당 45자 이하이며 금지어가 없다', () => {
+    for (const card of scenario.evidence) {
+      const lengths = sentenceCharLengths(card.content);
+      expect(lengths.length, card.id).toBeLessThanOrEqual(2);
+      for (const length of lengths) {
+        expect(length, `${card.id}: ${card.content}`).toBeLessThanOrEqual(45);
+      }
+      expect(findForbiddenWords(card.content), card.id).toEqual([]);
+    }
+  });
+
+  it('핵심 말(highlightTerms)이 4~6개이고 상황·제안·미정 문장에 실제로 들어 있다', () => {
+    const terms = scenario.highlightTerms ?? [];
+    expect(terms.length).toBeGreaterThanOrEqual(4);
+    expect(terms.length).toBeLessThanOrEqual(6);
+    const haystack = [
+      scenario.chairBriefing.situation,
+      scenario.motionBreakdown.proposal,
+      ...scenario.motionBreakdown.undecidedItems.map((i) => i.text),
+    ].join(' ');
+    for (const term of terms) {
+      expect(haystack, term).toContain(term);
+    }
+  });
+});
+
+// T100(2026-10-08 규칙 점검): 참가자 눈에 보이는 조건 라벨·추천 문구·키워드·자료 제목·
+// 후속 답변·결과 문구까지 금지 어휘 0을 고정한다. 금지 목록에 없지만 같은 어려운 말인
+// 단어도 함께 막는다.
+describe('쉬운 말(T100) — 라벨·추천 문구·키워드·제목', () => {
+  const EXTRA_HARD_WORDS = ['복기', '재검토', '전례 없는', '절대 우선', '양식', '전면'];
+  const visibleTexts: string[] = [
+    scenario.originalMotion.text,
+    scenario.subtitle,
+    scenario.briefingSummary.text,
+    ...scenario.evidence.flatMap((e) => [e.title, e.content, e.insight]),
+    ...scenario.conditions.flatMap((c) => [c.label, ...c.keywords]),
+    ...scenario.phrases.map((p) => p.text),
+    ...scenario.followUp.options.map((o) => o.text),
+    ...Object.values(scenario.holdReasons ?? {}),
+    scenario.resultCopy.pass,
+    scenario.resultCopy.reject,
+    scenario.resultCopy.sixMonthsLater.pass,
+    scenario.resultCopy.sixMonthsLater.passOriginal,
+    scenario.resultCopy.sixMonthsLater.reject,
+  ];
+
+  it('금지 어휘와 같은 수준의 어려운 말이 하나도 없다', () => {
+    for (const text of visibleTexts) {
+      expect(findForbiddenWords(text), text).toEqual([]);
+      for (const word of EXTRA_HARD_WORDS) {
+        expect(text.includes(word), `${word} :: ${text}`).toBe(false);
+      }
+    }
+  });
+
+  it('안건 번호 라벨이 "안건 0N" 꼴이다', () => {
+    expect(scenario.incident.caseLabel).toMatch(/^안건 0\d$/);
   });
 });

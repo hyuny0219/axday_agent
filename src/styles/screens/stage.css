@@ -232,6 +232,13 @@
   border-color: var(--hud-warn);
 }
 
+/* 참가자 명패(T85 #24): RESULT에서만 그린다(StageBand.tsx) — 임원 4석 색과 겹치지
+   않는 중립 색(accent)으로 "나"를 표시한다. */
+.stage-band__nameplate--participant {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"): 명패 아래 작은 회색 한 줄.
    StageBand.tsx가 역할별 관심사 단어(방향/비용/시스템/보안) + STANCE_LABEL을 합쳐 넣는다. */
 .stage-band__caption {
@@ -478,9 +485,46 @@
   }
 }
 
-/* 표결 배지: CEO→CFO→CAIO→CISO→나 순으로 0.2초 간격 등장(총 1초 이내, RESULT 전용).
-   VoteBadge가 inline animation-delay를 매겨 CSS animation-delay만으로 순차 공개한다
-   (setTimeout 없음, Clock 규칙과 무관). */
+/* 표결 배지(RESULT 전용, T114): 임원 4명은 봉인 '?'로 시작해 0.9초 간격으로 한 장씩
+   뒤집힌다(CEO→CFO→CAIO→CISO, 참가자 표는 처음부터 보임). VoteBadge가 inline
+   animation-delay를 매겨 CSS animation-delay만으로 순차 공개한다(setTimeout 없음,
+   Clock 규칙과 무관). reduced-motion·운영자 skip은 base.css가 delay를 0으로 만든다. */
+.stage-band__vote-slot {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+}
+
+.stage-band__vote-slot > * {
+  grid-area: 1 / 1;
+}
+
+.stage-band__vote-seal {
+  box-sizing: border-box;
+  border: 1.5px dashed #4a4d55;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: #8f8a80;
+  animation: stage-seal-out var(--reveal-flip, 500ms) ease-in both;
+}
+
+@keyframes stage-seal-out {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+    transform: rotateY(90deg);
+  }
+}
+
 .stage-band__vote-badge {
   display: inline-flex;
   align-items: center;
@@ -490,16 +534,17 @@
   border-radius: 50%;
   font-size: 14px;
   font-weight: 700;
-  animation: stage-badge-pop 220ms ease-out both;
+  animation: stage-badge-pop var(--reveal-flip, 500ms) ease-out both;
 }
 
 @keyframes stage-badge-pop {
-  from {
+  0%,
+  50% {
     opacity: 0;
-    transform: scale(0.4);
+    transform: rotateY(90deg) scale(0.6);
   }
 
-  to {
+  100% {
     opacity: 1;
     transform: none;
   }
@@ -538,4 +583,19 @@
   .stage-band__nameplate {
     font-size: 11px;
   }
+}
+
+/* T118: 첫 의견 뒤 기울어진 방향 — 확정이 아니므로 채움 대신 점선 테두리 + 연한 배경. */
+.stage-band__mood--leaning {
+  background-color: transparent;
+  border: 1.5px dashed currentColor;
+  box-sizing: border-box;
+}
+
+.stage-band__mood--leaning.stage-band__mood--for {
+  color: var(--accent);
+}
+
+.stage-band__mood--leaning.stage-band__mood--against {
+  color: var(--vote-no);
 }

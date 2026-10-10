@@ -357,6 +357,21 @@
   }
 }
 
+/* "아직 정하지 않은 것" 줄(T84) — motion-screen__not-included-text와 같은 무게. */
+.vote-screen__motion-undecided {
+  margin: 8.75px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .vote-screen__motion-undecided {
+    margin-top: 7px;
+    font-size: 11px;
+  }
+}
+
 /* 화면에는 보이지 않는 fieldset 범례(시안에는 없는 보조 접근성 문구, ExecStanceList와
    같은 sr-only 기법 — 접근성은 시안 이탈 금지 규칙보다 앞선다). */
 .vote-screen__sr-only {
@@ -567,6 +582,32 @@
     width: 260px;
     font-size: 20px;
   }
+}
+
+/* 임원 표 집계 대기 점 애니메이션(T85 #7, stage.css의 stage-dot-bounce 키프레임을
+   그대로 재사용한다 — StageBand가 항상 같은 화면에 렌더돼 키프레임이 이미 로드돼
+   있다). prefers-reduced-motion에서는 base.css 전역 규칙이 지속 시간을 0으로 낮춘다. */
+.vote-screen__confirm-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.vote-screen__confirm-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: stage-dot-bounce 900ms ease-in-out infinite;
+}
+
+.vote-screen__confirm-dots span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.vote-screen__confirm-dots span:nth-child(3) {
+  animation-delay: 300ms;
 }
 
 .vote-screen__cta-note {

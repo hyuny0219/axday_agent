@@ -6,6 +6,7 @@ import {
   CONDITION_IDS,
   EVIDENCE_IDS,
   EXEC_ROLE_IDS,
+  PARTICIPANT_STANCE_VALUES,
   STANCE_VALUES,
   STATEMENT_STAGES,
   statementResponseSchema,
@@ -15,14 +16,21 @@ import {
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
-import { buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
+import {
+  FOLLOWUP_ANSWERED_RULE,
+  FOLLOWUP_NO_VERDICT_RULE,
+  REACTIONS_FIRST_PASS_RULE,
+  buildCommonGuardrails,
+  buildMeetingRecordBlock,
+} from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
+import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 import { withTimeout } from './timeout';
-import { classifyFailure, roleIdsSchema } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -41,6 +49,11 @@ export const roundRequestSchema = z.object({
     statements: z.array(transcriptStatementSchema),
   }),
   participantOpinion: z.string().min(1).optional(),
+  /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). 없으면 입장을 고르지 않은 것이다. */
+  participantStance: z.enum(PARTICIPANT_STANCE_VALUES).optional(),
+  /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 없으면(기존 요청) 답한 것으로
+   * 보지 않는다 — REACTIONS는 단계 자체가 "아직 답하기 전"이라 이 값과 무관하다. */
+  followUpAnswered: z.boolean().optional(),
   scenarioId: z.string().min(1),
   budgetMs: z.number().int().positive(),
   /** 실패한 역할만 다시 호출할 때 쓰는 선택 필드(T65, "다시 요청"). 없으면 임원 4명 전체를
@@ -67,6 +80,17 @@ export interface RoundHandlerDeps {
   /** OPINIONS·VOTE와 REACTIONS·FOLLOWUP의 타임아웃(ms, T65). 생략하면 config.ts 기본값
    * (8000/12000)을 쓴다 — 기존 테스트가 그대로 통과한다. */
   timeouts?: { roundTimeoutMs: number; reactionTimeoutMs: number };
+  /** T114(Codex 54차): FOLLOWUP 임원 한 명의 시도별 원시 응답·위반과 대체 여부를 받는 내부 수집기.
+   * 평가 스크립트만 넘긴다 — 클라이언트 응답 JSON에는 실리지 않는다(반환값·로그와 별개). */
+  followUpAudit?: FollowUpAuditEntry[];
+}
+
+export interface FollowUpAuditEntry {
+  roleId: ExecRoleId;
+  /** 시도별 원시 message(스키마를 통과한 응답만; 형식 오류·타임아웃 시도는 건너뛴다). */
+  attempts: Array<{ text: string; violations: string[]; invalidReason?: string }>;
+  /** 재시도 뒤에도 방향 표현이 남아 중립 문장으로 대체했는가(로그 note followup_verdict_masked). */
+  masked: boolean;
 }
 
 const DEFAULT_TIMEOUTS = {
@@ -113,12 +137,18 @@ function stageInstruction(stage: RoundRequest['stage']): string {
     case 'REACTIONS':
       return (
         '지금은 반응 단계입니다. 참가자 발언과 동료 임원의 기존 발언(ID)을 참고해 동의·반론·입장' +
-        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.'
+        ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.' +
+        ' 참가자 발언의 핵심 주장 한 가지를 짚어 그 주장에 직접 답하십시오 — "말씀은 잘' +
+        ' 들었습니다" 같은 수신 확인만 하고 넘어가지 마십시오. ' +
+        REACTIONS_FIRST_PASS_RULE
       );
     case 'FOLLOWUP':
       return (
         '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
-        ' 보완하십시오.'
+        ' 보완하십시오. ' +
+        FOLLOWUP_ANSWERED_RULE +
+        ' ' +
+        FOLLOWUP_NO_VERDICT_RULE
       );
   }
 }
@@ -141,6 +171,8 @@ function buildRoundSystemPrompt(
     transcriptRevision: input.transcript.revision,
     statements: input.transcript.statements,
     participantOpinion: input.participantOpinion,
+    participantStance: input.participantStance ?? null,
+    followUpAnswered: input.followUpAnswered,
   });
   return [
     buildCommonGuardrails(),
@@ -151,14 +183,44 @@ function buildRoundSystemPrompt(
   ].join('\n\n');
 }
 
-async function callRole(
+/** callRole 내부에서만 쓰는 시도 1회 결과 — 로그 전용 providerErrorClass·httpStatus·캐시
+ * 토큰 수까지 담아 둔다(T91, 재시도 판단과 최종 로그 한 줄에 쓴다). */
+interface RoleAttemptResult extends RoundRoleResult {
+  providerErrorClass?: ProviderErrorClass;
+  httpStatus?: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  /** T114: FOLLOWUP 응답이 스키마는 통과했지만 문장에 방향 단어가 있어 거절된 시도의 원본.
+   * callRole이 재시도 뒤에도 이 값이 남아 있으면 그 임원 발언을 중립 문장으로 대체한다. */
+  verdictStatement?: StatementResponse;
+  /** T115: OPINIONS·REACTIONS 응답의 문장 방향이 구조화된 stance와 명백히 어긋나 거절된 시도의 원본과 문장 방향. */
+  directionMismatch?: { statement: StatementResponse; direction: 'FOR' | 'AGAINST' };
+}
+
+/** T115: 문장이 선언한 방향과 stance가 명백히 반대(또는 고민 중인데 방향 선언)이면 그 방향을 돌려준다. */
+function mismatchedDirection(
+  stage: RoundRequest['stage'],
+  message: string,
+  stance: string,
+  participantStance: RoundRequest['participantStance'],
+): 'FOR' | 'AGAINST' | null {
+  if (stage !== 'OPINIONS' && stage !== 'REACTIONS') return null;
+  const direction = declaredDirection(message, participantStance ?? null);
+  if (!direction) return null;
+  return stance === direction ? null : direction;
+}
+
+/** 제공자 호출 1회(파싱·조건 ID 검증 포함). 로그를 남기지 않는다 — callRole이 재시도
+ * 여부를 정한 뒤 최종 결과만 한 줄로 남긴다(T91). */
+async function attemptRole(
   roleId: ExecRoleId,
   input: RoundRequest,
   materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   timeoutMs: number,
   provider: ModelProvider,
   clock: Clock,
-): Promise<RoundRoleResult> {
+  capture?: { message?: string; invalidReason?: string },
+): Promise<RoleAttemptResult> {
   const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -172,6 +234,8 @@ async function callRole(
       // PR #13 Codex 2차 검토 P1: mock 제공자가 안건별로 유효한 조건 ID를 고르려면
       // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
       scenarioId: input.scenarioId,
+      followUpAnswered: input.followUpAnswered,
+      participantStance: input.participantStance,
       mock: parseMockFault(input.mock?.[roleId]),
     });
     const raw = provider.complete({
@@ -183,6 +247,11 @@ async function callRole(
       signal: controller.signal,
     });
     const result = await withTimeout(raw, timeoutMs);
+    // T114(Codex 55차): 다른 필드가 검증에 실패해도 FOLLOWUP 원문 위반은 평가에 남긴다 — 검증 전에 수집.
+    const rawJson = result.json as { message?: unknown } | null;
+    if (capture && rawJson && typeof rawJson.message === 'string') {
+      capture.message = rawJson.message;
+    }
     const latencyMs = clock.now() - start;
     const parsed = statementResponseSchema(knownStatementIds).safeParse(result.json);
     // PR #13 Codex 1차 검토 P2: CONDITION_IDS는 모든 활성 안건의 합집합이라 스키마만으로는
@@ -193,41 +262,57 @@ async function callRole(
       parsed.success &&
       parsed.data.suggestedConditionIds.some((id) => !validConditionIds.has(id));
     if (!parsed.success || parsed.data.roleId !== roleId || hasForeignCondition) {
-      logCall({
-        ts: new Date(clock.now()).toISOString(),
-        kind: 'round',
-        sessionId: input.sessionId,
-        stage: input.stage,
+      if (capture) {
+        capture.invalidReason = !parsed.success
+          ? 'schema'
+          : parsed.data.roleId !== roleId
+            ? 'role_mismatch'
+            : 'foreign_condition';
+      }
+      return {
         roleId,
         status: 'failed',
         failReason: 'invalid_response',
         providerErrorClass: 'invalid_response',
         latencyMs,
-        timeoutMs,
-        promptVersion: PROMPT_VERSION,
         modelId: result.modelId,
-      });
+        // 응답까지는 받았으므로 캐시 토큰은 실제로 쓰였다 — 재시도 합산에 넣는다(Codex 36차 P2).
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+        promptVersion: PROMPT_VERSION,
+      };
+    }
+    // T114: 답변 뒤 방향은 결과에서 공개한다 — FOLLOWUP 문장에 찬성·반대 같은 말이 있으면
+    // invalid_response로 보고 기존 재시도 경로를 탄다.
+    if (input.stage === 'FOLLOWUP' && findVerdictWords(parsed.data.message).length > 0) {
       return {
         roleId,
         status: 'failed',
         failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
         latencyMs,
         modelId: result.modelId,
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
         promptVersion: PROMPT_VERSION,
+        verdictStatement: parsed.data,
       };
     }
-    logCall({
-      ts: new Date(clock.now()).toISOString(),
-      kind: 'round',
-      sessionId: input.sessionId,
-      stage: input.stage,
-      roleId,
-      status: 'answered',
-      latencyMs,
-      timeoutMs,
-      promptVersion: PROMPT_VERSION,
-      modelId: result.modelId,
-    });
+    const mismatch = mismatchedDirection(input.stage, parsed.data.message, parsed.data.stance, input.participantStance);
+    if (mismatch) {
+      return {
+        roleId,
+        status: 'failed',
+        failReason: 'invalid_response',
+        providerErrorClass: 'invalid_response',
+        latencyMs,
+        modelId: result.modelId,
+        cacheReadTokens: result.usage?.cacheReadInputTokens,
+        cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+        promptVersion: PROMPT_VERSION,
+        directionMismatch: { statement: parsed.data, direction: mismatch },
+      };
+    }
     return {
       roleId,
       status: 'answered',
@@ -235,29 +320,18 @@ async function callRole(
       latencyMs,
       modelId: result.modelId,
       promptVersion: PROMPT_VERSION,
+      cacheReadTokens: result.usage?.cacheReadInputTokens,
+      cacheWriteTokens: result.usage?.cacheCreationInputTokens,
     };
   } catch (err) {
     const latencyMs = clock.now() - start;
     const { failReason, providerErrorClass, httpStatus } = classifyFailure(err);
-    logCall({
-      ts: new Date(clock.now()).toISOString(),
-      kind: 'round',
-      sessionId: input.sessionId,
-      stage: input.stage,
+    return {
       roleId,
       status: 'failed',
       failReason,
       providerErrorClass,
       httpStatus,
-      latencyMs,
-      timeoutMs,
-      promptVersion: PROMPT_VERSION,
-      modelId: '',
-    });
-    return {
-      roleId,
-      status: 'failed',
-      failReason,
       latencyMs,
       modelId: '',
       promptVersion: PROMPT_VERSION,
@@ -267,7 +341,116 @@ async function callRole(
   }
 }
 
-/** 임원(기본 4명, roleIds가 있으면 그 역할만)을 병렬 호출한다(재시도 0회). 알 수 없는
+/** 임원 한 명을 호출하고, 빠르게(timeout 외 이유로) 실패했는데 남은 예산이 충분하면
+ * (MIN_RETRY_REMAINING_MS 이상) 같은 요청을 1회만 더 보낸다(T91). 최종 결과 한 줄만
+ * attempts 필드(1 또는 2)와 함께 로그에 남긴다 — latencyMs는 재시도까지 포함한 총
+ * 소요 시간이다. */
+async function callRole(
+  roleId: ExecRoleId,
+  input: RoundRequest,
+  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
+  timeoutMs: number,
+  provider: ModelProvider,
+  clock: Clock,
+  audit?: FollowUpAuditEntry[],
+): Promise<RoundRoleResult> {
+  const overallStart = clock.now();
+  let attempts = 1;
+  const rawAttempts: FollowUpAuditEntry['attempts'] = [];
+  const noteAttempt = (capture: { message?: string; invalidReason?: string }) => {
+    if (capture.message !== undefined) {
+      rawAttempts.push({
+        text: capture.message,
+        violations: findVerdictWords(capture.message),
+        ...(capture.invalidReason ? { invalidReason: capture.invalidReason } : {}),
+      });
+    }
+  };
+  const firstCapture: { message?: string; invalidReason?: string } = {};
+  let outcome = await attemptRole(roleId, input, materials, timeoutMs, provider, clock, firstCapture);
+  noteAttempt(firstCapture);
+  if (outcome.status === 'failed' && isRetryableFailure(outcome.failReason, outcome.providerErrorClass)) {
+    // 재시도까지 포함한 전체 시간은 서버 상한(timeoutMs)을 넘지 않는다 — input.budgetMs는
+    // 클라이언트가 보낸 값이라 서버 상한보다 클 수 있다(PR #20 Codex 17차 검토 P2).
+    const remainingMs = timeoutMs - (clock.now() - overallStart);
+    if (remainingMs >= MIN_RETRY_REMAINING_MS) {
+      attempts = 2;
+      const first = outcome;
+      const secondCapture: { message?: string; invalidReason?: string } = {};
+      const second = await attemptRole(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock, secondCapture);
+      noteAttempt(secondCapture);
+      // 캐시 토큰은 두 시도를 합산한다(PR #20 Codex 36차 검토 P2).
+      outcome = {
+        ...second,
+        cacheReadTokens: sumTokens(first.cacheReadTokens, second.cacheReadTokens),
+        cacheWriteTokens: sumTokens(first.cacheWriteTokens, second.cacheWriteTokens),
+      };
+    }
+  }
+  // T114: 재시도(또는 재시도 예산 부족) 뒤에도 방향 단어가 남았으면 그 발언만 중립 문장으로 바꿔
+  // 내려보낸다. 나머지 필드(stance·근거·조건)는 그대로 둔다.
+  let masked = false;
+  if (outcome.status === 'failed' && outcome.verdictStatement) {
+    outcome = {
+      ...outcome,
+      status: 'answered',
+      failReason: undefined,
+      providerErrorClass: undefined,
+      statement: { ...outcome.verdictStatement, message: maskedFollowUpMessage(roleId) },
+      verdictStatement: undefined,
+    };
+    masked = true;
+  }
+  // T115: 재시도에서도 문장과 stance가 어긋나면 참가자가 읽는 것은 문장이므로 stance를 문장 방향에 맞춘다.
+  let corrected = false;
+  if (outcome.status === 'failed' && outcome.directionMismatch) {
+    const { statement, direction } = outcome.directionMismatch;
+    outcome = {
+      ...outcome,
+      status: 'answered',
+      failReason: undefined,
+      providerErrorClass: undefined,
+      statement: { ...statement, stance: direction },
+      directionMismatch: undefined,
+    };
+    corrected = true;
+  }
+  if (audit && input.stage === 'FOLLOWUP') {
+    audit.push({ roleId, attempts: rawAttempts, masked });
+  }
+  const latencyMs = clock.now() - overallStart;
+  logCall({
+    ts: new Date(clock.now()).toISOString(),
+    kind: 'round',
+    sessionId: input.sessionId,
+    stage: input.stage,
+    roleId,
+    status: outcome.status,
+    failReason: outcome.failReason,
+    providerErrorClass: outcome.providerErrorClass,
+    httpStatus: outcome.httpStatus,
+    latencyMs,
+    timeoutMs,
+    attempts,
+    cacheReadTokens: outcome.cacheReadTokens,
+    cacheWriteTokens: outcome.cacheWriteTokens,
+    promptVersion: PROMPT_VERSION,
+    modelId: outcome.modelId,
+    note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : undefined,
+  });
+  return {
+    roleId,
+    status: outcome.status,
+    statement: outcome.statement,
+    failReason: outcome.failReason,
+    latencyMs,
+    modelId: outcome.modelId,
+    promptVersion: PROMPT_VERSION,
+  };
+}
+
+/** 임원(기본 4명, roleIds가 있으면 그 역할만)을 병렬 호출한다(역할당 최대 2회 — timeout
+ * 외 이유로 빠르게 실패하고 예산이 남아 있으면 callRole이 1회 재시도한다, T91). 알 수 없는
  * scenarioId는 예외를 던진다(호출자가 400 등으로 변환). 개별 임원 실패는 failed 결과로만
  * 남고 다른 임원 호출에 영향을 주지 않는다. roleIds는 실패한 역할만 다시 부르는 "다시
  * 요청"(T65)이 쓴다 — 응답은 요청한 역할만큼만 돌아온다. */
@@ -285,7 +468,7 @@ export async function handleRound(
   const targets = input.roleIds ?? EXEC_ROLE_IDS;
 
   const settled = await Promise.allSettled(
-    targets.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock)),
+    targets.map((roleId) => callRole(roleId, input, materials, timeoutMs, deps.provider, clock, deps.followUpAudit)),
   );
 
   return settled.map((result, index) => {

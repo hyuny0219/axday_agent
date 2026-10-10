@@ -14,8 +14,8 @@ interface ProgressStep {
 // 모양과 어울리는 타자기 표기다. 단계 이름 자체(상황 파악·임원 의견 등)는 그대로 둔다.
 const STEPS: ProgressStep[] = [
   { step: 1, label: '01 상황 파악' },
-  { step: 2, label: '02 임원 의견' },
-  { step: 3, label: '03 내 의견' },
+  { step: 2, label: '02 임원 의견 듣기' },
+  { step: 3, label: '03 내 의견 쓰기' },
   { step: 4, label: '04 반응에 답하기' },
   { step: 5, label: '05 표결' },
 ];
@@ -42,6 +42,11 @@ export function ProgressStrip({ stage }: ProgressStripProps) {
     return null;
   }
 
+  // RESULT(T85 #24): 여정이 끝났으므로 탭 5개 모두 완료로 보여준다 — "지금 단계"
+  // 표시(aria-current)는 더는 의미가 없어 끈다("05 표결"에 계속 머무는 것처럼
+  // 보이던 문제).
+  const isResult = stage === 'RESULT';
+
   return (
     <nav className="progress-strip" aria-label="진행 단계" data-testid="progress-strip">
       <ol className="progress-strip__list">
@@ -50,8 +55,8 @@ export function ProgressStrip({ stage }: ProgressStripProps) {
             key={step}
             className="progress-strip__step"
             data-testid={`progress-step-${step}`}
-            aria-current={step === currentStep ? 'step' : undefined}
-            data-done={step < currentStep ? 'true' : undefined}
+            aria-current={!isResult && step === currentStep ? 'step' : undefined}
+            data-done={(isResult ? step <= currentStep : step < currentStep) ? 'true' : undefined}
           >
             {label}
           </li>

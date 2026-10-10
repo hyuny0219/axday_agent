@@ -39,6 +39,11 @@ export interface MockRequestEnvelope {
   /** PR #13 Codex 2차 검토 P1: 역할별 조건 ID를 안건에 맞게 고르려면 어느 안건인지
    * 알아야 한다(server/handlers/round.ts·assistant.ts가 envelope에 실어 보낸다). */
   scenarioId?: string;
+  /** 참가자가 추가 질문에 답했는지(T110, 프롬프트 v12). 표결 envelope에서 false면 "답하지
+   * 않고 넘어감" 규칙을 흉내 낸다. */
+  followUpAnswered?: boolean;
+  /** 참가자 입장(T110 대칭). 생략·FOR는 찬성 쪽 목표, AGAINST는 반대 쪽 목표다. */
+  participantStance?: 'FOR' | 'AGAINST';
 }
 
 // 이 고정 맵은 scenarioId를 모를 때만 쓰는 폴백이다(아래 scenarioAwareRoleEvidence 참고).
@@ -125,20 +130,51 @@ function scenarioAwareOpeningStance(roleId: string, scenarioId: string | undefin
   return opening ?? ROLE_STANCE[roleId] ?? 'UNDECIDED';
 }
 
+// T82: 발언 문장(message)·판단 근거(reason)·정리 문장(draftText)이 서버 응답 검증을 그대로
+// 통과해야 하므로(findStrayLatinRun, validate.ts) roleId·"AI" 같은 허용된 예외 밖의 영문을
+// 섞지 않는다 — 옛 "[mock]" 표기·단계 영문명(OPINIONS 등)은 라틴 문자 연속이라 그 자체로
+// 걸려 e2e(live.spec.ts 등)가 깨졌다.
+const STAGE_LABEL_KO: Record<string, string> = {
+  OPINIONS: '의견',
+  REACTIONS: '반응',
+  FOLLOWUP: '후속',
+  VOTE: '표결',
+};
+
+/** T110(v12): 첫 반응에서 참가자 쪽으로 움직이는 임원은 "고민 중"까지만 간다. mock은 고정 맵이
+ * 참가자 목표 쪽(찬성 참가자면 FOR, 반대 참가자면 AGAINST)이면서 그 안건의 출발 성향은 목표가
+ * 아닌 임원을 "움직이는 임원"으로 본다(찬성·반대 대칭). 안건을 모르면 고정 맵 그대로다. */
+function movedTowardParticipant(
+  roleId: string,
+  scenarioId: string | undefined,
+  participantStance: 'FOR' | 'AGAINST' | undefined,
+): boolean {
+  const materials = scenarioId ? getScenarioMaterials(scenarioId) : undefined;
+  const opening = materials?.roleLenses?.[roleId as ExecRoleId]?.opening;
+  const target = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+  return ROLE_STANCE[roleId] === target && opening !== undefined && opening !== target;
+}
+
 function buildStatementJson(env: MockRequestEnvelope): unknown {
   const roleId = env.roleId ?? 'CEO';
   const stage = env.stage ?? 'OPINIONS';
   return {
     roleId,
-    message: `[mock] ${roleId}의 ${stage} 단계 발언입니다.`,
+    // T114: 후속(FOLLOWUP) 발언은 답변 뒤 방향을 밝히지 않는 문장만 쓴다(찬성·반대 단어 없음).
+    message:
+      stage === 'FOLLOWUP'
+        ? `[모의] ${roleId}가 답변을 듣고 소회를 남깁니다.`
+        : `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     referencedStatementIds: [],
-    concerns: [`[mock] ${roleId} 우려사항`],
+    concerns: [`[모의] ${roleId} 우려사항`],
     suggestedConditionIds: [scenarioAwareRoleCondition(roleId, env.scenarioId)],
     stance:
       stage === 'OPINIONS'
         ? scenarioAwareOpeningStance(roleId, env.scenarioId)
-        : ROLE_STANCE[roleId] ?? 'UNDECIDED',
+        : stage === 'REACTIONS' && movedTowardParticipant(roleId, env.scenarioId, env.participantStance)
+          ? 'UNDECIDED'
+          : ROLE_STANCE[roleId] ?? 'UNDECIDED',
   };
 }
 
@@ -148,8 +184,14 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
     roleId,
     motionId: env.motionId ?? 'unknown-motion',
     motionHash: env.motionHash ?? '',
-    vote: ROLE_VOTE[roleId] ?? 'NO',
-    reason: `[mock] ${roleId}의 판단 근거입니다.`,
+    // 답하지 않았다면 움직인 임원은 참가자 목표의 반대편(찬성 참가자면 NO, 반대 참가자면 YES)이다.
+    vote:
+      env.followUpAnswered === false && movedTowardParticipant(roleId, env.scenarioId, env.participantStance)
+        ? env.participantStance === 'AGAINST'
+          ? 'YES'
+          : 'NO'
+        : ROLE_VOTE[roleId] ?? 'NO',
+    reason: `[모의] ${roleId}의 판단 근거입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     remainingConcerns: [],
   };
@@ -158,7 +200,7 @@ function buildVoteJson(env: MockRequestEnvelope): unknown {
 function buildAssistantJson(env: MockRequestEnvelope): unknown {
   return {
     draftRevision: env.draftRevision ?? 0,
-    draftText: '[mock] 참가자 발언을 짧게 정리한 문장입니다.',
+    draftText: '[모의] 참가자 발언을 짧게 정리한 문장입니다.',
     evidenceIds: ['E1'],
     suggestedConditionIds: [scenarioAwareFirstCondition(env.scenarioId)],
   };

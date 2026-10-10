@@ -10,6 +10,9 @@ export type Predicate =
   | { any: Predicate[] }
   | { not: Predicate }
   | { mode: string }
+  /** 참가자가 이번 표결까지 가장 최근에 밝힌 입장(T92, 사용자 지적 "AI 임원들이 찬성
+   * 쪽으로 몰고 가는 경향"). null은 "입장을 고르지 않음". */
+  | { participantStance: 'FOR' | 'AGAINST' | null }
   | { always: true };
 
 export interface EvidenceCard {
@@ -39,12 +42,25 @@ export interface ChairBriefing {
   role: string;
 }
 
+/** 미정 항목 한 줄(T84). `resolvedBy`가 있으면 그 조건이 확정되는 순간 이 항목은 더
+ * 미정이 아니다 — BriefingScreen(조건 확정 전, 항상 전체 표시)과 달리 MotionScreen·
+ * VoteScreen·ResultScreen은 확정 조건에 대응하는 항목을 걸러내고 남은 것만 보여준다
+ * (`src/content/motionDisplay.ts`). 새 사실을 만들지 않고 기존 undecidedItems·
+ * remainingTasks 문자열에 대응 조건 id만 더한 것이다. */
+export interface UndecidedItem {
+  text: string;
+  /** 하나 또는 여럿 — 상반된 방향의 조건이 같은 미정 항목을 해소할 수 있다(예: "사람이 다시
+   * 보는 절차"는 REVIEW(일부 다시 보기)로도, FULL_AUTO(사람 확인 없이 전부 맡기기 = 절차 없음)로도
+   * 결정된다, PR #20 Codex 5차 검토 P2). */
+  resolvedBy?: string | readonly string[];
+}
+
 /** 원안을 "제안"과 "아직 정하지 않은 것"으로 나눠 보여줄 표시용 필드(T52, 브리핑 오른쪽
  * 열 2번 블록). 기존 원안 문장(`originalMotion.text`/`subtitle`)을 쪼개 채우며 새 사실을
  * 만들지 않는다. `originalMotion.text`는 표결·프롬프트가 그대로 쓰므로 건드리지 않는다. */
 export interface MotionBreakdown {
   proposal: string;
-  undecidedItems: string[];
+  undecidedItems: UndecidedItem[];
 }
 
 /** 임원 "지금 기울어 있는 쪽"의 값 집합(src/domain/types.ts의 Stance와 같은 리터럴).
@@ -55,6 +71,9 @@ export type OpeningStance = 'FOR' | 'AGAINST' | 'UNDECIDED';
 export interface InitialOpinion {
   memberId: ExecMemberId;
   text: string;
+  /** 무대 말풍선에 쓰는 핵심 한 구절(T102, 최대 18자). 전문은 오른쪽 종이 카드에서만
+   * 읽는다. 없으면 StageBand가 text에서 bubbleLineOf로 줄여 쓴다. */
+  bubble?: string;
   evidenceIds: string[];
   /** OPINIONS 단계(아직 참가자가 말하지 않은 동안, DISCUSS 포함) "출발 성향"(PR #13
    * Codex 3차 검토 — server/scenario-data.ts의 roleLenses[role].opening과 같은 값을
@@ -65,11 +84,19 @@ export interface InitialOpinion {
   openingStance: OpeningStance;
 }
 
+/** 추천 문구가 어느 입장에서 하는 말인지(T87, 사용자 지적 "추천 문구가 찬성 쪽에
+ * 편중"). 'BOTH'는 입장과 무관한 요청형 문구(P6류)에 쓴다. 과거 시나리오(anonBoard·
+ * aiAssistant, 레지스트리에서 뺀 파일)는 이 필드가 아직 없어도 되게 선택값으로
+ * 둔다 — DiscussScreen은 없는 값을 'FOR'로 본다(그 문구들이 전부 제안형 톤이라
+ * 기존 동작과 같다). */
+export type PhraseSide = 'FOR' | 'AGAINST' | 'BOTH';
+
 export interface Phrase {
   id: string;
   text: string;
   conditionId: string | null;
   tag?: string;
+  side?: PhraseSide;
 }
 
 export interface Condition {
@@ -86,18 +113,44 @@ export interface Reaction {
   conditionId: string | 'none';
   memberId: ExecMemberId;
   text: string;
+  /** 무대 말풍선용 핵심 한 구절(T102, 최대 18자). InitialOpinion.bubble과 같다. */
+  bubble?: string;
+  /** 1차 반응에서 이 조건 때문에 참가자 쪽으로 움직일 임원이 "고민 중"에 머물 때 쓰는 문구
+   * (T110, 두 단계 설득): "조건은 좋습니다. 하나만 더 묻겠습니다" 톤의 쉬운 말. 한 임원의
+   * 조건이 여러 개면 reactions 순서대로 이어 붙여 읽히도록 쓴다. 조건을 다 채웠는데도 이
+   * 문구가 없으면 일반 text로 되돌아간다. */
+  pendingText?: string;
+  /** pendingText의 무대 말풍선 한 구절(최대 18자). */
+  pendingBubble?: string;
 }
+
+/** 추천 답변이 어느 입장에서 하는 말인지(T89, 사용자 지시 "반응에 답하기에서도 내
+ * 의견에서와 마찬가지로 선택할 수 있도록"). Phrase.side와 같은 뜻·같은 기본값
+ * 규칙이다 — 값이 없는 과거 시나리오(anonBoard·aiAssistant, 레지스트리에서 뺀 파일)는
+ * ReactionsScreen이 'FOR'로 본다. */
+export type FollowUpSide = 'FOR' | 'AGAINST' | 'BOTH';
 
 export interface FollowUpOption {
   text: string;
   proposeConditionId: string | null;
   keepPrevious?: boolean;
+  side?: FollowUpSide;
+}
+
+/** 입장별 후속 질문 한 쌍(T93, 2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서
+ * 질문한다" — 결재권을 준다는 전제의 질문이 반대 참가자에게 어색했다). */
+export interface FollowUpPrompt {
+  question: string;
+  askedBy: ExecMemberId;
 }
 
 export interface FollowUp {
   question: string;
   /** 후속 질문을 던지는 임원(v0.9: CAIO, docs/SCENARIO_AI_ASSISTANT.md "첫 반응 및 후속 질문"). */
   askedBy: ExecMemberId;
+  /** 참가자 입장별 질문(T93). 값이 없는 과거 시나리오(anonBoard·aiAssistant)는 위
+   * question·askedBy를 그대로 쓴다(resolveFollowUpPrompt가 기본값으로 처리). */
+  byStance?: { FOR: FollowUpPrompt; AGAINST: FollowUpPrompt };
   options: FollowUpOption[];
 }
 
@@ -155,10 +208,29 @@ export interface Scenario {
   conditions: Condition[];
   conflicts: ConflictPair[];
   reactions: Reaction[];
+  /** 순수 반대(조건 없이 안건 자체에 반대, T92)에 대한 임원 4명의 반응 한 문장씩. 기존
+   * reactions의 conditionId: 'none'은 "말씀은 기록했습니다" 같은 입장 무관 문구라, 참가자가
+   * 반대 입장이면 대신 이 문구를 쓴다(ReactionsScreen·minutes.ts). 없으면(과거 시나리오)
+   * 기존 'none' 반응으로 되돌아간다. */
+  oppositionReactions?: Record<ExecMemberId, string>;
+  /** REACTIONS 카드가 "유지"일 때(T96) 보여줄 임원별 유지 이유 한 문장. 조건별이 아니라
+   * 역할별 1문장 — "지금까지 조건으로는 아직 입장을 바꿀 만큼 채워지지 않았다"는 뜻을
+   * 각 역할의 평소 말투로 담는다. 없으면(과거 시나리오) ReactionsScreen이 기존
+   * "앞서 말씀드린 입장 그대로입니다"로 되돌아간다. */
+  holdReasons?: Record<ExecMemberId, string>;
+  /** BRIEFING 상황·제안·미정 줄에서 굵게 표시할 핵심 말(T99, 안건당 4~6개). 문장 속 글자와
+   * 그대로 일치할 때만 표시되고, 일치하지 않으면 조용히 건너뛴다. 겹치면 긴 말이 우선. */
+  highlightTerms?: string[];
+  /** 근거 자료 카드 해석(insight)에서 굵게 표시할 핵심 수치·사실(T105, 안건당 6~10개).
+   * 자료 문장에 그대로 들어 있는 글자만 쓴다. */
+  evidenceHighlightTerms?: string[];
+  /** 임원 발언 카드(OPINIONS·REACTIONS·추가 질문)에서 굵게 표시할 핵심 주장(T105, 안건당
+   * 6~10개). 카드 한 장에 강조는 4곳을 넘지 않는다. */
+  statementHighlightTerms?: string[];
   followUp: FollowUp;
   voteRules: Record<ExecMemberId, VoteRule[]>;
   resultCopy: ResultCopy;
-  remainingTasks: string[];
+  remainingTasks: UndecidedItem[];
   baseConditionIds: string[];
   status: ScenarioStatus;
 }

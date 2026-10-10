@@ -24,14 +24,17 @@ import {
 } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
+import { CoachHost } from '../components/parts/CoachHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
-import { liveStances, scriptedStances } from '../domain/stance';
+import { answeredRoleIds, leaningStances, liveStances, scriptedStances } from '../domain/stance';
+import type { LeaningMap } from '../domain/stance';
+import type { ReactionsView } from '../components/screens/ReactionsScreen';
 import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
-import { detectInitialMode } from './mode';
+import { coachOffByQuery, detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
 import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
@@ -50,7 +53,10 @@ import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
 import type { RoundLogEntry } from '../components/minutes';
+import { collectConfirmedConditionIds, collectParticipantStance } from '../components/opinionConditions';
+import { chairMotionLine } from '../components/chairMotionLine';
 import { AttractScreen } from '../components/screens/AttractScreen';
+import { IntroScreen } from '../components/screens/IntroScreen';
 import { SelectScreen } from '../components/screens/SelectScreen';
 import { BriefingScreen } from '../components/screens/BriefingScreen';
 import { OpinionsScreen } from '../components/screens/OpinionsScreen';
@@ -88,6 +94,17 @@ interface SessionContextValue {
   retryRound: (stage: StatementStage, roleIds: ExecMemberId[]) => Promise<void>;
   /** 미표결(실패) 역할만 최종표를 다시 요청한다("미표결 임원 다시 요청", T65). */
   retryFinalVotes: (roleIds: ExecMemberId[]) => Promise<void>;
+  /** REACTIONS 단계를 "반응 듣기"·"다시 답하기" 두 화면으로 나눈 서브스텝(T89, 사용자
+   * 지시 "임원들의 의견을 듣고 다시 답하는 화면을 만들어서"). 도메인 session.stage는
+   * REACTIONS 그대로다(서버 페이로드·해시 영향 없음) — AppShell이 "반응 듣기"일 때만
+   * MinutesPanel을 OPINIONS처럼 보여줘야 해서 StageRouter보다 위(SessionProvider)에
+   * 둔다. REACTIONS를 벗어나면 다음 방문을 위해 'listen'으로 되돌린다. */
+  reactionsStep: 'listen' | 'answer';
+  setReactionsStep: (step: 'listen' | 'answer') => void;
+  /** T118: ReactionsScreen이 지금 고른 입장·조건 기준으로 계산한 기울음. 무대 표정도 현황판·카드와
+   * 같은 기준을 쓰도록 위로 올린다. null이면 session 기준(leaningFor). */
+  reactionsView: ReactionsView | null;
+  setReactionsView: (view: ReactionsView | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -112,10 +129,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
       if (action.type === 'OPERATOR_RESET') {
         requestRegistry.abortAll();
       }
-      return reduce(state, action, now);
+      const next = reduce(state, action, now);
+      // `?coach=off`는 페이지 단위 설정이라 새 체험으로 리셋해도 유지한다(T104).
+      return action.type === 'OPERATOR_RESET' && coachOffByQuery() ? { ...next, coachEnabled: false } : next;
     },
     undefined,
-    () => createInitialSession(appClock.now()),
+    // 코치는 기본 켜짐. 운영·테스트용 `?coach=off`로 시작할 때만 끈다(T104).
+    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery() }),
   );
 
   // 회의록 패널의 라운드별 기록(roundLog, v1.0 7절, T41). stage가 실린 SET_ROLE_STATUS만
@@ -123,6 +143,17 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // dispatch prop과 orchestratorStore.dispatch 둘 다 같은 함수를 쓴다)이 대상이다.
   // reducer 분기는 건드리지 않는 순수 화면 쪽 부기라 useReducer가 아니라 useState로 둔다.
   const [roundLog, setRoundLog] = useState<RoundLogEntry[]>([]);
+
+  // REACTIONS 서브스텝(T89) — session.stage는 그대로 REACTIONS다. 다른 단계로
+  // 넘어가면(REACTIONS를 벗어나면) 다음 방문을 위해 'listen'으로 되돌린다.
+  const [reactionsStep, setReactionsStep] = useState<'listen' | 'answer'>('listen');
+  const [reactionsView, setReactionsView] = useState<ReactionsView | null>(null);
+  useEffect(() => {
+    if (session.stage !== 'REACTIONS') {
+      setReactionsStep('listen');
+      setReactionsView(null);
+    }
+  }, [session.stage]);
 
   const dispatch = useCallback((action: SessionAction) => {
     rawDispatch(action);
@@ -310,8 +341,12 @@ function SessionProvider({ children }: { children: ReactNode }) {
       modeCheckPending,
       retryRound: orchestrator.retryRound,
       retryFinalVotes: orchestrator.retryFinalVotes,
+      reactionsStep,
+      setReactionsStep,
+      reactionsView,
+      setReactionsView,
     }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator],
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsView],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -337,9 +372,19 @@ function useViewportFit(): ViewportFit {
 }
 
 /** stage별 화면 라우팅. */
-function StageRouter() {
-  const { session, dispatch, followUpPending, modeCheckPending, roundLog, retryRound, retryFinalVotes } =
-    useSession();
+function StageScreen() {
+  const {
+    session,
+    dispatch,
+    followUpPending,
+    modeCheckPending,
+    roundLog,
+    retryRound,
+    retryFinalVotes,
+    reactionsStep,
+    setReactionsStep,
+    setReactionsView,
+  } = useSession();
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -347,13 +392,31 @@ function StageRouter() {
     session.mode === 'live' ? liveAssistantAdapter : scriptedAssistantAdapter;
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
 
+  // 입장 선택(T87이 DiscussScreen 로컬 state로 두던 것을 T89에서 여기로 끌어올렸다 —
+  // 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할 수 있도록": DISCUSS
+  // 에서 고른 쪽이 REACTIONS까지 기본값으로 이어지고(참가자가 REACTIONS에서 바꿀 수
+  // 있다), 두 화면이 같은 state를 공유해야 한다. 도메인 session에는 넣지 않는다 —
+  // 서버 페이로드·해시에 영향이 없어야 하는 화면 쪽 부기라 roundLog와 같은 이유로
+  // useState로 둔다. 세션이 리셋되면(OPERATOR_RESET으로 sessionId가 바뀌면) 함께
+  // 초기화된다.
+  const [sidePick, setSidePick] = useState<'FOR' | 'AGAINST' | null>(null);
+  useEffect(() => {
+    setSidePick(null);
+  }, [session.sessionId]);
+
   switch (session.stage) {
     case 'ATTRACT':
       return (
         <AttractScreen
-          mode={session.mode}
           onStart={() => dispatch({ type: 'START' })}
           startDisabled={modeCheckPending}
+        />
+      );
+
+    case 'INTRO':
+      return (
+        <IntroScreen
+          onStart={() => dispatch({ type: 'NEXT_STAGE' })}
         />
       );
 
@@ -404,10 +467,12 @@ function StageRouter() {
           sessionId={session.sessionId}
           transcript={session.transcript}
           mode={session.mode}
-          roleStatus={session.roleStatus}
           stances={stancesFor(session, scenario)}
-          onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload })}
+          side={sidePick}
+          onChooseSide={setSidePick}
+          onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload, stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
+          assistantActions={session.assistantActions}
           assistantAdapter={assistantAdapter}
         />
       );
@@ -427,8 +492,13 @@ function StageRouter() {
           roundLog={roundLog}
           stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
-          onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload })}
-          onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS' })}
+          side={sidePick}
+          onChooseSide={setSidePick}
+          step={reactionsStep}
+          onAdvanceStep={() => setReactionsStep('answer')}
+          onViewChange={setReactionsView}
+          onSubmitFollowup={(payload) => dispatch({ type: 'SUBMIT_FOLLOWUP', ...payload, stance: sidePick })}
+          onKeepPrevious={() => dispatch({ type: 'KEEP_PREVIOUS', stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
           onRetryFailedRoles={
@@ -446,6 +516,7 @@ function StageRouter() {
           scenario={scenario}
           stances={stancesFor(session, scenario)}
           opinions={session.opinions}
+          statements={session.transcript.statements}
           freezeDisabled={session.mode === 'live' && followUpPending}
           mode={session.mode}
           roleStatus={session.roleStatus}
@@ -467,9 +538,11 @@ function StageRouter() {
           scenario={scenario}
           stances={stancesFor(session, scenario)}
           motion={session.finalMotion}
+          statements={session.transcript.statements}
           pendingVote={session.pendingVote}
           mode={session.mode}
           execBallotsPending={session.execBallotsPending}
+          participantStance={collectParticipantStance(session.opinions)}
           roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
@@ -500,16 +573,28 @@ function StageRouter() {
 }
 
 /** BRIEFING·MOTION 단계에서 무대 띠 의장(CEO) 말풍선에 쓸 원문(v1.0 1절). 다른
- * 단계에서는 undefined를 돌려주고 StageBand가 그 단계 규칙대로 다른 문구를 고른다. */
-function chairLineFor(stage: Session['stage'], scenario: Scenario | null): string | undefined {
+ * 단계에서는 undefined를 돌려주고 StageBand가 그 단계 규칙대로 다른 문구를 고른다.
+ * MOTION(T85 #19): scripted에서 후속 답변 뒤 아무도 반응하지 않아 어색하던 것을,
+ * 고정 문구 대신 실제로 반영된 조건 수·첫 조건명을 말하는 한 줄로 바꾼다 — 조건이
+ * 없으면 원안 그대로 표결한다고 말한다. */
+function chairLineFor(
+  stage: Session['stage'],
+  scenario: Scenario | null,
+  confirmedConditionIds: string[],
+  participantStance: 'FOR' | 'AGAINST' | null,
+): string | undefined {
   if (stage === 'BRIEFING') {
-    return scenario?.chairBriefing.situation;
+    // 상황 문장은 오른쪽 종이에 이미 있으므로 말풍선은 짧은 안내만 한다(T100).
+    return scenario ? '자료부터 같이 보시죠.' : undefined;
   }
   if (stage === 'MOTION') {
-    return '이 조건으로 안건을 고정합니다';
+    return chairMotionLine(scenario, confirmedConditionIds, participantStance);
   }
   return undefined;
 }
+
+/** T114: 추가 질문에 답한 뒤(MOTION·VOTE)에는 무대 표정으로도 임원 방향을 알리지 않는다. */
+const sealedStages: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']);
 
 const ALL_UNDECIDED_STANCES: Record<ExecMemberId, Stance> = {
   CEO: 'UNDECIDED',
@@ -528,6 +613,30 @@ function stancesFor(session: Session, scenario: Scenario | null): Record<ExecMem
   return session.mode === 'live' ? liveStances(session) : scriptedStances(scenario, session);
 }
 
+/** T118: 첫 의견 뒤(REACTIONS)에만 기울어진 방향을 무대에 보인다. MOTION·VOTE 봉인은 그대로다. */
+function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
+  if (!scenario || session.stage !== 'REACTIONS') {
+    return {};
+  }
+  return leaningStances(
+    scenario,
+    session,
+    session.mode === 'live' ? liveStances(session) : undefined,
+    answeredRoleIds('REACTIONS', session.roleStatus, session.transcript.statements),
+  );
+}
+
+/** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
+function StageRouter() {
+  const { session, dispatch, reactionsStep } = useSession();
+  return (
+    <>
+      <StageScreen />
+      <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />
+    </>
+  );
+}
+
 const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'BRIEFING',
   'OPINIONS',
@@ -538,14 +647,11 @@ const STAGE_BAND_STAGES: ReadonlySet<Session['stage']> = new Set([
   'RESULT',
 ]);
 
-/** 회의록 패널을 렌더하는 단계(v1.0 7절). DISCUSS·REACTIONS는 입력이 왼쪽 열을 이미
- * 채우고, RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
-const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
-  'BRIEFING',
-  'OPINIONS',
-  'MOTION',
-  'VOTE',
-]);
+/** 발언 흐름 패널을 렌더하는 단계(v1.0 7절, T102 조정). 임원 발언 전문은 오른쪽 종이
+ * 카드(OPINIONS·REACTIONS)에서만 읽으므로 그 단계와 DISCUSS에서는 같은 말을 두 번
+ * 보여주지 않는다. 오른쪽에 발언 카드가 없는 MOTION·VOTE에서만 복습용으로 둔다(BRIEFING은
+ * 오른쪽 "상황" 문장과 같은 한 줄뿐이라 뺐다). RESULT는 기록 3패널이 같은 역할을 하므로 두지 않는다. */
+const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']);
 
 /**
  * SELECT 이후(BRIEFING~RESULT) 모든 화면은 왼쪽 무대+행동 열과 오른쪽 회의 정보
@@ -556,7 +662,7 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set([
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { session, dispatch, roundLog } = useSession();
+  const { session, dispatch, roundLog, reactionsView } = useSession();
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
@@ -574,6 +680,8 @@ function AppShell() {
             session={session}
             scenario={scenario}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
+            coachEnabled={session.coachEnabled}
+            onToggleCoach={() => dispatch({ type: 'COACH_SET_ENABLED', enabled: !session.coachEnabled })}
           />
           {hasStageBand && scenario ? (
             // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
@@ -592,9 +700,21 @@ function AppShell() {
                     statements={session.transcript.statements}
                     opinions={session.opinions}
                     scenario={scenario}
-                    stances={stancesFor(session, scenario)}
+                    stances={
+                      sealedStages.has(session.stage)
+                        ? ALL_UNDECIDED_STANCES
+                        : session.stage === 'REACTIONS' && reactionsView
+                          ? reactionsView.stances
+                          : stancesFor(session, scenario)
+                    }
+                    leaning={session.stage === 'REACTIONS' && reactionsView ? reactionsView.leaning : leaningFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
-                    chairLine={chairLineFor(session.stage, scenario)}
+                    chairLine={chairLineFor(
+                      session.stage,
+                      scenario,
+                      collectConfirmedConditionIds(session.opinions),
+                      collectParticipantStance(session.opinions),
+                    )}
                   />
                 </div>
                 {content}

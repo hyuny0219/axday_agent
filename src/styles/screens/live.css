@@ -415,11 +415,6 @@
   color: var(--ink-muted);
 }
 
-.result-screen__mode-notice {
-  margin: 0;
-  color: var(--ink-muted);
-}
-
 /* RESULT 오른쪽 열은 T66부터 종이 보고서라 --panel(짙은 네이비)·--vote-hold(밝은
    골드)는 종이 위에서 어두운 상자로 튀었다(Codex 리뷰 17차 지적) — 다른 경고 문구와
    같은 종이-2 + 도장 앰버 테두리 + --label 잉크로 맞춘다. */
@@ -430,4 +425,28 @@
   border: 1px solid var(--stamp-amber);
   background-color: var(--paper-2);
   color: var(--label);
+}
+
+/* T118: 기울음 카드 — 확정이 아니므로 점선 테두리, 상태 칩은 "고민 중 → 찬성 쪽"(live에서 기울음은
+   모델 stance가 미정일 때만 생긴다). 유지/바뀜 칩보다 선택자가 구체적이라 이긴다. */
+.live-statement--leaning {
+  border-style: dashed;
+}
+
+.live-statement--reaction.live-statement--leaning .live-statement__head::after {
+  border-style: dashed;
+}
+
+.live-statement--reaction.live-statement--leaning-for .live-statement__head::after {
+  content: '고민 중 → 찬성 쪽' / '';
+}
+
+.live-statement--reaction.live-statement--leaning-against .live-statement__head::after {
+  content: '고민 중 → 반대 쪽' / '';
+}
+
+.live-statement__leaning-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
 }
