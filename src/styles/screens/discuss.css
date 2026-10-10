@@ -599,6 +599,22 @@
   color: var(--ink);
 }
 
+/* T119: 추천 문구 카드 앞 번호. 비서실장이 "추천 문구 N번"이라고 안내하므로 DISCUSS
+   목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(글자·접근성 이름은 그대로). */
+.discuss-screen__phrase-list--numbered {
+  counter-reset: phrase-no;
+}
+
+.discuss-screen__phrase-list--numbered .phrase-card {
+  counter-increment: phrase-no;
+}
+
+.discuss-screen__phrase-list--numbered .phrase-card__text::before {
+  content: counter(phrase-no) '. ';
+  font-weight: 700;
+  color: var(--label);
+}
+
 /* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼은 T86에서
    공용 .cta.cta--secondary(shell.css)로 바뀌었고, 안내 한 줄(.evidence-open-hint)만
    evidenceDialog.css의 공용 규칙이다 — 여기서는 점선 위 경계 + 배치만 맡는다. */

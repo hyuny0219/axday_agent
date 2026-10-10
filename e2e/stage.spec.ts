@@ -65,7 +65,6 @@ async function enterReactionsWithAllConditions(page: Page) {
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
   await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(

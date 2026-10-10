@@ -136,7 +136,7 @@ test('LIMIT+REVIEW 조건에 찬성하면, 이사회 한 장 요약에서 내 �
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await page.getByTestId('reactions-advance').click();
-  await page.getByTestId('followup-option-6').click();
+  await page.getByTestId('followup-option-11').click();
   await page.getByTestId('submit-followup').click();
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -233,7 +233,7 @@ test('반대 쪽 추천 문구만 골라도 완주하고, 조건이 없어 처�
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
 
   await page.getByTestId('discuss-side-against').click();
-  // 반대 쪽을 고르면 찬성 쪽 문구(P1~P5)는 보이지 않고, 반대 문구(N1~N4) + 요청형
+  // 반대 쪽을 고르면 찬성 쪽 문구(P1~P4)는 보이지 않고, 반대 문구(N1~N4) + 요청형
   // (P6, BOTH)만 보인다.
   await expect(page.getByTestId('phrase-card-P1')).toHaveCount(0);
   await expect(page.getByTestId('phrase-card-N4')).toBeVisible();

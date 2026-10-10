@@ -44,20 +44,23 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 
     await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
     await page.getByTestId('discuss-side-for').click();
-    // LIMIT·LOG·REVIEW·OWNER 네 조건을 모두 제안하는 문구 4개를 고른다.
+    // T119: LIMIT·LOG·REVIEW 세 조건을 제안하는 문구 3개를 고른다. OWNER(책임자 지정)는 후속
+    // 질문이 묻는 조건이라 첫 문구에 없고 추가 답변에서 고른다.
     await page.getByTestId('phrase-card-P1').click();
     await page.getByTestId('phrase-card-P2').click();
     await page.getByTestId('phrase-card-P3').click();
-    await page.getByTestId('phrase-card-P4').click();
     await tryAllAssistantFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeEnabled();
     await submitOpinion.click();
 
-    // REACTIONS 1/2(T110·T118, 두 단계 설득): 네 조건이 모두 확정돼도 CFO·CAIO·CISO는 확정 전이라
-    // "찬성 쪽"으로 기울기만 한다(점선 표정). 처음부터 같은 편인 CEO는 찬성 그대로다.
+    // REACTIONS 1/2(T110·T118, 두 단계 설득): 세 조건이 맞은 CFO·CAIO는 확정 전이라 "찬성 쪽"으로
+    // 기울기만 한다(점선 표정). CISO는 책임자 지정(OWNER)이 아직 없어 반대 쪽 그대로다. 처음부터
+    // 같은 편인 CEO는 찬성 그대로다.
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    for (const id of ['CFO', 'CAIO', 'CISO']) {
+    await expect(moodBadge(page, 'CISO')).not.toHaveClass(/stage-band__mood--leaning/);
+    await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대 쪽');
+    for (const id of ['CFO', 'CAIO']) {
       await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--for/);
       await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--leaning/);
       await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('하나만 더 묻겠습니다');
@@ -76,7 +79,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     }
     await expect(page.getByTestId('persuasion-board-stance-CFO')).toContainText('반대 → 찬성 쪽');
     await expect(page.getByTestId('persuasion-board-note-CFO')).toContainText('답변하면 확정');
-    await expect(page.getByTestId('persuasion-board-count')).toContainText('(기울음 3)');
+    await expect(page.getByTestId('persuasion-board-count')).toContainText('(기울음 2)');
 
     // 추가 질문에 답을 전달하면(책임자를 정하는 추천 답변) 조건이 맞은 임원이 찬성으로 바뀐다.
     await page.getByTestId('reactions-advance').click();
@@ -120,7 +123,6 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await page.getByTestId('phrase-card-P1').click();
     await page.getByTestId('phrase-card-P2').click();
     await page.getByTestId('phrase-card-P3').click();
-    await page.getByTestId('phrase-card-P4').click();
     await tryAllAssistantFeatures(page);
     await page.getByTestId('submit-opinion').click();
 
@@ -180,8 +182,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 
     // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
     await page.getByTestId('reactions-advance').click();
-    // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션, 6번 인덱스).
-    await page.getByTestId('followup-option-6').click();
+    // 조건을 제안하지 않는 빠른 답을 고른다(T89: 입장과 무관한 BOTH 옵션, 11번 인덱스).
+    await page.getByTestId('followup-option-11').click();
     await page.getByTestId('submit-followup').click();
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();

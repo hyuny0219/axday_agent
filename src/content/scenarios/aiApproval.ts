@@ -127,18 +127,11 @@ export const aiApprovalScenario: Scenario = {
     { id: 'P1', text: '결재 금액 한도를 정해 소액부터 자동 승인합시다.', conditionId: 'LIMIT', side: 'FOR' },
     { id: 'P2', text: '자동 승인마다 승인 사유를 기록합시다.', conditionId: 'LOG', side: 'FOR' },
     { id: 'P3', text: '승인 뒤 사람이 일부를 다시 보도록 합시다.', conditionId: 'REVIEW', side: 'FOR' },
-    {
-      id: 'P4',
-      text: '잘못된 승인에 책임질 결재 규칙 책임자를 지정합시다.',
-      conditionId: 'OWNER',
-      side: 'FOR',
-    },
-    {
-      id: 'P5',
-      text: '사람 확인을 빼고 전부 자동 승인합시다.',
-      conditionId: 'FULL_AUTO',
-      side: 'FOR',
-    },
+    // T119: 책임자 지정(OWNER)도 첫 단계 추천 문구에서 뺐다 — 후속 질문(CISO "누구에게 책임을
+    // 맡기시겠습니까")이 바로 묻는 조건이라 추가 답변에서 고른다(자유 입력은 여전히 가능).
+    // T119: 사람 확인 없이 전부 맡기기(FULL_AUTO)는 첫 단계 추천 문구에서 일부러 뺐다 —
+    // 추가 답변(followUp.options)에서 고를 수 있다. 첫 단계에서 빠지는 조건이 1~2개여야
+    // 한다는 불변식은 tests/content/conditionCoverage.test.ts.
     {
       id: 'P6',
       text: '맡겨도 될지 판단할 근거를 더 제시해 주십시오.',
@@ -381,6 +374,19 @@ export const aiApprovalScenario: Scenario = {
         side: 'FOR',
       },
       {
+        // T119: 첫 단계 추천 문구에서 뺀 조건 외에도 추가 답변은 그 입장에서 규칙표가 쓰는
+        // 모든 조건을 제안한다(직접 쓰기가 필수 경로가 되지 않게).
+        text: '승인 뒤 사람이 일부를 다시 보도록 하고, 확인한 사람이 책임집시다.',
+        proposeConditionId: 'REVIEW',
+        side: 'FOR',
+      },
+      {
+        // T119: 첫 단계 추천 문구에서 뺀 FULL_AUTO를 추가 답변에서 고를 수 있게 한다.
+        text: '사람 확인을 빼고 전부 자동 승인하고, 문제가 생기면 이사회가 책임집시다.',
+        proposeConditionId: 'FULL_AUTO',
+        side: 'FOR',
+      },
+      {
         text: '사람을 더 투입하거나 순서를 바꿔 풀어야지, AI에게 맡기면 안 된다고 생각합니다.',
         proposeConditionId: null,
         side: 'AGAINST',
@@ -393,6 +399,21 @@ export const aiApprovalScenario: Scenario = {
       {
         text: '그래도 급하다면, 사람이 일부를 다시 보도록 하는 선에서는 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 급하다면, 승인 사유를 기록한다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'LOG',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 급하다면, 책임자를 지정한다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'OWNER',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 급하다면, 사람 확인을 빼고 전부 자동 승인하는 것도 다시 생각해 보겠습니다.',
+        proposeConditionId: 'FULL_AUTO',
         side: 'AGAINST',
       },
       {

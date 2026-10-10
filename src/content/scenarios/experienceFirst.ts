@@ -130,24 +130,17 @@ export const experienceFirstScenario: Scenario = {
       conditionId: 'RECORD',
       side: 'FOR',
     },
-    {
-      id: 'P3',
-      text: '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
-      conditionId: 'DATA_VETO',
-      side: 'FOR',
-    },
+    // T119: 데이터 경고 시 멈춤(DATA_VETO)도 첫 단계 추천 문구에서 뺐다 — 후속 질문(CFO
+    // "데이터가 분명히 위험하다고 알려도 경험을 따르시겠습니까")이 바로 묻는 조건이라
+    // 추가 답변에서 고른다(자유 입력은 여전히 가능).
     {
       id: 'P4',
       text: '결정 결과를 돌아보고 다음 판단 기준으로 삼읍시다.',
       conditionId: 'REVIEW',
       side: 'FOR',
     },
-    {
-      id: 'P5',
-      text: '최종 결정은 언제나 경험 판단을 따르도록 합시다.',
-      conditionId: 'EXP_ONLY',
-      side: 'FOR',
-    },
+    // T119: 언제나 경험 먼저(EXP_ONLY)는 첫 단계 추천 문구에서 일부러 뺐다 — 추가
+    // 답변(followUp.options)에서 고를 수 있다.
     {
       id: 'P6',
       text: '경험을 먼저 믿어야 할 이유를 더 설명해 주십시오.',
@@ -376,6 +369,17 @@ export const experienceFirstScenario: Scenario = {
         side: 'FOR',
       },
       {
+        // T119: 추가 답변은 그 입장에서 규칙표가 쓰는 모든 조건을 제안한다.
+        text: '경험으로 결정하되, 판단 근거를 기록합시다.',
+        proposeConditionId: 'RECORD',
+        side: 'FOR',
+      },
+      {
+        text: '경험으로 결정하더라도, 결정 결과를 돌아보고 다음 판단 기준으로 삼읍시다.',
+        proposeConditionId: 'REVIEW',
+        side: 'FOR',
+      },
+      {
         text: '새로운 상황도 데이터를 더 모아서 풀어야지, 경험만 앞세우면 안 된다고 생각합니다.',
         proposeConditionId: null,
         side: 'AGAINST',
@@ -388,6 +392,22 @@ export const experienceFirstScenario: Scenario = {
       {
         text: '그래도 어렵다면, 결정 결과를 돌아보고 다음에 반영한다면 다시 생각해 보겠습니다.',
         proposeConditionId: 'REVIEW',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 어렵다면, 데이터가 경고하면 결정을 잠시 멈추고 다시 본다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'DATA_VETO',
+        side: 'AGAINST',
+      },
+      {
+        // T119: 반대 입장도 첫 단계에서 빠진 SCOPE·EXP_ONLY를 추가 답변에서 고를 수 있다.
+        text: '그래도 어렵다면, 처음 겪는 상황에서만 경험을 우선한다면 다시 생각해 보겠습니다.',
+        proposeConditionId: 'SCOPE',
+        side: 'AGAINST',
+      },
+      {
+        text: '그래도 어렵다면, 최종 결정은 언제나 경험 판단을 따르도록 하는 것도 다시 생각해 보겠습니다.',
+        proposeConditionId: 'EXP_ONLY',
         side: 'AGAINST',
       },
       {

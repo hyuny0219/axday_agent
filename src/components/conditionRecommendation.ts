@@ -73,6 +73,9 @@ export function buildConditionRecommendation(
   /** 조건은 이미 맞았고 추가 질문의 답만 남은 임원(T110). "더 필요한 조건" 계산에서 빼고
    * 안내 줄에 "답하면 찬성(또는 반대)"으로 따로 말한다. */
   awaitingAnswerIds: readonly ExecMemberId[] = [],
+  /** T119: 추천 문구·추가 답변 어디에도 없는 조건은 추천하지 않는다(방어적 — 콘텐츠 불변식
+   * 덕에 보통은 모두 true). 없으면 모든 조건을 추천 후보로 본다. */
+  isConditionOffered: (conditionId: string) => boolean = () => true,
 ): ConditionRecommendation {
   // (4) "아직 찬성이 아닌 임원"은 항상 실제 표정으로 가른다 — scripted는 stances 자체가
   // voteRules로 계산된 값이라 requiredConditionsFor(...).persuaded와 결과가 같고, live는
@@ -106,7 +109,9 @@ export function buildConditionRecommendation(
     (memberId) =>
       stances[memberId] !== targetStance && !alreadyNoByRules(memberId) && !awaitingMembers.includes(memberId),
   );
-  const candidates = scenario.conditions.filter((condition) => !confirmedConditionIds.includes(condition.id));
+  const candidates = scenario.conditions.filter(
+    (condition) => !confirmedConditionIds.includes(condition.id) && isConditionOffered(condition.id),
+  );
 
   let usedRuleFallback = false;
 
@@ -162,7 +167,11 @@ export function buildConditionRecommendation(
         continue;
       }
       const required = requiredConditionsFor(scenario, memberId, confirmedConditionIds, participantStance);
-      if (!required.conditionIds || required.conditionIds.length < 2) {
+      if (
+        !required.conditionIds ||
+        required.conditionIds.length < 2 ||
+        !required.conditionIds.every(isConditionOffered)
+      ) {
         continue;
       }
       const key = required.conditionIds.join('+');

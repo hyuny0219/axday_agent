@@ -19,10 +19,13 @@ async function enterExperienceFirstReactions(page: Page) {
   await page.getByTestId('discuss-side-for').click();
 }
 
-/** P3 = DATA_VETO(데이터가 경고하면 멈춤)를 확정한 채 첫 의견을 전달한다. */
+/** DATA_VETO(데이터가 경고하면 멈춤)를 확정한 채 첫 의견을 전달한다. T119: 이 조건은 첫 단계
+ * 추천 문구에서 빠져 있어(추가 답변에서만 제안) 직접 입력으로 확정한다. */
 async function reachReactionsWithDataVetoConfirmed(page: Page) {
   await enterExperienceFirstReactions(page);
-  await page.getByTestId('phrase-card-P3').click();
+  await page.getByTestId('draft-editor-textarea').fill('데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.');
+  // 자유 입력에서 찾은 조건은 칩을 눌러야 확인된다.
+  await page.getByTestId('condition-chip-DATA_VETO').click();
   await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
