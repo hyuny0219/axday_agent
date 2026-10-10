@@ -664,3 +664,43 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
     viewport,
   );
 }
+
+// T119: 추가 답변이 늘어난 반대 입장(안건 ① 4개 + BOTH, 안건 ② 5개 + BOTH)의 2/2 화면에서도
+// 마지막 추천 답변 카드와 "답변 전달" 버튼이 잘리지 않고, 문서 스크롤이 없다. 비서실장의
+// 조건 추천에는 "붙이는 곳" 안내가 함께 보인다.
+// hintedConditionId: 첫 단계 문구에서 빠져 추가 답변에서만 고를 수 있는 조건(반대 입장).
+for (const [scenarioId, hintedConditionId] of [
+  ['ai-approval', 'FULL_AUTO'],
+  ['experience-first', 'SCOPE'],
+] as const) {
+  test(`T119: 반대 입장 2/2 추가 답변이 늘어도 ${scenarioId} 화면이 잘리거나 스크롤되지 않는다`, async ({ page }) => {
+    await page.goto('/?mode=scripted&coach=off');
+    await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '확인', exact: true }).click();
+    await page.getByTestId(`scenario-card-${scenarioId}`).click();
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId('discuss-side-against').click();
+    await page.getByTestId('phrase-card-N4').click();
+    await tryAllAssistantFeatures(page);
+    await page.getByTestId('submit-opinion').click();
+    await page.getByTestId('reactions-advance').click();
+
+    const options = page.locator('[data-testid^="followup-option-"]');
+    const count = await options.count();
+    expect(count).toBeGreaterThanOrEqual(5);
+    await expectNoPageScroll(page, `T119 ${scenarioId} 반대 2/2`);
+    await expectFullyVisible(page, `followup-option-${count - 1}`, `T119 ${scenarioId} 마지막 추천 답변`);
+    await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} 답변 전달 버튼`);
+
+    await page.getByTestId('assistant-toggle').click();
+    await page.getByTestId('assistant-action-compare').click();
+    await expect(page.getByTestId('assistant-recommend-opening')).toBeVisible();
+    await expect(page.getByTestId(`assistant-remaining-${hintedConditionId}`)).toContainText(
+      '추가 답변에서 고를 수 있습니다',
+    );
+    await expectNoPageScroll(page, `T119 ${scenarioId} 비서실장 열림`);
+  });
+}

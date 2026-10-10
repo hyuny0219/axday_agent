@@ -236,8 +236,8 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByTestId('submit-opinion').click();
   // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
   await page.getByTestId('reactions-advance').click();
-  // 조건을 하나도 더하지 않는 BOTH 옵션(T89, 6번 인덱스).
-  await page.getByTestId('followup-option-6').click();
+  // 조건을 하나도 더하지 않는 BOTH 옵션(T89, 8번 인덱스).
+  await page.getByTestId('followup-option-8').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();

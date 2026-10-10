@@ -489,7 +489,7 @@ export function DiscussScreen({
           ) : (
             <>
               <div
-                className="discuss-screen__phrase-list"
+                className="discuss-screen__phrase-list discuss-screen__phrase-list--numbered"
               >
                 {scenario.phrases
                   .filter((phrase) => {

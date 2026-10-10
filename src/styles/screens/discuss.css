@@ -600,16 +600,16 @@
 }
 
 /* T119: 추천 문구 카드 앞 번호. 비서실장이 "추천 문구 N번"이라고 안내하므로 DISCUSS
-   목록의 보이는 순서(1부터)를 CSS counter로 붙인다(글자·접근성 이름은 그대로). */
-.discuss-screen__phrase-list {
+   목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(글자·접근성 이름은 그대로). */
+.discuss-screen__phrase-list--numbered {
   counter-reset: phrase-no;
 }
 
-.discuss-screen__phrase-list .phrase-card {
+.discuss-screen__phrase-list--numbered .phrase-card {
   counter-increment: phrase-no;
 }
 
-.discuss-screen__phrase-list .phrase-card__text::before {
+.discuss-screen__phrase-list--numbered .phrase-card__text::before {
   content: counter(phrase-no) '. ';
   font-weight: 700;
   color: var(--label);
