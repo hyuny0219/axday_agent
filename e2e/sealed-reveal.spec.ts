@@ -18,7 +18,7 @@ async function goToMotion(page: Page) {
   await page.getByRole('button', { name: '의견 듣기' }).click();
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
-  for (const id of ['P1', 'P2', 'P3', 'P4']) {
+  for (const id of ['P1', 'P2', 'P3']) {
     await page.getByTestId(`phrase-card-${id}`).click();
   }
   await tryAllAssistantFeatures(page);

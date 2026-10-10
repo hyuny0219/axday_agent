@@ -116,21 +116,19 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
-  // DISCUSS: 추천 문구 6개가 모두 보이는 상태에서 4개(P1~P4)를 선택해 최종 조건
-  // 4개(LIMIT·LOG·REVIEW·OWNER)를 확정하고, 300자에 가까운 직접 입력으로
+  // DISCUSS: 추천 문구 4개가 모두 보이는 상태에서 3개(P1~P3)를 선택해 조건
+  // 3개(LIMIT·LOG·REVIEW)를 확정하고, 300자에 가까운 직접 입력으로
   // 덮어써 textarea 분량을 함께 보여준다.
   await expect(page.getByTestId('phrase-card-P6')).toBeVisible();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
 
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill(DRAFT_TEXT);
   await expect(page.getByTestId('condition-chip-LIMIT')).toBeVisible();
   await expect(page.getByTestId('condition-chip-LOG')).toBeVisible();
   await expect(page.getByTestId('condition-chip-REVIEW')).toBeVisible();
-  await expect(page.getByTestId('condition-chip-OWNER')).toBeVisible();
 
   // DISCUSS(T97): 문구를 고른 뒤 비서실장 팝업 첫 화면(소개·체크리스트)을 캡처한다.
   // 이 시점에는 전달 버튼이 아직 닫혀 있다.

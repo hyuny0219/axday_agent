@@ -103,12 +103,11 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
-  // 추천 문구 4개(조건 4개, 시나리오 최대치)를 선택해 가장 내용이 많은 상태를 만든다.
+  // 추천 문구 3개(조건 3개 — 책임자 지정은 추가 답변)를 선택해 가장 내용이 많은 상태를 만든다.
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
-  await expectNoPageScroll(page, 'DISCUSS(조건 4개 선택)');
+  await expectNoPageScroll(page, 'DISCUSS(조건 3개 선택)');
   // T69: 자료 4장은 더 이상 상시 노출되지 않는다 — "근거 자료 보기" 버튼만 있다
   // (BRIEFING과 같은 동작). 팝업은 position:fixed 전체 화면 오버레이라 비서실장
   // 드로어(오른쪽 열 위에 겹치는 절대 위치 드로어, z-index 6)보다 위(evidence-dialog
@@ -116,7 +115,7 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // (오른쪽 열의 다른 카드와 같은 규칙) 드로어를 닫은 이 시점에 먼저 확인한다.
   const discussOpenEvidence = page.getByTestId('open-evidence');
   await expect(discussOpenEvidence).toBeVisible();
-  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 4개 선택)');
+  await expectNoClip(page, '.app-body__content', 'DISCUSS(조건 3개 선택)');
 
   await discussOpenEvidence.click();
   const discussEvidenceDialog = page.getByTestId('evidence-dialog');
@@ -319,12 +318,11 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   await expectNoPageScroll(page, 'DISCUSS(live, 120자 발언, 팝업 열림)');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
-  // 조건 4개(P1~P4, 시나리오 최대치)를 모두 골라 RESULT 요약의 "이사님이 붙인 조건"
-  // 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
+  // 조건 4개(P1~P3 + 추가 답변의 OWNER, 시나리오 최대치)를 모두 붙여 RESULT 요약의 "이사님이
+  // 붙인 조건" 줄이 720에서 두 줄로 감기는 최악 조합을 만든다(PR #9 Codex 1차 검토).
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
   await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
@@ -337,8 +335,11 @@ test('live 모드에서 임원 4명이 120자 발언을 해도 REACTIONS·VOTE�
   // CAIO 후속 질문이 답글 카드 아래에서 잘리지 않고 보인다.
   await expect(page.getByTestId('followup-question')).toBeInViewport();
 
-  await page.getByTestId('keep-previous-answer').click();
-  await expect(page.getByTestId('motion-card')).toBeVisible();
+  // T119: 네 번째 조건(OWNER)은 추가 답변에서 붙인다.
+  await page.getByTestId('reactions-advance').click();
+  await page.getByTestId('followup-option-0').click();
+  await page.getByTestId('submit-followup').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'VOTE(live)');
@@ -665,15 +666,23 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
   );
 }
 
-// T119: 추가 답변이 늘어난 반대 입장(안건 ① 4개 + BOTH, 안건 ② 5개 + BOTH)의 2/2 화면에서도
-// 마지막 추천 답변 카드와 "답변 전달" 버튼이 잘리지 않고, 문서 스크롤이 없다. 비서실장의
-// 조건 추천에는 "붙이는 곳" 안내가 함께 보인다.
-// hintedConditionId: 첫 단계 문구에서 빠져 추가 답변에서만 고를 수 있는 조건(반대 입장).
-for (const [scenarioId, hintedConditionId] of [
-  ['ai-approval', 'FULL_AUTO'],
-  ['experience-first', 'SCOPE'],
-] as const) {
-  test(`T119: 반대 입장 2/2 추가 답변이 늘어도 ${scenarioId} 화면이 잘리거나 스크롤되지 않는다`, async ({ page }) => {
+// T119: 추가 답변은 그 입장에서 규칙표가 쓰는 모든 조건을 제안한다. 첫 의견에서 조건을 하나도
+// 붙이지 않고 넘어온 최악 경우(모든 카드가 보인다)에도 2/2 화면에서 마지막 추천 답변 카드와
+// "답변 전달" 버튼이 잘리지 않고 문서 스크롤이 없다(안건 × 입장 4가지). 비서실장의 조건
+// 추천에는 "붙이는 곳" 안내가 함께 보인다.
+// hintedConditionId: 추가 답변에서 고를 수 있다고 안내돼야 하는 조건. 찬성은 첫 문구에서 빠진
+// 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
+const T119_CASES = [
+  { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 7, hinted: 'FULL_AUTO' },
+  { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 7, hinted: 'SCOPE' },
+] as const;
+
+for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
+  test(`T119: 조건 0개로 넘어온 ${scenarioId} ${side === 'for' ? '찬성' : '반대'} 2/2 화면에 모든 추가 답변이 보여도 잘리거나 스크롤되지 않는다`, async ({
+    page,
+  }) => {
     await page.goto('/?mode=scripted&coach=off');
     await page.getByRole('button', { name: '체험 시작' }).click();
     await page.getByRole('button', { name: '확인', exact: true }).click();
@@ -682,25 +691,25 @@ for (const [scenarioId, hintedConditionId] of [
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '의견 듣기' }).click();
     await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
-    await page.getByTestId('discuss-side-against').click();
-    await page.getByTestId('phrase-card-N4').click();
+    await page.getByTestId(`discuss-side-${side}`).click();
+    await page.getByTestId(`phrase-card-${phraseId}`).click();
     await tryAllAssistantFeatures(page);
     await page.getByTestId('submit-opinion').click();
     await page.getByTestId('reactions-advance').click();
 
     const options = page.locator('[data-testid^="followup-option-"]');
-    const count = await options.count();
-    expect(count).toBeGreaterThanOrEqual(5);
-    await expectNoPageScroll(page, `T119 ${scenarioId} 반대 2/2`);
-    await expectFullyVisible(page, `followup-option-${count - 1}`, `T119 ${scenarioId} 마지막 추천 답변`);
-    await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} 답변 전달 버튼`);
+    await expect(options).toHaveCount(cards);
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 2/2`);
+    // 카드 testid는 전체 옵션 중 순번이라(다른 입장 카드는 숨김) 보이는 카드 중 마지막을 읽는다.
+    const lastId = await options.last().getAttribute('data-testid');
+    expect(lastId).not.toBeNull();
+    await expectFullyVisible(page, lastId ?? '', `T119 ${scenarioId} ${side} 마지막 추천 답변`);
+    await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} ${side} 답변 전달 버튼`);
 
     await page.getByTestId('assistant-toggle').click();
     await page.getByTestId('assistant-action-compare').click();
     await expect(page.getByTestId('assistant-recommend-opening')).toBeVisible();
-    await expect(page.getByTestId(`assistant-remaining-${hintedConditionId}`)).toContainText(
-      '추가 답변에서 고를 수 있습니다',
-    );
-    await expectNoPageScroll(page, `T119 ${scenarioId} 비서실장 열림`);
+    await expect(page.getByTestId(`assistant-remaining-${hinted}`)).toContainText('추가 답변에서 고를 수 있습니다');
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 비서실장 열림`);
   });
 }
