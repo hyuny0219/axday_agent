@@ -584,6 +584,55 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     );
   });
 
+  function renderWithFirstOpinion(selectedPhraseIds: string[]) {
+    return render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={sc}
+        opinions={[
+          {
+            id: 'o1',
+            originalText: '자동 승인마다 승인 사유를 기록합시다.',
+            selectedPhraseIds,
+            confirmedConditionIds: ['LOG'],
+            stance: 'FOR',
+            createdAt: 0,
+          },
+        ]}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
+      />,
+    );
+  }
+
+  async function releaseLogAndCompare() {
+    // 조건 없는 공통 답변으로 시작하면 이전 의견의 확정 조건 칩이 나타난다.
+    const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
+    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
+    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    fireEvent.click(screen.getByTestId('assistant-action-compare'));
+    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
+    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
+  }
+
+  it('첫 의견에서 문구 2번(LOG)을 골라 제출한 뒤 2/2에서 칩을 해제하면 "이미 고른 문구 2번(첫 의견)" 안내가 보인다(T119)', async () => {
+    renderWithFirstOpinion(['P2']);
+    await releaseLogAndCompare();
+    const where = screen.getByTestId('assistant-recommend-where-LOG');
+    expect(where).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다 · 조건 칩을 다시 누르면 붙습니다');
+    expect(where).not.toHaveTextContent('이미 쓴 내용');
+  });
+
+  it('첫 의견을 직접 써서 제출했으면 2/2에서 칩을 해제해도 "이미 쓴 내용" 안내가 유지된다(T119)', async () => {
+    renderWithFirstOpinion([]);
+    await releaseLogAndCompare();
+    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent('이미 쓴 내용의 조건입니다');
+  });
+
   it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
     const actions: { type: string; evidenceIds: string[] }[] = [];
     renderReactions(actions);

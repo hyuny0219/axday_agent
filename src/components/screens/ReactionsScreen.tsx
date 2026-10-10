@@ -486,7 +486,20 @@ export function ReactionsScreen({
     const picked = scenario.followUp.options.some(
       (option, index) => option.proposeConditionId === conditionId && selectedOptionIds.includes(String(index)),
     );
-    return picked ? '이미 고른 답변의 조건입니다' : '이미 쓴 내용의 조건입니다';
+    if (picked) {
+      return '이미 고른 답변의 조건입니다';
+    }
+    // 이전 단계(첫 의견)에서 고른 문구가 이 조건을 제안했으면 그 문구의 DISCUSS 카드 번호를 말한다.
+    const visible = scenario.phrases.filter((phrase) => {
+      const phraseSide = phrase.side ?? 'FOR';
+      return phraseSide === 'BOTH' || phraseSide === guideSide;
+    });
+    const firstIndex = visible.findIndex(
+      (phrase) => phrase.conditionId === conditionId && (lastOpinion?.selectedPhraseIds ?? []).includes(phrase.id),
+    );
+    return firstIndex >= 0
+      ? `이미 고른 문구 ${firstIndex + 1}번(첫 의견)의 조건입니다`
+      : '이미 쓴 내용의 조건입니다';
   }
 
   function isReleasedCondition(conditionId: string): boolean {
@@ -502,7 +515,7 @@ export function ReactionsScreen({
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds],
+    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds, lastOpinion],
   );
 
   function canApplyRecommendation(conditionId: string): boolean {
