@@ -1096,6 +1096,9 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       // 답을 쓰기 시작하면 재확정된 LOG 칩이 눌린 상태로 보인다.
       fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '이어서 직접 씁니다.' } });
       expect(screen.getByTestId('condition-chip-LOG')).toHaveAttribute('aria-pressed', 'true');
+      // 이전 의견에서 확정되지 않았던 조건이라 '기존 확정'이 아니라 새 조건으로 보인다.
+      expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
+      expect(screen.getByTestId('condition-chip-LOG')).toHaveTextContent('+ 새 조건');
     });
   });
 });

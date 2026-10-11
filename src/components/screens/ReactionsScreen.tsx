@@ -355,8 +355,8 @@ export function ReactionsScreen({
   // 조건을 가리키는 다른 옵션을 고르는 등) "새 조건"으로 보이면 안 되므로
   // previousConfirmedIds를 뺀다.
   const newlyProposedConditionIds = useMemo(
-    () => newProposedIds.filter((id) => !previousConfirmedIds.includes(id)),
-    [newProposedIds, previousConfirmedIds],
+    () => uniqueInOrder([...newProposedIds, ...restorableConditionIds]).filter((id) => !previousConfirmedIds.includes(id)),
+    [newProposedIds, restorableConditionIds, previousConfirmedIds],
   );
 
   // 후속 보완은 이전에 확정한 조건을 그대로 보여주고 유지·해제할 수 있게 하며,
