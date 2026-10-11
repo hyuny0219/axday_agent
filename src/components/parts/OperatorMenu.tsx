@@ -2,7 +2,7 @@
 // (CLAUDE_IMPLEMENTATION.md 3장 "현장 운영"). 참가자용 보안 기능이 아니라 현장 운영
 // 편의 메뉴다. 관람 창 열기(P1)는 이 카드 범위 밖이라 추가하지 않는다.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchHealth, probeModel, type HealthInfo, type ProbeResult } from '../../services/transport/probe';
 
 export interface OperatorMenuProps {
@@ -24,6 +24,20 @@ type PanelState =
   | 'confirmRestartScripted';
 
 type ProbeStatus = 'pending' | 'ok' | 'fail';
+
+/** 지금 전체화면인가(T121). 전체화면에서는 운영 버튼을 숨기고, Esc로 전체화면을 나오면 다시 보인다. */
+function useIsFullscreen(): boolean {
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => typeof document !== 'undefined' && Boolean(document.fullscreenElement),
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  return isFullscreen;
+}
 
 function isFullscreenSupported(): boolean {
   return typeof document !== 'undefined' && document.fullscreenEnabled === true;
@@ -62,6 +76,7 @@ export function OperatorMenu({
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('pending');
   const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
+  const isFullscreen = useIsFullscreen();
 
   function close(): void {
     setPanel('closed');
@@ -116,6 +131,10 @@ export function OperatorMenu({
     close();
     (onRestartScripted ?? defaultRestartScripted)();
   }
+
+  // T121: 전체화면(현장 진행 중)에서는 참가자 눈에 띄지 않게 운영 버튼 자체를 숨긴다.
+  // 운영자는 Esc로 전체화면을 나오면 버튼이 다시 보인다.
+  if (isFullscreen) return null;
 
   return (
     <div className="operator-menu">

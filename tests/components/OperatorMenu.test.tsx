@@ -3,7 +3,7 @@
 
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OperatorMenu, scriptedRestartUrl } from '../../src/components/parts/OperatorMenu';
 
@@ -129,5 +129,25 @@ describe('OperatorMenu 안내 끄기/켜기(T103)', () => {
     render(<OperatorMenu onNewSession={vi.fn()} />);
     await openMenu();
     expect(screen.queryByTestId('operator-toggle-coach')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('OperatorMenu — 전체화면에서 숨김(T121)', () => {
+  afterEach(() => {
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+  });
+
+  it('전체화면이면 운영 버튼을 그리지 않고, 전체화면을 나오면 다시 보인다', () => {
+    const el = document.createElement('div');
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => el });
+    render(<OperatorMenu onNewSession={() => {}} />);
+    expect(screen.queryByTestId('operator-menu-button')).toBeNull();
+
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+    act(() => {
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(screen.getByTestId('operator-menu-button')).toBeInTheDocument();
   });
 });
