@@ -310,6 +310,28 @@ export function ReactionsScreen({
     setDraftRevision((value) => value + 1);
   }
 
+  // T120: 첫 의견에서 이미 낸 문구(와 같은 조건)를 제안하는 추천 답변은 보이지 않는다.
+  const duplicateOptionIndexes = useMemo(
+    () => duplicateFollowUpOptionIndexes(scenario, lastOpinion, side),
+    [scenario, lastOpinion, side],
+  );
+  // T120(Codex 108차): 첫 의견에서 문구를 골랐지만 그 조건 칩을 해제한 채 넘어온 경우, 숨긴 추천 답변
+  // 대신 칩 재확정으로 되살린다 — "제안돼 있지만 해제된 조건"(T119)으로 취급한다.
+  const restorableConditionIds = useMemo(() => {
+    const pickedConditionIds = new Set(
+      scenario.phrases
+        .filter((phrase) => (lastOpinion?.selectedPhraseIds ?? []).includes(phrase.id))
+        .map((phrase) => phrase.conditionId),
+    );
+    return uniqueInOrder(
+      [...duplicateOptionIndexes]
+        .map((index) => scenario.followUp.options[index]?.proposeConditionId ?? null)
+        .filter(
+          (id): id is string => id !== null && pickedConditionIds.has(id) && !previousConfirmedIds.includes(id),
+        ),
+    );
+  }, [scenario, lastOpinion, duplicateOptionIndexes, previousConfirmedIds]);
+
   const newProposedIds = useMemo(() => {
     // P1-a: dirty(직접 수정)인 동안은 체크된 옵션의 조건 제안을 쓰지 않는다 — 고친
     // 문장이 이미 체크 카드 문구와 다를 수 있으므로, 제안은 오직 현재 textValue를
@@ -324,8 +346,8 @@ export function ReactionsScreen({
   }, [scenario, selectedOptionIds, textValue, dirty]);
 
   const proposedConditionIds = useMemo(
-    () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds]),
-    [previousConfirmedIds, newProposedIds],
+    () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds, ...restorableConditionIds]),
+    [previousConfirmedIds, newProposedIds, restorableConditionIds],
   );
 
   // CONDITIONS 칩의 "기존 확정"(cyan) vs "새 조건"(앰버) 구분(T74 2차 검토, 시안
@@ -505,11 +527,6 @@ export function ReactionsScreen({
       : '이미 쓴 내용의 조건입니다';
   }
 
-  // T120: 첫 의견에서 이미 낸 문구(와 같은 조건)를 제안하는 추천 답변은 보이지 않는다.
-  const duplicateOptionIndexes = useMemo(
-    () => duplicateFollowUpOptionIndexes(scenario, lastOpinion, side),
-    [scenario, lastOpinion, side],
-  );
   // T120: 그 조건을 제안하는 보이는 추천 답변이 없고 전부 첫 의견과 겹쳐 숨겨진 경우 — 안내는
   // 숨긴 카드가 아니라 첫 의견에서 이미 고른 문구를 가리킨다.
   function isHiddenOnlyCondition(conditionId: string): boolean {
@@ -546,7 +563,7 @@ export function ReactionsScreen({
     return (
       confirmedConditionIds.includes(conditionId) ||
       isReleasedCondition(conditionId) ||
-      findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR', selectedOptionIds) >= 0
+      findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR', selectedOptionIds, duplicateOptionIndexes) >= 0
     );
   }
 
@@ -580,7 +597,7 @@ export function ReactionsScreen({
         const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, [
           ...selectedOptionIds,
           ...batch.map((item) => String(item.index)),
-        ]);
+        ], duplicateOptionIndexes);
         if (index >= 0) {
           batch.push({ index, conditionId });
         }
@@ -596,7 +613,7 @@ export function ReactionsScreen({
     let next = selectedOptionIds;
     const appliedIds: string[] = [];
     for (const conditionId of conditionIds) {
-      const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, next);
+      const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, next, duplicateOptionIndexes);
       if (index < 0) {
         continue;
       }

@@ -1058,6 +1058,45 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       );
       expect(visibleOptionTexts().length).toBe(forOptions.length);
     });
+
+    it('첫 의견에서 문구를 고르고 칩을 해제해 제출했어도 비서실장 적용은 숨긴 카드를 고르지 않고 칩을 재확정한다(Codex 108차)', async () => {
+      const opinions: Opinion[] = [
+        {
+          id: 'o1',
+          originalText: '자동 승인마다 승인 사유를 기록합시다.',
+          selectedPhraseIds: ['P2'],
+          confirmedConditionIds: [],
+          stance: 'FOR',
+          createdAt: 0,
+        },
+      ];
+      render(
+        <ReactionsScreen
+          {...baseProps()}
+          scenario={ai}
+          opinions={opinions}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          statements={[]}
+          roundLog={[]}
+          stances={aiStances}
+        />,
+      );
+      const logIndexes = ai.followUp.options
+        .map((option, index) => ({ option, index }))
+        .filter(({ option }) => option.proposeConditionId === 'LOG' && (option.side ?? 'FOR') === 'FOR');
+      expect(logIndexes.length).toBeGreaterThan(0);
+      fireEvent.click(screen.getByTestId('assistant-toggle'));
+      fireEvent.click(screen.getByTestId('assistant-action-compare'));
+      fireEvent.click(await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 }));
+      for (const { option, index } of logIndexes) {
+        expect(screen.queryByTestId(`followup-option-${index}`)).not.toBeInTheDocument();
+        expect((screen.getByTestId('followup-textarea') as HTMLTextAreaElement).value).not.toContain(option.text);
+      }
+      // 답을 쓰기 시작하면 재확정된 LOG 칩이 눌린 상태로 보인다.
+      fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '이어서 직접 씁니다.' } });
+      expect(screen.getByTestId('condition-chip-LOG')).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 });
 

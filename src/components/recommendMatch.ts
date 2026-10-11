@@ -26,12 +26,14 @@ export function findFollowUpIndexForCondition(
   conditionId: string,
   side: 'FOR' | 'AGAINST',
   selectedOptionIds?: readonly string[],
+  hiddenIndexes?: ReadonlySet<number>,
 ): number {
   return scenario.followUp.options.findIndex(
     (option, idx) =>
       option.proposeConditionId === conditionId &&
       !option.keepPrevious &&
       (option.side ?? 'FOR') === side &&
-      !(selectedOptionIds?.includes(String(idx)) ?? false),
+      !(selectedOptionIds?.includes(String(idx)) ?? false) &&
+      !(hiddenIndexes?.has(idx) ?? false),
   );
 }
