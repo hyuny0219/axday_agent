@@ -347,7 +347,10 @@ async function runCase(
       executionMode: 'DEFAULT',
     },
     participantStance: evalCase.participantStance,
-    followUpAnswered: evalCase.followUpAnswered,
+    // 실제 앱은 추가 질문에 답하면 표결 요청에 followUpAnswered=true를 싣는다(T110). 값이 없는
+    // 케이스(=답한 케이스, 위 FOLLOWUP 라운드가 돈 경우)는 true로 맞춘다 — undefined로 두면
+    // 회의 기록에 '추가 질문 답변' 줄이 빠져 VOTE 미답변 규칙으로 읽혀 지표가 왜곡된다.
+    followUpAnswered: evalCase.followUpAnswered ?? true,
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;
