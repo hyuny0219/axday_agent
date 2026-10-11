@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T120 | 진행 중 | ① 답변 뒤 임원의 마지막 반응(FOLLOWUP 발언)은 표결 전(MOTION·VOTE) **전부 가림**(첫 의견 뒤 반응은 그대로 보임), RESULT에서 공개 ② 반응에 답하기 추천 답변에서 **첫 의견에 이미 낸 문구는 제외**(2026-10-11 사용자 지시). 상세는 아래 T120 카드 |
 | T119 | 완료 | 조건은 **직접 작성 없이** 추천 문구·추천 답변만으로 모두 붙일 수 있게: 첫 추천 문구는 조건 1~2개를 일부러 비우고, 추가 답변 단계의 추천 답변이 남은 조건을 전부 커버(조건 비교·조건 추천도 도달 가능한 조건만 안내)(2026-10-10 사용자 지시). 상세는 아래 T119 카드 |
 | T118 | 완료 | 첫 의견 전달 뒤(반응 듣기·답하기)에는 임원이 **어느 쪽으로 기울었는지** 보이게('반대 → 찬성 쪽 · 답변하면 확정'), 봉인은 답변 뒤~표결 전(MOTION·VOTE)에만 유지(2026-10-10 사용자 지시). 상세는 아래 T118 카드 |
 | T117 | 완료 | 반응에 답하기(2/2) HUD: 버튼 잘림 재현·수정(여러 뷰포트), 내 발언 조건 칩을 **한 줄**에(2026-10-10 사용자 지시, T116 후속). 상세는 아래 T117 카드 |
@@ -102,6 +103,20 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T120 답변 뒤 마지막 반응 가림 + 추천 답변 중복 제외
+
+- 목표(2026-10-11 사용자 지시): "내 의견을 전달했을 때 임원들의 반응은 볼 수 있고, 그 뒤에 반응에 답한 후의 마지막 표결 전 반응만 볼 수 없도록 해 줘야지. 그리고 반응에 답하기에서는 이미 내 의견 전달 시에 찍었던 추천 문구가 중복으로 들어가 있어서 중복은 제외하고 선택할 수 있도록 해 줘. 이미 의견을 낸 문구는 반응 답하기에서는 더 이상 보여 주지 않아도 돼."
+- 읽을 것: `src/components/minutes.ts`(sealFollowUp·SEALED_FOLLOWUP_TEXT), `src/components/parts/{MinutesPanel,StageBand,LiveStatementCards}.tsx`, `src/components/screens/{MotionScreen,VoteScreen,ResultScreen,ReactionsScreen}.tsx`, `src/app/App.tsx`(sealedStages), `src/content/scenarios/*.ts`(phrases·followUp.options 텍스트 재사용), `tests/content/conditionCoverage.test.ts`(T119 불변식), DESIGN_SPEC T114·T118·T119 단락.
+- 만들 것:
+  1. **마지막 반응 전부 가림**: MOTION·VOTE에서 FOLLOWUP 라운드 발언(live)·scripted 2차 반응은 **방향 단어 유무와 무관하게** 본문을 가리고 '(답변을 들었습니다 · 결과에서 공개)'만 표시 — 회의록(MinutesPanel), 무대 말풍선(StageBand), 안건 확정 화면의 발언 카드 등 노출 경로 전수. RESULT에서는 기존 순차 공개(T114) 타이밍에 맞춰 원문 공개. OPINIONS·REACTIONS(첫 의견에 대한 반응)는 지금처럼 보임. 서버 verdictWords 교정·프롬프트는 그대로(방어 계층 유지).
+  2. **추천 답변 중복 제외**: REACTIONS 2/2 추천 답변 그리드에서 첫 의견(`lastOpinion.selectedPhraseIds`)에 이미 낸 추천 문구와 **같은 문구(텍스트 동일) 또는 같은 조건을 제안하는 문구**는 숨김(기존 alreadyProposed 필터 확장). T119 불변식은 "숨겨진 조건은 이미 첫 의견에서 제안됨"이므로 유지 — 불변식 테스트에 "첫 의견에서 고른 문구 집합 S에 대해, 2/2에 보이는 카드 ∪ S의 조건 = 그 입장 규칙표 조건 전부"를 추가. 입장을 바꾼 경우(첫 의견 입장 ≠ 현재 입장)는 다른 입장 문구라 중복이 아니므로 숨기지 않음(텍스트가 같으면 숨김).
+  3. 비서실장 출처 안내(T119)가 숨긴 카드를 가리키지 않게 — 숨긴 조건은 '이미 고른 문구 N번(첫 의견)' 쪽으로.
+  4. 문서: DESIGN_SPEC "## T120" 단락, FACILITATOR_GUIDE 한 줄, TASKS 행.
+  5. 테스트·e2e: minutes·StageBand 단위(MOTION·VOTE에서 FOLLOWUP 본문 가림, RESULT 공개), ReactionsScreen 단위(첫 의견 문구 중복 숨김·입장 전환 시 규칙), 커버리지 불변식 확장, e2e sealed-reveal·reactions·flow-full·live·noscroll 1080·720, 스크린샷 motion·vote·reactions-answer 갱신 뒤 Read.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 프롬프트·서버 교정 변경, 첫 의견 반응 표시(T118) 변경, 표결 규칙 변경, 영문 UI.
+- 크기: M.
 
 ## T119 조건 커버리지 — 직접 작성 없이 추천만으로 모든 조건 도달
 
