@@ -10,6 +10,7 @@ import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
 import type { ExecMemberId, Predicate, Scenario } from '../../src/content/types';
 import { proposeFromText } from '../../src/domain/conditions';
+import { duplicateFollowUpOptionIndexes } from '../../src/components/followUpDuplicates';
 
 type Stance = 'FOR' | 'AGAINST';
 
@@ -89,6 +90,51 @@ describe.each(scenarios)('T119 조건 커버리지 — %s', (_name, scenario) =>
     it('(b2) 첫 단계에서 빠지는 조건에는 후속 질문이 묻는 조건이 들어 있다', () => {
       const asked = ASKED_CONDITION[scenario.id]?.[stance];
       if (asked) expect(missingFirst).toContain(asked);
+    });
+  });
+
+  // T120: 첫 의견에서 고른 문구 집합 S에 대해, 2/2에 보이는 카드 ∪ S의 조건 = 규칙표 조건 전부.
+  // 숨긴 카드의 조건은 반드시 S가 이미 제안한 조건이다(같은 입장일 때; 입장 전환 시에는 텍스트가 같은 카드만 숨긴다).
+  describe.each<Stance>(['FOR', 'AGAINST'])('(e) T120 중복 제외 후에도 조건이 모두 도달한다 — 입장 %s', (stance) => {
+    const sidePhrases = scenario.phrases.filter((p) => {
+      const side = p.side ?? 'FOR';
+      return side === 'BOTH' || side === stance;
+    });
+    const selections: string[][] = [
+      [],
+      ...sidePhrases.map((p) => [p.id]),
+      sidePhrases.map((p) => p.id),
+    ];
+    for (const selected of selections) {
+      it(`첫 의견 문구 [${selected.join(',') || '없음'}]`, () => {
+        const hidden = duplicateFollowUpOptionIndexes(scenario, { selectedPhraseIds: selected, stance }, stance);
+        const fromSelected = new Set(
+          scenario.phrases.filter((p) => selected.includes(p.id) && p.conditionId).map((p) => p.conditionId as string),
+        );
+        const visible = new Set<string>();
+        scenario.followUp.options.forEach((option, index) => {
+          const side = option.side ?? 'FOR';
+          if (option.keepPrevious || hidden.has(index) || !option.proposeConditionId) return;
+          if (side === 'BOTH' || side === stance) visible.add(option.proposeConditionId);
+        });
+        const unreachable = required.filter((id) => !visible.has(id) && !fromSelected.has(id));
+        expect(unreachable).toEqual([]);
+        // 숨긴 카드의 조건은 S가 이미 제안한 조건이거나, 텍스트가 같은 카드다.
+        for (const index of hidden) {
+          const option = scenario.followUp.options[index]!;
+          const sameText = scenario.phrases.some((p) => selected.includes(p.id) && p.text.trim() === option.text.trim());
+          expect(sameText || (option.proposeConditionId !== null && fromSelected.has(option.proposeConditionId))).toBe(true);
+        }
+      });
+    }
+    it('입장을 바꾸면 조건이 같다는 이유로는 숨기지 않는다', () => {
+      const other: Stance = stance === 'FOR' ? 'AGAINST' : 'FOR';
+      const selected = sidePhrases.map((p) => p.id);
+      const hidden = duplicateFollowUpOptionIndexes(scenario, { selectedPhraseIds: selected, stance }, other);
+      const texts = new Set(scenario.phrases.filter((p) => selected.includes(p.id)).map((p) => p.text.trim()));
+      for (const index of hidden) {
+        expect(texts.has(scenario.followUp.options[index]!.text.trim())).toBe(true);
+      }
     });
   });
 

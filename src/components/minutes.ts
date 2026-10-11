@@ -7,7 +7,7 @@
 import type { ExecMemberId, Reaction, Scenario } from '../content/types';
 import type { MemberId, RoleStatus, Session, SessionStage, StatementStage } from '../domain/types';
 import { EXEC_MEMBER_ORDER } from '../domain/voting';
-import { SEALED_FOLLOWUP_TEXT, findVerdictWords } from '../domain/verdictWords';
+import { SEALED_FOLLOWUP_TEXT } from '../domain/verdictWords';
 import { membersAwaitingAnswer } from '../domain/stance';
 import { reactionBodyText, reactionsFor, oppositionReactionText, resolveFollowUpPrompt } from './reactionsFor';
 import { chairMotionLine } from './chairMotionLine';
@@ -156,7 +156,7 @@ export function buildMinutes(
   scenario: Scenario,
   roundLog: RoundLogEntry[],
   options: {
-    /** T114: FOLLOWUP 발언에 방향 단어가 있으면 본문을 가린다. 생략하면 MOTION·VOTE에서만
+    /** T114·T120: FOLLOWUP 발언(답변 뒤 마지막 반응) 본문을 방향 단어 유무와 무관하게 전부 가린다. 생략하면 MOTION·VOTE에서만
      * 가리고 RESULT 이후에는 원문을 보여 준다(결과 화면의 순차 공개 전에는 호출부가 true). */
     sealFollowUp?: boolean;
   } = {},
@@ -286,7 +286,7 @@ export function buildMinutes(
         entries.push({
           id: `followup-${result.roleId}`,
           speaker: result.roleId,
-          text: sealFollowUp && findVerdictWords(result.text).length > 0 ? SEALED_FOLLOWUP_TEXT : result.text,
+          text: sealFollowUp && result.kind === 'speech' ? SEALED_FOLLOWUP_TEXT : result.text,
           kind: result.kind,
           timeLabel: formatElapsed(startedAt, result.createdAt),
         });

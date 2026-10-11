@@ -993,5 +993,71 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
     expect(calls[calls.length - 1]?.leaning).toEqual({});
     expect(calls[calls.length - 1]?.stances.CAIO).toBe('AGAINST');
   });
+
+  describe('추천 답변 중복 제외(T120)', () => {
+    const ai = aiApprovalScenario;
+    const aiStances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' };
+    function renderAi(side: 'FOR' | 'AGAINST', stance: 'FOR' | 'AGAINST', selectedPhraseIds: string[]) {
+      const opinions: Opinion[] = [
+        { id: 'o1', originalText: '첫 의견', selectedPhraseIds, confirmedConditionIds: [], stance, createdAt: 0 },
+      ];
+      render(
+        <ReactionsScreen
+          {...baseProps()}
+          scenario={ai}
+          opinions={opinions}
+          side={side}
+          mode="scripted"
+          roleStatus={idleRoleStatus}
+          statements={[]}
+          roundLog={[]}
+          stances={aiStances}
+        />,
+      );
+    }
+    function visibleOptionTexts(): string[] {
+      return ai.followUp.options
+        .map((option, index) => ({ option, index }))
+        .filter(({ index }) => screen.queryByTestId(`followup-option-${index}`) !== null)
+        .map(({ option }) => option.text);
+    }
+
+    it('첫 의견에서 고른 문구와 같은 조건을 제안하는 추천 답변은 보이지 않는다', () => {
+      const withoutPick = (() => {
+        renderAi('FOR', 'FOR', []);
+        const texts = visibleOptionTexts();
+        cleanup();
+        return texts;
+      })();
+      renderAi('FOR', 'FOR', ['P1']); // LIMIT
+      const texts = visibleOptionTexts();
+      const limitOptions = ai.followUp.options.filter((o) => o.proposeConditionId === 'LIMIT' && (o.side ?? 'FOR') === 'FOR');
+      expect(limitOptions.length).toBeGreaterThan(0);
+      for (const option of limitOptions) {
+        expect(withoutPick).toContain(option.text);
+        expect(texts).not.toContain(option.text);
+      }
+      expect(texts.length).toBe(withoutPick.length - limitOptions.length);
+    });
+
+    it('입장을 바꾸면 조건이 같다는 이유로는 숨기지 않는다', () => {
+      renderAi('AGAINST', 'FOR', ['P1']);
+      const againstLimit = ai.followUp.options.filter(
+        (o) => o.proposeConditionId === 'LIMIT' && (o.side ?? 'FOR') === 'AGAINST',
+      );
+      expect(againstLimit.length).toBeGreaterThan(0);
+      for (const option of againstLimit) {
+        expect(visibleOptionTexts()).toContain(option.text);
+      }
+    });
+
+    it('고른 문구가 없으면 아무것도 숨기지 않는다', () => {
+      renderAi('FOR', 'FOR', []);
+      const forOptions = ai.followUp.options.filter(
+        (o) => !o.keepPrevious && ((o.side ?? 'FOR') === 'FOR' || o.side === 'BOTH'),
+      );
+      expect(visibleOptionTexts().length).toBe(forOptions.length);
+    });
+  });
 });
 

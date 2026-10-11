@@ -71,6 +71,7 @@
 // 앞에서 pendingOptionIndex !== null이면 바로 멈추고, PhraseCard에도 disabled를
 // 넘겨 시각적으로도 잠근다.
 
+import { duplicateFollowUpOptionIndexes } from '../followUpDuplicates';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
@@ -504,6 +505,25 @@ export function ReactionsScreen({
       : '이미 쓴 내용의 조건입니다';
   }
 
+  // T120: 첫 의견에서 이미 낸 문구(와 같은 조건)를 제안하는 추천 답변은 보이지 않는다.
+  const duplicateOptionIndexes = useMemo(
+    () => duplicateFollowUpOptionIndexes(scenario, lastOpinion, side),
+    [scenario, lastOpinion, side],
+  );
+  // T120: 그 조건을 제안하는 보이는 추천 답변이 없고 전부 첫 의견과 겹쳐 숨겨진 경우 — 안내는
+  // 숨긴 카드가 아니라 첫 의견에서 이미 고른 문구를 가리킨다.
+  function isHiddenOnlyCondition(conditionId: string): boolean {
+    const offering = scenario.followUp.options
+      .map((option, index) => ({ option, index }))
+      .filter(
+        ({ option }) =>
+          option.proposeConditionId === conditionId &&
+          !option.keepPrevious &&
+          ((option.side ?? 'FOR') === 'BOTH' || (option.side ?? 'FOR') === guideSide),
+      );
+    return offering.length > 0 && offering.every(({ index }) => duplicateOptionIndexes.has(index));
+  }
+
   function isReleasedCondition(conditionId: string): boolean {
     return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
   }
@@ -512,12 +532,14 @@ export function ReactionsScreen({
       hint: (id: string) =>
         isReleasedCondition(id)
           ? releasedHint(releasedSourceText(id))
-          : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
+          : isHiddenOnlyCondition(id)
+            ? releasedSourceText(id)
+            : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
       offered: (id: string) => isConditionOffered(scenario, id, guideSide),
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds, lastOpinion],
+    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds, lastOpinion, duplicateOptionIndexes],
   );
 
   function canApplyRecommendation(conditionId: string): boolean {
@@ -677,9 +699,9 @@ export function ReactionsScreen({
     hasAnswer: textValue.trim() !== '',
     canSubmit,
   });
-  const firstOptionIndex = scenario.followUp.options.findIndex((option) => {
+  const firstOptionIndex = scenario.followUp.options.findIndex((option, index) => {
     const optionSide = option.side ?? 'FOR';
-    return !option.keepPrevious && (optionSide === 'BOTH' || optionSide === side);
+    return !option.keepPrevious && !duplicateOptionIndexes.has(index) && (optionSide === 'BOTH' || optionSide === side);
   });
 
   if (step === 'listen') {
@@ -1003,10 +1025,11 @@ export function ReactionsScreen({
                 if (optionSide !== 'BOTH' && optionSide !== side) {
                   return null;
                 }
-                // 이미 확정된 조건을 다시 제안하는 카드도 그대로 보여 준다(T89 리드 확인 —
-                // 숨기면 찬성 쪽 카드가 1~2장만 남아 빈 그리드가 된다; 다시 골라도 조건 칩은
-                // "기존 확정"으로 표시될 뿐 새 조건이 생기지 않아 무해하다). T84 #23의
-                // "(앞서 제안함)" 잠금 표시는 쓰지 않는다.
+                // T120: 첫 의견에서 이미 낸 문구·조건과 겹치는 카드는 숨긴다(T89의 "겹쳐도
+                // 보여 준다"를 대체 — 사용자 지시 "이미 의견을 낸 문구는 더 이상 보여 주지 않아도 돼").
+                if (duplicateOptionIndexes.has(index)) {
+                  return null;
+                }
                 return (
                   <PhraseCard
                     key={index}
@@ -1020,6 +1043,11 @@ export function ReactionsScreen({
                 );
               })}
               </div>
+              {firstOptionIndex === -1 && (
+                <p className="side-select__guide" data-testid="reactions-options-empty">
+                  첫 의견에서 추천 문구를 이미 모두 냈습니다. 새로 덧붙일 말은 직접 써 주세요.
+                </p>
+              )}
             </>
           )}
           <div className="discuss-screen__evidence-row">

@@ -215,11 +215,15 @@ describe('FOLLOWUP 발언 회의록(T114)', () => {
     }));
     const entries = buildMinutes(session, scenario, roundLog);
     render(<MinutesPanel entries={entries} />);
+    // T120: MOTION에서는 방향 단어가 없어도 본문 전체를 가린다.
     for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
       const row = screen.getByTestId(`minutes-entry-followup-${roleId}`);
-      expect(row).toHaveTextContent('답변을 잘 들었습니다');
-      expect(row.textContent).not.toMatch(/찬성 쪽|반대 쪽|고민 중|FOR|AGAINST/);
+      expect(row).toHaveTextContent(SEALED_FOLLOWUP_TEXT);
+      expect(row.textContent).not.toMatch(/답변을 잘 들었습니다|근거가 분명|FOR|AGAINST/);
     }
+    // RESULT 이후에는 원문이고 입장 라벨은 붙지 않는다.
+    render(<MinutesPanel entries={buildMinutes({ ...session, stage: 'RESULT' }, scenario, roundLog)} />);
+    expect(screen.getAllByTestId('minutes-entry-followup-CEO').at(-1)).toHaveTextContent('답변을 잘 들었습니다');
   });
 
   function liveFollowUpSession(texts: Record<string, string>): { session: Session; roundLog: RoundLogEntry[] } {
@@ -253,14 +257,15 @@ describe('FOLLOWUP 발언 회의록(T114)', () => {
     };
   }
 
-  it('모델이 규칙을 어겨 방향 단어를 쓰면 MOTION·VOTE 회의록은 그 행만 가린다', () => {
+  it('MOTION·VOTE 회의록은 방향 단어 유무와 무관하게 임원 4명 FOLLOWUP 행을 모두 가린다(T120)', () => {
     const { session, roundLog } = liveFollowUpSession({ CFO: '이번에는 찬성합니다.', CISO: '반대로 남겠습니다.' });
     for (const stage of ['MOTION', 'VOTE'] as const) {
       const entries = buildMinutes({ ...session, stage }, scenario, roundLog);
       const byId = (id: string) => entries.find((entry) => entry.id === id)?.text;
       expect(byId('followup-CFO')).toBe(SEALED_FOLLOWUP_TEXT);
       expect(byId('followup-CISO')).toBe(SEALED_FOLLOWUP_TEXT);
-      expect(byId('followup-CEO')).toBe('답변을 잘 들었습니다.');
+      expect(byId('followup-CEO')).toBe(SEALED_FOLLOWUP_TEXT);
+      expect(byId('followup-CAIO')).toBe(SEALED_FOLLOWUP_TEXT);
     }
   });
 
