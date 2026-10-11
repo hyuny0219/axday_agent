@@ -75,4 +75,11 @@
 // 방향을 문장으로 밝히지 말 것"(common.ts의 FOLLOWUP_NO_VERDICT_RULE)을 더했다. 응답
 // 스키마(stance 포함)는 그대로 — 화면에서만 가린다. 이 규칙 외 변경 없음.
 // 전후 비교 계획은 docs/eval/tuning-v13.md(live 실측은 사용자 승인 뒤).
-export const PROMPT_VERSION = 'v13';
+// v14(2026-10-11, T122): v13 live 실측에서 조건 보완 경로가 찬성으로 넘어온 비율이 3/12(v11
+// 10/12)였다. live 임원이 첫 반응에서 각자 다른 새 질문을 던지는데 화면은 시나리오의 추가 질문
+// 하나만 보여 줘 참가자가 답해도 "내 질문에 답이 없다"며 반대가 유지됐기 때문이다. REACTIONS에
+// "남은 우려는 화면의 추가 질문 하나로만, 질문자가 아닌 임원은 그 답을 기다린다고만"(common.ts의
+// buildReactionsQuestionRule)을, FOLLOWUP·VOTE에 참가자의 답변 문장과 "그 답이 그 질문에 답했는지로
+// 판단"(ANSWER_JUDGMENT_RULE)을 더했다. round·vote 요청에 followUpQuestion·followUpAnswerText
+// (선택 필드)를 추가했다. v13의 FOLLOWUP 방향 단어 금지·서버 교정은 그대로. 비교는 docs/eval/tuning-v14.md.
+export const PROMPT_VERSION = 'v14';

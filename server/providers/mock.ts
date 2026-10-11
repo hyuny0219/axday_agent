@@ -42,6 +42,8 @@ export interface MockRequestEnvelope {
   /** 참가자가 추가 질문에 답했는지(T110, 프롬프트 v12). 표결 envelope에서 false면 "답하지
    * 않고 넘어감" 규칙을 흉내 낸다. */
   followUpAnswered?: boolean;
+  /** 화면의 추가 질문을 던지는 임원(T122, 프롬프트 v14). 있으면 REACTIONS 모의 발언이 질문자 기준이 된다. */
+  followUpAskedBy?: string;
   /** 참가자 입장(T110 대칭). 생략·FOR는 찬성 쪽 목표, AGAINST는 반대 쪽 목표다. */
   participantStance?: 'FOR' | 'AGAINST';
 }
@@ -158,13 +160,21 @@ function movedTowardParticipant(
 function buildStatementJson(env: MockRequestEnvelope): unknown {
   const roleId = env.roleId ?? 'CEO';
   const stage = env.stage ?? 'OPINIONS';
+  // T122: 첫 반응 우려는 질문자만 추가 질문으로 묻고 나머지는 그 답을 기다린다(새 질문 없음).
+  const reactionsMessage = env.followUpAskedBy
+    ? roleId === env.followUpAskedBy
+      ? `[모의] ${roleId}가 추가 질문 하나를 묻습니다.`
+      : `[모의] ${roleId}는 ${env.followUpAskedBy}의 질문에 대한 답을 기다립니다.`
+    : undefined;
   return {
     roleId,
     // T114: 후속(FOLLOWUP) 발언은 답변 뒤 방향을 밝히지 않는 문장만 쓴다(찬성·반대 단어 없음).
     message:
       stage === 'FOLLOWUP'
         ? `[모의] ${roleId}가 답변을 듣고 소회를 남깁니다.`
-        : `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
+        : stage === 'REACTIONS' && reactionsMessage
+          ? reactionsMessage
+          : `[모의] ${roleId}의 ${STAGE_LABEL_KO[stage] ?? stage} 단계 발언입니다.`,
     evidenceIds: [scenarioAwareRoleEvidence(roleId, env.scenarioId)],
     referencedStatementIds: [],
     concerns: [`[모의] ${roleId} 우려사항`],

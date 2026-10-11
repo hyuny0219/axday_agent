@@ -44,6 +44,7 @@ export function resolveEvalModel(env: NodeJS.ProcessEnv): { useMock: boolean; mo
 }
 import { systemClock, type Clock } from '../server/clock';
 import { findVerdictWords } from '../src/domain/verdictWords';
+import { scenarios } from '../src/content/scenarios';
 
 const BUDGET_MS = 8000;
 
@@ -62,6 +63,24 @@ export interface EvalCase {
   /** T110(v12): 참가자가 추가 질문에 답했는지. 생략하면(기존 20케이스) 요청에 필드를 싣지 않아
    * 답한 것과 같게 다룬다. false인 케이스만 "답하지 않고 넘어감"을 잰다. */
   followUpAnswered?: boolean;
+  /** T122(v14): 참가자가 추가 질문에 낸 답변 문장(followUp.options 중 확정 조건과 맞는 문장). 답한
+   * 케이스만 있고, FOLLOWUP·VOTE 요청에 실어 실제 앱과 같게 한다. */
+  followUpAnswerText?: string;
+}
+
+/** T122: 화면이 참가자에게 보여 주는 추가 질문 하나(입장별 질문, T93). 실제 앱의 live.ts와 같은 기준. */
+export function evalFollowUpQuestion(
+  scenarioId: string,
+  participantStance: 'FOR' | 'AGAINST' | string | undefined | null,
+): { askedBy: ExecRoleId; question: string } | undefined {
+  const followUp = scenarios.find((scenario) => scenario.id === scenarioId)?.followUp;
+  if (!followUp) return undefined;
+  const prompt = followUp.byStance
+    ? participantStance === 'AGAINST'
+      ? followUp.byStance.AGAINST
+      : followUp.byStance.FOR
+    : followUp;
+  return { askedBy: prompt.askedBy as ExecRoleId, question: prompt.question };
 }
 
 interface EvalSetFile {
@@ -296,6 +315,7 @@ async function runCase(
     participantStance: evalCase.participantStance,
     // 첫 반응은 항상 "아직 답하기 전"이다(REACTIONS 단계 자체가 그 뜻이라 값은 영향이 없다).
     followUpAnswered: false,
+    followUpQuestion: evalFollowUpQuestion(evalCase.scenarioId, evalCase.participantStance),
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -321,9 +341,12 @@ async function runCase(
       mode: 'live',
       stage: 'FOLLOWUP',
       transcript: { revision: 2, statements: [...opinionsStatements, ...reactionsStatements] },
-      participantOpinion: evalCase.participantOpinion,
+      // 실제 앱은 후속 의견(추가 질문 답변)을 마지막 의견으로 보낸다 — 답변 문장이 있으면 그것이 원문이다.
+      participantOpinion: evalCase.followUpAnswerText ?? evalCase.participantOpinion,
       participantStance: evalCase.participantStance,
       followUpAnswered: true,
+      followUpQuestion: evalFollowUpQuestion(evalCase.scenarioId, evalCase.participantStance),
+      followUpAnswerText: evalCase.followUpAnswerText,
       scenarioId: evalCase.scenarioId,
       budgetMs: BUDGET_MS,
     };
@@ -351,6 +374,10 @@ async function runCase(
     // 케이스(=답한 케이스, 위 FOLLOWUP 라운드가 돈 경우)는 true로 맞춘다 — undefined로 두면
     // 회의 기록에 '추가 질문 답변' 줄이 빠져 VOTE 미답변 규칙으로 읽혀 지표가 왜곡된다.
     followUpAnswered: evalCase.followUpAnswered ?? true,
+    followUpQuestion: evalFollowUpQuestion(evalCase.scenarioId, evalCase.participantStance),
+    ...(evalCase.followUpAnswered !== false && evalCase.followUpAnswerText
+      ? { followUpAnswerText: evalCase.followUpAnswerText }
+      : {}),
   };
   const sink: CallRecord[] = [];
   const voteFrom = sink.length;
@@ -722,6 +749,34 @@ export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplem
   return { eligible, persuaded };
 }
 
+export interface NewQuestionStats {
+  /** REACTIONS answered 행 중 질문자가 아닌 임원의 발언 수. */
+  nonAskerRows: number;
+  /** 그중 의문문(?·까요·나요·궁금 등)이 들어 있어 화면의 추가 질문과 별개의 새 질문으로 본 수. */
+  newQuestionRows: number;
+}
+
+const QUESTION_MARKERS = /[?？]|까요|나요|습니까|입니까|궁금/;
+
+/**
+ * T122: 첫 반응에서 질문자가 아닌 임원이 새 질문을 던진 비율(규칙 기반, 측정만). 화면은 시나리오의
+ * 추가 질문 하나(질문자 askedBy)만 보여 주므로 다른 임원의 의문문은 참가자가 답할 길이 없는 질문이다.
+ * 표지(?·까요·나요·습니까·궁금)가 없는 간접 질문은 못 잡아 과소 집계될 수 있다 — 비교는 같은 규칙으로
+ * 다시 잰 v13 기록과 한다.
+ */
+export function newQuestionStats(rows: EvalRow[]): NewQuestionStats {
+  let nonAskerRows = 0;
+  let newQuestionRows = 0;
+  for (const row of rows) {
+    if (row.stage !== 'REACTIONS' || row.status !== 'answered' || !row.message || !row.scenarioId) continue;
+    const asked = evalFollowUpQuestion(row.scenarioId, row.participantStance);
+    if (!asked || asked.askedBy === row.roleId) continue;
+    nonAskerRows += 1;
+    if (QUESTION_MARKERS.test(row.message)) newQuestionRows += 1;
+  }
+  return { nonAskerRows, newQuestionRows };
+}
+
 export interface PathVoteDistribution {
   pathId: string;
   participantStance: string;
@@ -825,6 +880,7 @@ function runCheck(files: string[]): void {
     const agreement = stanceVoteAgreement(rows);
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
+    const newQuestions = newQuestionStats(rows);
     const distribution = voteDistributionByPath(rows);
     const plainStats = plainLanguageStats(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
@@ -839,7 +895,8 @@ function runCheck(files: string[]): void {
         ` · 원문 없음(장애) ${verdictStats.noRawRows}행` +
         ` · 형식 오류 시도 ${Object.entries(verdictStats.invalidReasons).map(([k, v]) => `${k} ${v}`).join(', ') || '0'}` +
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
-        ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}`,
+        ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}` +
+        ` · 첫 반응 새 질문(질문자 외) ${newQuestions.newQuestionRows}/${newQuestions.nonAskerRows}`,
     );
     // T93: 쉬운 말 가독성 지표(측정만, 거절하지 않음).
     console.log(

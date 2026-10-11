@@ -125,6 +125,28 @@ function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | u
   return stance ?? undefined;
 }
 
+/** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). 입장별 질문(T93)을 화면과 같은
+ * 기준으로 고른다 — REACTIONS는 지금 의견의 입장, 답을 낸 뒤(FOLLOWUP·VOTE)는 질문을 보여 준
+ * 입장(followUpStance, 없으면 첫 의견의 입장). */
+function visibleFollowUpQuestion(ctx: BoardAgentsContext, stage: StatementStage | 'VOTE') {
+  const { followUp } = ctx.scenario;
+  const opinions = ctx.session.opinions;
+  const stance =
+    stage === 'REACTIONS'
+      ? (opinions[opinions.length - 1]?.stance ?? null)
+      : (ctx.session.followUpStance ?? opinions[0]?.stance ?? null);
+  const prompt = followUp.byStance ? (stance === 'AGAINST' ? followUp.byStance.AGAINST : followUp.byStance.FOR) : followUp;
+  return { askedBy: prompt.askedBy, question: prompt.question };
+}
+
+/** 참가자가 추가 질문에 낸 답변 문장(T122). 답했을 때(두 번째 의견이 있을 때)만 싣고 서버 상한 300자로 자른다. */
+function followUpAnswerText(ctx: BoardAgentsContext): string | undefined {
+  const { followUpAnswered, opinions } = ctx.session;
+  if (!followUpAnswered || opinions.length < 2) return undefined;
+  const text = opinions[opinions.length - 1]?.originalText.trim();
+  return text ? text.slice(0, 300) : undefined;
+}
+
 function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutMs: number) {
   return {
     sessionId: ctx.sessionId,
@@ -135,6 +157,10 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     participantOpinion: latestParticipantOpinion(ctx),
     participantStance: latestParticipantStance(ctx),
     followUpAnswered: ctx.session.followUpAnswered,
+    ...(stage === 'REACTIONS' || stage === 'FOLLOWUP'
+      ? { followUpQuestion: visibleFollowUpQuestion(ctx, stage) }
+      : {}),
+    ...(stage === 'FOLLOWUP' ? { followUpAnswerText: followUpAnswerText(ctx) } : {}),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,
     roleIds: ctx.roleIds,
@@ -237,6 +263,8 @@ function buildVoteBody(ctx: BoardAgentsContext, timeoutMs: number) {
     },
     participantStance: latestParticipantStance(ctx),
     followUpAnswered: ctx.session.followUpAnswered,
+    followUpQuestion: visibleFollowUpQuestion(ctx, 'VOTE'),
+    followUpAnswerText: followUpAnswerText(ctx),
     roleIds: ctx.roleIds,
   };
 }

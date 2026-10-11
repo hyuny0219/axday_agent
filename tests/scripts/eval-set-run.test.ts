@@ -2,9 +2,13 @@
 // 검토 세 라운드(2차: 인용 괄호·문장 경계, 6차: 해요체·합니까)가 모두 이 판정기를 겨냥했으므로
 // 규칙을 코드로 고정한다. 기존 기록 재집계(v1 187 · v2 1 · v3 0)는 이 규칙으로 변하지 않는다.
 
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   callRecordsByRole,
+  evalFollowUpQuestion,
+  newQuestionStats,
   findFollowUpVerdictWords,
   followUpVerdictStats,
   findStyleViolations,
@@ -261,5 +265,55 @@ describe('followUpVerdictStats — 원시 위반율·대체율(T114, Codex 54차
     expect(serialized.followUpAttempts?.[0]).toEqual({ text: '찬성합니다.', violations: ['찬성'], invalidReason: 'schema' });
     expect(serialized.followUpViolations).toEqual([1, 0]);
     expect(serialized.followUpMasked).toBe(false);
+  });
+});
+
+describe('newQuestionStats·evalFollowUpQuestion·평가 세트 답변 문장(T122)', () => {
+  const row = (roleId: string, message: string, extra: Partial<EvalRow> = {}): EvalRow =>
+    ({
+      caseId: 'c',
+      scenarioId: 'ai-approval',
+      pathId: 'p',
+      pathLabel: 'p',
+      variant: 'v',
+      stage: 'REACTIONS',
+      roleId,
+      status: 'answered',
+      message,
+      latencyMs: 1,
+      modelId: 'm',
+      promptVersion: 'v14',
+      ...extra,
+    }) as EvalRow;
+
+  it('질문자(CISO)를 뺀 임원 발언 중 의문문 표지가 있는 비율만 센다', () => {
+    const stats = newQuestionStats([
+      row('CISO', '책임은 누구에게 있습니까?'),
+      row('CEO', '실제 손해 금액은 얼마입니까?'),
+      row('CFO', 'CISO의 질문에 대한 답을 기다리겠습니다.'),
+      row('CAIO', '누가 확인할지 궁금합니다.'),
+      row('CEO', '질문', { stage: 'OPINIONS' }),
+    ]);
+    expect(stats).toEqual({ nonAskerRows: 3, newQuestionRows: 2 });
+  });
+
+  it('반대 입장은 입장별 질문과 질문자를 쓴다', () => {
+    expect(evalFollowUpQuestion('ai-approval', 'AGAINST')?.askedBy).toBe('CEO');
+    expect(evalFollowUpQuestion('ai-approval', undefined)?.askedBy).toBe('CISO');
+    expect(evalFollowUpQuestion('nope', 'FOR')).toBeUndefined();
+  });
+
+  it('평가 세트의 답한 케이스에는 followUpAnswerText가 있고 미답변 케이스에는 없다', () => {
+    const set = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../scripts/eval-set.json'), 'utf-8')) as {
+      cases: EvalCase[];
+    };
+    for (const evalCase of set.cases) {
+      if (evalCase.followUpAnswered === false) {
+        expect(evalCase.followUpAnswerText).toBeUndefined();
+      } else {
+        expect(evalCase.followUpAnswerText?.length ?? 0).toBeGreaterThan(0);
+        expect(evalCase.followUpAnswerText!.length).toBeLessThanOrEqual(300);
+      }
+    }
   });
 });

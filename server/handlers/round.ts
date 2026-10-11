@@ -17,10 +17,12 @@ import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
 import {
+  ANSWER_JUDGMENT_RULE,
   FOLLOWUP_ANSWERED_RULE,
   FOLLOWUP_NO_VERDICT_RULE,
   REACTIONS_FIRST_PASS_RULE,
   buildCommonGuardrails,
+  buildReactionsQuestionRule,
   buildMeetingRecordBlock,
 } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
@@ -30,7 +32,7 @@ import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config
 import { logCall } from '../log';
 import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -54,6 +56,11 @@ export const roundRequestSchema = z.object({
   /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 없으면(기존 요청) 답한 것으로
    * 보지 않는다 — REACTIONS는 단계 자체가 "아직 답하기 전"이라 이 값과 무관하다. */
   followUpAnswered: z.boolean().optional(),
+  /** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). 첫 반응·후속에서 임원의
+   * 남은 우려를 이 질문 하나에 맞추게 한다. 생략하면 v13까지의 동작이다. */
+  followUpQuestion: followUpQuestionSchema.optional(),
+  /** 참가자가 추가 질문에 낸 답변 문장(T122). 답했을 때만 싣는다(FOLLOWUP). */
+  followUpAnswerText: z.string().min(1).max(300).optional(),
   scenarioId: z.string().min(1),
   budgetMs: z.number().int().positive(),
   /** 실패한 역할만 다시 호출할 때 쓰는 선택 필드(T65, "다시 요청"). 없으면 임원 4명 전체를
@@ -130,7 +137,7 @@ const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
   },
 };
 
-function stageInstruction(stage: RoundRequest['stage']): string {
+function stageInstruction(stage: RoundRequest['stage'], hasAnswerText = false): string {
   switch (stage) {
     case 'OPINIONS':
       return '지금은 초기 의견 단계입니다. 자료와 원안을 근거로 짧은 논거와 확인 질문을 내십시오.';
@@ -147,6 +154,7 @@ function stageInstruction(stage: RoundRequest['stage']): string {
         '지금은 후속 보완 단계입니다. 직전까지의 전체 발언과 참가자의 후속 의견을 반영해 짧게' +
         ' 보완하십시오. ' +
         FOLLOWUP_ANSWERED_RULE +
+        (hasAnswerText ? ' ' + ANSWER_JUDGMENT_RULE : '') +
         ' ' +
         FOLLOWUP_NO_VERDICT_RULE
       );
@@ -173,11 +181,16 @@ function buildRoundSystemPrompt(
     participantOpinion: input.participantOpinion,
     participantStance: input.participantStance ?? null,
     followUpAnswered: input.followUpAnswered,
+    followUpQuestion: input.followUpQuestion,
+    followUpAnswerText: input.followUpAnswerText,
   });
   return [
     buildCommonGuardrails(),
     rolePrompt,
-    stageInstruction(input.stage),
+    stageInstruction(input.stage, input.followUpAnswerText !== undefined),
+    ...(input.stage === 'REACTIONS' && input.followUpQuestion
+      ? [buildReactionsQuestionRule(roleId, input.followUpQuestion)]
+      : []),
     '응답은 message 120자 이내로 요약하고, roleId 필드에는 당신의 역할 ID를 그대로 넣으십시오.',
     meetingRecord,
   ].join('\n\n');
@@ -235,6 +248,7 @@ async function attemptRole(
       // scenarioId가 envelope에 있어야 한다(server/providers/mock.ts 참고).
       scenarioId: input.scenarioId,
       followUpAnswered: input.followUpAnswered,
+      followUpAskedBy: input.followUpQuestion?.askedBy,
       participantStance: input.participantStance,
       mock: parseMockFault(input.mock?.[roleId]),
     });

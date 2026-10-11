@@ -120,3 +120,9 @@ export function sumTokens(a: number | undefined, b: number | undefined): number 
   if (a === undefined && b === undefined) return undefined;
   return (a ?? 0) + (b ?? 0);
 }
+
+/** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). round·vote 요청이 함께 쓴다. */
+export const followUpQuestionSchema = z.object({
+  askedBy: z.enum(EXEC_ROLE_IDS),
+  question: z.string().min(1).max(300),
+});

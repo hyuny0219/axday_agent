@@ -16,14 +16,14 @@ import {
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
 import { getScenarioMaterials } from '../scenario-data';
-import { VOTE_UNANSWERED_RULE, buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
+import { ANSWER_JUDGMENT_RULE, VOTE_UNANSWERED_RULE, buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -57,6 +57,9 @@ const voteRequestShape = z.object({
   /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 생략하면(기존 요청) 답한 것과
    * 같게 다룬다 — false일 때만 "답하지 않고 넘어감" 규칙이 붙는다. */
   followUpAnswered: z.boolean().optional(),
+  /** 화면의 추가 질문 하나와 참가자의 답변 문장(T122, 프롬프트 v14). 생략하면 v13까지의 동작이다. */
+  followUpQuestion: followUpQuestionSchema.optional(),
+  followUpAnswerText: z.string().min(1).max(300).optional(),
   /** 미표결(UNCAST) 임원만 다시 호출할 때 쓰는 선택 필드(T65, "미표결 임원 다시 요청").
    * 없으면 임원 4명 전체를 부른다. */
   roleIds: roleIdsSchema.optional(),
@@ -166,6 +169,8 @@ function buildVoteSystemPrompt(
     },
     participantStance: input.participantStance ?? null,
     followUpAnswered: input.followUpAnswered,
+    followUpQuestion: input.followUpQuestion,
+    followUpAnswerText: input.followUpAnswerText,
   });
   return [
     buildCommonGuardrails(),
@@ -176,6 +181,7 @@ function buildVoteSystemPrompt(
     '응답의 motionId·motionHash는 meeting_record에 적힌 값과 정확히 같아야 하고, reason은' +
       ' 160자 이내여야 합니다.',
     ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
+    ...(input.followUpAnswered !== false && input.followUpAnswerText !== undefined ? [ANSWER_JUDGMENT_RULE] : []),
     meetingRecord,
   ].join('\n\n');
 }
