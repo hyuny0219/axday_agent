@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T122 | 진행 중 | 프롬프트 v14: 첫 반응에서 임원들이 각자 다른 질문을 던지지 않고 **화면의 추가 질문(followUp.question) 하나에 맞춰** 묻게, 답하면 그 답으로 판단 + 평가 세트에 답변 문장 추가 후 live 재실측(2026-10-11 사용자 지시, v13 실측 후속). 상세는 아래 T122 카드 |
 | T121 | 완료 | 전체화면에서는 우측 상단 '운영' 버튼을 숨김(fullscreenchange 감지, Esc로 나오면 다시 보임)(2026-10-11 사용자 지시) |
 | T120 | 완료 | ① 답변 뒤 임원의 마지막 반응(FOLLOWUP 발언)은 표결 전(MOTION·VOTE) **전부 가림**(첫 의견 뒤 반응은 그대로 보임), RESULT에서 공개 ② 반응에 답하기 추천 답변에서 **첫 의견에 이미 낸 문구는 제외**(2026-10-11 사용자 지시). 상세는 아래 T120 카드 |
 | T119 | 완료 | 조건은 **직접 작성 없이** 추천 문구·추천 답변만으로 모두 붙일 수 있게: 첫 추천 문구는 조건 1~2개를 일부러 비우고, 추가 답변 단계의 추천 답변이 남은 조건을 전부 커버(조건 비교·조건 추천도 도달 가능한 조건만 안내)(2026-10-10 사용자 지시). 상세는 아래 T119 카드 |
@@ -104,6 +105,22 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T122 프롬프트 v14 — 임원 질문을 화면의 추가 질문 하나로 맞추기 + 재실측
+
+- 목표(2026-10-11 사용자 지시, v13 실측 결과 후 선택지 2번): live 임원 네 명이 첫 반응(REACTIONS)에서 각자 새 질문("누가 언제 확인하나", "실제 손해 금액은")을 던지는데 화면은 시나리오의 추가 질문(`followUp.askedBy`·`followUp.question`) 하나만 보여 줘, 참가자가 답해도 임원이 "자기 질문에 답이 없다"며 반대를 유지한다(v13 실측: 조건 보완 → 찬성 3/12, v11 10/12). 첫 반응의 남은 우려를 **그 추가 질문 하나**에 맞추고, FOLLOWUP·VOTE는 참가자의 그 답을 보고 판단하게 한다.
+- 읽을 것: `server/prompts/common.ts`(REACTIONS_FIRST_PASS_RULE·FOLLOWUP_ANSWERED_RULE·VOTE 규칙·buildMeetingRecordBlock), `server/handlers/{round,vote}.ts`, `server/prompts/version.ts`, `src/content/scenarios/*.ts`(followUp.askedBy·question·options), 클라이언트가 보내는 요청(`src/services/...` round/vote 요청에 참가자 답변 텍스트가 실리는지), `scripts/eval-set-run.ts`·`scripts/eval-set.json`, `docs/eval/tuning-v13.md`(실측 결과·원인), `server/providers/mock.ts`.
+- 만들 것:
+  1. **프롬프트 v14**: (a) REACTIONS 첫 반응 지시에 시나리오의 추가 질문 원문과 질문자(askedBy)를 넣고 "조건이 우려를 덜어 줬다면, 남은 우려는 이 질문 하나로만 말할 것 — 새 질문을 따로 만들지 말 것; 질문자가 아닌 임원은 그 질문에 대한 답을 기다린다고만 말할 것"을 규칙으로. (b) FOLLOWUP·VOTE 회의 기록에 참가자의 **추가 질문 답변 문장**을 싣고(없으면 지금처럼 '답변: 없음'), "답변이 이 질문에 답했고 확정 조건이 우려를 덜어 줬다면 목표 쪽으로 확정; 답변 내용이 질문과 무관하면 그 점을 근거로 판단"을 규칙으로. (c) promptVersion v13→v14, v13의 FOLLOWUP 방향 단어 금지 규칙·서버 교정은 그대로.
+  2. **클라이언트→서버 전달**: 참가자가 2/2에서 낸 답변 텍스트가 FOLLOWUP·VOTE 요청에 실리는지 확인하고, 없으면 `followUpAnswerText`(≤300자, 검증)로 추가. scripted 모드 영향 없음.
+  3. **평가 세트**: `eval-set.json` 케이스에 `followUpAnswerText`(그 안건·입장의 followUp.options 중 질문에 직접 답하는 문장, 미답변 케이스는 없음) 추가, `eval-set-run.ts`가 FOLLOWUP·VOTE 요청에 싣게. 새 지표: REACTIONS에서 '새 질문'을 던진 비율(시나리오 질문과 다른 의문문 — 간단한 규칙 기반, 예: 질문자 아닌 임원 발언에 '?'·'까요'·'나요'·'궁금' 포함 비율)과 조건 보완 경로 YES 비율.
+  4. **mock**: v14 규칙을 흉내(첫 반응 우려 문장을 질문자 기준으로), 단위 테스트.
+  5. **live 실측**: mock·단위가 통과하면 `npx tsx scripts/eval-set-run.ts --out docs/eval/tuning-v14-after.jsonl`을 실제로 돌리고(사용자 승인됨, 키는 메인 트리 .env의 ANTHROPIC_API_KEY를 env로만 주입·파일에 쓰지 말 것), `--check` 집계를 `docs/eval/tuning-v14.md`에 v13 2차와 비교 표로 기록. 목표: 조건 보완 → YES 비율 ≥ 9/12, 새 질문 비율 감소, 방향 누설 화면 0 유지, 금지 어휘·존댓말 지표 악화 없음. 목표 미달이면 원인 분석을 문서에 쓰고 보고(프롬프트를 한 번 더 고쳐 재실측하는 것까지는 허용, 최대 2회).
+  6. 문서: DESIGN_SPEC "## T122" 단락, TASKS 행.
+- 허용 경로: `server/`, `src/`, `scripts/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 표결 규칙표(domain)·T110 게이트 의미 변경, 화면 문구 변경(필요 없으면), 영문 UI, API 키를 파일에 쓰기.
+- 완료 확인: `npm run check`, e2e live·stance 1080·720, live 실측 결과 문서.
+- 크기: M~L.
 
 ## T120 답변 뒤 마지막 반응 가림 + 추천 답변 중복 제외
 
