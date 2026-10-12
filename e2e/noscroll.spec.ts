@@ -50,6 +50,16 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'ATTRACT');
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  // INTRO(T125): 목적·성공 기준 아래 팁 카드까지 넘치지 않고 팝업 전체가 보인다.
+  await expect(page.getByTestId('intro-tips')).toBeVisible();
+  await expectNoPageScroll(page, 'INTRO');
+  await expectFullyVisible(page, 'intro-start', 'INTRO');
+  const paperBox = await page.locator('.intro-screen__paper').boundingBox();
+  expect(paperBox, 'INTRO: 안내 종이를 찾지 못했다').not.toBeNull();
+  expect(
+    paperBox!.y >= -1 && paperBox!.y + paperBox!.height <= (page.viewportSize()?.height ?? 0) + 1,
+    `INTRO: 안내 종이가 뷰포트를 벗어났다(top=${paperBox!.y}, h=${paperBox!.height})`,
+  ).toBe(true);
   await page.getByRole('button', { name: '확인', exact: true }).click();
   await expectNoPageScroll(page, 'SELECT');
   // 사건 헤드라인(T47): 카드 안에서 잘리지 않고 보인다.

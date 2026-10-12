@@ -159,3 +159,66 @@
   justify-content: center;
   margin-top: 8px;
 }
+
+/* 팁 4단계 카드(T125): 4열 같은 높이·같은 안쪽 여백. 720 이하에서는 글자·여백을 한 단계 줄인다. */
+.intro-screen__tips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.intro-screen__tip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--paper-border);
+  background: var(--paper-2);
+}
+
+.intro-screen__tip-tag {
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--label);
+}
+
+.intro-screen__tip-text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.intro-screen__tip--warn {
+  border-style: dashed;
+  border-color: var(--stamp-red);
+}
+
+.intro-screen__tip--warn .intro-screen__tip-tag {
+  color: var(--stamp-red);
+}
+
+@media (max-width: 1280px) {
+  .intro-screen__tips {
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .intro-screen__tip {
+    gap: 4px;
+    padding: 9px 11px;
+  }
+
+  .intro-screen__tip-tag {
+    font-size: 11px;
+  }
+
+  .intro-screen__tip-text {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+}
