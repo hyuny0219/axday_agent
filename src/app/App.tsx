@@ -717,7 +717,7 @@ function StageRouter() {
         <StageScreen variant="live" />
       </div>
       {viewPage !== null && (
-        <div data-past-screen style={{ display: 'contents' }}>
+        <div key={viewPage} data-past-screen style={{ display: 'contents' }}>
           <StageScreen variant="past" />
         </div>
       )}

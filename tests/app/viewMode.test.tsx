@@ -80,4 +80,31 @@ describe('지난 화면 보기', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByTestId('evidence-dialog')).toBeNull());
   });
+
+  it('완료한 세션에서 앞 화면으로 갔다가 다음으로 넘어가면 다시 답하기 화면에 제출했던 답변이 보인다', async () => {
+    await toDiscuss();
+    fireEvent.click(screen.getByTestId('discuss-side-for'));
+    fireEvent.click(screen.getByTestId('phrase-card-P1'));
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    for (const feature of ['summary', 'compare', 'refine']) {
+      fireEvent.click(await screen.findByTestId(`assistant-action-${feature}`));
+      await screen.findByTestId(`assistant-done-${feature}`, undefined, { timeout: 8000 });
+      const keep = screen.queryByTestId('assistant-keep-original');
+      if (keep) fireEvent.click(keep);
+    }
+    fireEvent.click(screen.getByTestId('assistant-close'));
+    fireEvent.click(screen.getByTestId('submit-opinion'));
+    fireEvent.click(await screen.findByTestId('reactions-advance'));
+    const answer = '진행 상황을 계속 공유해 주세요.';
+    fireEvent.change(await screen.findByTestId('followup-textarea'), { target: { value: answer } });
+    fireEvent.click(screen.getByTestId('submit-followup'));
+    await screen.findByTestId('motion-card');
+
+    fireEvent.click(screen.getByTestId('view-prev')); // 다시 답하기
+    fireEvent.click(screen.getByTestId('view-prev')); // 반응 듣기
+    fireEvent.click(screen.getByTestId('view-prev')); // DISCUSS
+    fireEvent.click(screen.getByTestId('view-next')); // 반응 듣기
+    fireEvent.click(screen.getByTestId('view-next')); // 다시 답하기
+    expect((screen.getByTestId('followup-textarea') as HTMLTextAreaElement).value).toBe(answer);
+  });
 });

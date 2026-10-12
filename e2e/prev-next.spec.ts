@@ -207,3 +207,24 @@ test('현재 화면에서 쓰던 글·고른 문구·조건 칩은 이전을 갔
   await page.getByTestId('view-next').click();
   await expect(page.getByTestId('followup-textarea')).toHaveValue('쓰던 답변입니다.');
 });
+
+test('완료한 세션에서 앞 화면으로 갔다가 다음으로 넘어가도 다시 답하기 화면에 제출한 답변이 보인다', async ({
+  page,
+}) => {
+  await toDiscuss(page, '/?mode=scripted&coach=off');
+  await page.getByTestId('discuss-side-for').click();
+  await page.getByTestId('draft-editor-textarea').fill(OPINION_TEXT);
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+  await page.getByTestId('followup-textarea').fill('제출했던 답변입니다.');
+  await page.getByTestId('submit-followup').click();
+  await expect(page.getByTestId('motion-card')).toBeVisible();
+
+  for (let step = 0; step < 3; step += 1) await page.getByTestId('view-prev').click(); // 다시 답하기·반응 듣기·DISCUSS
+  await expect(page.getByTestId('draft-editor-textarea')).toHaveValue(OPINION_TEXT);
+  await page.getByTestId('view-next').click(); // 반응 듣기
+  await page.getByTestId('view-next').click(); // 다시 답하기
+  await expect(page.getByTestId('followup-textarea')).toHaveValue('제출했던 답변입니다.');
+  await expect(page.getByTestId('submit-followup')).toBeDisabled();
+});
