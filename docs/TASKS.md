@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T125 | 진행 중 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |
 | T124 | 완료 | Mac 전체화면 단축키 Command+Shift+K 추가(해제 Esc)(2026-10-12 사용자 지시) |
 | T123 | 완료 | 전체화면 단축키: F11·Ctrl+Shift+F로 페이지 전체화면(운영 버튼 숨김), 해제는 Esc(2026-10-12 사용자 지시) |
 | T122 | 완료 | 프롬프트 v14: 첫 반응에서 임원들이 각자 다른 질문을 던지지 않고 **화면의 추가 질문(followUp.question) 하나에 맞춰** 묻게, 답하면 그 답으로 판단(round·vote 요청에 `followUpQuestion`·`followUpAnswerText` 추가) + 평가 세트에 답변 문장 추가 후 live 재실측(2026-10-11 사용자 지시, v13 실측 후속). 조건 보완 → YES 3/12 → 12/12, 첫 반응 새 질문 31/65 → 1/64, 방향 누설 화면 0 유지(`docs/eval/tuning-v14.md`). 상세는 아래 T122 카드 |
@@ -107,6 +108,19 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T125 체험 전 안내 — '팁' 4단계 카드(A안)
+
+- 목표(2026-10-12 사용자 지시): "'이기는 순서'라는 말 대신 '팁'으로 써 주고 A안으로 해 줘." 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR 의 A안 — 기존 목적·성공 기준 두 열은 그대로, 그 아래에 라벨 **'팁'**과 카드 4장을 한 줄로.
+- 카드 문구(그대로, 쉬운 말 규칙 준수):
+  1. `01 · 읽기` — 근거 자료에서 임원마다 무엇을 걱정하는지 찾습니다. (강조: '무엇을 걱정하는지')
+  2. `02 · 담기` — 그 걱정을 덜어 줄 조건을 의견에 담습니다. 현황판과 AI 비서실장이 도와줍니다. (강조: '조건')
+  3. `03 · 답하기` — 임원의 추가 질문에 답해야 마음이 확정됩니다. 넘어가면 원래 입장으로 돌아갑니다. (강조: '추가 질문에 답해야')
+  4. `주의` — 듣기 좋은 조건이 오히려 반대를 부를 수도 있습니다. (강조: '오히려 반대', 점선 테두리·도장 빨강 라벨)
+- 읽을 것: `src/components/screens/IntroScreen.tsx`, `src/styles/screens/intro.css`, `src/components/parts/HighlightText.tsx`, `tests/components/IntroScreen.test.tsx`, `e2e/noscroll.spec.ts`(INTRO), DESIGN_SPEC T95·T102 단락, `server/prompts/plainLanguage.ts`(FORBIDDEN_WORDS — 화면 문구 검사가 있으면 준수).
+- 만들 것: 카드 그리드(4열, 같은 높이·안쪽 여백 동일), 기존 HighlightText 강조 방식 재사용, 720(1280×720)과 1366×768에서 팝업이 넘치지 않게 글자·여백 조정(필요 시 카드 글자 한 단계 축소), 코치 INTRO 문구와 겹치지 않는지 확인. 단위 테스트(라벨 '팁'·카드 4장·문구·강조), e2e noscroll INTRO 1080·720, 스크린샷 intro.png 두 해상도 갱신 뒤 Read. DESIGN_SPEC "## T125", TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: 기존 목적·성공 기준 문구 변경, 영문 UI(라벨 '01 · 읽기' 등 한국어 유지).
+- 크기: S.
 
 ## T122 프롬프트 v14 — 임원 질문을 화면의 추가 질문 하나로 맞추기 + 재실측
 
