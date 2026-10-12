@@ -1209,3 +1209,9 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 사용자 지시(2026-10-12): "윈도우즈용으로 전체화면 단축키 추가해 주고 해제는 Esc로 해 줘."
 - `OperatorMenu`가 document `keydown`을 구독한다. **F11**은 브라우저 기본(창 전체화면, Esc로 안 나와짐·운영 버튼 안 숨음)을 `preventDefault`로 막고 `document.documentElement.requestFullscreen()`을 부른다. **Ctrl+Shift+F**도 같은 동작이며 input·textarea·contenteditable에 포커스가 있으면 무시한다. 이미 전체화면이면 F11만 기본 동작을 막고 아무것도 하지 않는다. 해제는 Esc(페이지 전체화면의 브라우저 기본 동작). 요청이 거부되면 조용히 무시한다.
 - T124(2026-10-12 사용자 지시 "맥에서도 단축키 추가해 줘 command+shift+k로"): **Command+Shift+K**(metaKey+shiftKey+K)도 같은 동작 — 입력 중 무시, 기본 동작 preventDefault, 해제 Esc.
+
+## T125 — 체험 전 안내 '팁' 4단계 카드(A안)
+
+- 사용자 지시(2026-10-12): "'이기는 순서'라는 말 대신 '팁'으로 써 주고 A안으로 해 줘." 기존 목적·성공 기준 두 열은 그대로 두고, 그 아래에 라벨 **팁**과 카드 4장을 한 줄로 놓는다.
+- 카드(`INTRO_TIPS`, `IntroScreen.tsx`): `01 · 읽기`(강조 '무엇을 걱정하는지'), `02 · 담기`('조건'), `03 · 답하기`('추가 질문에 답해야'), `주의`('오히려 반대', 점선 테두리·도장 빨강 라벨). 강조는 카드마다 자기 말만 `HighlightText`로 표시한다(카드 4의 '조건'은 강조하지 않는다).
+- 레이아웃: 4열 같은 높이·같은 안쪽 여백. 1080은 카드 글자 17px, 1280 이하(720)는 14px·여백 축소. 1366×768에서 팝업 위 107px~아래 749px, 문서 스크롤 없음. noscroll e2e에 INTRO 단계 단언 추가.

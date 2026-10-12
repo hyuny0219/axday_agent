@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
 | T126 | 진행 중 | 화면 안 '◀ 이전'·'다음 ▶' 버튼으로 지난 화면을 **보기만**(전달한 의견·답변은 수정 불가)(2026-10-12 사용자 지시). 상세는 아래 T126 카드 |
-| T125 | 진행 중 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |
+| T125 | 완료 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |
 | T124 | 완료 | Mac 전체화면 단축키 Command+Shift+K 추가(해제 Esc)(2026-10-12 사용자 지시) |
 | T123 | 완료 | 전체화면 단축키: F11·Ctrl+Shift+F로 페이지 전체화면(운영 버튼 숨김), 해제는 Esc(2026-10-12 사용자 지시) |
 | T122 | 완료 | 프롬프트 v14: 첫 반응에서 임원들이 각자 다른 질문을 던지지 않고 **화면의 추가 질문(followUp.question) 하나에 맞춰** 묻게, 답하면 그 답으로 판단(round·vote 요청에 `followUpQuestion`·`followUpAnswerText` 추가) + 평가 세트에 답변 문장 추가 후 live 재실측(2026-10-11 사용자 지시, v13 실측 후속). 조건 보완 → YES 3/12 → 12/12, 첫 반응 새 질문 31/65 → 1/64, 방향 누설 화면 0 유지(`docs/eval/tuning-v14.md`). 상세는 아래 T122 카드 |

@@ -30,6 +30,23 @@ export const INTRO_HIGHLIGHT_TERMS: readonly string[] = [
   '성공 도장',
 ];
 
+/** 체험 전 안내의 '팁' 4단계 카드(T125, 2026-10-12 사용자 — "'팁'으로 써 주고 A안으로").
+ * 함정 조건의 이름이나 임원별 정답은 밝히지 않고 흐름만 알려 준다. */
+export const INTRO_TIPS_LABEL = '팁';
+export interface IntroTip {
+  tag: string;
+  text: string;
+  /** 카드마다 강조할 말(카드 문장 속 글자와 일치할 때만 표시). */
+  terms: readonly string[];
+  warn?: boolean;
+}
+export const INTRO_TIPS: readonly IntroTip[] = [
+  { tag: '01 · 읽기', text: '근거 자료에서 임원마다 무엇을 걱정하는지 찾습니다.', terms: ['무엇을 걱정하는지'] },
+  { tag: '02 · 담기', text: '그 걱정을 덜어 줄 조건을 의견에 담습니다. 현황판과 AI 비서실장이 도와줍니다.', terms: ['조건'] },
+  { tag: '03 · 답하기', text: '임원의 추가 질문에 답해야 마음이 확정됩니다. 넘어가면 원래 입장으로 돌아갑니다.', terms: ['추가 질문에 답해야'] },
+  { tag: '주의', text: '듣기 좋은 조건이 오히려 반대를 부를 수도 있습니다.', terms: ['오히려 반대'], warn: true },
+];
+
 // 2026-10-09 사용자 지시: "성공 기준은 특별 이사의 의견으로 AI 임원들을 설득시켜 같은 편으로 만드는 것".
 const SUCCESS_TEXT =
   '특별 이사의 의견으로 AI 임원들을 설득해 같은 편으로 만드는 것입니다. 이사님을 포함해 같은 표가 3석 이상이면 ‘성공 도장’을, 아니면 ‘실패 도장’을 받습니다.';
@@ -78,6 +95,24 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
                 <HighlightText text={SUCCESS_TEXT} terms={INTRO_HIGHLIGHT_TERMS} />
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="intro-screen__block" data-testid="intro-tips">
+          <span className="intro-screen__label">{INTRO_TIPS_LABEL}</span>
+          <div className="intro-screen__tips">
+            {INTRO_TIPS.map((tip) => (
+              <div
+                key={tip.tag}
+                className={tip.warn ? 'intro-screen__tip intro-screen__tip--warn' : 'intro-screen__tip'}
+                data-testid="intro-tip"
+              >
+                <b className="intro-screen__tip-tag">{tip.tag}</b>
+                <p className="intro-screen__tip-text">
+                  <HighlightText text={tip.text} terms={tip.terms} />
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
