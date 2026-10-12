@@ -57,6 +57,8 @@ async function waitForRevealDone(page: Page) {
 test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과를 실제 콘텐츠로 채운 상태로 캡처한다', async ({
   page,
 }, testInfo) => {
+  // T127: 성공·실패 엔딩 캡처가 더해져 기본 30초를 넘는다.
+  test.setTimeout(75_000);
   await page.goto('/?mode=scripted&coach=off');
 
   // ATTRACT(T71): 시안(S0_Attract) 그대로 — 무대 풀블리드·제목·CTA.
@@ -219,6 +221,14 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result');
 
+  // T127: 엔딩 화면(성공). '마무리 ▶'는 공개가 끝난 뒤 나타난다.
+  await page.getByTestId('result-finish').click();
+  await expect(page.getByTestId('ending-stamp')).toHaveText('성공');
+  await expect(page.getByTestId('ending-home')).toBeInViewport();
+  await waitForRevealDone(page);
+  await capture(page, testInfo.project.name, 'ending');
+  await page.getByTestId('ending-detail').click();
+
   // 부결 경로(찬성 2석) 스크린샷(T66 완료 확인 "부결 경로 스크린샷 1장 추가"). 같은
   // 세션을 리셋하지 않고 "처음 화면으로" 전에 이미 result.png를 찍었으니, 여기서는
   // 새로 완주해 반대를 확정한다. T84 #5부터 "처음 화면으로"는 확인 단계를 먼저 연다.
@@ -255,6 +265,13 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await waitForRevealDone(page);
   await expect(page.getByTestId('end-session')).toBeInViewport();
   await capture(page, testInfo.project.name, 'result-reject');
+
+  // T127: 엔딩 화면(실패, 실마리 한 줄 포함).
+  await page.getByTestId('result-finish').click();
+  await expect(page.getByTestId('ending-stamp')).toHaveText('실패');
+  await expect(page.getByTestId('ending-home')).toBeInViewport();
+  await waitForRevealDone(page);
+  await capture(page, testInfo.project.name, 'ending-fail');
 });
 
 // T103·T104 진행 도우미 캡처: 상황 안내(1/6)와 토론 안내(3/6). 카드가 화면 안에 들어오는 모습을 남긴다.
