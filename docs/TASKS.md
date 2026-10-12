@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T126 | 진행 중 | 화면 안 '◀ 이전'·'다음 ▶' 버튼으로 지난 화면을 **보기만**(전달한 의견·답변은 수정 불가)(2026-10-12 사용자 지시). 상세는 아래 T126 카드 |
 | T125 | 진행 중 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |
 | T124 | 완료 | Mac 전체화면 단축키 Command+Shift+K 추가(해제 Esc)(2026-10-12 사용자 지시) |
 | T123 | 완료 | 전체화면 단축키: F11·Ctrl+Shift+F로 페이지 전체화면(운영 버튼 숨김), 해제는 Esc(2026-10-12 사용자 지시) |
@@ -108,6 +109,21 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T126 이전·다음 버튼 — 지난 화면 다시 보기(읽기 전용)
+
+- 목표(2026-10-12 사용자 지시): "사용자가 뒤로, 앞으로 버튼으로 조작이 가능하면 좋겠어." → 선택: **화면 안 버튼**, 의견 전달 뒤에는 **보기만**. (기존 결정 "2/2에 뒤로 가기 버튼을 두지 않는다"를 이 지시로 대체.)
+- 동작 규칙:
+  1. 헤더 진행 스트립 양옆(또는 바로 아래)에 '◀ 이전'·'다음 ▶' 버튼. 전체화면에서도 보임(운영 버튼과 별개). 키보드 접근 가능.
+  2. **지난 화면 보기 모드**: '◀ 이전'을 누르면 세션 단계(`session.stage`)는 그대로 두고 화면만 이전 단계로 바꿔 보여 준다(`viewStage` 상태). 그 화면의 입력·선택·제출·비서실장 실행·추천 문구 클릭은 모두 막고(읽기 전용), 이미 전달한 의견·답변·확정 조건·임원 반응을 그대로 보여 준다. 상단에 "지난 화면을 보고 있습니다 · 다음 ▶ 또는 '지금 화면으로'를 누르면 돌아갑니다" 띠.
+  3. '다음 ▶'은 보기 모드에서 한 단계씩 앞으로, 현재 단계에 도달하면 보기 모드 종료. 현재 단계에서는 '다음 ▶'을 비활성(진행은 각 화면의 기존 버튼으로만 — 제출·전달 없이 건너뛰기 금지).
+  4. 아직 아무것도 전달하지 않은 앞 단계(INTRO→SELECT→BRIEFING→OPINIONS)는 실제 이동도 아니고 보기 모드로 통일(단순하게). 단 SELECT(안건 선택) 이전으로는 이동하지 않음(안건 바꾸기는 운영 메뉴 '새 체험'으로).
+  5. 봉인 유지: MOTION·VOTE 중에 지난 REACTIONS를 봐도 T114·T118·T120 규칙대로(첫 반응·기울음은 보이되 답변 뒤 마지막 반응·방향은 계속 가림). RESULT 단계에서는 이전 버튼 숨김(공개 연출 보호).
+  6. 보기 모드에서는 코치 말풍선·다음 할 일 점선(T113)·비서실장 팝업 열기를 끈다. live 요청이 새로 나가지 않아야 한다(단위·e2e로 검증).
+- 읽을 것: `src/app/App.tsx`(단계별 화면 렌더·SessionProvider), `src/components/parts/{Header,ProgressStrip,CoachHost,AssistantPanel}.tsx`, `src/components/screens/*.tsx`(입력·제출 지점), `src/domain/session.ts`, `src/components/parts/focusRing.ts`, DESIGN_SPEC T74(뒤로 가기 없음 결정)·T104·T113·T114·T118·T120.
+- 만들 것: `viewStage` 상태와 읽기 전용 prop(`readOnly`)을 화면들에 전달, 버튼 UI, 띠, 단위 테스트(보기 모드에서 제출 불가·세션 불변·live 요청 0·봉인 유지·RESULT에서 버튼 숨김), e2e(DISCUSS 전달 뒤 '◀ 이전'으로 BRIEFING·OPINIONS·DISCUSS를 보고 '다음 ▶'으로 복귀, 720 noscroll), 스크린샷 1장(보기 모드) 추가, DESIGN_SPEC "## T126", FACILITATOR_GUIDE 한 줄, TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: 세션 되돌리기·수정, 표결·봉인 규칙 변경, 영문 UI.
+- 크기: M.
 
 ## T125 체험 전 안내 — '팁' 4단계 카드(A안)
 
