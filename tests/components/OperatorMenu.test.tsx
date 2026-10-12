@@ -184,4 +184,17 @@ describe('OperatorMenu — 전체화면 단축키(T123)', () => {
     expect(request).toHaveBeenCalledTimes(1);
     textarea.remove();
   });
+
+  it('Mac의 Command+Shift+K로도 들어가고 브라우저 기본 동작을 막으며, 입력창에서는 무시한다(T124)', () => {
+    const request = setup();
+    const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, shiftKey: true, cancelable: true, bubbles: true });
+    document.body.dispatchEvent(event);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', metaKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    textarea.remove();
+  });
 });

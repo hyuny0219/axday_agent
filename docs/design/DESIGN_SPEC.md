@@ -1208,3 +1208,4 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 
 - 사용자 지시(2026-10-12): "윈도우즈용으로 전체화면 단축키 추가해 주고 해제는 Esc로 해 줘."
 - `OperatorMenu`가 document `keydown`을 구독한다. **F11**은 브라우저 기본(창 전체화면, Esc로 안 나와짐·운영 버튼 안 숨음)을 `preventDefault`로 막고 `document.documentElement.requestFullscreen()`을 부른다. **Ctrl+Shift+F**도 같은 동작이며 input·textarea·contenteditable에 포커스가 있으면 무시한다. 이미 전체화면이면 F11만 기본 동작을 막고 아무것도 하지 않는다. 해제는 Esc(페이지 전체화면의 브라우저 기본 동작). 요청이 거부되면 조용히 무시한다.
+- T124(2026-10-12 사용자 지시 "맥에서도 단축키 추가해 줘 command+shift+k로"): **Command+Shift+K**(metaKey+shiftKey+K)도 같은 동작 — 입력 중 무시, 기본 동작 preventDefault, 해제 Esc.
