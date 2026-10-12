@@ -4,6 +4,7 @@
 // 팝업(role=dialog)이라 코치 말풍선·점선은 CoachHost·focusRing이 알아서 숨긴다.
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { systemClock, type Clock } from '../../domain/clock';
 import {
   ENDING_AUTO_RETURN_SECONDS,
@@ -29,8 +30,45 @@ export function EndingCard({ model, caseTag, onDetail, onHome, clock = systemClo
   homeRef.current = onHome;
   const homeButtonRef = useRef<HTMLButtonElement>(null);
 
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  // 모달 처리: 열릴 때 포커스를 '처음 화면으로'에 두고, 뒤 화면 전체를 inert로 막고(body로 portal해 형제가
+  // 된다), Tab·Shift+Tab은 카드 안에서만 돈다. 닫히면 연 버튼('마무리 ▶')으로 포커스를 돌려준다.
   useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     homeButtonRef.current?.focus();
+    const backdrop = backdropRef.current;
+    const blocked: HTMLElement[] = [];
+    for (const child of Array.from(document.body.children)) {
+      if (child instanceof HTMLElement && child !== backdrop && !child.hasAttribute('inert')) {
+        child.setAttribute('inert', '');
+        blocked.push(child);
+      }
+    }
+    function trap(event: KeyboardEvent) {
+      if (event.key !== 'Tab' || !backdrop) return;
+      const focusables = Array.from(backdrop.querySelectorAll<HTMLElement>('button:not([disabled])'));
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (!backdrop.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', trap);
+    return () => {
+      document.removeEventListener('keydown', trap);
+      blocked.forEach((element) => element.removeAttribute('inert'));
+      if (opener && opener.isConnected) opener.focus();
+    };
   }, []);
 
   useEffect(() => {
@@ -60,8 +98,8 @@ export function EndingCard({ model, caseTag, onDetail, onHome, clock = systemClo
   }, [clock]);
 
   const variant = model.success ? 'win' : 'lose';
-  return (
-    <div className="ending-backdrop" data-testid="ending-backdrop">
+  return createPortal(
+    <div className="ending-backdrop" data-testid="ending-backdrop" ref={backdropRef}>
       <div
         className={`ending ending--${variant}`}
         role="dialog"
@@ -120,6 +158,7 @@ export function EndingCard({ model, caseTag, onDetail, onHome, clock = systemClo
           {secondsLeft}초 뒤 처음 화면으로 돌아갑니다
         </p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

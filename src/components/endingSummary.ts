@@ -4,7 +4,7 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
-import { EXEC_MEMBER_ORDER, requiredConditionsFor } from '../domain/voting';
+import { EXEC_MEMBER_ORDER, decideMember, requiredConditionsFor } from '../domain/voting';
 import type { PersuasionTally } from './persuasionSummary';
 
 export type EndingSeatKind = 'me' | 'same' | 'other';
@@ -50,15 +50,37 @@ function clueFor(
   }
   const others = EXEC_MEMBER_ORDER.filter((memberId) => votes[memberId] !== participantVote);
   if (others.length === 0) return null;
-  // scripted에서는 조건으로 움직일 수 있는 임원을 먼저 가리킨다(조건 이름은 말하지 않는다).
-  const movable =
-    session.mode === 'scripted'
-      ? others.find((memberId) => {
-          const required = requiredConditionsFor(scenario, memberId, finalConditionIds, participantStance);
-          return !required.persuaded && required.conditionIds !== null;
-        })
-      : undefined;
-  const memberId = movable ?? others[0];
+  let memberId: ExecMemberId | undefined;
+  if (participantVote === 'NO') {
+    // 반대가 목표인 실패: 찬성한 임원 중 조건 하나를 더하면 반대로 돌아설 수 있고, 처음부터 우려를
+    // 가진(첫 입장이 찬성이 아닌) 임원만 가리킨다 — 첫 입장이 찬성인 임원의 근거 자료는 찬성 쪽이라
+    // 방향이 어긋난다. 규칙표가 없는 live이거나 그런 임원이 없으면 줄을 생략한다.
+    if (session.mode !== 'scripted') return null;
+    memberId = others.find((candidate) => {
+      const opening = scenario.initialOpinions.find((opinion) => opinion.memberId === candidate)?.openingStance;
+      if (opening === 'FOR') return false;
+      return scenario.conditions.some(
+        (condition) =>
+          !finalConditionIds.includes(condition.id) &&
+          decideMember(scenario.voteRules[candidate], {
+            conditionIds: [...finalConditionIds, condition.id],
+            executionMode: 'DEFAULT',
+            participantStance,
+            followUpAnswered: true,
+          }) === 'NO',
+      );
+    });
+  } else {
+    // scripted에서는 조건으로 움직일 수 있는 임원을 먼저 가리킨다(조건 이름은 말하지 않는다).
+    const movable =
+      session.mode === 'scripted'
+        ? others.find((candidate) => {
+            const required = requiredConditionsFor(scenario, candidate, finalConditionIds, participantStance);
+            return !required.persuaded && required.conditionIds !== null;
+          })
+        : undefined;
+    memberId = movable ?? others[0];
+  }
   if (!memberId) return null;
   const evidenceId = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId)?.evidenceIds[0];
   const evidence = scenario.evidence.find((card) => card.id === evidenceId);

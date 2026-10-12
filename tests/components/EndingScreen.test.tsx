@@ -2,6 +2,7 @@
 // 입력 시 재시작, 보고서로 돌아가면 정지, 처음 화면으로 즉시 초기화.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useState } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ResultScreen } from '../../src/components/screens/ResultScreen';
 import { EndingCard } from '../../src/components/parts/EndingCard';
@@ -9,6 +10,7 @@ import { buildEnding } from '../../src/components/endingSummary';
 import { ENDING_AUTO_RETURN_SECONDS } from '../../src/domain/endingReturn';
 import { ALL_EXEC_REVEALED_SECONDS } from '../../src/components/resultStamp';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario, experienceFirstScenario } from '../../src/content/scenarios';
 import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
 import type { Ballot, Motion, Session } from '../../src/domain/types';
@@ -238,5 +240,122 @@ describe('60초 자동 복귀', () => {
     expect(screen.getByTestId('ending-timer')).toHaveAttribute('aria-live', 'off');
     expect(screen.getByTestId('ending-outcome')).toHaveTextContent('첫 문장입니다.');
     expect(screen.getByTestId('ending-outcome')).not.toHaveTextContent('둘째');
+  });
+});
+
+describe('반대 목표 실패의 실마리 방향(T127 검토)', () => {
+  function againstEnding(sc: typeof aiApprovalScenario, finalConditionIds: string[], mode: 'scripted' | 'live' = 'scripted') {
+    return buildEnding({
+      scenario: sc,
+      session: { mode, followUpAnswered: true },
+      earned: false,
+      sameVoteSeats: 1,
+      participantVote: 'NO',
+      execVotes: { CEO: 'YES', CFO: 'YES', CAIO: 'YES', CISO: 'YES' },
+      persuasionTally: null,
+      resultStampText: '가결',
+      epilogue: null,
+      conditionLabels: [],
+      finalConditionIds,
+      participantStance: 'AGAINST',
+    });
+  }
+
+  for (const sc of [aiApprovalScenario, experienceFirstScenario]) {
+    it(`${sc.id}: 찬성 쪽 근거를 가진 임원(첫 입장 찬성)을 가리키지 않고 조건 이름도 말하지 않는다`, () => {
+      const allIds = sc.conditions.map((condition) => condition.id);
+      for (const finalIds of [[], allIds.filter((id) => id !== 'FULL_AUTO'), allIds]) {
+        const clue = againstEnding(sc, finalIds).clue;
+        if (clue === null) continue;
+        const labelOf = (id: string) => sc.initialOpinions.find((o) => o.memberId === id)?.openingStance;
+        const pointed = (['CEO', 'CFO', 'CAIO', 'CISO'] as const).find((id) => clue.startsWith(id));
+        expect(pointed).toBeDefined();
+        expect(labelOf(pointed as string)).not.toBe('FOR');
+        for (const condition of sc.conditions) {
+          expect(clue).not.toContain(condition.label);
+        }
+      }
+    });
+  }
+
+  it('ai-approval: 조건 네 개로 전원 찬성, 참가자 반대면 CEO·찬성 쪽 자료가 아니라 우려 쪽 임원을 가리킨다', () => {
+    const clue = againstEnding(aiApprovalScenario, ['LIMIT', 'REVIEW', 'LOG', 'OWNER']).clue;
+    expect(clue).not.toBeNull();
+    expect(clue).not.toMatch(/^CEO/);
+    expect(clue).not.toContain('결재 처리 기록');
+  });
+
+  it('반대를 더 돕는 조건이 남지 않았으면 줄을 생략한다', () => {
+    const all = aiApprovalScenario.conditions.map((condition) => condition.id);
+    expect(againstEnding(aiApprovalScenario, all).clue).toBeNull();
+  });
+
+  it('live에서는 규칙표가 없어 반대 목표의 실마리를 생략한다', () => {
+    expect(againstEnding(aiApprovalScenario, [], 'live').clue).toBeNull();
+  });
+});
+
+describe('엔딩 모달 포커스', () => {
+  function Harness({ onHome = () => undefined }: { onHome?: () => void }) {
+    const [open, setOpen] = useState(false);
+    const model = buildEnding({
+      scenario,
+      session: { mode: 'scripted', followUpAnswered: true },
+      earned: true,
+      sameVoteSeats: 3,
+      participantVote: 'YES',
+      execVotes: { CEO: 'YES', CFO: 'YES', CAIO: 'NO', CISO: 'NO' },
+      persuasionTally: null,
+      resultStampText: '가결',
+      epilogue: null,
+      conditionLabels: [],
+      finalConditionIds: [],
+      participantStance: 'FOR',
+    });
+    return (
+      <div>
+        <button type="button" data-testid="opener" onClick={() => setOpen(true)}>
+          마무리
+        </button>
+        <button type="button" data-testid="behind">
+          뒤 버튼
+        </button>
+        {open && <EndingCard model={model} caseTag="사건 01" onDetail={() => setOpen(false)} onHome={onHome} />}
+      </div>
+    );
+  }
+
+  function openEnding() {
+    render(<Harness />);
+    const opener = screen.getByTestId('opener');
+    opener.focus();
+    fireEvent.click(opener);
+    return opener;
+  }
+
+  it('열리면 처음 화면으로에 포커스가 가고 뒤 화면은 inert다', () => {
+    openEnding();
+    expect(screen.getByTestId('ending-home')).toHaveFocus();
+    expect(screen.getByTestId('behind').closest('[inert]')).not.toBeNull();
+    expect(screen.getByTestId('ending').closest('[inert]')).toBeNull();
+  });
+
+  it('Tab·Shift+Tab은 엔딩 안에서만 돈다', () => {
+    openEnding();
+    const detail = screen.getByTestId('ending-detail');
+    const home = screen.getByTestId('ending-home');
+    expect(home).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(detail).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(home).toHaveFocus();
+  });
+
+  it('닫으면 inert가 풀리고 포커스가 연 버튼으로 돌아간다', () => {
+    const opener = openEnding();
+    fireEvent.click(screen.getByTestId('ending-detail'));
+    expect(screen.queryByTestId('ending')).toBeNull();
+    expect(screen.getByTestId('behind').closest('[inert]')).toBeNull();
+    expect(opener).toHaveFocus();
   });
 });
