@@ -1203,3 +1203,8 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 화면 변화 없음(문구·레이아웃 그대로). 바뀐 것은 live 모델 호출뿐이다. 첫 반응에서 질문자(`askedBy`)만 그 질문을 묻고 나머지 임원은 그 답을 기다린다고 말하므로, 화면의 추가 질문 카드와 임원 발언이 일치한다.
 - round·vote 요청에 `followUpQuestion`·`followUpAnswerText`(선택) 추가. 판단 기준은 "답이 그 질문에 답했는가"다. 표결 규칙표·T110 게이트는 그대로다.
 - 실측 결과와 지표는 `docs/eval/tuning-v14.md`: 조건 보완 → YES 12/12, 첫 반응 새 질문 31/65 → 1/64.
+
+## T123 — 전체화면 단축키(Windows)
+
+- 사용자 지시(2026-10-12): "윈도우즈용으로 전체화면 단축키 추가해 주고 해제는 Esc로 해 줘."
+- `OperatorMenu`가 document `keydown`을 구독한다. **F11**은 브라우저 기본(창 전체화면, Esc로 안 나와짐·운영 버튼 안 숨음)을 `preventDefault`로 막고 `document.documentElement.requestFullscreen()`을 부른다. **Ctrl+Shift+F**도 같은 동작이며 input·textarea·contenteditable에 포커스가 있으면 무시한다. 이미 전체화면이면 F11만 기본 동작을 막고 아무것도 하지 않는다. 해제는 Esc(페이지 전체화면의 브라우저 기본 동작). 요청이 거부되면 조용히 무시한다.

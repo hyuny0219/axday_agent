@@ -151,3 +151,37 @@ describe('OperatorMenu — 전체화면에서 숨김(T121)', () => {
     expect(screen.getByTestId('operator-menu-button')).toBeInTheDocument();
   });
 });
+
+describe('OperatorMenu — 전체화면 단축키(T123)', () => {
+  afterEach(() => {
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, get: () => false });
+  });
+
+  function setup() {
+    const request = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, get: () => true });
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+    document.documentElement.requestFullscreen = request;
+    render(<OperatorMenu onNewSession={() => {}} />);
+    return request;
+  }
+
+  it('F11을 누르면 페이지 전체화면을 요청하고 브라우저 기본 동작을 막는다', () => {
+    const request = setup();
+    const event = new KeyboardEvent('keydown', { key: 'F11', cancelable: true, bubbles: true });
+    document.body.dispatchEvent(event);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Ctrl+Shift+F로도 들어가고, 입력창에서는 무시한다', () => {
+    const request = setup();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    textarea.remove();
+  });
+});

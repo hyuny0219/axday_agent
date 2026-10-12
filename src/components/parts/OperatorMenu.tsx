@@ -78,6 +78,31 @@ export function OperatorMenu({
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
   const isFullscreen = useIsFullscreen();
 
+  // T123: Windows 현장용 전체화면 단축키. F11(브라우저 기본 전체화면을 가로채 페이지 전체화면으로)
+  // 또는 Ctrl+Shift+F로 들어가고, 해제는 Esc(브라우저 기본 동작). 페이지 전체화면이라 운영
+  // 버튼도 숨는다(T121). 입력 중(textarea·input)에는 Ctrl+Shift+F를 무시한다.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isF11 = event.key === 'F11';
+      const isCombo = event.ctrlKey && event.shiftKey && (event.key === 'F' || event.key === 'f');
+      if (!isF11 && !isCombo) return;
+      const target = event.target as HTMLElement | null;
+      const typing = target?.closest?.('input, textarea, [contenteditable="true"]');
+      if (isCombo && typing) return;
+      if (document.fullscreenElement || !isFullscreenSupported()) {
+        if (isF11) event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      document.documentElement.requestFullscreen().catch(() => {
+        // 거부되면 아무것도 하지 않는다(운영 메뉴의 '전체화면'이 안내 문구를 보여 준다).
+      });
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   function close(): void {
     setPanel('closed');
   }
