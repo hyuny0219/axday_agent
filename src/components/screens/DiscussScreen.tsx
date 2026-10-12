@@ -17,7 +17,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
-import type { SessionMode, Stance, Transcript } from '../../domain/types';
+import type { Opinion, SessionMode, Stance, Transcript } from '../../domain/types';
+import type { DraftState } from '../../domain/draft';
 import {
   EMPTY_DRAFT_STATE,
   buildDraftText,
@@ -72,6 +73,9 @@ export interface DiscussScreenProps {
   side: 'FOR' | 'AGAINST' | null;
   onChooseSide: (next: 'FOR' | 'AGAINST') => void;
   onSubmit: (payload: DiscussSubmitPayload) => void;
+  /** T126: 지난 화면 보기. 입력·제출·비서실장을 막고, pastOpinion(이미 전달한 의견)을 그대로 보여 준다. */
+  readOnly?: boolean;
+  pastOpinion?: Opinion | null;
   /** 이번 세션의 AI 비서실장 사용 기록(session.assistantActions). 한 기능 이상을
    * 써 봤는지 판정해 '의견 전달'을 여는 데 쓴다(T97). */
   assistantActions?: readonly string[];
@@ -108,11 +112,17 @@ export function DiscussScreen({
   side,
   onChooseSide,
   onSubmit,
+  readOnly = false,
+  pastOpinion = null,
   onAssistantAction,
   assistantActions = [],
   assistantAdapter,
 }: DiscussScreenProps) {
-  const [draft, setDraft] = useState(EMPTY_DRAFT_STATE);
+  const [draft, setDraft] = useState<DraftState>(() =>
+    readOnly && pastOpinion
+      ? { selectedPhraseIds: pastOpinion.selectedPhraseIds, draftText: pastOpinion.originalText, dirty: true }
+      : EMPTY_DRAFT_STATE,
+  );
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
   const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
   const [pendingBatch, setPendingBatch] = useState<{ phraseId: string; conditionId: string | null }[] | null>(null);
@@ -126,7 +136,9 @@ export function DiscussScreen({
   useEffect(() => {
     infoRef.current?.toggleAttribute('inert', assistantOpen);
   }, [assistantOpen]);
-  const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>([]);
+  const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(() =>
+    readOnly && pastOpinion ? pastOpinion.confirmedConditionIds : [],
+  );
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // draftText가 바뀔 때마다(직접 입력·AI 초안 적용 모두) 늘려 AssistantPanel이 "입력이
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
@@ -150,12 +162,15 @@ export function DiscussScreen({
   // 더 이상 제안되지 않는 조건은 목록에서 뺀다. 자유 입력에서만 찾은 조건은 참가자가
   // 칩을 눌러야 확인된다.
   useEffect(() => {
+    if (readOnly) {
+      return; // 지난 화면은 그때 확정한 조건을 그대로 둔다.
+    }
     setAcceptedConditionIds((previous) => {
       const stillProposed = previous.filter((id) => proposedConditionIds.includes(id));
       const autoAccepted = phraseConditionIds.filter((id) => !stillProposed.includes(id));
       return uniqueInOrder([...stillProposed, ...autoAccepted]);
     });
-  }, [proposedConditionIds, phraseConditionIds]);
+  }, [proposedConditionIds, phraseConditionIds, readOnly]);
 
   const conflictPairs = useMemo(
     () => findConflicts(scenario, acceptedConditionIds),
@@ -181,7 +196,7 @@ export function DiscussScreen({
   // PR #20 Codex 35차 P2-1: 입장을 고르지 않고 직접 쓴 글로 순서를 건너뛰지 못하게 입장 선택을
   // 문구 준비(비서실장 잠금·전달)의 전제로 둔다.
   const draftReady = side !== null && pendingPhraseId === null && isSubmittable(draft);
-  const canSubmit = draftReady && assistantDone;
+  const canSubmit = !readOnly && draftReady && assistantDone;
   // T113: 다음 할 일 점선 — 입장 → 추천 문구(글이 아직 없을 때) → 비서실장 → 의견 전달.
   const gate = useFocusGate('discuss');
   const nextStep = discussNextStep({
@@ -452,7 +467,7 @@ export function DiscussScreen({
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
             requiredFeatures={{ used: assistantUsed }}
-            focusNext={gate.armed && nextStep === 'assistant'}
+            focusNext={!readOnly && gate.armed && nextStep === 'assistant'}
             toggleLocked={!draftReady}
             toggleLockedHint={side === null ? '먼저 입장을 골라 주세요' : undefined}
             onOpenChange={handleAssistantOpenChange}

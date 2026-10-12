@@ -17,6 +17,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -49,6 +50,8 @@ import { liveAssistantAdapter } from '../services/assistant/live';
 import { scriptedAssistantAdapter } from '../services/assistant/scripted';
 import type { AssistantAdapter } from '../services/assistant/types';
 import { Header } from '../components/parts/Header';
+import { ViewBanner } from '../components/parts/ViewNav';
+import { currentPageOf, nextPageOf, prevPageOf, snapshotAt, type ViewPage } from '../domain/viewPages';
 import { StageBand } from '../components/parts/StageBand';
 import { MinutesPanel } from '../components/parts/MinutesPanel';
 import { buildMinutes, upsertRoundLogEntry } from '../components/minutes';
@@ -105,6 +108,13 @@ interface SessionContextValue {
    * 같은 기준을 쓰도록 위로 올린다. null이면 session 기준(leaningFor). */
   reactionsView: ReactionsView | null;
   setReactionsView: (view: ReactionsView | null) => void;
+  /** T126: 지난 화면 보기. null이면 지금 화면. 세션(session)은 그대로고 shown만 그 시점의 스냅숏이다. */
+  viewPage: ViewPage | null;
+  /** 화면에 그릴 세션. 보기 모드면 viewPage 시점의 스냅숏, 아니면 session 그대로. */
+  shown: Session;
+  /** 헤더 '◀ 이전'·'다음 ▶'. RESULT·ATTRACT~SELECT에서는 visible=false. */
+  viewNav: { visible: boolean; canPrev: boolean; canNext: boolean; onPrev: () => void; onNext: () => void };
+  exitView: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -332,6 +342,37 @@ function SessionProvider({ children }: { children: ReactNode }) {
     void orchestrator.awaitResult();
   }, [session.mode, session.stage, session.sessionId, session.finalMotion, session.ballots, orchestrator]);
 
+  // T126: 지난 화면 보기. 세션은 건드리지 않고 화면만 viewPage 시점의 스냅숏으로 바꾼다. 상태에는
+  // "어느 세션의 어느 지금 화면에서 눌렀는가"를 함께 적어, 세션이 앞으로 가거나(자동 RESULT 포함)
+  // 리셋되면 비교가 어긋나 저절로 보기 모드가 풀린다.
+  const currentPage = currentPageOf(session, reactionsStep);
+  const viewKey = `${session.sessionId}:${currentPage}`;
+  const [viewState, setViewState] = useState<{ key: string; page: ViewPage } | null>(null);
+  const viewPage = currentPage !== null && viewState?.key === viewKey ? viewState.page : null;
+  const opinionCount = session.opinions.length;
+  const prevTarget = currentPage ? prevPageOf(currentPage, viewPage, opinionCount) : null;
+  const nextTarget = currentPage ? nextPageOf(currentPage, viewPage, opinionCount) : null;
+  const viewNav = useMemo(
+    () => ({
+      visible: currentPage !== null,
+      canPrev: prevTarget !== null,
+      canNext: nextTarget !== null,
+      onPrev: () => {
+        if (prevTarget) setViewState({ key: viewKey, page: prevTarget });
+      },
+      onNext: () => {
+        if (nextTarget === 'CURRENT') setViewState(null);
+        else if (nextTarget) setViewState({ key: viewKey, page: nextTarget });
+      },
+    }),
+    [currentPage, prevTarget, nextTarget, viewKey],
+  );
+  const exitView = useCallback(() => setViewState(null), []);
+  const shown = useMemo(
+    () => (viewPage ? snapshotAt(session, viewPage, roundLog) : session),
+    [session, viewPage, roundLog],
+  );
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
@@ -345,8 +386,12 @@ function SessionProvider({ children }: { children: ReactNode }) {
       setReactionsStep,
       reactionsView,
       setReactionsView,
+      viewPage,
+      shown,
+      viewNav,
+      exitView,
     }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsView],
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsView, viewPage, shown, viewNav, exitView],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -374,22 +419,38 @@ function useViewportFit(): ViewportFit {
 /** stage별 화면 라우팅. */
 function StageScreen() {
   const {
-    session,
-    dispatch,
+    session: realSession,
+    shown,
+    viewPage,
+    dispatch: realDispatch,
     followUpPending,
     modeCheckPending,
     roundLog,
-    retryRound,
-    retryFinalVotes,
-    reactionsStep,
-    setReactionsStep,
+    retryRound: realRetryRound,
+    retryFinalVotes: realRetryFinalVotes,
+    reactionsStep: realReactionsStep,
+    setReactionsStep: realSetReactionsStep,
     setReactionsView,
   } = useSession();
+  // T126: 지난 화면 보기(readOnly)에서는 세션 쪽으로 나가는 길을 모두 비운다 — dispatch, 후속 요청,
+  // 단계 전환이 전부 아무 일도 하지 않는다. 화면은 스냅숏 세션(shown)만 읽는다. 입력 자체도
+  // AppShell이 본문을 inert로 막아 이중으로 막힌다.
+  const readOnly = viewPage !== null;
+  const session = readOnly ? shown : realSession;
+  const noop = useCallback(() => {}, []);
+  const dispatch = readOnly ? noop : realDispatch;
+  const retryRound = readOnly ? async () => {} : realRetryRound;
+  const retryFinalVotes = readOnly ? async () => {} : realRetryFinalVotes;
+  const reactionsStep = viewPage ? (viewPage === 'REACTIONS_ANSWER' ? 'answer' : 'listen') : realReactionsStep;
+  const setReactionsStep = readOnly ? noop : realSetReactionsStep;
+  // 지난 의견(전달한 것). DISCUSS는 첫 의견, 다시 답하기는 후속 답변을 그대로 보여 준다.
+  const pastOpinion =
+    viewPage === 'DISCUSS' ? (realSession.opinions[0] ?? null) : viewPage === 'REACTIONS_ANSWER' ? (realSession.opinions[1] ?? null) : null;
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
   const assistantAdapter: AssistantAdapter =
-    session.mode === 'live' ? liveAssistantAdapter : scriptedAssistantAdapter;
+    session.mode === 'live' && !readOnly ? liveAssistantAdapter : scriptedAssistantAdapter;
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
 
   // 입장 선택(T87이 DiscussScreen 로컬 state로 두던 것을 T89에서 여기로 끌어올렸다 —
@@ -403,6 +464,12 @@ function StageScreen() {
   useEffect(() => {
     setSidePick(null);
   }, [session.sessionId]);
+  // 지난 화면에서는 그때 실제로 전달한 입장을 보여 준다(sidePick은 나중에 바뀌었을 수 있다).
+  const side = readOnly
+    ? viewPage === 'REACTIONS_LISTEN'
+      ? (session.opinions[0]?.stance ?? null)
+      : (pastOpinion?.stance ?? null)
+    : sidePick;
 
   switch (session.stage) {
     case 'ATTRACT':
@@ -450,9 +517,10 @@ function StageScreen() {
           roleStatus={session.roleStatus}
           statements={session.transcript.statements}
           stances={stancesFor(session, scenario)}
+          readOnly={readOnly}
           onNext={() => dispatch({ type: 'NEXT_STAGE' })}
           onRetryFailedRoles={
-            session.mode === 'live' ? (roleIds) => void retryRound('OPINIONS', roleIds) : undefined
+            session.mode === 'live' && !readOnly ? (roleIds) => void retryRound('OPINIONS', roleIds) : undefined
           }
         />
       );
@@ -468,8 +536,10 @@ function StageScreen() {
           transcript={session.transcript}
           mode={session.mode}
           stances={stancesFor(session, scenario)}
-          side={sidePick}
-          onChooseSide={setSidePick}
+          side={side}
+          readOnly={readOnly}
+          pastOpinion={pastOpinion}
+          onChooseSide={readOnly ? noop : setSidePick}
           onSubmit={(payload) => dispatch({ type: 'SUBMIT_OPINION', ...payload, stance: sidePick })}
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantActions={session.assistantActions}
@@ -492,8 +562,10 @@ function StageScreen() {
           roundLog={roundLog}
           stances={stancesFor(session, scenario)}
           transcriptRevision={session.transcript.revision}
-          side={sidePick}
-          onChooseSide={setSidePick}
+          side={side}
+          readOnly={readOnly}
+          pastOpinion={pastOpinion}
+          onChooseSide={readOnly ? noop : setSidePick}
           step={reactionsStep}
           onAdvanceStep={() => setReactionsStep('answer')}
           onViewChange={setReactionsView}
@@ -502,7 +574,7 @@ function StageScreen() {
           onAssistantAction={(entry) => dispatch({ type: 'RECORD_ASSISTANT_ACTION', entry })}
           assistantAdapter={assistantAdapter}
           onRetryFailedRoles={
-            session.mode === 'live' ? (roleIds) => void retryRound('REACTIONS', roleIds) : undefined
+            session.mode === 'live' && !readOnly ? (roleIds) => void retryRound('REACTIONS', roleIds) : undefined
           }
         />
       );
@@ -521,7 +593,7 @@ function StageScreen() {
           mode={session.mode}
           roleStatus={session.roleStatus}
           onRetryFailedRoles={
-            session.mode === 'live' ? (roleIds) => void retryRound('FOLLOWUP', roleIds) : undefined
+            session.mode === 'live' && !readOnly ? (roleIds) => void retryRound('FOLLOWUP', roleIds) : undefined
           }
           onFreeze={(confirmedConditionIds) =>
             dispatch({ type: 'FREEZE_MOTION', scenario, confirmedConditionIds })
@@ -546,7 +618,7 @@ function StageScreen() {
           roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
-          onRetryFailedRoles={session.mode === 'live' ? (roleIds) => void retryFinalVotes(roleIds) : undefined}
+          onRetryFailedRoles={session.mode === 'live' && !readOnly ? (roleIds) => void retryFinalVotes(roleIds) : undefined}
         />
       );
 
@@ -628,11 +700,12 @@ function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
 
 /** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
 function StageRouter() {
-  const { session, dispatch, reactionsStep } = useSession();
+  const { session, dispatch, reactionsStep, viewPage } = useSession();
   return (
     <>
       <StageScreen />
-      <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />
+      {/* T126: 지난 화면을 보는 동안은 코치 말풍선·아이콘을 끈다(실제 조작이 아니므로 안내를 소모하지 않는다). */}
+      {viewPage === null && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
     </>
   );
 }
@@ -662,7 +735,33 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { session, dispatch, roundLog, reactionsView } = useSession();
+  const { shown: session, dispatch, roundLog, reactionsView, viewPage, viewNav, exitView } = useSession();
+  const shellRef = useRef<HTMLDivElement>(null);
+  // T126: 지난 화면을 보는 동안 왼쪽 행동 열·오른쪽 정보 열을 통째로 inert로 막는다 — 클릭·키보드·
+  // 포커스가 모두 차단된다. 화면 안에서 inert를 직접 토글하는 곳(비서실장 드로어)이나 화면 교체가
+  // 속성을 지워도 다시 건다(MutationObserver).
+  useLayoutEffect(() => {
+    const body = shellRef.current?.querySelector('.app-body');
+    if (!viewPage || !body) {
+      return;
+    }
+    const targets = () =>
+      body.querySelectorAll(':scope > .app-body__actions, :scope > .app-body__content');
+    function apply() {
+      targets().forEach((element) => {
+        if (!element.hasAttribute('inert')) {
+          element.setAttribute('inert', '');
+        }
+      });
+    }
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['inert'] });
+    return () => {
+      observer.disconnect();
+      targets().forEach((element) => element.removeAttribute('inert'));
+    };
+  }, [viewPage, session.stage]);
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const hasStageBand = STAGE_BAND_STAGES.has(session.stage) && scenario !== null;
   const showMinutes = MINUTES_STAGES.has(session.stage) && scenario !== null;
@@ -675,14 +774,16 @@ function AppShell() {
   return (
     <div className="app-scale-outer" data-fit={fit.mode}>
       <div className="app-scale-wrapper" data-fit={fit.mode} style={wrapperStyle}>
-        <div className="app-shell">
+        <div className="app-shell" ref={shellRef}>
           <Header
+            viewNav={viewNav}
             session={session}
             scenario={scenario}
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
             coachEnabled={session.coachEnabled}
             onToggleCoach={() => dispatch({ type: 'COACH_SET_ENABLED', enabled: !session.coachEnabled })}
           />
+          {viewPage !== null && <ViewBanner onExit={exitView} />}
           {hasStageBand && scenario ? (
             // 조종석 배치(v1.0 6절, T45): .app-body는 3개 grid area(무대·왼쪽 아래 행동·
             // 오른쪽 정보)를 가진 단일 grid다. StageRouter가 렌더하는 개별 Screen
@@ -691,7 +792,7 @@ function AppShell() {
             // wrapper를 만들지 않으므로 이 두 div는 여기 .app-body의 직계 grid item이
             // 된다 — StageBand와 정확히 같은 부모 아래에서 grid-area로 배치된다.
             <main className="app-main app-main--stage">
-              <div className="app-body">
+              <div className="app-body" data-view-mode={viewPage ? '' : undefined}>
                 <div className="app-body__stage">
                   <StageBand
                     stage={session.stage}

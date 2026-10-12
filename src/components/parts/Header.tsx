@@ -15,6 +15,7 @@ import type { Scenario } from '../../content/types';
 import '../../styles/screens/shell.css';
 import { OperatorMenu } from './OperatorMenu';
 import { ProgressStrip } from './ProgressStrip';
+import { ViewNavButton, type ViewNavProps } from './ViewNav';
 
 // T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
 // 표시도 빼줘"): live든 scripted든 참가자 화면에는 더 이상 모드 배지를 보여주지
@@ -27,9 +28,11 @@ export interface HeaderProps {
   onOperatorReset: () => void;
   coachEnabled?: boolean;
   onToggleCoach?: () => void;
+  /** 이전·다음 버튼(T126). 없거나 visible이 false이면 그리지 않는다. */
+  viewNav?: ViewNavProps;
 }
 
-export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach }: HeaderProps) {
+export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach, viewNav }: HeaderProps) {
   // 안건을 고르기 전에는 사건 번호를 숨긴다("사건 --"가 엉뚱해 보임, Opus 최종 검토 should 7).
   const caseLabel = scenario?.incident.caseLabel;
   return (
@@ -44,7 +47,13 @@ export function Header({ session, scenario, onOperatorReset, coachEnabled, onTog
         </span>
       </div>
       <div className="app-header__center">
+        {viewNav?.visible && (
+          <ViewNavButton direction="prev" disabled={!viewNav.canPrev} onClick={viewNav.onPrev} />
+        )}
         <ProgressStrip stage={session.stage} />
+        {viewNav?.visible && (
+          <ViewNavButton direction="next" disabled={!viewNav.canNext} onClick={viewNav.onNext} />
+        )}
       </div>
       <div className="app-header__right">
         <OperatorMenu

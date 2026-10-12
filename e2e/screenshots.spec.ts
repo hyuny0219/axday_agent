@@ -172,6 +172,14 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
 
+  // 지난 화면 보기(T126): '◀ 이전'으로 내 의견 쓰기 화면을 읽기 전용으로 다시 본다(상단 띠 + 입력 잠금).
+  await page.getByTestId('view-prev').click();
+  await expect(page.getByTestId('view-banner')).toBeVisible();
+  await expect(page.getByTestId('submit-opinion')).toBeDisabled();
+  await capture(page, testInfo.project.name, 'view-past');
+  await page.getByTestId('view-exit').click();
+  await expect(page.getByTestId('reactions-advance')).toBeVisible();
+
   // REACTIONS "다시 답하기"(T89 2/2, DiscussScreen과 같은 구성): MY REPLY 입력 상자·
   // 조건 칩·입장 선택·추천 답변 체크 카드를 캡처한 뒤, 후속 질문 없이 앞선 의견을
   // 유지해 확정한 4개 조건을 그대로 넘긴다.

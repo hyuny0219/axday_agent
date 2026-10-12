@@ -30,6 +30,8 @@ export interface OpinionsScreenProps {
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63)이자, 카드 역할색 띠·타자기 집계의
    * 근거가 되는 실제 stance다. */
   stances: Record<ExecMemberId, Stance>;
+  /** T126: 지난 화면 보기. 카드를 한꺼번에 보여 주고 순차 노출·잠금 없이 읽기만 한다. */
+  readOnly?: boolean;
   onNext: () => void;
   /** 실패한 역할만 골라 OPINIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
@@ -69,6 +71,7 @@ export function OpinionsScreen({
   roleStatus,
   statements,
   stances,
+  readOnly = false,
   onNext,
   onRetryFailedRoles,
 }: OpinionsScreenProps) {
@@ -81,9 +84,9 @@ export function OpinionsScreen({
   // 즉시 다 보여준다(live는 roleStatus 기반 allExecsSettled 잠금을 그대로 쓰므로 영향 없음).
   const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
   const totalCards = scenario.initialOpinions.length;
-  const [revealedCount, setRevealedCount] = useState(mode === 'live' || reducedMotion ? totalCards : 0);
+  const [revealedCount, setRevealedCount] = useState(mode === 'live' || reducedMotion || readOnly ? totalCards : 0);
   useEffect(() => {
-    if (mode === 'live' || reducedMotion) {
+    if (mode === 'live' || reducedMotion || readOnly) {
       setRevealedCount(totalCards);
       return;
     }
@@ -93,7 +96,7 @@ export function OpinionsScreen({
     );
     return () => timers.forEach(clearTimeout);
     // scenario가 바뀔 때만 다시 돈다(mode·reducedMotion도 바뀌면 처음부터).
-  }, [scenario.id, mode, reducedMotion, totalCards]);
+  }, [scenario.id, mode, reducedMotion, readOnly, totalCards]);
   const allCardsRevealed = mode === 'live' || revealedCount >= totalCards;
 
   function handleRetry() {

@@ -153,6 +153,9 @@ export interface ReactionsScreenProps {
   onViewChange?: (view: ReactionsView | null) => void;
   /** "답하기 ▶"를 눌러 'listen' → 'answer'로 넘어간다(뒤로가기는 없다). */
   onAdvanceStep: () => void;
+  /** T126: 지난 화면 보기. 입력·제출·비서실장·재요청을 막고, pastOpinion(이미 전달한 답변)이 있으면 그대로 보여 준다. */
+  readOnly?: boolean;
+  pastOpinion?: Opinion | null;
   onSubmitFollowup: (payload: ReactionsFollowupPayload) => void;
   onKeepPrevious: () => void;
   /** AI 비서실장 결과가 실제로 표시·적용됐을 때만 호출된다(세션 기록용). */
@@ -196,6 +199,8 @@ export function ReactionsScreen({
   onChooseSide,
   step,
   onAdvanceStep,
+  readOnly = false,
+  pastOpinion = null,
   onSubmitFollowup,
   onKeepPrevious,
   onAssistantAction,
@@ -252,7 +257,7 @@ export function ReactionsScreen({
         (entry) => entry.stage === 'REACTIONS' && entry.roleId === roleId && entry.status === 'failed',
       ),
   );
-  const listenLocked = mode === 'live' && !allExecsSettled;
+  const listenLocked = !readOnly && mode === 'live' && !allExecsSettled;
 
   // 추천 답변 체크 카드(T74): 선택된 것(문자열 인덱스)을 followUp.options 순서대로
   // 이어 붙여 textValue를 구성한다 — DISCUSS의 selectedPhraseIds·buildDraftText와 같은
@@ -260,15 +265,17 @@ export function ReactionsScreen({
   // domain/draft.ts를 그대로 쓸 수 없어 이 화면 안에서 같은 모양으로 다시 짠다.
   // keepPrevious 옵션은 조합에 끼지 않고 onKeepPrevious를 즉시 부른다(기존 동작).
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
-  const [textValue, setTextValue] = useState('');
+  const [textValue, setTextValue] = useState(() => (readOnly && pastOpinion ? pastOpinion.originalText : ''));
   // DISCUSS의 DraftState.dirty와 같은 뜻: textarea를 직접 고친 뒤(아직 체크 카드로
   // 다시 구성하지 않은 동안) true다. P1-a·P1-b(위 주석) 모두 이 플래그로 가른다.
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(() => readOnly && pastOpinion !== null);
   const [pendingOptionIndex, setPendingOptionIndex] = useState<number | null>(null);
   // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 승인 시 전체를 한 번에 반영한다.
   const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
   const [pendingBatch, setPendingBatch] = useState<{ index: number; conditionId: string }[] | null>(null);
-  const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(previousConfirmedIds);
+  const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(() =>
+    readOnly && pastOpinion ? pastOpinion.confirmedConditionIds : previousConfirmedIds,
+  );
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
   const [draftRevision, setDraftRevision] = useState(0);
@@ -362,12 +369,15 @@ export function ReactionsScreen({
   // 후속 보완은 이전에 확정한 조건을 그대로 보여주고 유지·해제할 수 있게 하며,
   // 새로 제안된 조건은 문구 선택 때와 같이 미리 확인된 상태로 보여준다.
   useEffect(() => {
+    if (readOnly) {
+      return; // 지난 화면은 그때 확정한 조건을 그대로 둔다.
+    }
     setAcceptedConditionIds((previous) => {
       const stillProposed = previous.filter((id) => proposedConditionIds.includes(id));
       const autoAccepted = newProposedIds.filter((id) => !stillProposed.includes(id));
       return uniqueInOrder([...stillProposed, ...autoAccepted]);
     });
-  }, [proposedConditionIds, newProposedIds]);
+  }, [proposedConditionIds, newProposedIds, readOnly]);
 
   const conflictPairs = useMemo(
     () => findConflicts(scenario, acceptedConditionIds),
@@ -390,6 +400,7 @@ export function ReactionsScreen({
   // 참가자가 요청한 체크 변경이 아직 반영되지 않았으므로 전달을 막는다 — DiscussScreen의
   // `pendingPhraseId === null && isSubmittable(draft)`와 같은 규칙이다.
   const canSubmit =
+    !readOnly &&
     pendingOptionIndex === null &&
     textValue.trim() !== '' &&
     textValue.length <= DRAFT_MAX_LENGTH &&

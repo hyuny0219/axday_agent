@@ -852,3 +852,65 @@
 
 /* T103: 진행 가이드 한 줄(.guide-hint)과 다음 행동 맥동 테두리([data-guide])는 진행 도우미
    (coach.css)의 화면당 말풍선 하나(T104 코치)로 대체돼 지웠다. */
+
+/* 이전·다음 버튼과 지난 화면 띠(T126). 버튼은 헤더 진행 스트립 양옆, 띠는 헤더 바로 아래 한 줄이다.
+   보기 모드에서는 화면 본문(.app-body__actions·.app-body__content)을 inert로 막고(App.tsx),
+   다음 할 일 점선(T113)은 끈다. */
+.app-header__center {
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-nav__btn {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border-radius: 0;
+  border: 1px solid #4a4d55;
+  background-color: transparent;
+  color: var(--text);
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.view-nav__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.view-nav__btn:not(:disabled):hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.view-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-4);
+  background-color: var(--amber);
+  color: #1b1a17;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.view-banner__exit {
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid #1b1a17;
+  border-radius: 0;
+  background-color: transparent;
+  color: #1b1a17;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-body[data-view-mode] [data-next-step]::after {
+  display: none;
+}
