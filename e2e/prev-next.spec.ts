@@ -51,8 +51,14 @@ test('의견 전달 뒤 이전으로 BRIEFING·OPINIONS·DISCUSS를 읽기 전�
   await expect(page.getByTestId('view-banner')).toBeVisible();
   await expect(page.getByTestId('draft-editor-textarea')).toHaveValue(OPINION_TEXT);
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
-  await expect(page.locator('.app-body__actions')).toHaveAttribute('inert', '');
-  await expect(page.locator('.app-body__content')).toHaveAttribute('inert', '');
+  await expect(page.locator('[data-past-screen] .app-body__actions')).toHaveAttribute('inert', '');
+  // 오른쪽 열은 '근거 자료 보기'만 열려 있고 나머지(입장·문구 카드)는 막혀 있다.
+  await expect(
+    page.getByTestId('discuss-side-for').evaluate((element) => element.closest('[inert]') !== null),
+  ).resolves.toBe(true);
+  await expect(
+    page.getByTestId('open-evidence').evaluate((element) => element.closest('[inert]') === null),
+  ).resolves.toBe(true);
   await expect(page.getByTestId('discuss-side-for')).toHaveAttribute('aria-pressed', 'true');
   await expectNoPageScroll(page, 'DISCUSS 보기');
   await page.screenshot({ path: 'test-results/prev-next-discuss-view.png' });
@@ -79,7 +85,7 @@ test('의견 전달 뒤 이전으로 BRIEFING·OPINIONS·DISCUSS를 읽기 전�
   await page.getByTestId('view-next').click();
   await expect(page.getByTestId('view-banner')).toHaveCount(0);
   await expect(page.getByTestId('reactions-advance')).toBeEnabled();
-  await expect(page.locator('.app-body__actions[inert]')).toHaveCount(0);
+  await expect(page.locator('[data-past-screen]')).toHaveCount(0);
 
   // '지금 화면으로' 버튼도 같은 복귀다.
   await page.getByTestId('view-prev').click();
@@ -144,7 +150,7 @@ test('live: 지난 화면을 보는 동안 /api 요청이 새로 나가지 않�
     await page.getByTestId('view-prev').click();
   }
   await expect(page.getByTestId('view-banner')).toBeVisible();
-  await expect(page.locator('.app-body__actions')).toHaveAttribute('inert', '');
+  await expect(page.locator('[data-past-screen] .app-body__actions').first()).toHaveAttribute('inert', '');
   for (let step = 0; step < 8; step += 1) {
     if (await page.getByTestId('view-banner').count() === 0) break;
     await page.getByTestId('view-next').click();
@@ -158,4 +164,46 @@ test('live: 지난 화면을 보는 동안 /api 요청이 새로 나가지 않�
   await page.getByTestId('confirm-vote').click();
   await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('view-prev')).toHaveCount(0);
+});
+
+test('현재 화면에서 쓰던 글·고른 문구·조건 칩은 이전을 갔다 와도 남고, 지난 화면에서도 근거 자료를 열 수 있다', async ({
+  page,
+}) => {
+  await toDiscuss(page, '/?mode=scripted&coach=off');
+  await page.getByTestId('discuss-side-for').click();
+  await page.getByTestId('phrase-card-P1').click();
+  const textarea = page.getByTestId('draft-editor-textarea');
+  const original = await textarea.inputValue();
+  await textarea.fill(`${original} 덧붙인 문장입니다.`);
+  const written = await textarea.inputValue();
+  const chips = await page.locator('[data-testid^="condition-chip-"]').count();
+  expect(chips).toBeGreaterThan(0);
+
+  // ◀ ◀ → BRIEFING. 지난 화면의 근거 자료 팝업은 열 수 있다.
+  await page.getByTestId('view-prev').click();
+  await page.getByTestId('view-prev').click();
+  await page.locator('[data-past-screen]').getByTestId('open-evidence').click();
+  await expect(page.getByTestId('evidence-dialog')).toBeVisible();
+  await expect(page.getByTestId('evidence-card-E1')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('evidence-dialog')).toHaveCount(0);
+  await expectNoPageScroll(page, 'BRIEFING 보기(근거 자료 닫은 뒤)');
+
+  // ▶ ▶ → 지금 화면: 글·입장·조건 칩이 그대로다.
+  await page.getByTestId('view-next').click();
+  await page.getByTestId('view-next').click();
+  await expect(page.getByTestId('view-banner')).toHaveCount(0);
+  await expect(page.getByTestId('draft-editor-textarea')).toHaveValue(written);
+  await expect(page.getByTestId('discuss-side-for')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-testid^="condition-chip-"]')).toHaveCount(chips);
+
+  // 다시 답하기에서 쓰던 글도 같다.
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await page.getByTestId('reactions-advance').click();
+  await page.getByTestId('followup-textarea').fill('쓰던 답변입니다.');
+  await page.getByTestId('view-prev').click();
+  await expect(page.getByTestId('reactions-advance')).toBeVisible();
+  await page.getByTestId('view-next').click();
+  await expect(page.getByTestId('followup-textarea')).toHaveValue('쓰던 답변입니다.');
 });

@@ -108,6 +108,8 @@ interface SessionContextValue {
    * 같은 기준을 쓰도록 위로 올린다. null이면 session 기준(leaningFor). */
   reactionsView: ReactionsView | null;
   setReactionsView: (view: ReactionsView | null) => void;
+  /** T126: 지난 화면(보기 모드) 쪽 ReactionsScreen이 올리는 값. 지금 화면의 값과 섞이지 않게 따로 둔다. */
+  setPastReactionsView: (view: ReactionsView | null) => void;
   /** T126: 지난 화면 보기. null이면 지금 화면. 세션(session)은 그대로고 shown만 그 시점의 스냅숏이다. */
   viewPage: ViewPage | null;
   /** 화면에 그릴 세션. 보기 모드면 viewPage 시점의 스냅숏, 아니면 session 그대로. */
@@ -158,6 +160,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
   // 넘어가면(REACTIONS를 벗어나면) 다음 방문을 위해 'listen'으로 되돌린다.
   const [reactionsStep, setReactionsStep] = useState<'listen' | 'answer'>('listen');
   const [reactionsView, setReactionsView] = useState<ReactionsView | null>(null);
+  const [pastReactionsView, setPastReactionsView] = useState<ReactionsView | null>(null);
   useEffect(() => {
     if (session.stage !== 'REACTIONS') {
       setReactionsStep('listen');
@@ -384,14 +387,16 @@ function SessionProvider({ children }: { children: ReactNode }) {
       retryFinalVotes: orchestrator.retryFinalVotes,
       reactionsStep,
       setReactionsStep,
-      reactionsView,
+      // 보기 모드에서는 지난 화면이 올린 값만 무대에 쓴다(지금 화면은 숨은 채 따로 살아 있다).
+      reactionsView: viewPage ? pastReactionsView : reactionsView,
       setReactionsView,
+      setPastReactionsView,
       viewPage,
       shown,
       viewNav,
       exitView,
     }),
-    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsView, viewPage, shown, viewNav, exitView],
+    [session, dispatch, followUpPending, roundLog, modeCheckPending, orchestrator, reactionsStep, reactionsView, pastReactionsView, viewPage, shown, viewNav, exitView],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
@@ -417,7 +422,7 @@ function useViewportFit(): ViewportFit {
 }
 
 /** stage별 화면 라우팅. */
-function StageScreen() {
+function StageScreen({ variant }: { variant: 'live' | 'past' }) {
   const {
     session: realSession,
     shown,
@@ -430,22 +435,24 @@ function StageScreen() {
     retryFinalVotes: realRetryFinalVotes,
     reactionsStep: realReactionsStep,
     setReactionsStep: realSetReactionsStep,
-    setReactionsView,
+    setReactionsView: setLiveReactionsView,
+    setPastReactionsView,
   } = useSession();
   // T126: 지난 화면 보기(readOnly)에서는 세션 쪽으로 나가는 길을 모두 비운다 — dispatch, 후속 요청,
   // 단계 전환이 전부 아무 일도 하지 않는다. 화면은 스냅숏 세션(shown)만 읽는다. 입력 자체도
   // AppShell이 본문을 inert로 막아 이중으로 막힌다.
-  const readOnly = viewPage !== null;
+  const readOnly = variant === 'past' && viewPage !== null;
+  const setReactionsView = readOnly ? setPastReactionsView : setLiveReactionsView;
   const session = readOnly ? shown : realSession;
   const noop = useCallback(() => {}, []);
   const dispatch = readOnly ? noop : realDispatch;
   const retryRound = readOnly ? async () => {} : realRetryRound;
   const retryFinalVotes = readOnly ? async () => {} : realRetryFinalVotes;
-  const reactionsStep = viewPage ? (viewPage === 'REACTIONS_ANSWER' ? 'answer' : 'listen') : realReactionsStep;
+  const reactionsStep = readOnly && viewPage ? (viewPage === 'REACTIONS_ANSWER' ? 'answer' : 'listen') : realReactionsStep;
   const setReactionsStep = readOnly ? noop : realSetReactionsStep;
   // 지난 의견(전달한 것). DISCUSS는 첫 의견, 다시 답하기는 후속 답변을 그대로 보여 준다.
   const pastOpinion =
-    viewPage === 'DISCUSS' ? (realSession.opinions[0] ?? null) : viewPage === 'REACTIONS_ANSWER' ? (realSession.opinions[1] ?? null) : null;
+    !readOnly ? null : viewPage === 'DISCUSS' ? (realSession.opinions[0] ?? null) : viewPage === 'REACTIONS_ANSWER' ? (realSession.opinions[1] ?? null) : null;
   // AssistantPanel(AI 비서실장)도 board 라운드와 같은 원칙으로 live/scripted를 고른다:
   // 세션 시작 전 고정된 session.mode를 그대로 따른다(T31). orchestrator의 dynamicAdapter와
   // 달리 여기는 매 렌더에서 session.mode를 직접 읽을 수 있어 ref 트릭이 필요 없다.
@@ -703,7 +710,17 @@ function StageRouter() {
   const { session, dispatch, reactionsStep, viewPage } = useSession();
   return (
     <>
-      <StageScreen />
+      {/* T126: 지금 화면은 보기 모드에서도 숨긴 채 그대로 둔다(마운트 유지) — 쓰던 글·고른 문구·
+          조건 칩이 돌아왔을 때 남아 있다. 지난 화면은 따로 그린다. display:contents라 평소에는
+          그리드 배치에 영향이 없다. */}
+      <div data-live-screen style={{ display: viewPage ? 'none' : 'contents' }}>
+        <StageScreen variant="live" />
+      </div>
+      {viewPage !== null && (
+        <div data-past-screen style={{ display: 'contents' }}>
+          <StageScreen variant="past" />
+        </div>
+      )}
       {/* T126: 지난 화면을 보는 동안은 코치 말풍선·아이콘을 끈다(실제 조작이 아니므로 안내를 소모하지 않는다). */}
       {viewPage === null && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
     </>
@@ -737,29 +754,48 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']
 function AppShell() {
   const { shown: session, dispatch, roundLog, reactionsView, viewPage, viewNav, exitView } = useSession();
   const shellRef = useRef<HTMLDivElement>(null);
-  // T126: 지난 화면을 보는 동안 왼쪽 행동 열·오른쪽 정보 열을 통째로 inert로 막는다 — 클릭·키보드·
-  // 포커스가 모두 차단된다. 화면 안에서 inert를 직접 토글하는 곳(비서실장 드로어)이나 화면 교체가
-  // 속성을 지워도 다시 건다(MutationObserver).
+  // T126: 지난 화면(data-past-screen) 안의 두 열을 inert로 막는다 — 클릭·키보드·포커스가 모두 차단된다.
+  // 단 '근거 자료 보기' 버튼은 읽기 전용 정보라 열 수 있게 둔다: inert는 하위 전체에 걸리므로 그 버튼의
+  // 조상 줄기는 두고 그 곁가지만 막는다. 화면 안에서 inert를 직접 토글하는 곳(비서실장 드로어)이나 화면
+  // 교체가 속성을 지워도 다시 건다(MutationObserver).
   useLayoutEffect(() => {
-    const body = shellRef.current?.querySelector('.app-body');
-    if (!viewPage || !body) {
+    const past = shellRef.current?.querySelector('[data-past-screen]');
+    if (!viewPage || !past) {
       return;
     }
-    const targets = () =>
-      body.querySelectorAll(':scope > .app-body__actions, :scope > .app-body__content');
+    const marked = new Set<Element>();
+    function lock(element: Element) {
+      for (const child of Array.from(element.children)) {
+        if (child.matches('[data-testid="open-evidence"]')) {
+          continue;
+        }
+        if (child.querySelector('[data-testid="open-evidence"]')) {
+          lock(child);
+        } else if (!child.hasAttribute('inert')) {
+          child.setAttribute('inert', '');
+          marked.add(child);
+        }
+      }
+    }
     function apply() {
-      targets().forEach((element) => {
-        if (!element.hasAttribute('inert')) {
-          element.setAttribute('inert', '');
+      past?.querySelectorAll('.app-body__actions, .app-body__content').forEach((column) => {
+        if (column.querySelector('[data-testid="open-evidence"]')) {
+          if (column.hasAttribute('inert')) {
+            column.removeAttribute('inert');
+          }
+          lock(column);
+        } else if (!column.hasAttribute('inert')) {
+          column.setAttribute('inert', '');
+          marked.add(column);
         }
       });
     }
     apply();
     const observer = new MutationObserver(apply);
-    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['inert'] });
+    observer.observe(past, { childList: true, subtree: true, attributes: true, attributeFilter: ['inert'] });
     return () => {
       observer.disconnect();
-      targets().forEach((element) => element.removeAttribute('inert'));
+      marked.forEach((element) => element.removeAttribute('inert'));
     };
   }, [viewPage, session.stage]);
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
