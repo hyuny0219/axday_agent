@@ -39,6 +39,9 @@ import {
 import { useResultReveal } from '../useResultReveal';
 import { epilogueText } from '../resultEpilogue';
 import { EndSessionConfirm } from '../parts/EndSessionConfirm';
+import { EndingCard } from '../parts/EndingCard';
+import { nextStepAttr, useFocusGate } from '../parts/focusRing';
+import { buildEnding } from '../endingSummary';
 // 결론·설득 도장(result-stamp)은 T44에서 무대 열 우하단에 그렸으나, T64("기밀 작전실"
 // 스킨)에서 오른쪽 종이 보고서의 전용 칸(200px)으로 옮겼다(docs/design/mockups/README.md
 // "도장은 결과 화면 오른쪽 종이 보고서 우상단에 — 무대에는 표 배지만"). 이 화면이
@@ -144,6 +147,9 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // "처음 화면으로" 확인 단계(T84, Opus UX 검토 #5 — "'체험 종료'가 확인 없이 즉시
   // 초기화"). 세션 초기화(onReset)는 되돌릴 수 없으므로 한 번 더 확인한다.
   const [endSessionConfirmOpen, setEndSessionConfirmOpen] = useState(false);
+  // T127: 엔딩 화면. 세션 단계는 RESULT 그대로이고 이 화면의 로컬 상태로만 전환한다.
+  const [endingOpen, setEndingOpen] = useState(false);
+  const gate = useFocusGate('result');
 
 
   // 클릭·키 입력으로 도장 연출을 즉시 건너뛴다(DESIGN_SPEC.md v1.0 3절). 건너뛴
@@ -249,9 +255,43 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
     return '표가 갈려 어느 쪽도 다수가 아니었습니다';
   })();
 
+  // T127: 공개가 모두 끝난 뒤(건너뛰기·감속 모드는 바로) '마무리 ▶'가 나온다. 표 없는 참가자(persuasion null)는 엔딩을 만들 수 없다.
+  const ending =
+    persuasion && resultStamp && resultSummary
+      ? buildEnding({
+          scenario,
+          session,
+          earned: persuasion.earned,
+          sameVoteSeats: persuasion.sameVoteSeats,
+          participantVote: persuasion.participantVote,
+          execVotes: Object.fromEntries(
+            resultSummary.execRows.map((row) => [row.memberId, row.vote]),
+          ) as Record<ExecMemberId, Ballot['vote']>,
+          persuasionTally,
+          resultStampText: resultStamp.text,
+          epilogue,
+          conditionLabels: resultSummary.conditionLabels,
+          finalConditionIds: finalMotion.effectiveConditionIds,
+          participantStance,
+        })
+      : null;
+  const canFinish = ending !== null && reveal.allRevealed;
+
   return (
     <>
       <div className="app-body__actions screen result-screen__actions">
+        {canFinish && (
+          <button
+            type="button"
+            className="cta"
+            onClick={() => setEndingOpen(true)}
+            disabled={endSessionConfirmOpen}
+            data-testid="result-finish"
+            {...nextStepAttr(gate.visible && !endingOpen)}
+          >
+            마무리 ▶
+          </button>
+        )}
         {/* TALLY 패널(T64 item 7, Main.html C_Result.html 왼쪽 열 "TALLY · 5석 과반").
             5칸 막대 + 표 세기·설득 문구는 오른쪽 종이 보고서(VERDICTS 패널)와 같은
             계산값을 다시 그린 것이라 aria-hidden으로 중복 낭독을 막는다(무대 띠와
@@ -306,7 +346,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             영역만 화면 로컬 상태로 전문 ↔ 요약을 오간다. */}
         <button
           type="button"
-          className="cta"
+          className={canFinish ? 'cta cta--secondary' : 'cta'}
           onClick={() => {
             setShowTranscript((previous) => !previous);
           }}
@@ -628,6 +668,14 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
           </section>
         )}
       </div>
+      {endingOpen && ending && (
+        <EndingCard
+          model={ending}
+          caseTag={caseTag}
+          onDetail={() => setEndingOpen(false)}
+          onHome={onReset}
+        />
+      )}
     </>
   );
 }

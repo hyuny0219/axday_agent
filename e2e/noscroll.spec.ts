@@ -232,6 +232,22 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expect(page.getByTestId('result-summary')).toBeVisible();
   await expect(page.getByTestId('result-transcript')).toHaveCount(0);
   await expectNoPageScroll(page, 'RESULT(요약으로 복귀)');
+
+  // T127: 공개가 끝나면 '마무리 ▶' → 엔딩(스크롤·잘림 없음) → 자세한 결과 보기 → 다시 마무리 → 처음 화면으로.
+  await page.getByTestId('result-finish').click();
+  await expect(page.getByTestId('ending')).toBeVisible();
+  await expect(page.getByTestId('ending-stamp')).toHaveText(/성공|실패/);
+  await expectNoPageScroll(page, 'ENDING');
+  await expectFullyVisible(page, 'ending-card', 'ENDING');
+  await expect(page.getByTestId('ending-home')).toBeInViewport();
+  await expect(page.getByTestId('ending-timer')).toBeInViewport();
+  await page.getByTestId('ending-detail').click();
+  await expect(page.getByTestId('ending')).toHaveCount(0);
+  await expect(page.getByTestId('result-summary')).toBeVisible();
+  await page.getByTestId('result-finish').click();
+  await expect(page.getByTestId('ending')).toBeVisible();
+  await page.getByTestId('ending-home').click();
+  await expect(page.getByRole('heading', { name: 'BECOME A BOARD' })).toBeVisible();
 });
 
 // live 모드 최악 경로(PR #6 Codex 검토): 임원 4명 모두 120자 발언 + 근거 칩 + 인용을
