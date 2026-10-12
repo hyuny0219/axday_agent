@@ -4,7 +4,8 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
-import { EXEC_MEMBER_ORDER, decideMember, requiredConditionsFor } from '../domain/voting';
+import { findConflicts } from '../domain/conditions';
+import { EXEC_MEMBER_ORDER, decideMember } from '../domain/voting';
 import type { PersuasionTally } from './persuasionSummary';
 
 export type EndingSeatKind = 'me' | 'same' | 'other';
@@ -37,6 +38,28 @@ export function firstSentence(text: string | null): string | null {
   return index >= 0 ? text.slice(0, index + 1) : text;
 }
 
+/** 아직 확정하지 않은 조건을 더해 이 임원의 표를 target으로 돌릴 수 있는가. 충돌쌍(scenario.conflicts)은
+ * 한 번에 확정될 수 없으므로(confirmConditions는 둘 다 거부한다) 충돌이 생기는 조합은 따지지 않는다. */
+function canFlipByReachableConditions(
+  scenario: Scenario,
+  memberId: ExecMemberId,
+  finalConditionIds: string[],
+  participantStance: 'FOR' | 'AGAINST' | null,
+  target: Vote,
+): boolean {
+  const candidates = scenario.conditions.map((condition) => condition.id).filter((id) => !finalConditionIds.includes(id));
+  const rules = scenario.voteRules[memberId];
+  for (let mask = 1; mask < 1 << candidates.length; mask += 1) {
+    const extra = candidates.filter((_, index) => (mask & (1 << index)) !== 0);
+    const ids = [...finalConditionIds, ...extra];
+    if (findConflicts(scenario, ids).length > 0) continue;
+    if (decideMember(rules, { conditionIds: ids, executionMode: 'DEFAULT', participantStance, followUpAnswered: true }) === target) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function clueFor(
   scenario: Scenario,
   session: Pick<Session, 'mode' | 'followUpAnswered'>,
@@ -52,34 +75,22 @@ function clueFor(
   if (others.length === 0) return null;
   let memberId: ExecMemberId | undefined;
   if (participantVote === 'NO') {
-    // 반대가 목표인 실패: 찬성한 임원 중 조건 하나를 더하면 반대로 돌아설 수 있고, 처음부터 우려를
-    // 가진(첫 입장이 찬성이 아닌) 임원만 가리킨다 — 첫 입장이 찬성인 임원의 근거 자료는 찬성 쪽이라
-    // 방향이 어긋난다. 규칙표가 없는 live이거나 그런 임원이 없으면 줄을 생략한다.
+    // 반대가 목표인 실패: 첫 입장이 찬성인 임원의 근거 자료는 찬성 쪽이라 방향이 어긋나므로 제외한다.
+    // 규칙표가 없는 live이거나 그런 임원이 없으면 줄을 생략한다.
     if (session.mode !== 'scripted') return null;
     memberId = others.find((candidate) => {
       const opening = scenario.initialOpinions.find((opinion) => opinion.memberId === candidate)?.openingStance;
-      if (opening === 'FOR') return false;
-      return scenario.conditions.some(
-        (condition) =>
-          !finalConditionIds.includes(condition.id) &&
-          decideMember(scenario.voteRules[candidate], {
-            conditionIds: [...finalConditionIds, condition.id],
-            executionMode: 'DEFAULT',
-            participantStance,
-            followUpAnswered: true,
-          }) === 'NO',
-      );
+      return opening !== 'FOR' && canFlipByReachableConditions(scenario, candidate, finalConditionIds, participantStance, 'NO');
     });
   } else {
-    // scripted에서는 조건으로 움직일 수 있는 임원을 먼저 가리킨다(조건 이름은 말하지 않는다).
-    const movable =
+    // scripted에서는 조건으로 움직일 수 있는 임원만 가리킨다(조건 이름은 말하지 않는다). 없으면 줄을 생략한다.
+    // live는 규칙표가 없어 나와 다른 표를 던진 첫 임원을 가리킨다.
+    memberId =
       session.mode === 'scripted'
-        ? others.find((candidate) => {
-            const required = requiredConditionsFor(scenario, candidate, finalConditionIds, participantStance);
-            return !required.persuaded && required.conditionIds !== null;
-          })
-        : undefined;
-    memberId = movable ?? others[0];
+        ? others.find((candidate) =>
+            canFlipByReachableConditions(scenario, candidate, finalConditionIds, participantStance, 'YES'),
+          )
+        : others[0];
   }
   if (!memberId) return null;
   const evidenceId = scenario.initialOpinions.find((opinion) => opinion.memberId === memberId)?.evidenceIds[0];

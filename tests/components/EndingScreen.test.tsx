@@ -278,11 +278,19 @@ describe('반대 목표 실패의 실마리 방향(T127 검토)', () => {
     });
   }
 
-  it('ai-approval: 조건 네 개로 전원 찬성, 참가자 반대면 CEO·찬성 쪽 자료가 아니라 우려 쪽 임원을 가리킨다', () => {
-    const clue = againstEnding(aiApprovalScenario, ['LIMIT', 'REVIEW', 'LOG', 'OWNER']).clue;
-    expect(clue).not.toBeNull();
-    expect(clue).not.toMatch(/^CEO/);
-    expect(clue).not.toContain('결재 처리 기록');
+  it('충돌쌍 때문에 확정할 수 없는 조합으로만 뒤집히면 줄을 생략한다(ai-approval REVIEW↔FULL_AUTO)', () => {
+    // 남은 FULL_AUTO는 확정된 REVIEW와 충돌해 함께 확정될 수 없다.
+    expect(againstEnding(aiApprovalScenario, ['LIMIT', 'REVIEW', 'LOG', 'OWNER']).clue).toBeNull();
+  });
+
+  it('충돌쌍 파트너를 고르지 않은 상태에서는 다른 쪽 조건이 실제로 움직일 수 있어 줄이 나온다', () => {
+    expect(againstEnding(aiApprovalScenario, []).clue).toMatch(/^CFO/);
+  });
+
+  it('experience-first: DATA_VETO·EXP_ONLY 충돌 파트너가 남아도 도달 불가능하면 생략, 도달 가능하면 방향 맞는 임원을 가리킨다', () => {
+    expect(againstEnding(experienceFirstScenario, ['SCOPE', 'RECORD', 'REVIEW', 'DATA_VETO']).clue).toBeNull();
+    expect(againstEnding(experienceFirstScenario, ['SCOPE', 'RECORD', 'REVIEW', 'EXP_ONLY']).clue).toBeNull();
+    expect(againstEnding(experienceFirstScenario, ['DATA_VETO']).clue).toMatch(/^CAIO/);
   });
 
   it('반대를 더 돕는 조건이 남지 않았으면 줄을 생략한다', () => {
