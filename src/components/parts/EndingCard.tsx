@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { sound } from '../../audio/sound';
 import { systemClock, type Clock } from '../../domain/clock';
 import {
   ENDING_AUTO_RETURN_SECONDS,
@@ -14,6 +15,9 @@ import {
 } from '../../domain/endingReturn';
 import type { EndingModel } from '../endingSummary';
 import '../../styles/screens/ending.css';
+
+/** 자동 복귀 마지막 몇 초 동안 째깍 소리를 낼지(T128). */
+const ENDING_TICK_SECONDS = 10;
 
 export interface EndingCardProps {
   model: EndingModel;
@@ -96,6 +100,20 @@ export function EndingCard({ model, caseTag, onDetail, onHome, clock = systemClo
       window.removeEventListener('keydown', restart);
     };
   }, [clock]);
+
+  // T128: 엔딩이 열리면 BGM을 멈추고 성공/실패 팡파르와 도장을 한 번 낸다. 보고서로 돌아가면 BGM이 다시 깔린다.
+  useEffect(() => {
+    sound.setEnding(true);
+    sound.playEnding(model.success);
+    return () => sound.setEnding(false);
+    // 엔딩이 열려 있는 동안 model은 바뀌지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 자동 복귀 마지막 10초 동안 1초마다 째깍 소리.
+  useEffect(() => {
+    if (secondsLeft > 0 && secondsLeft <= ENDING_TICK_SECONDS) sound.play('tick');
+  }, [secondsLeft]);
 
   const variant = model.success ? 'win' : 'lose';
   return createPortal(

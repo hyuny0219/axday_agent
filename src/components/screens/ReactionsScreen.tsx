@@ -981,6 +981,7 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
+            data-sound="send"
             {...nextStepAttr(gate.visible && answerStep === 'submit')}
             aria-describedby={!canSubmit ? 'reactions-submit-why' : undefined}
           >
