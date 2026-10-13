@@ -258,6 +258,9 @@ export function createSynth(ctx: AudioContext): SynthEngine {
     let next = ctx.currentTime + 0.08;
     const dt = 60 / tr.bpm / 4;
     const timer = setInterval(() => {
+      // 탭이 가려지거나 메인 스레드가 멈춘 동안 밀린 박자는 건너뛴다(PR #21 Codex P2) — 지난
+      // 시각으로 예약된 음이 돌아오는 순간 한꺼번에 터지지 않게.
+      ({ next, step } = skipMissedBeats(next, step, ctx.currentTime, dt));
       while (next < ctx.currentTime + 0.15) {
         tr.step(step, next, level, state);
         step += 1;
@@ -339,4 +342,19 @@ export function createSynth(ctx: AudioContext): SynthEngine {
     },
     startBgm,
   };
+}
+
+/**
+ * BGM 예약 시계가 현재 시각보다 뒤처졌으면(탭 비활성·스레드 멈춤) 밀린 박자를 건너뛰어 다음 박자를
+ * 현재 시각 이후로 옮긴다. step도 같은 수만큼 올려 곡의 마디 위치(코드 진행)를 시간에 맞춘다.
+ */
+export function skipMissedBeats(
+  next: number,
+  step: number,
+  now: number,
+  dt: number,
+): { next: number; step: number } {
+  if (next >= now || dt <= 0) return { next, step };
+  const missed = Math.ceil((now - next) / dt);
+  return { next: next + missed * dt, step: step + missed };
 }
