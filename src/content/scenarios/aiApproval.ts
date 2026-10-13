@@ -103,7 +103,7 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       memberId: 'CFO',
-      text: '자동 승인을 해봤더니 규칙을 벗어난 승인이 4건 있었습니다. 적은 돈이어도 그냥 넘길 수 없습니다. 돈 한도와 다시 확인하는 절차가 없으면 반대합니다.',
+      text: '자동 승인을 해봤더니 규칙을 벗어난 승인이 4건 있었습니다. 적은 돈이어도 그냥 넘길 수 없습니다. 금액 한도와 다시 확인하는 절차가 없으면 반대합니다.',
       bubble: '규칙 밖 승인 4건이 걱정입니다',
       evidenceIds: ['E2'],
       openingStance: 'AGAINST',
@@ -219,10 +219,10 @@ export const aiApprovalScenario: Scenario = {
     {
       conditionId: 'LIMIT',
       memberId: 'CFO',
-      text: '돈 한도를 정하면 잘못 승인되는 돈이 얼마나 되는지 알 수 있습니다. 어디까지 맡길지 숫자로 정합시다.',
+      text: '금액 한도를 정하면 잘못 승인되는 돈이 얼마나 되는지 알 수 있습니다. 어디까지 맡길지 숫자로 정합시다.',
       bubble: '한도를 숫자로 정합시다',
       pendingText:
-        '돈 한도를 정한다는 점은 좋습니다.',
+        '금액 한도를 정한다는 점은 좋습니다.',
       pendingBubble: '한도는 좋습니다. 하나만 더',
     },
     {
@@ -280,7 +280,7 @@ export const aiApprovalScenario: Scenario = {
   // 문장씩 직접 답한다.
   oppositionReactions: {
     CEO: '사람이 판단해야 한다는 말씀, 이해합니다. 다만 담당자가 없으면 일이 멈추니, 범위를 좁혀서라도 맡겨 보자는 제안입니다.',
-    CFO: '사람이 판단해야 한다는 말씀에는 저도 동의합니다. 돈 한도도, 다시 확인하는 절차도 없이 넘기는 건 저도 반대입니다.',
+    CFO: '사람이 판단해야 한다는 말씀에는 저도 동의합니다. 금액 한도도, 다시 확인하는 절차도 없이 넘기는 건 저도 반대입니다.',
     CAIO: '말씀하신 걱정에는 공감합니다. 다만 승인 이유를 남기는 장치가 있다면, 좁은 범위에서는 맡겨볼 수 있다고 봅니다.',
     CISO: '사람이 판단해야 한다는 말씀, 감사 메모에서도 같은 걱정이 나왔습니다. 책임질 사람부터 정하지 않으면 저도 반대합니다.',
   },
@@ -311,7 +311,7 @@ export const aiApprovalScenario: Scenario = {
   statementHighlightTerms: [
     '담당자가 없을 때',
     '규칙을 벗어난 승인',
-    '돈 한도',
+    '금액 한도',
     '다시 확인하는 절차',
     '왜 승인했는지',
     '이유를 남기는',
@@ -322,7 +322,7 @@ export const aiApprovalScenario: Scenario = {
   ],
   holdReasons: {
     CEO: '지금 안건대로도 느린 결재를 풀어주는 방향이라 말씀은 바뀌지 않습니다.',
-    CFO: '돈 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아 입장은 그대로입니다.',
+    CFO: '금액 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아 입장은 그대로입니다.',
     CAIO: '승인 사유를 남기는 장치가 아직 보이지 않아 입장은 그대로입니다.',
     CISO: '책임질 사람과 기록, 둘 다 아직 확인되지 않아 입장은 그대로입니다.',
   },
@@ -453,12 +453,12 @@ export const aiApprovalScenario: Scenario = {
       {
         when: { all: [{ has: 'LIMIT' }, { has: 'REVIEW' }] },
         vote: 'YES',
-        reason: '돈 한도를 정하고 일부도 다시 본다니 그러면 찬성합니다',
+        reason: '금액 한도를 정하고 일부도 다시 본다니 그러면 찬성합니다',
       },
       {
         when: { always: true },
         vote: 'NO',
-        reason: '돈 한도와 다시 확인하는 절차가 둘 다 있어야 찬성할 수 있어 반대합니다',
+        reason: '금액 한도와 다시 확인하는 절차가 둘 다 있어야 찬성할 수 있어 반대합니다',
       },
     ],
     CAIO: [
@@ -511,7 +511,7 @@ export const aiApprovalScenario: Scenario = {
     },
   },
   remainingTasks: [
-    { text: '결재 범위와 돈 한도 정하기', resolvedBy: 'LIMIT' },
+    { text: '결재 범위와 금액 한도 정하기', resolvedBy: 'LIMIT' },
     { text: '승인 이유를 어떻게 남길지', resolvedBy: 'LOG' },
     { text: '책임질 사람 정하기', resolvedBy: 'OWNER' },
   ],

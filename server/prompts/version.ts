@@ -82,4 +82,7 @@
 // buildReactionsQuestionRule)을, FOLLOWUP·VOTE에 참가자의 답변 문장과 "그 답이 그 질문에 답했는지로
 // 판단"(ANSWER_JUDGMENT_RULE)을 더했다. round·vote 요청에 followUpQuestion·followUpAnswerText
 // (선택 필드)를 추가했다. v13의 FOLLOWUP 방향 단어 금지·서버 교정은 그대로. 비교는 docs/eval/tuning-v14.md.
-export const PROMPT_VERSION = 'v14';
+// v15(2026-10-13): 사용자 지시 "임원들의 말 중에 '돈 한도'라고 되어 있는데 '금액 한도'라고
+// 나와야해." 쉬운 말 규칙(plainLanguage.ts PLAIN_LANGUAGE_RULE)의 바꿔 쓰기 예시를 "한도"→"금액
+// 한도"로 고쳤다(v11부터 "돈 한도"). scripted 발언·조건 문구도 같은 말로 맞췄다. 이 예시 외 변경 없음.
+export const PROMPT_VERSION = 'v15';

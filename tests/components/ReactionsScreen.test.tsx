@@ -216,7 +216,7 @@ describe('ReactionsScreen', () => {
 
     const card = screen.getByTestId('reaction-card-CFO');
     expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('유지');
-    expect(card).toHaveTextContent('돈 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아');
+    expect(card).toHaveTextContent('금액 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아');
     expect(card.querySelector('.reaction-card__cause')).toBeNull();
   });
 
