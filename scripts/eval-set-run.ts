@@ -935,9 +935,11 @@ function runCheck(files: string[]): void {
   }
 }
 
-function parseArgs(argv: string[]): { out: string; check: string[] } {
+function parseArgs(argv: string[]): { out: string; check: string[]; only: string[] } {
   let out = '';
   const check: string[] = [];
+  // --case <id>(여러 번 가능): 일부 케이스만 다시 잰다(크레딧 절약·실패 케이스 재측정, T129).
+  const only: string[] = [];
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--out' && argv[i + 1] !== undefined) {
       out = argv[i + 1] as string;
@@ -945,16 +947,19 @@ function parseArgs(argv: string[]): { out: string; check: string[] } {
     } else if (argv[i] === '--check' && argv[i + 1] !== undefined) {
       check.push(argv[i + 1] as string);
       i += 1;
+    } else if (argv[i] === '--case' && argv[i + 1] !== undefined) {
+      only.push(argv[i + 1] as string);
+      i += 1;
     }
   }
   if (!out && check.length === 0) {
-    throw new Error('usage: eval-set-run.ts --out <path.jsonl> | --check <path.jsonl> [--check ...]');
+    throw new Error('usage: eval-set-run.ts --out <path.jsonl> [--case <id> ...] | --check <path.jsonl> [--check ...]');
   }
-  return { out, check };
+  return { out, check, only };
 }
 
 async function main(): Promise<void> {
-  const { out, check } = parseArgs(process.argv.slice(2));
+  const { out, check, only } = parseArgs(process.argv.slice(2));
   if (check.length > 0) {
     runCheck(check);
     if (!out) {
@@ -983,7 +988,14 @@ async function main(): Promise<void> {
   }
   console.log(`[eval-set-run] 연결 확인 OK · ${probe.modelId} · ${probe.latencyMs}ms`);
 
-  const cases = loadEvalSet();
+  const allCases = loadEvalSet();
+  const cases = only.length > 0 ? allCases.filter((c) => only.includes(c.id)) : allCases;
+  const unknown = only.filter((id) => !allCases.some((c) => c.id === id));
+  if (unknown.length > 0) {
+    console.error(`[eval-set-run] 없는 케이스: ${unknown.join(', ')}`);
+    process.exit(1);
+    return;
+  }
   const allRows: EvalRow[] = [];
   for (const evalCase of cases) {
     const rows = await runCase(evalCase, provider, systemClock);
