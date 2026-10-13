@@ -19,7 +19,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.useRealTimers();
-  appSound.updateSettings({ bgm: 'tension', bgmVolume: 45, sfxOn: true, sfxVolume: 80 });
+  appSound.updateSettings({ bgm: 'random', bgmVolume: 45, sfxOn: true, sfxVolume: 80 });
 });
 
 function fakeSound() {
@@ -271,7 +271,9 @@ describe('운영 메뉴 소리 구역', () => {
     render(<OperatorMenu onNewSession={() => undefined} />);
     fireEvent.click(screen.getByTestId('operator-menu-button'));
     fireEvent.click(screen.getByTestId('operator-sound'));
-    expect(screen.getByTestId('operator-bgm-tension')).toBeChecked();
+    expect(screen.getByTestId('operator-bgm-random')).toBeChecked();
+    // T130: 선택지 순서는 랜덤(기본) · 세 곡 · 끄기
+    expect(screen.getAllByRole('radio', { name: /랜덤|긴장된 회의실|브리핑 펄스|조용한 숙고|끄기/ }).map((r) => r.getAttribute('data-testid'))).toEqual(['operator-bgm-random', 'operator-bgm-tension', 'operator-bgm-pulse', 'operator-bgm-piano', 'operator-bgm-off']);
     fireEvent.click(screen.getByTestId('operator-bgm-piano'));
     expect(appSound.getSettings().bgm).toBe('piano');
     fireEvent.click(screen.getByTestId('operator-bgm-off'));

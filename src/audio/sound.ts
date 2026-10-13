@@ -4,7 +4,9 @@
 
 import { createSynth, BGM_NAMES, type BgmHandle, type BgmName, type SfxName, type SynthEngine } from './synth';
 
-export type BgmChoice = BgmName | 'off';
+/** 'random'(기본, T130): 체험을 시작할 때마다 세 곡 중 하나를 고른다(바로 전 곡은 피함). */
+export type BgmChoice = BgmName | 'random' | 'off';
+export const BGM_CHOICES: readonly BgmChoice[] = ['random', ...BGM_NAMES, 'off'];
 
 export interface SoundSettings {
   bgm: BgmChoice;
@@ -15,15 +17,26 @@ export interface SoundSettings {
   sfxVolume: number;
 }
 
-/** 시안의 슬라이더 기본값(BGM 45, 효과음 80)과 팀리드 기본(소리 켬, '긴장된 회의실'). */
+/** 시안의 슬라이더 기본값(BGM 45, 효과음 80), 소리 켬, BGM은 랜덤(2026-10-13 사용자 지시, T130). */
 export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
-  bgm: 'tension',
+  bgm: 'random',
   bgmVolume: 45,
   sfxOn: true,
   sfxVolume: 80,
 };
 
-export const SOUND_STORAGE_KEY = 'boardroom.sound.v1';
+// v2(T130): 기본 곡이 랜덤으로 바뀌어 키를 올렸다. v1에 저장된 곡 선택('긴장된 회의실' 등)은
+// 버리고 음량·효과음 설정만 옮겨 온다 — 이미 쓰던 브라우저도 랜덤으로 시작하게.
+export const SOUND_STORAGE_KEY = 'boardroom.sound.v2';
+export const LEGACY_SOUND_STORAGE_KEY = 'boardroom.sound.v1';
+
+export const BGM_CHOICE_LABELS: Record<BgmChoice, string> = {
+  random: '랜덤(체험마다 바뀜)',
+  tension: '긴장된 회의실',
+  pulse: '브리핑 펄스',
+  piano: '조용한 숙고',
+  off: '끄기',
+};
 
 export const BGM_LABELS: Record<BgmName, string> = {
   tension: '긴장된 회의실',
@@ -42,6 +55,15 @@ export interface SoundOptions {
   /** 테스트에서 가짜 AudioContext를 주입한다. null을 돌려주면 소리 없는 환경이다. */
   createContext?: () => AudioContext | null;
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
+  /** 랜덤 곡 고르기에 쓰는 난수(0 이상 1 미만). 테스트에서 고정한다. */
+  random?: () => number;
+}
+
+/** 랜덤 모드의 곡 고르기: 바로 전 곡(exclude)을 빼고 고른다. */
+export function pickRandomBgm(exclude: BgmName | null, random: () => number = Math.random): BgmName {
+  const pool = BGM_NAMES.filter((name) => name !== exclude);
+  const index = Math.min(pool.length - 1, Math.floor(random() * pool.length));
+  return pool[index] as BgmName;
 }
 
 const LEVEL_NORMAL = 1;
@@ -62,7 +84,7 @@ export function parseSoundSettings(raw: string | null): SoundSettings {
   if (!raw) return { ...DEFAULT_SOUND_SETTINGS };
   try {
     const data = JSON.parse(raw) as Partial<Record<keyof SoundSettings, unknown>>;
-    const bgm = data.bgm === 'off' || BGM_NAMES.includes(data.bgm as BgmName) ? (data.bgm as BgmChoice) : DEFAULT_SOUND_SETTINGS.bgm;
+    const bgm = BGM_CHOICES.includes(data.bgm as BgmChoice) ? (data.bgm as BgmChoice) : DEFAULT_SOUND_SETTINGS.bgm;
     return {
       bgm,
       bgmVolume: clamp(data.bgmVolume, DEFAULT_SOUND_SETTINGS.bgmVolume),
@@ -119,13 +141,20 @@ export function createSound(options: SoundOptions = {}): Sound {
   const createContext = options.createContext ?? defaultCreateContext;
   const storage = options.storage === undefined ? defaultStorage() : options.storage;
 
+  const random = options.random ?? Math.random;
   let settings: SoundSettings = (() => {
     try {
-      return parseSoundSettings(storage?.getItem(SOUND_STORAGE_KEY) ?? null);
+      const saved = storage?.getItem(SOUND_STORAGE_KEY) ?? null;
+      if (saved) return parseSoundSettings(saved);
+      const legacy = parseSoundSettings(storage?.getItem(LEGACY_SOUND_STORAGE_KEY) ?? null);
+      return { ...legacy, bgm: DEFAULT_SOUND_SETTINGS.bgm };
     } catch {
       return { ...DEFAULT_SOUND_SETTINGS };
     }
   })();
+  /** 랜덤 모드에서 이번 체험에 고른 곡. 체험이 끝나면(scene.playing false) 비운다. */
+  let randomPick: BgmName | null = null;
+  let lastRandomPick: BgmName | null = null;
   let ctx: AudioContext | null = null;
   let synth: SynthEngine | null = null;
   let unavailable = false;
@@ -152,7 +181,18 @@ export function createSound(options: SoundOptions = {}): Sound {
 
   function syncBgm(): void {
     if (!ctx || !synth) return;
-    const want: BgmName | null = scene.playing && !ending && settings.bgm !== 'off' ? settings.bgm : null;
+    let want: BgmName | null = null;
+    if (scene.playing && !ending && settings.bgm !== 'off') {
+      if (settings.bgm === 'random') {
+        if (!randomPick) {
+          randomPick = pickRandomBgm(lastRandomPick, random);
+          lastRandomPick = randomPick;
+        }
+        want = randomPick;
+      } else {
+        want = settings.bgm;
+      }
+    }
     if (bgm && bgm.name !== want) {
       bgm.stop();
       bgm = null;
@@ -214,6 +254,8 @@ export function createSound(options: SoundOptions = {}): Sound {
     },
     setScene(next) {
       if (next.playing === scene.playing && next.low === scene.low) return;
+      // 체험이 끝나면(처음 화면) 랜덤 곡을 비워 다음 체험에서 새로 고른다.
+      if (!next.playing) randomPick = null;
       scene = next;
       syncBgm();
     },

@@ -3,8 +3,7 @@
 // 편의 메뉴다. 관람 창 열기(P1)는 이 카드 범위 밖이라 추가하지 않는다.
 
 import { useEffect, useState } from 'react';
-import { BGM_LABELS, type BgmChoice } from '../../audio/sound';
-import { BGM_NAMES } from '../../audio/synth';
+import { BGM_CHOICES, BGM_CHOICE_LABELS } from '../../audio/sound';
 import { useSoundSettings } from '../../audio/useSound';
 import { fetchHealth, probeModel, type HealthInfo, type ProbeResult } from '../../services/transport/probe';
 
@@ -271,7 +270,7 @@ export function OperatorMenu({
         >
           <fieldset className="operator-sound__group">
             <legend>배경 음악</legend>
-            {([...BGM_NAMES, 'off'] as BgmChoice[]).map((choice) => (
+            {BGM_CHOICES.map((choice) => (
               <label key={choice} className="operator-sound__option">
                 <input
                   type="radio"
@@ -280,7 +279,7 @@ export function OperatorMenu({
                   onChange={() => updateSoundSettings({ bgm: choice })}
                   data-testid={`operator-bgm-${choice}`}
                 />
-                <span>{choice === 'off' ? '끄기' : BGM_LABELS[choice]}</span>
+                <span>{BGM_CHOICE_LABELS[choice]}</span>
               </label>
             ))}
           </fieldset>

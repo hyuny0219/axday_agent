@@ -26,8 +26,8 @@ async function instrument(page: Page, stored?: object) {
       window.__audio.oscillators += 1;
       return start.apply(this, args);
     };
-    if (settings && !localStorage.getItem('boardroom.sound.v1')) {
-      localStorage.setItem('boardroom.sound.v1', JSON.stringify(settings));
+    if (settings && !localStorage.getItem('boardroom.sound.v2')) {
+      localStorage.setItem('boardroom.sound.v2', JSON.stringify(settings));
     }
   }, stored ?? null);
 }
@@ -88,14 +88,14 @@ test('운영 메뉴 소리 구역: 곡 고르기·끄기·효과음 토글·음�
   await page.getByTestId('operator-sound').click();
   await expect(page.getByTestId('operator-sound-panel')).toBeInViewport({ ratio: 1 });
   await noPageScroll(page);
-  await expect(page.getByTestId('operator-bgm-tension')).toBeChecked();
+  await expect(page.getByTestId('operator-bgm-random')).toBeChecked(); // T130: 기본은 랜덤
 
   await page.getByTestId('operator-bgm-piano').check();
   await page.getByTestId('operator-sfx-on').uncheck();
   await page.getByTestId('operator-bgm-volume').fill('20');
   await expect(page.getByTestId('operator-sfx-volume')).toBeDisabled();
 
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('boardroom.sound.v1') ?? '{}'));
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('boardroom.sound.v2') ?? '{}'));
   expect(saved).toMatchObject({ bgm: 'piano', sfxOn: false, bgmVolume: 20 });
 
   await page.reload();

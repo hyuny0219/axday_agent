@@ -4,9 +4,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_SOUND_SETTINGS,
+  LEGACY_SOUND_STORAGE_KEY,
   SOUND_STORAGE_KEY,
   createSound,
   parseSoundSettings,
+  pickRandomBgm,
 } from '../../src/audio/sound';
 import { createFakeContext, memoryStorage } from './fakeAudio';
 
@@ -17,11 +19,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function setup(stored?: Record<string, string>) {
+function setup(stored?: Record<string, string>, random?: () => number) {
   const fake = createFakeContext();
   const createContext = vi.fn(() => fake.ctx);
   const storage = memoryStorage(stored);
-  const sound = createSound({ createContext, storage });
+  const sound = createSound({ createContext, storage, random });
   return { fake, createContext, storage, sound };
 }
 
@@ -71,9 +73,10 @@ describe('AudioContext 생성', () => {
 });
 
 describe('BGM', () => {
-  it('기본은 소리 켬·긴장된 회의실이고, 체험 중 장면에서만 재생한다', () => {
-    const { sound } = setup();
+  it('기본은 소리 켬·랜덤이고, 체험 중 장면에서만 재생한다(T130)', () => {
+    const { sound } = setup(undefined, () => 0);
     expect(sound.getSettings()).toEqual(DEFAULT_SOUND_SETTINGS);
+    expect(DEFAULT_SOUND_SETTINGS.bgm).toBe('random');
     sound.unlock();
     expect(sound.currentBgm()).toBeNull();
     sound.setScene({ playing: true, low: false });
@@ -83,7 +86,7 @@ describe('BGM', () => {
   });
 
   it('unlock 전에 장면이 정해져 있으면 unlock에서 시작한다', () => {
-    const { sound } = setup();
+    const { sound } = setup(undefined, () => 0);
     sound.setScene({ playing: true, low: false });
     expect(sound.currentBgm()).toBeNull();
     sound.unlock();
@@ -104,14 +107,37 @@ describe('BGM', () => {
     expect(sound.currentBgm()).toBe('tension');
   });
 
-  it('엔딩이 열리면 멈추고 닫히면 다시 깐다', () => {
-    const { sound } = setup();
+  it('엔딩이 열리면 멈추고 닫히면 같은 곡을 다시 깐다', () => {
+    const { sound } = setup(undefined, () => 0.99);
     sound.unlock();
     sound.setScene({ playing: true, low: false });
+    const picked = sound.currentBgm();
     sound.setEnding(true);
     expect(sound.currentBgm()).toBeNull();
     sound.setEnding(false);
+    expect(sound.currentBgm()).toBe(picked);
+  });
+
+  it('랜덤: 한 체험 안에서는 같은 곡, 다음 체험에서는 바로 전 곡을 피해 새로 고른다', () => {
+    const { sound } = setup(undefined, () => 0);
+    sound.unlock();
+    sound.setScene({ playing: true, low: false });
     expect(sound.currentBgm()).toBe('tension');
+    sound.setScene({ playing: true, low: true }); // MOTION·VOTE
+    expect(sound.currentBgm()).toBe('tension');
+    sound.setScene({ playing: false, low: false }); // 처음 화면
+    sound.setScene({ playing: true, low: false }); // 다음 체험
+    expect(sound.currentBgm()).toBe('pulse'); // tension을 빼고 첫 번째
+    sound.setScene({ playing: false, low: false });
+    sound.setScene({ playing: true, low: false });
+    expect(sound.currentBgm()).toBe('tension'); // 바로 전(pulse)만 피한다
+  });
+
+  it('pickRandomBgm은 바로 전 곡을 빼고 고른다', () => {
+    for (const r of [0, 0.3, 0.6, 0.999]) {
+      expect(pickRandomBgm('piano', () => r)).not.toBe('piano');
+    }
+    expect(pickRandomBgm(null, () => 0.999)).toBe('piano');
   });
 
   it('MOTION·VOTE는 낮게, 표 공개 덕킹은 크게 줄이고 끝나면 원래대로', () => {
@@ -178,6 +204,13 @@ describe('설정 저장·복원', () => {
     first.sound.updateSettings({ bgm: 'piano', bgmVolume: 20, sfxOn: false, sfxVolume: 55 });
     const second = createSound({ createContext: () => null, storage: first.storage });
     expect(second.getSettings()).toEqual({ bgm: 'piano', bgmVolume: 20, sfxOn: false, sfxVolume: 55 });
+  });
+
+  it('v1에 저장된 곡 선택은 버리고(랜덤으로 시작) 음량·효과음은 옮겨 온다(T130)', () => {
+    const { sound } = setup({
+      [LEGACY_SOUND_STORAGE_KEY]: JSON.stringify({ bgm: 'tension', bgmVolume: 30, sfxOn: false, sfxVolume: 60 }),
+    });
+    expect(sound.getSettings()).toEqual({ bgm: 'random', bgmVolume: 30, sfxOn: false, sfxVolume: 60 });
   });
 
   it('저장값이 깨졌거나 저장소를 못 쓰면 기본값이다', () => {
