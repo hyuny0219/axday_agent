@@ -154,7 +154,8 @@ export function createSound(options: SoundOptions = {}): Sound {
   })();
   /** 랜덤 모드에서 이번 체험에 고른 곡. 체험이 끝나면(scene.playing false) 비운다. */
   let randomPick: BgmName | null = null;
-  let lastRandomPick: BgmName | null = null;
+  /** 실제로 마지막에 재생한 곡(랜덤·고정 모두). 랜덤은 이 곡을 피해 고른다(PR #21 Codex P2). */
+  let lastPlayedBgm: BgmName | null = null;
   let ctx: AudioContext | null = null;
   let synth: SynthEngine | null = null;
   let unavailable = false;
@@ -185,8 +186,7 @@ export function createSound(options: SoundOptions = {}): Sound {
     if (scene.playing && !ending && settings.bgm !== 'off') {
       if (settings.bgm === 'random') {
         if (!randomPick) {
-          randomPick = pickRandomBgm(lastRandomPick, random);
-          lastRandomPick = randomPick;
+          randomPick = pickRandomBgm(lastPlayedBgm, random);
         }
         want = randomPick;
       } else {
@@ -199,6 +199,7 @@ export function createSound(options: SoundOptions = {}): Sound {
     }
     if (want && !bgm) {
       bgm = synth.startBgm(want);
+      lastPlayedBgm = want;
     }
     applyLevel();
   }

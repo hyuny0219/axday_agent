@@ -133,6 +133,21 @@ describe('BGM', () => {
     expect(sound.currentBgm()).toBe('tension'); // 바로 전(pulse)만 피한다
   });
 
+  it('랜덤은 직전 체험에 고정 모드로 재생한 곡도 피한다(PR #21 Codex P2)', () => {
+    const { sound } = setup(undefined, () => 0);
+    sound.unlock();
+    sound.setScene({ playing: true, low: false }); // 랜덤 → tension
+    sound.setScene({ playing: false, low: false });
+    sound.updateSettings({ bgm: 'pulse' });
+    sound.setScene({ playing: true, low: false }); // 고정 pulse로 한 판
+    expect(sound.currentBgm()).toBe('pulse');
+    sound.setScene({ playing: false, low: false });
+    sound.updateSettings({ bgm: 'random' });
+    sound.setScene({ playing: true, low: false });
+    expect(sound.currentBgm()).not.toBe('pulse');
+    expect(sound.currentBgm()).toBe('tension'); // pulse를 뺀 첫 번째
+  });
+
   it('pickRandomBgm은 바로 전 곡을 빼고 고른다', () => {
     for (const r of [0, 0.3, 0.6, 0.999]) {
       expect(pickRandomBgm('piano', () => r)).not.toBe('piano');
