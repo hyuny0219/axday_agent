@@ -15,7 +15,9 @@ export function clickCueFor(target: EventTarget | null): 'clickA' | 'sendA' | nu
   return button.matches(MAJOR_BUTTON_SELECTOR) ? 'clickA' : null;
 }
 
-/** 새로 붙은 노드 안의 도착 카드 수(지난 화면 보기 안은 제외). */
+/** 새로 붙은 노드 안의 도착 카드 수(지난 화면 보기 안은 제외). live 카드는 data-testid
+ *  (statement-card-·reaction-card-), scripted 첫 의견 카드(OpinionsScreen의 .opinion-card)는
+ *  data-arrival-card로 표시한다(PR #21 Codex P2). */
 export function countArrivals(node: Node): number {
   if (!(node instanceof Element)) return 0;
   // 지난 화면 보기(T126) 중에는 지금 화면이 display:none으로 마운트만 유지된다. 그 안에서 늦게 도착하는
@@ -26,10 +28,11 @@ export function countArrivals(node: Node): number {
     return live !== null && live.style.display === 'none';
   };
   let count = 0;
-  const candidates = [node, ...Array.from(node.querySelectorAll('[data-testid]'))];
+  const candidates = [node, ...Array.from(node.querySelectorAll('[data-testid], [data-arrival-card]'))];
   for (const el of candidates) {
     const id = el.getAttribute('data-testid');
-    if (id && ARRIVAL_CARD_PATTERN.test(id) && !inPast(el)) count += 1;
+    const isArrival = (id !== null && ARRIVAL_CARD_PATTERN.test(id)) || el.hasAttribute('data-arrival-card');
+    if (isArrival && !inPast(el)) count += 1;
   }
   return count;
 }

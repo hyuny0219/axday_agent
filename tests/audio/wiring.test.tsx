@@ -134,6 +134,16 @@ describe('SoundHost', () => {
     expect(playArrive).toHaveBeenCalledTimes(1);
   });
 
+  it('scripted 첫 의견 카드(data-arrival-card)도 도착 카드로 센다', () => {
+    const host = document.createElement('div');
+    host.innerHTML =
+      '<article class="opinion-card" data-arrival-card="CEO"></article><article class="opinion-card"></article>';
+    expect(countArrivals(host)).toBe(1);
+    const single = document.createElement('article');
+    single.setAttribute('data-arrival-card', 'CFO');
+    expect(countArrivals(single)).toBe(1);
+  });
+
   it('countArrivals는 임원 카드 testid만 센다', () => {
     const host = document.createElement('div');
     host.innerHTML = '<div data-testid="statement-card-CAIO"></div><div data-testid="statement-card-X"></div><div data-testid="reaction-card-cause-CEO"></div>';

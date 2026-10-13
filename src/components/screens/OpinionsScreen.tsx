@@ -203,6 +203,7 @@ export function OpinionsScreen({
                 <article
                   key={opinion.memberId}
                   className={`opinion-card opinion-card--${STANCE_MODIFIER[stance]}`}
+                  data-arrival-card={opinion.memberId}
                 >
                   <div className="opinion-card__head">
                     <span className="opinion-card__code" aria-hidden="true">
