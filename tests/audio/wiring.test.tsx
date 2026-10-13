@@ -2,6 +2,7 @@
 // 추천 카드 선택음·운영 메뉴 '소리' 구역.
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { StrictMode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { clickCueFor, countArrivals } from '../../src/audio/cues';
 import { SoundHost } from '../../src/audio/SoundHost';
@@ -112,6 +113,27 @@ describe('SoundHost', () => {
     expect(playArrive).not.toHaveBeenCalled();
   });
 
+  it('지금 화면이 숨겨진 보기 모드에서 늦게 도착하는 카드는 무음', async () => {
+    const { target, playArrive } = fakeSound();
+    render(
+      <>
+        <SoundHost stage="REACTIONS" target={target} />
+        <div data-live-screen style={{ display: 'none' }} id="hidden-live" />
+        <div data-live-screen style={{ display: 'contents' }} id="shown-live" />
+      </>,
+    );
+    await act(async () => {
+      document.getElementById('hidden-live')!.innerHTML = '<div data-testid="reaction-card-CEO"></div>';
+      await Promise.resolve();
+    });
+    expect(playArrive).not.toHaveBeenCalled();
+    await act(async () => {
+      document.getElementById('shown-live')!.innerHTML = '<div data-testid="reaction-card-CEO"></div>';
+      await Promise.resolve();
+    });
+    expect(playArrive).toHaveBeenCalledTimes(1);
+  });
+
   it('countArrivals는 임원 카드 testid만 센다', () => {
     const host = document.createElement('div');
     host.innerHTML = '<div data-testid="statement-card-CAIO"></div><div data-testid="statement-card-X"></div><div data-testid="reaction-card-cause-CEO"></div>';
@@ -188,6 +210,16 @@ describe('엔딩 소리', () => {
     expect(playEnding).toHaveBeenCalledWith(true);
     unmount();
     expect(setEnding).toHaveBeenLastCalledWith(false);
+  });
+
+  it('StrictMode에서도 팡파르(도장 포함)는 한 번만', () => {
+    const playEnding = vi.spyOn(appSound, 'playEnding');
+    render(
+      <StrictMode>
+        <EndingCard model={model(true)} caseTag="A" onDetail={() => undefined} onHome={() => undefined} />
+      </StrictMode>,
+    );
+    expect(playEnding).toHaveBeenCalledTimes(1);
   });
 
   it('실패 팡파르는 실패 쪽', () => {

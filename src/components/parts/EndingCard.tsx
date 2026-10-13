@@ -102,9 +102,14 @@ export function EndingCard({ model, caseTag, onDetail, onHome, clock = systemClo
   }, [clock]);
 
   // T128: 엔딩이 열리면 BGM을 멈추고 성공/실패 팡파르와 도장을 한 번 낸다. 보고서로 돌아가면 BGM이 다시 깔린다.
+  // StrictMode가 설정→정리→설정을 되풀이해도 팡파르·도장은 이 엔딩이 열릴 때 한 번만 낸다.
+  const playedRef = useRef(false);
   useEffect(() => {
     sound.setEnding(true);
-    sound.playEnding(model.success);
+    if (!playedRef.current) {
+      playedRef.current = true;
+      sound.playEnding(model.success);
+    }
     return () => sound.setEnding(false);
     // 엔딩이 열려 있는 동안 model은 바뀌지 않는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps

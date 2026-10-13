@@ -18,7 +18,13 @@ export function clickCueFor(target: EventTarget | null): 'clickA' | 'sendA' | nu
 /** 새로 붙은 노드 안의 도착 카드 수(지난 화면 보기 안은 제외). */
 export function countArrivals(node: Node): number {
   if (!(node instanceof Element)) return 0;
-  const inPast = (el: Element) => el.closest('[data-past-screen]') !== null;
+  // 지난 화면 보기(T126) 중에는 지금 화면이 display:none으로 마운트만 유지된다. 그 안에서 늦게 도착하는
+  // 카드도 소리를 내지 않는다(돌아와도 놓친 도착음은 다시 내지 않는다).
+  const inPast = (el: Element) => {
+    if (el.closest('[data-past-screen]') !== null) return true;
+    const live = el.closest<HTMLElement>('[data-live-screen]');
+    return live !== null && live.style.display === 'none';
+  };
   let count = 0;
   const candidates = [node, ...Array.from(node.querySelectorAll('[data-testid]'))];
   for (const el of candidates) {
