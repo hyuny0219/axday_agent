@@ -914,3 +914,15 @@
 .app-body[data-view-mode] [data-next-step]::after {
   display: none;
 }
+
+/* 200% 확대 상당(1199px 이하, 문서 스크롤 모드)에서는 헤더 가운데의 진행 스트립이 줄바꿈해
+   좁아질 수 있게 한다. T126 이전·다음 버튼이 같은 줄에 더해지며 960px에서 여유가 0에 가까워져,
+   CI(Linux Chromium) 글꼴 폭이나 회의 번호 길이에 따라 가로 스크롤이 생겼다(a11y 960×540).
+   검수 해상도(1920·1280)는 이 규칙 밖이라 한 줄 그대로다. */
+@media (max-width: 1199px) {
+  .app-scale-wrapper:not([data-fit='scale']) .progress-strip__list {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+  }
+}
