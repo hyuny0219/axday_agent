@@ -1210,6 +1210,26 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - `OperatorMenu`가 document `keydown`을 구독한다. **F11**은 브라우저 기본(창 전체화면, Esc로 안 나와짐·운영 버튼 안 숨음)을 `preventDefault`로 막고 `document.documentElement.requestFullscreen()`을 부른다. **Ctrl+Shift+F**도 같은 동작이며 input·textarea·contenteditable에 포커스가 있으면 무시한다. 이미 전체화면이면 F11만 기본 동작을 막고 아무것도 하지 않는다. 해제는 Esc(페이지 전체화면의 브라우저 기본 동작). 요청이 거부되면 조용히 무시한다.
 - T124(2026-10-12 사용자 지시 "맥에서도 단축키 추가해 줘 command+shift+k로"): **Command+Shift+K**(metaKey+shiftKey+K)도 같은 동작 — 입력 중 무시, 기본 동작 preventDefault, 해제 Esc.
 
+## T128 — BGM·효과음: 코드 합성, 운영자 BGM 선택 (2026-10-13)
+
+- 사용자 지시: "게임을 진행할 때 BGM과 효과음이 있으면 좋겠어." 시안 검토 뒤 결정: **임원 표 한 장 공개는 B(카드 뒤집기)**, 나머지 효과음은 모두 A, **BGM 3곡 모두 넣고 운영자가 고른다**. 기본값은 소리 켬·BGM '긴장된 회의실'(팀리드 판단).
+- **소리 원천**: 승인된 시안의 tone/noise/kick 합성, BGM 3곡(`tension`·`pulse`·`piano`), 효과음 9종(`clickA`·`pickA`·`sendA`·`arriveA`·`revealB`·`stamp`·`winA`·`loseA`·`tick`)을 `src/audio/synth.ts`로 그대로 옮겼다. 음색·음높이·리듬·BGM 대비 효과음 음량 비율(BGM 슬라이더² × 0.6, 효과음 슬라이더², 마스터 0.9 + 컴프레서)은 시안과 같다. 외부 음원 파일·CDN 없음. `tick`만 시안의 3연타 대신 1초마다 한 번씩 부르도록 한 번만 울린다.
+- **구조**: `sound.ts`(컨트롤러 싱글턴: AudioContext 하나, 설정 저장·복원, BGM 장면·덕킹·엔딩 정지, 효과음 재생), `SoundHost.tsx`(AppShell에 한 번 마운트: 첫 입력에서 unlock, 단계→BGM 장면, 주요 버튼 클릭음, 도착음), `cues.ts`(클릭·도착 카드 판정 순수 함수), `useResultSounds.ts`(표 공개음·덕킹·도장), `useSound.ts`(설정 훅). `AudioContext`가 없거나 만들기에 실패하면(jsdom·구형 브라우저) 모든 호출이 조용히 무시된다.
+- **AudioContext**: 하나만, 첫 pointerdown·keydown·click에서 만든다(자동 재생 정책). 그 전에는 만들지 않는다.
+- **BGM 장면**(실제 `session.stage` 기준, 지난 화면 보기 중에도 그대로): ATTRACT 무음 · '체험 시작'을 누른 뒤(INTRO부터) 선택된 곡을 반복 · MOTION·VOTE는 0.7배로 낮게 · 결과 표 공개 중에는 0.25배로 덕킹했다가 공개가 끝나면 원래대로 · 엔딩이 열리면 정지(보고서로 돌아가면 다시 재생) · 처음 화면으로·새 체험·자동 복귀로 ATTRACT가 되면 0.25초 시정수로 줄이며 멈춘다. 곡을 바꾸면 재생 중이어도 바로 교체한다.
+- **효과음 매핑**
+  - clickA: 주요 버튼 = 비활성이 아닌 `button.cta`(`.cta--secondary`·`.cta--outline`·`aria-disabled` 제외)와 `data-sound`가 붙은 버튼(이전·다음·지금 화면으로). 보조 버튼(근거 자료 보기, 재시도, 입장 고르기 등)은 무음.
+  - pickA: 추천 문구/추천 답변 카드를 **선택**할 때(`PhraseCard`, 해제는 무음).
+  - sendA: '의견 전달 ▶'·'답변 전달 ▶'(`data-sound="send"`, clickA 대신).
+  - arriveA: 임원 발언/반응 카드(`statement-card-<ROLE>`·`reaction-card-<ROLE>`)가 DOM에 붙을 때마다. 겹치면 0.32초 간격으로 밀어서 낸다. `[data-past-screen]`(T126 지난 화면) 안에서 생긴 카드는 소리를 내지 않는다.
+  - revealB: 결과 보고서 임원 표 한 장 공개마다(`useResultSounds`). 건너뛰기·감속 모드로 한꺼번에 열리면 한 번만.
+  - stamp: 보고서의 가결·부결 도장(공개가 끝나는 순간) · 엔딩 도장(팡파르 안에서 성공 +0.38초, 실패 +0.66초).
+  - winA/loseA: 엔딩이 열릴 때 한 번.
+  - tick: 엔딩 자동 복귀 마지막 10초 동안 1초마다.
+- **운영 메뉴 '소리'**: 메뉴 항목 '소리'를 누르면 패널이 열린다. BGM 선택(긴장된 회의실 · 브리핑 펄스 · 조용한 숙고 · 끄기), BGM 음량, 효과음 켜기/끄기, 효과음 음량(효과음을 끄면 비활성). 바꾸는 즉시 적용되고 패널은 열려 있다('뒤로'·'닫기'). 전체화면에서 운영 버튼이 숨는 규칙(T121)은 그대로다.
+- **설정 저장**: `localStorage['boardroom.sound.v1']`에 JSON(`bgm`·`bgmVolume`·`sfxOn`·`sfxVolume`). 새 체험·새로고침에도 유지된다. 깨졌거나 저장소를 못 쓰면 기본값(이번 화면 동안만 유지). 기존 운영 설정은 저장소에 쓰는 것이 없어(코치 위치·접근 토큰은 sessionStorage) 부스 장비 전체에서 유지되도록 localStorage를 택했다.
+- **검증**: `tests/audio/sound.test.ts`(컨트롤러 16건: 첫 클릭 전 미생성·BGM 교체/끄기·엔딩 정지·덕킹·효과음 끄기·컨텍스트 없음·저장/복원), `tests/audio/wiring.test.tsx`(클릭 범위·도착음·지난 화면 무음·표 공개음·pickA·엔딩 소리·운영 메뉴), e2e `e2e/sound.spec.ts`(첫 클릭 전 컨텍스트 0·전체 흐름 콘솔 오류 0·소리 구역 조작과 기억·지난 화면 보기 무음, 1080·720).
+
 ## T127 — 엔딩 화면: 성공·실패 강조와 마무리(A안) (2026-10-12)
 
 - 사용자 지시: 투표 뒤 결과를 따로 띄워 성공/실패를 강조하고 "마무리가 되었는지" 분명히. 선택: **A안**(결과 보고서 → '마무리 ▶' → 엔딩), 보고서의 도장 크기는 유지, 실패 실마리 한 줄 포함, 60초 자동 복귀 + '처음 화면으로' 버튼.

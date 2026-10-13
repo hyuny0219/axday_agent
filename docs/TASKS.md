@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
 | T129 | 완료 | 임원 발언의 "돈 한도" → "금액 한도"(2026-10-13 사용자 지시). scripted 발언·조건 문구(aiApproval.ts)·쉬운 말 규칙 예시(plainLanguage.ts) 수정, 프롬프트 v15 |
-| T128 | 진행 | BGM 3곡(운영자 선택)과 장면별 효과음(2026-10-13 사용자 지시, 시안 https://claude.ai/artifact/EkatwSB5iaKrPxAca2qvNs). 상세는 아래 T128 카드 |
+| T128 | 완료 | BGM 3곡(운영자 선택)과 장면별 효과음(2026-10-13 사용자 지시, 시안 https://claude.ai/artifact/EkatwSB5iaKrPxAca2qvNs). 상세는 아래 T128 카드 |
 | T127 | 완료 | 표결 뒤 마지막 '엔딩' 화면 — 성공·실패를 크게, 실마리 한 줄, 60초 자동 복귀·처음 화면으로(A안)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Jj1LPUGLTvLUs8ufAdUFpk). 상세는 아래 T127 카드 |
 | T126 | 완료 | 화면 안 '◀ 이전'·'다음 ▶' 버튼으로 지난 화면을 **보기만**(전달한 의견·답변은 수정 불가)(2026-10-12 사용자 지시). 상세는 아래 T126 카드 |
 | T125 | 완료 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |

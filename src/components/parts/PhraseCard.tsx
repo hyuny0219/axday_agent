@@ -18,6 +18,7 @@
 // 기본값은 false라 DISCUSS 호출부는 바뀌지 않는다.
 
 import type { Phrase } from '../../content/types';
+import { sound } from '../../audio/sound';
 import { nextStepAttr } from './focusRing';
 
 export interface PhraseCardProps {
@@ -43,7 +44,10 @@ export function PhraseCard({ phrase, selected, onToggle, testId, disabled = fals
         type="checkbox"
         className="phrase-card__input"
         checked={selected}
-        onChange={onToggle}
+        onChange={() => {
+          if (!selected) sound.play('pickA');
+          onToggle();
+        }}
         disabled={disabled}
       />
       <span className="phrase-card__checkbox" aria-hidden="true">

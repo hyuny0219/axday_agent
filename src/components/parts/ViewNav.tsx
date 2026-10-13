@@ -28,6 +28,7 @@ export function ViewNavButton({
       disabled={disabled}
       onClick={onClick}
       data-testid={direction === 'prev' ? 'view-prev' : 'view-next'}
+      data-sound="click"
     >
       {direction === 'prev' ? '◀ 이전' : '다음 ▶'}
     </button>
@@ -41,7 +42,7 @@ export function ViewBanner({ onExit }: { onExit: () => void }) {
       <span className="view-banner__text">
         지난 화면을 보고 있습니다 · 다음 ▶ 또는 &lsquo;지금 화면으로&rsquo;를 누르면 돌아갑니다
       </span>
-      <button type="button" className="view-banner__exit" onClick={onExit} data-testid="view-exit">
+      <button type="button" className="view-banner__exit" onClick={onExit} data-testid="view-exit" data-sound="click">
         지금 화면으로
       </button>
     </div>
