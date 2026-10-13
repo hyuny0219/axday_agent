@@ -14,9 +14,14 @@ export function useResultSounds(
     prevRevealed.current = state.execRevealed;
   }, [state.execRevealed, target]);
 
+  // StrictMode가 설정→정리→설정을 되풀이해도(감속 모드는 처음부터 allRevealed) 도장음은 한 번만.
+  const stamped = useRef(false);
   useEffect(() => {
     target.setDuck(!state.allRevealed);
-    if (state.allRevealed) target.play('stamp');
+    if (state.allRevealed && !stamped.current) {
+      stamped.current = true;
+      target.play('stamp');
+    }
     return () => target.setDuck(false);
   }, [state.allRevealed, target]);
 }

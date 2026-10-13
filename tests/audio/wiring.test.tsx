@@ -165,6 +165,15 @@ describe('표 공개음', () => {
     render(<Probe target={target} state={{ execRevealed: 4, allRevealed: true }} />);
     expect(play.mock.calls.filter(([name]) => name === 'revealB')).toHaveLength(1);
   });
+  it('StrictMode에서 처음부터 다 열린 채 마운트돼도(감속 모드) 도장음은 한 번만', () => {
+    const { target, play } = fakeSound();
+    render(
+      <StrictMode>
+        <Probe target={target} state={{ execRevealed: 4, allRevealed: true }} />
+      </StrictMode>,
+    );
+    expect(play.mock.calls.filter(([name]) => name === 'stamp')).toHaveLength(1);
+  });
   it('떠날 때 덕킹을 풀어 준다', () => {
     const { target } = fakeSound();
     const duck = vi.spyOn(target, 'setDuck');
