@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T128 | 진행 | BGM 3곡(운영자 선택)과 장면별 효과음(2026-10-13 사용자 지시, 시안 https://claude.ai/artifact/EkatwSB5iaKrPxAca2qvNs). 상세는 아래 T128 카드 |
 | T127 | 완료 | 표결 뒤 마지막 '엔딩' 화면 — 성공·실패를 크게, 실마리 한 줄, 60초 자동 복귀·처음 화면으로(A안)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Jj1LPUGLTvLUs8ufAdUFpk). 상세는 아래 T127 카드 |
 | T126 | 완료 | 화면 안 '◀ 이전'·'다음 ▶' 버튼으로 지난 화면을 **보기만**(전달한 의견·답변은 수정 불가)(2026-10-12 사용자 지시). 상세는 아래 T126 카드 |
 | T125 | 완료 | 체험 전 안내에 '팁' 4단계 카드(A안: 기존 두 열 아래 한 줄)(2026-10-12 사용자 지시, 시안 https://claude.ai/artifact/Rd9dyywR4AJy5WDStVVqGR). 상세는 아래 T125 카드 |
@@ -110,6 +111,22 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T128 BGM·효과음 — 코드 합성, 운영자 BGM 선택
+
+- 목표(2026-10-13 사용자 지시): "게임을 진행할 때 BGM과 효과음이 있으면 좋겠어" → 시안(https://claude.ai/artifact/EkatwSB5iaKrPxAca2qvNs) 검토 뒤 결정: **표 한 장 공개는 B(카드 뒤집기), 나머지 효과음은 모두 A**, **BGM 3곡 모두 넣고 운영자가 선택**. 기본값(팀리드 판단, 사용자 미지정): 소리 켬, BGM 01 '긴장된 회의실'.
+- 소리 원천: 시안과 **같은 소리**를 Web Audio API로 코드 합성(파일·외부 음원 없음). 시안 소스: `/private/tmp/claude-501/-Users-hyun-Claude-MyProjects-axday-agent/3e33b3a2-6840-44a1-a8d2-6ad204f52c24/scratchpad/audio/index.html`의 `<script>`(tone/noise/kick, TRACKS tension·pulse·piano, SFX clickA·pickA·sendA·arriveA·revealB·stamp·winA·loseA·tick)를 TS 모듈로 옮긴다. 음색·음높이·리듬·BGM 대비 효과음 음량 비율을 바꾸지 않는다.
+- 동작 규칙:
+  1. **AudioContext는 하나**, 첫 사용자 클릭('체험 시작' 등)에서 만든다(자동 재생 정책). `AudioContext`가 없는 환경(jsdom, 구형 브라우저)에서는 모든 호출이 조용히 아무것도 하지 않는다(예외 금지).
+  2. **BGM**: '체험 시작'을 누르면 선택된 곡을 반복 재생. INTRO(첫 화면)에서는 재생하지 않는다. MOTION·VOTE에서는 조금 더 낮게. RESULT 표 순차 공개 중에는 크게 줄이고(덕킹) 공개가 끝나면 원래대로. **엔딩(T127)이 열리면 BGM을 멈춘다**. 처음 화면으로/새 체험/자동 복귀 시 멈추고 페이드아웃.
+  3. **효과음 매핑**: clickA = 주요 버튼(CTA·확인·다음 등, 비활성 버튼 제외, 과하면 주요 버튼만) · pickA = 추천 문구/추천 답변 카드 선택, 조건이 붙을 때 · sendA = '의견 전달'·'답변 전달' · arriveA = 임원 발언/반응 카드가 도착할 때(카드마다, 겹치면 간격을 둠) · **revealB = 결과 보고서 임원 표 한 장 공개마다** · stamp = 가결·부결 도장, 엔딩 성공·실패 도장 · winA/loseA = 엔딩이 열릴 때 한 번 · tick = 엔딩 자동 복귀 마지막 10초 동안 1초마다.
+  4. **운영 메뉴 '소리' 구역**: BGM 선택(긴장된 회의실 · 브리핑 펄스 · 조용한 숙고 · 끄기, 고르면 지금 재생 중이면 바로 교체), BGM 음량 슬라이더, 효과음 켜기/끄기, 효과음 음량 슬라이더. 설정은 브라우저 저장소에 기억(기존 운영 설정 저장 방식을 따름, 저장소 접근 실패 시 기본값). 전체화면에서 운영 버튼이 숨는 규칙(T121)은 그대로.
+  5. 지난 화면 보기(T126) 중에는 화면 전환으로 생기는 효과음(arrive·reveal·stamp·win/lose)을 다시 내지 않는다. 버튼 클릭음만 허용.
+  6. 순차 공개 건너뛰기/감속 모드(reduced motion)에서는 표 공개음을 4번 겹쳐 내지 말고 한 번만.
+- 읽을 것: 시안 소스(위 경로), `src/components/parts/OperatorMenu.tsx`(운영 메뉴·저장 방식), `src/app/App.tsx`(단계 전환·리셋), `src/components/screens/{Intro,Discuss,Reactions,Opinions,Result}Screen.tsx`, `src/components/parts/EndingCard.tsx`, `src/domain/endingReturn.ts`, `useResultReveal`, DESIGN_SPEC T114·T121·T126·T127.
+- 만들 것: `src/audio/`(엔진·BGM 3곡·효과음, React 훅 또는 컨텍스트), 화면 연결, 운영 메뉴 '소리' 구역, 단위 테스트(가짜 AudioContext로: 첫 클릭 전 생성 안 함 · BGM 선택 교체/끄기 · 엔딩에서 BGM 정지 · 덕킹 · 효과음 끄기 시 무음 · AudioContext 없는 환경 무예외 · 보기 모드에서 전환음 없음 · 설정 저장/복원), e2e(전체 흐름에서 콘솔 오류 0, 운영 메뉴 소리 구역 조작, 1080·720 noscroll 유지), DESIGN_SPEC "## T128", FACILITATOR_GUIDE(소리 켜고 끄기·곡 바꾸기·부스 음량 팁), TASKS 행 완료.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: 외부 음원 파일·CDN, 서버·프롬프트 변경, 영문 UI, 레이아웃 변경(운영 메뉴 안에서만).
+- 크기: M.
 
 ## T127 엔딩 화면 — 성공·실패 강조와 마무리(A안)
 
