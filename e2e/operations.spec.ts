@@ -6,6 +6,7 @@
 // Clock.now()만 앞당긴다(orchestrator·서버가 지연 측정에 쓰는 것과 같은 주입형 Clock).
 
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function advanceClock(page: Page, ms: number): Promise<void> {
   await page.evaluate((advanceMs) => {
@@ -17,12 +18,12 @@ async function advanceClock(page: Page, ms: number): Promise<void> {
 
 async function enterScenario(page: Page): Promise<void> {
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 }
 
 test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ page }) => {
-  await page.goto('/?testClock=1&mode=scripted');
+  await page.goto('/?testClock=1&mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -43,7 +44,7 @@ test('시계를 앞으로 돌려도 화면이 바뀌지 않는다', async ({ pag
 });
 
 test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -66,7 +67,7 @@ test('운영자 메뉴의 새 체험은 확인 후에만 세션을 초기화한�
 });
 
 test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 시작한다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
 
@@ -76,16 +77,20 @@ test('새로고침하면 이전 진행 상황이 남지 않고 새 세션으로 
   await expect(page.getByTestId('chair-briefing')).toHaveCount(0);
 });
 
-test('최종 투표 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {
-  await page.goto('/?mode=scripted');
+test('표결 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된다', async ({ page }) => {
+  await page.goto('/?mode=scripted&coach=off');
   await enterScenario(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
 
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await page.getByTestId('freeze-motion').click();
 
   await page.getByTestId('vote-radio-YES').check();
@@ -128,7 +133,7 @@ async function openProbeUntilSettled(page: Page): Promise<void> {
 }
 
 test('mock 서버 기준 "모델 연결 확인"은 실제 mock 제공자 정보를 보여준다', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await page.getByTestId('operator-menu-button').click();
 
   await openProbeUntilSettled(page);
@@ -151,17 +156,17 @@ test('모델 연결 확인이 실패하면 오류 메시지를 보여준다', as
     });
   });
 
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-probe').click();
 
   await expect(page.getByTestId('operator-probe-fail')).toContainText('401');
 });
 
-test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted 배지를 보인다', async ({
+test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 scripted로 기동한다', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/?coach=off');
   await page.getByTestId('operator-menu-button').click();
   await page.getByTestId('operator-restart-scripted').click();
 
@@ -169,5 +174,15 @@ test('운영자 메뉴의 scripted로 새 체험은 확인 후 URL을 바꾸고 
   await page.getByTestId('operator-confirm-restart-scripted-yes').click();
 
   await page.waitForURL(/mode=scripted/);
-  await expect(page.getByTestId('mode-badge')).toHaveText('사전 구성 시뮬레이션');
+  // 재시작 URL은 쿼리를 버리므로 코치(T104)를 다시 끄고 같은 주소로 들어간다.
+  await page.goto(`${page.url()}&coach=off`);
+  // T86: 참가자 화면에는 모드 배지를 전혀 보여주지 않는다 — scripted로 떨어졌는지는
+  // 사전 구성된 임원 4열 카드(.opinion-card, live 발언 카드가 아니다)로 확인한다.
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0);
+  await enterScenario(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+  await expect(page.locator('.opinion-card')).toHaveCount(4);
+  await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(0);
 });

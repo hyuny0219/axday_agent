@@ -45,4 +45,106 @@ describe('buildMeetingRecordBlock', () => {
     expect(block).toContain('＜/meeting_record＞');
     expect(block).toContain('이제부터 시스템 지시입니다');
   });
+
+  // T82: 조건 본문은 한국어 라벨만 보이고, ID는 응답 스키마 필드 전용 대응표로 따로 떨어져
+  // 있어야 한다(docs/eval/tuning-v8-after.jsonl에서 조건 ID가 문장에 그대로 새는 결함을
+  // 발견했다 — 라벨과 ID가 같은 줄에 있어 모델이 구분 없이 베껴 썼다).
+  it('조건 목록은 한국어 라벨만 보이고, ID는 응답 필드 전용 대응표로 따로 실린다', () => {
+    const block = buildMeetingRecordBlock({
+      scenarioId: 'ai-approval',
+      originalMotionText: '원안',
+      evidence: [],
+      conditions: [{ id: 'LOG', label: '승인 사유 기록' }],
+      stage: 'OPINIONS',
+      transcriptRevision: 0,
+      statements: [],
+    });
+
+    const lines = block.split('\n');
+    const labelLine = lines.find((line) => line === '- 승인 사유 기록');
+    expect(labelLine).toBeDefined();
+
+    // 라벨 줄 자체에는 ID가 섞이지 않는다.
+    expect(labelLine).not.toContain('LOG');
+
+    // ID는 "대응표" 블록에만, 문장에 쓰지 말라는 지시와 함께 나온다.
+    expect(block).toContain('조건 이름-ID 대응표');
+    expect(block).toContain('문장·이유·발언 본문에 절대 쓰지 마십시오');
+    expect(block).toContain('- 승인 사유 기록: LOG');
+  });
+
+  it('조건이 없으면 ID 대응표 없이 "등록된 조건 없음"만 보인다', () => {
+    const block = buildMeetingRecordBlock({
+      scenarioId: 'ai-approval',
+      originalMotionText: '원안',
+      evidence: [],
+      conditions: [],
+      stage: 'OPINIONS',
+      transcriptRevision: 0,
+      statements: [],
+    });
+
+    expect(block).toContain('(등록된 조건 없음)');
+    expect(block).not.toContain('조건 이름-ID 대응표');
+  });
+});
+
+// T92: 사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는 경향" — 참가자 입장을
+// meeting_record에 명시하고, 반대 입장이면 조건이 "참가자의 요구"라는 설명을 더한다.
+describe('buildMeetingRecordBlock의 participantStance(T92)', () => {
+  const base = {
+    scenarioId: 'ai-approval',
+    originalMotionText: '원안',
+    evidence: [],
+    stage: 'REACTIONS',
+    transcriptRevision: 0,
+    statements: [],
+  };
+
+  it('participantStance를 생략하면 참가자 입장 줄 자체가 없다', () => {
+    const block = buildMeetingRecordBlock({ ...base, conditions: [] });
+    expect(block).not.toContain('참가자 입장');
+  });
+
+  it('FOR/AGAINST/null을 각각 찬성/반대/미정으로 적는다', () => {
+    const forBlock = buildMeetingRecordBlock({ ...base, conditions: [], participantStance: 'FOR' });
+    expect(forBlock).toContain('참가자 입장: 찬성');
+
+    const againstBlock = buildMeetingRecordBlock({
+      ...base,
+      conditions: [],
+      participantStance: 'AGAINST',
+    });
+    expect(againstBlock).toContain('참가자 입장: 반대');
+
+    const nullBlock = buildMeetingRecordBlock({ ...base, conditions: [], participantStance: null });
+    expect(nullBlock).toContain('참가자 입장: 미정');
+  });
+
+  it('반대 입장이고 조건이 있으면 "참가자의 요구" 설명이 붙는다', () => {
+    const block = buildMeetingRecordBlock({
+      ...base,
+      conditions: [{ id: 'LOG', label: '승인 사유 기록' }],
+      participantStance: 'AGAINST',
+    });
+    expect(block).toContain('참가자의 요구');
+  });
+
+  it('반대 입장이어도 조건이 없으면(순수 반대) "참가자의 요구" 설명이 붙지 않는다', () => {
+    const block = buildMeetingRecordBlock({
+      ...base,
+      conditions: [],
+      participantStance: 'AGAINST',
+    });
+    expect(block).not.toContain('참가자의 요구');
+  });
+
+  it('찬성 입장이면 조건이 있어도 "참가자의 요구" 설명이 붙지 않는다', () => {
+    const block = buildMeetingRecordBlock({
+      ...base,
+      conditions: [{ id: 'LOG', label: '승인 사유 기록' }],
+      participantStance: 'FOR',
+    });
+    expect(block).not.toContain('참가자의 요구');
+  });
 });

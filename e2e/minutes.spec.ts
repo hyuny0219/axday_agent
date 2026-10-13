@@ -4,16 +4,23 @@
 // 않는다. 새 항목이 오면 최신 항목이 보이도록 목록이 맨 아래에 있다.
 
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function reachVote(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();

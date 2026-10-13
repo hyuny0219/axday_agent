@@ -1,21 +1,27 @@
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function reachDiscuss(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 }
 
 async function finishToResult(page: Page) {
+  // T97: 전달 전에 세 기능을 한 번씩 써야 한다. 이미 쓴 기능은 건너뛴다.
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
-  await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지
+  await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
@@ -41,7 +47,7 @@ test('AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사
   const panel = page.getByTestId('assistant-panel');
   await expect(panel).toBeVisible();
   await expect(page.getByTestId('assistant-close')).toBeVisible();
-  await expect(panel.getByText('AI 비서실장(시연)')).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'AI 비서실장', exact: true })).toBeVisible();
 
   await page.getByTestId('assistant-action-refine').click();
   const refineResult = page.getByTestId('assistant-result-refine');
@@ -70,7 +76,9 @@ test('AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사
 // BRIEFING의 자동 정리 카드는 T52에서 제거됐다. 그런데도 표시 기록이 남아 결과에
 // "자료 4장 자동 정리 데모 표시"가 항상 나오던 것을 PR #10 Codex 27차 검토(P2)에서 뺐다 —
 // 보이지 않은 것을 표시했다고 기록하지 않는다.
-test('패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 미사용 문구만 남는다', async ({ page }) => {
+// T97: 이제 비서실장을 한 번도 안 쓰고는 전달할 수 없다(assistant-gate.spec). 대신 세 기능을
+// 쓰고 정리한 초안은 적용하지 않은 경우, 결과에는 실제로 확인한 두 줄만 남는다.
+test('세 기능을 쓰고 정리 초안을 적용하지 않으면 결과에 확인한 기록만 남고 정리 적용 줄은 없다', async ({ page }) => {
   await reachDiscuss(page);
 
   await page.getByTestId('phrase-card-P1').click();
@@ -78,9 +86,10 @@ test('패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 
 
   const aiHelp = page.getByTestId('result-ai-help');
   await expect(aiHelp).not.toContainText('자동 정리');
-  await expect(page.getByTestId('result-ai-help-none')).toContainText(
-    'AI 비서실장 도움은 사용하지 않았습니다.',
-  );
+  await expect(aiHelp).toContainText('의견 한눈에 보기를 확인했습니다.');
+  await expect(aiHelp).toContainText('조건 추천 1회');
+  await expect(aiHelp).not.toContainText('내 발언 정리를 내 발언에 적용했습니다.');
+  await expect(page.getByTestId('result-ai-help-none')).toHaveCount(0);
 });
 
 // live(mock) 경로(T31). playwright.config.ts가 띄우는 mock board 서버를 그대로 쓴다
@@ -88,17 +97,20 @@ test('패널을 열지 않고 완주하면 결과에 AI 도움 기록이 없고 
 test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 결과에 실시간 AI 호출 기록이 남는다', async ({
   page,
 }) => {
-  await page.goto('/');
-  await expect(page.getByTestId('mode-badge')).toHaveText('LIVE');
+  await page.goto('/?coach=off');
+  await expect(page.getByTestId('mode-badge')).toHaveCount(0); // T86: live에서는 '실시간' 배지 자체를 그리지 않는다
 
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
 
   // OPINIONS: 임원 4명의 실제 발언 카드가 모두 나온 뒤에야 DISCUSS로 넘어간다.
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
 
   const textarea = page.getByTestId('draft-editor-textarea');
   const originalText = '아직 검증되지 않아 바로 진행하지 않겠습니다.';
@@ -109,7 +121,8 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
 
   const refineResult = page.getByTestId('assistant-result-refine');
   await expect(refineResult).toBeVisible({ timeout: 10_000 });
-  await expect(refineResult).toContainText('실시간 AI 응답');
+  // T86: live에서는 '실시간 AI 응답' 캡션 자체를 그리지 않는다.
+  await expect(refineResult.locator('.assistant-panel__badge')).toHaveCount(0);
 
   const refinedText = await page.getByTestId('assistant-refine-draft').textContent();
   expect(refinedText).toBeTruthy();
@@ -120,13 +133,15 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await expect(textarea).toHaveValue(refinedText ?? '');
   await page.getByTestId('assistant-close').click();
 
+  // T97: 나머지 두 기능도 한 번씩 써야 전달이 열린다.
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
 
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
-  await page.getByTestId('followup-option-2').click(); // 앞선 의견 유지
+  await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();

@@ -7,6 +7,8 @@
 // 테두리 + "✓", 새로 제안된 칩은 확정돼도 앰버 테두리 + "+ 새 조건"이다. 선택적
 // newlyProposedIds가 비어 있으면(DISCUSS 기본) 전부 기존 cyan "✓" 모양 그대로다.
 
+import { useLayoutEffect, useRef, useState } from 'react';
+import { countHiddenChips } from './chipOverflow';
 import type { ConflictPair, Scenario } from '../../content/types';
 
 export interface ConditionChipsProps {
@@ -50,45 +52,93 @@ export function ConditionChips({
   onToggle,
   newlyProposedIds = [],
 }: ConditionChipsProps) {
+  // T117: 칩은 한 줄 가로 스크롤이다. macOS 오버레이 스크롤바는 스크롤 힌트를 주지 못해 오른쪽에
+  // 가려진 칩이 있으면 오른쪽 끝을 페이드하고 "+N"(가려진 칩 수)을 보여 준다.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [hiddenCount, setHiddenCount] = useState(0);
+  const measure = () => {
+    const el = listRef.current;
+    if (!el) {
+      setHiddenCount(0);
+      return;
+    }
+    const hidden = countHiddenChips(
+      el.getBoundingClientRect(),
+      [...el.querySelectorAll<HTMLElement>('.condition-chip')].map((chip) => chip.getBoundingClientRect()),
+    );
+    setHiddenCount(hidden);
+  };
+  useLayoutEffect(() => {
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
+
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
       return null;
     }
     return (
       <p className="condition-chips__hint" data-testid="condition-chips-hint">
-        말씀은 회의 기록에 남깁니다. 반영할 조건이 있으면 선택해 주세요
+        조건으로 잡힌 내용은 없습니다. 추천을 고르거나 직접 쓰면 조건이 붙습니다.
       </p>
     );
   }
 
   return (
-    <div className="condition-chips" data-testid="condition-chips">
-      {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안 그대로
-          쓰는 장식 라벨이고(STEP·EXHIBIT 등과 같은 규칙), 확정 칩의 체크는 배지가 아니라
-          시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
-      <p className="condition-chips__label">CONDITIONS</p>
-      <div className="condition-chips__list">
-        {proposedIds.map((id) => {
-          const accepted = acceptedIds.includes(id);
-          const isNew = newlyProposedIds.includes(id);
-          const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
-          return (
-            <button
-              key={id}
-              type="button"
-              className={`condition-chip${modifier}`}
-              aria-pressed={accepted}
-              data-testid={`condition-chip-${id}`}
-              onClick={() => onToggle(id)}
-            >
-              {conditionLabel(scenario, id)}
-              {accepted ? (isNew ? ' + 새 조건' : ' ✓') : ''}
-            </button>
-          );
-        })}
+    <div
+      className={`condition-chips${conflictPairs.length > 0 ? ' condition-chips--conflict' : ''}`}
+      data-testid="condition-chips"
+    >
+      {/* T73(S3_Discuss·S4_Reactions 시안 공용 HUD 라벨): "CONDITIONS"는 시안의 장식
+          라벨이었으나(STEP·EXHIBIT 등과 같은 규칙) T83에서 한국어로 바꿨다. 확정 칩의
+          체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
+      <div className="condition-chips__row">
+        <p className="condition-chips__label">조건</p>
+        <div
+          className="condition-chips__list"
+          ref={listRef}
+          data-more={hiddenCount > 0}
+          onScroll={measure}
+        >
+          {proposedIds.map((id) => {
+            const accepted = acceptedIds.includes(id);
+            const isNew = newlyProposedIds.includes(id);
+            const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`condition-chip${modifier}`}
+                aria-pressed={accepted}
+                data-testid={`condition-chip-${id}`}
+                title={conditionLabel(scenario, id)}
+                onClick={() => onToggle(id)}
+              >
+                <span className="condition-chip__label">{conditionLabel(scenario, id)}</span>
+                {accepted && (
+                  <span className="condition-chip__tail" aria-hidden="true">{isNew ? '+ 새 조건' : '✓'}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <span
+          className="condition-chips__more"
+          aria-hidden="true"
+          title={hiddenCount > 0 ? `오른쪽에 가려진 조건 ${hiddenCount}개 — 옆으로 밀어 보세요` : undefined}
+          data-testid="condition-chips-more"
+        >
+          {hiddenCount > 0 ? `+${hiddenCount}` : ''}
+        </span>
       </div>
       {conflictPairs.length > 0 && (
-        <ul className="condition-chips__conflicts" role="alert" data-testid="condition-chips-conflicts">
+        <ul
+          className="condition-chips__conflicts"
+          role="alert"
+          data-testid="condition-chips-conflicts"
+          title={conflictPairs.map((pair) => conflictMessage(scenario, pair)).join(' ')}
+        >
           {conflictPairs.map(([a, b]) => (
             <li key={`${a}-${b}`}>{conflictMessage(scenario, [a, b])}</li>
           ))}

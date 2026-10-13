@@ -1,10 +1,10 @@
 // server/handlers/vote.ts: motionHash 전달·불일치 거절, 참가자 표·다른 임원 표를 절대
 // 포함하지 않음을 확인한다. AGENT_BOARDROOM_SPEC.md 3·5·6장.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleVote, voteRequestSchema, type VoteRequest } from '../../server/handlers/vote';
 import { createMockProvider } from '../../server/providers/mock';
-import type { ModelProvider } from '../../server/providers/types';
+import { ProviderCallError, type ModelProvider } from '../../server/providers/types';
 
 function baseVoteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
   return {
@@ -163,7 +163,7 @@ describe('handleVote with the mock provider', () => {
     expect(results[0]?.status).toBe('answered');
   });
 
-  it('deps.timeoutMs로 타임아웃 상한을 바꿀 수 있다(T65, 기본은 ROUND_TIMEOUT_MS 8000)', async () => {
+  it('deps.timeoutMs로 타임아웃 상한을 바꿀 수 있다(T65, 기본은 ROUND_TIMEOUT_MS 15000, T91)', async () => {
     const timeoutsSeen: number[] = [];
     const fakeProvider: ModelProvider = {
       async complete(req) {
@@ -190,7 +190,7 @@ describe('handleVote with the mock provider', () => {
       provider: fakeProvider,
       timeoutMs: 3000,
     });
-    expect(timeoutsSeen[0]).toBe(8000);
+    expect(timeoutsSeen[0]).toBe(15000);
     expect(timeoutsSeen[4]).toBe(3000);
   });
 });
@@ -201,6 +201,21 @@ describe('voteRequestSchema roleIds(PR #11 Codex 21차 P1)', () => {
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO', 'CAIO'] }).success).toBe(false);
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CEO', 'CFO', 'CAIO', 'CISO', 'CFO'] }).success).toBe(false);
     expect(voteRequestSchema.safeParse({ ...base, roleIds: ['CAIO'] }).success).toBe(true);
+  });
+});
+
+// T92: 참가자 입장. round.ts와 같은 선택 필드 규칙.
+describe('voteRequestSchema participantStance(T92)', () => {
+  const base = baseVoteInput({ requestId: 'req-stance' });
+
+  it('생략하면(기존 요청) 그대로 통과한다', () => {
+    expect(voteRequestSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('FOR·AGAINST는 통과하고, 그 밖의 값은 거부한다', () => {
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'FOR' }).success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'AGAINST' }).success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...base, participantStance: 'UNDECIDED' }).success).toBe(false);
   });
 });
 
@@ -309,4 +324,112 @@ describe('실제 mock 제공자가 두 안건 모두에서 깨끗하게 동작�
       expect(results.every((r) => r.status === 'answered')).toBe(true);
     },
   );
+});
+
+// T91: 빠르게(timeout 외 이유로) 실패했고 남은 예산이 충분하면 1회 재시도한다.
+describe('callRoleVote의 1회 재시도(T91)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('연결 오류로 빠르게 실패해도 남은 예산이 충분하면 1회 재시도해 성공으로 끝난다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        if (calls === 1) {
+          throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+        }
+        const envelope = JSON.parse(req.user) as { roleId: string; motionId: string; motionHash: string };
+        return {
+          json: {
+            roleId: envelope.roleId,
+            motionId: envelope.motionId,
+            motionHash: envelope.motionHash,
+            vote: 'YES',
+            reason: '재시도 후 정상 판단입니다.',
+            evidenceIds: [],
+            remainingConcerns: [],
+          },
+          modelId: 'fake-model',
+        };
+      },
+    };
+    const input = baseVoteInput({ requestId: 'req-retry-success', budgetMs: 8000, roleIds: ['CEO'] });
+    const results = await handleVote(input, { provider: fakeProvider });
+    expect(calls).toBe(2);
+    expect(results[0]?.status).toBe('answered');
+  });
+
+  it('timeout으로 실패하면 예산이 남아도 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        const err = new Error('aborted');
+        err.name = 'AbortError';
+        throw err;
+      },
+    };
+    const input = baseVoteInput({ requestId: 'req-no-retry-timeout', budgetMs: 999_999, roleIds: ['CEO'] });
+    const results = await handleVote(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+    expect(results[0]?.failReason).toBe('timeout');
+  });
+
+  it('남은 예산이 MIN_RETRY_REMAINING_MS(6000)보다 적으면 재시도하지 않는다', async () => {
+    let calls = 0;
+    const fakeProvider: ModelProvider = {
+      async complete() {
+        calls += 1;
+        throw new ProviderCallError('conn_refused', { errorType: 'APIConnectionError' });
+      },
+    };
+    const input = baseVoteInput({ requestId: 'req-no-retry-budget', budgetMs: 5000, roleIds: ['CEO'] });
+    const results = await handleVote(input, { provider: fakeProvider });
+    expect(calls).toBe(1);
+    expect(results[0]?.status).toBe('failed');
+  });
+});
+
+// T110(프롬프트 v12): 추가 질문에 답하지 않고 넘어간 참가자에 대한 표결 지시.
+describe('추가 질문 미답변 표결 지시(T110, v12)', () => {
+  function captureSystems(): { systems: string[]; provider: ModelProvider } {
+    const systems: string[] = [];
+    const provider: ModelProvider = {
+      async complete(req) {
+        systems.push(req.system);
+        return createMockProvider('mock-model').complete(req);
+      },
+    };
+    return { systems, provider };
+  }
+
+  it('followUpAnswered:false면 "처음 입장대로 표결" 규칙과 회의 기록의 "답변: 없음"이 붙는다', async () => {
+    const { systems, provider } = captureSystems();
+    await handleVote(baseVoteInput({ requestId: 'req-t110-no', participantStance: 'FOR', followUpAnswered: false }), { provider });
+    expect(systems).toHaveLength(4);
+    for (const system of systems) {
+      expect(system).toContain('처음 입장대로 표결하십시오');
+      expect(system).toContain('추가 질문 답변: 없음');
+    }
+  });
+
+  it('followUpAnswered가 true이거나 생략(기존 요청)이면 미답변 규칙이 붙지 않는다', async () => {
+    for (const followUpAnswered of [true, undefined]) {
+      const { systems, provider } = captureSystems();
+      await handleVote(baseVoteInput({ requestId: `req-t110-${String(followUpAnswered)}`, followUpAnswered }), { provider });
+      for (const system of systems) {
+        expect(system).not.toContain('처음 입장대로 표결하십시오');
+        expect(system).not.toContain('추가 질문 답변: 없음');
+      }
+    }
+  });
+
+  it('요청 스키마가 followUpAnswered(불리언, 선택)를 받는다', () => {
+    const parsed = voteRequestSchema.safeParse({ ...baseVoteInput(), followUpAnswered: false });
+    expect(parsed.success).toBe(true);
+    expect(voteRequestSchema.safeParse({ ...baseVoteInput(), followUpAnswered: 0 }).success).toBe(false);
+  });
 });

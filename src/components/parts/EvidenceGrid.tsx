@@ -20,7 +20,9 @@
 // 바꿔 팝업 쪽 `evidence-card-<id>`와 겹치지 않게 한다 — 팝업이 열리면 배경의 압축
 // 카드와 팝업 안 전문 카드가 동시에 DOM에 있어야 하기 때문이다.
 
-import type { EvidenceCard as EvidenceCardData } from '../../content/types';
+import type { EvidenceCard as EvidenceCardData, Scenario } from '../../content/types';
+import { evidenceTextHighlightTerms } from '../highlightTerms';
+import { HighlightText } from './HighlightText';
 import '../../styles/screens/evidence.css';
 
 export interface EvidenceGridProps {
@@ -28,14 +30,17 @@ export interface EvidenceGridProps {
   /** 'dialog'(기본, EvidenceDialog 팝업 전문 — 원문 클램프 없음) | 'compact'(BRIEFING
    * 오른쪽 열 상시 요약 카드, Main.html EXHIBIT 2×2 — 해석·원문 각 1~2줄 클램프). */
   variant?: 'dialog' | 'compact';
+  /** 있으면 해석(insight) 속 핵심 수치·사실을 굵게 표시한다(T105). 제목은 제외. */
+  scenario?: Scenario;
 }
 
-// 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록"). 화면 문구에
-// 자료 ID(E1~E4)를 쓰지 않는 규칙(위 주석)을 그대로 지키기 위해 ID 대신 카드 순서로
-// A~D를 매긴다 — evidence-card-{id} 같은 자동화용 값이 아니라 순수 장식이다.
-const EXHIBIT_LETTERS = ['A', 'B', 'C', 'D'] as const;
+// 자료 카드 장식 태그(T64, Main.html "EXHIBIT A · 게시판 운영 기록", T83에서
+// "자료 ①" 형식으로 한국어화). 화면 문구에 자료 ID(E1~E4)를 쓰지 않는 규칙(위 주석)을
+// 그대로 지키기 위해 ID 대신 카드 순서로 ①~④를 매긴다 — evidence-card-{id} 같은
+// 자동화용 값이 아니라 순수 장식이다.
+const EXHIBIT_MARKS = ['①', '②', '③', '④'] as const;
 
-export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps) {
+export function EvidenceGrid({ evidence, variant = 'dialog', scenario }: EvidenceGridProps) {
   const isCompact = variant === 'compact';
   return (
     <div className={isCompact ? 'evidence-grid evidence-grid--compact' : 'evidence-grid'}>
@@ -50,13 +55,19 @@ export function EvidenceGrid({ evidence, variant = 'dialog' }: EvidenceGridProps
               한 줄로, 원문(content)을 그 아래 흐린 메타 줄로 둔다. */}
           <h3 className="evidence-card__heading">
             <span className="evidence-card__tag" aria-hidden="true">
-              EXHIBIT {EXHIBIT_LETTERS[index % EXHIBIT_LETTERS.length]}
+              자료 {EXHIBIT_MARKS[index % EXHIBIT_MARKS.length]}
             </span>
             {' · '}
             {card.title}
           </h3>
-          <p className="evidence-card__insight">{card.insight}</p>
-          <p className="evidence-card__meta">{card.content}</p>
+          <p className="evidence-card__insight">
+            <HighlightText text={card.insight} terms={scenario ? evidenceTextHighlightTerms(scenario, card.insight) : []} />
+          </p>
+          {/* T99(2026-10-08 사용자 — "글씨가 너무 많다"): 원문(content)은 카드에서 뺐다. 해석
+              한 문장(insight)과 관련 임원만 보인다. content는 데이터·서버 프롬프트용으로 남는다. */}
+          {card.relatedMemberIds.length > 0 && (
+            <p className="evidence-card__meta">관련 임원 · {card.relatedMemberIds.join(' · ')}</p>
+          )}
         </article>
       ))}
     </div>

@@ -28,13 +28,12 @@ function preparingScenario(): Scenario {
 }
 
 describe('SelectScreen', () => {
-  it('카드 제목에는 chairBriefing.question만 보이고 headline·hook·subtitle은 보이지 않는다', () => {
+  it('카드에는 chairBriefing.question과 사건 한 줄(headline)만 보이고 hook·subtitle은 보이지 않는다(T84 #10)', () => {
     render(<SelectScreen scenarios={scenarios} onEnter={vi.fn()} />);
 
-    expect(
-      screen.getByTestId(`scenario-card-${aiApprovalScenario.id}`),
-    ).toHaveTextContent(aiApprovalScenario.chairBriefing.question);
-    expect(screen.queryByText(aiApprovalScenario.incident.headline)).not.toBeInTheDocument();
+    const card = screen.getByTestId(`scenario-card-${aiApprovalScenario.id}`);
+    expect(card).toHaveTextContent(aiApprovalScenario.chairBriefing.question);
+    expect(card).toHaveTextContent(aiApprovalScenario.incident.headline);
     expect(screen.queryByText(aiApprovalScenario.incident.hook)).not.toBeInTheDocument();
     expect(screen.queryByText(aiApprovalScenario.subtitle)).not.toBeInTheDocument();
   });
@@ -55,17 +54,19 @@ describe('SelectScreen', () => {
     expect(screen.getByTestId(`scenario-card-${aiApprovalScenario.id}`)).toBeEnabled();
   });
 
-  it('카드를 선택하기 전에는 "이사회 입장" CTA가 비활성이고, 선택하면 활성화돼 onEnter를 호출한다', () => {
+  it('카드를 누르면 바로 onEnter가 불리고, 이후 모든 카드가 잠겨 중복 입장을 막는다(T84 #10)', () => {
     const onEnter = vi.fn();
     render(<SelectScreen scenarios={scenarios} onEnter={onEnter} />);
 
-    const cta = screen.getByRole('button', { name: '이사회 입장 ▶' });
-    expect(cta).toBeDisabled();
-
+    expect(screen.queryByRole('button', { name: '이사회 입장 ▶' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId(`scenario-card-${aiApprovalScenario.id}`));
-    expect(cta).toBeEnabled();
-
-    fireEvent.click(cta);
+    expect(onEnter).toHaveBeenCalledTimes(1);
     expect(onEnter).toHaveBeenCalledWith(aiApprovalScenario.id);
+
+    for (const scenario of scenarios) {
+      expect(screen.getByTestId(`scenario-card-${scenario.id}`)).toBeDisabled();
+    }
+    fireEvent.click(screen.getByTestId(`scenario-card-${scenarios[1]!.id}`));
+    expect(onEnter).toHaveBeenCalledTimes(1);
   });
 });

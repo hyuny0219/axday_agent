@@ -11,7 +11,7 @@
 0. [임원 에이전트·비서실장 명세](docs/AGENT_BOARDROOM_SPEC.md): v0.8 실행 모드·역할 판단·서버 응답·장애 처리 기준
 
 1. 본 문서: 최신 기능 요구사항과 완료 기준
-2. 상세 시나리오(2026-10-02 T78부터 활성 안건 둘): [① AI Agent 결재권](docs/SCENARIO_AI_APPROVAL.md)·[② 데이터보다 경험](docs/SCENARIO_EXPERIENCE_FIRST.md) — 대사·조건·결과 규칙. 이전 안건은 보존 문서로 남아 있다: [사내 게시판 익명제](docs/SCENARIO_ANON_BOARD.md)·[AI 업무 비서](docs/SCENARIO_AI_ASSISTANT.md).
+2. 상세 시나리오(2026-10-02 T78부터 활성 안건 둘): [① AI 에이전트 결재권](docs/SCENARIO_AI_APPROVAL.md)·[② 데이터보다 경험](docs/SCENARIO_EXPERIENCE_FIRST.md) — 대사·조건·결과 규칙. 이전 안건은 보존 문서로 남아 있다: [사내 게시판 익명제](docs/SCENARIO_ANON_BOARD.md)·[AI 업무 비서](docs/SCENARIO_AI_ASSISTANT.md).
 3. [디자인 명세](docs/design/DESIGN_SPEC.md): 화면별 레이아웃·디자인 토큰·인터랙션
 4. [개정 PPT](docs/reference/AX_Day_2026_Boardroom_Proposal.pptx): v0.7 · 18장, 8P AI 브리핑 / 9P 의견 입력 / 12P 최종 투표 / 13P 결과 / 15P 안건③ 최종안
 5. 기존 `AX_Day_2026_Boardroom_Plan.md`: 세 안건의 전체 기획 배경
@@ -203,8 +203,8 @@ P0는 위 Motion 인터페이스를 유지하되 `baseConditionIds = []`, `effec
 ### P0.5 이해도·후속 단순화 (v0.9, 기본 안건①)
 
 - BRIEFING에 의장 브리핑 3문장·결정 질문·현재 상황·제안·아직 정하지 않은 것·특별 이사님이 할 일·자료 4장(자료명·해석 한 줄·원문 상시 노출)이 있고, 모두 시나리오 데이터에서 온다(화면 코드에 문구 하드코딩 없음). 핵심 쟁점 3개·조건 미리보기는 T52(2026-09-23)에서 제거했다 — 자료 카드 해석과 내용이 겹쳐 같은 말을 두 번 읽게 했기 때문이며, 복원 대상이 아니다. 진행 스트립(`ProgressStrip`, ① 상황 파악 → ⑤ 표결)은 유지하며 BRIEFING에서 ①, DISCUSS에서 ③을 가리킨다(`e2e/briefing.spec.ts`). 새 사실(확정 수치·비율·절감률)을 만들지 않는다.
-- REACTIONS 후속 질문에 발화자(기본 안건① AI Agent 결재권에서는 CISO — 책임자 질문, `docs/SCENARIO_AI_APPROVAL.md`)가 표시되고, 빠른 답 3개만으로 MOTION까지 완주할 수 있다. 직접 입력만으로 완주하는 경로도 유지된다(접힌 편집기를 마우스·키보드로 열어 입력·제출). 두 경로 모두 E2E로 확인한다.
-- 처음 보는 사람 3명 전원이 설명 없이 BRIEFING을 읽고 (1) "무엇을 정하는지"(AI Agent에게 결재권을 줄지와 붙일 조건)와 (2) "내가 할 수 있는 일"을 한 문장으로 말하고, 스스로 REACTIONS까지 진행한 뒤 (3) "두 번째 입력이 CISO의 책임자 질문에 답하는 것"임을 말한다. 이 검수는 T52·T53(2026-09-23 사내 게시판 익명제 기준) 뒤 받았던 것이며, 2026-10-02 T78의 안건 교체로 다시 받아야 한다(아직 미수행). 한 명이라도 실패하면 해당 카피를 수정해 재검수한다(현장 검수, FACILITATOR_GUIDE "v0.9 이해도 검수").
+- REACTIONS 후속 질문에 발화자(기본 안건① AI 에이전트 결재권에서는 CISO — 책임자 질문, `docs/SCENARIO_AI_APPROVAL.md`)가 표시되고, 빠른 답 3개만으로 MOTION까지 완주할 수 있다. 직접 입력만으로 완주하는 경로도 유지된다(접힌 편집기를 마우스·키보드로 열어 입력·제출). 두 경로 모두 E2E로 확인한다.
+- 처음 보는 사람 3명 전원이 설명 없이 BRIEFING을 읽고 (1) "무엇을 정하는지"(AI 에이전트에게 결재권을 줄지와 붙일 조건)와 (2) "내가 할 수 있는 일"을 한 문장으로 말하고, 스스로 REACTIONS까지 진행한 뒤 (3) "두 번째 입력이 CISO의 책임자 질문에 답하는 것"임을 말한다. 이 검수는 T52·T53(2026-09-23 사내 게시판 익명제 기준) 뒤 받았던 것이며, 2026-10-02 T78의 안건 교체로 다시 받아야 한다(아직 미수행). 한 명이라도 실패하면 해당 카피를 수정해 재검수한다(현장 검수, FACILITATOR_GUIDE "v0.9 이해도 검수").
 
 ### P1 추가 범위
 
@@ -221,4 +221,4 @@ P0는 위 Motion 인터페이스를 유지하되 `baseConditionIds = []`, `effec
 
 ## 8. Claude Code에 전달할 시작 프롬프트
 
-> 이 저장소의 CLAUDE_IMPLEMENTATION.md, docs/SCENARIO_AI_APPROVAL.md, docs/SCENARIO_EXPERIENCE_FIRST.md, docs/design/DESIGN_SPEC.md와 참조 이미지를 읽고 BOARDROOM 2026 웹 체험을 구현해줘. 두 안건(① AI Agent 결재권·② 데이터보다 경험) 모두 P0가 실제 조작 가능한 상태로 이미 완성·테스트돼 있으니, 그 기준을 유지하면서 P1(관람 뷰)로 확장해줘. 현장 조작은 PC 마우스 클릭 중심이고 직접 입력은 물리 키보드로 해. 참가자는 특별 이사이고 토론은 추천 문구 복수 선택 또는 직접 입력이며, 투표는 마지막에만 해. PPT의 미래적인 네이비·시안 회의실 디자인을 실제 반응형 UI로 구현해줘. P0부터 실제 임원4명 에이전트와 실제 내 발언 정리를 AGENT_BOARDROOM_SPEC.md에 따라 연결하고, 별도 scripted 데모는 키 없이 실행하되 live 완료와 구분해. 기존 저장소 파일과 사용자 변경은 보존해줘. 완료 후 실행 방법, 검증 결과, 화면 캡처, 남은 제약을 정리해줘.
+> 이 저장소의 CLAUDE_IMPLEMENTATION.md, docs/SCENARIO_AI_APPROVAL.md, docs/SCENARIO_EXPERIENCE_FIRST.md, docs/design/DESIGN_SPEC.md와 참조 이미지를 읽고 BOARDROOM 2026 웹 체험을 구현해줘. 두 안건(① AI 에이전트 결재권·② 데이터보다 경험) 모두 P0가 실제 조작 가능한 상태로 이미 완성·테스트돼 있으니, 그 기준을 유지하면서 P1(관람 뷰)로 확장해줘. 현장 조작은 PC 마우스 클릭 중심이고 직접 입력은 물리 키보드로 해. 참가자는 특별 이사이고 토론은 추천 문구 복수 선택 또는 직접 입력이며, 투표는 마지막에만 해. PPT의 미래적인 네이비·시안 회의실 디자인을 실제 반응형 UI로 구현해줘. P0부터 실제 임원4명 에이전트와 실제 내 발언 정리를 AGENT_BOARDROOM_SPEC.md에 따라 연결하고, 별도 scripted 데모는 키 없이 실행하되 live 완료와 구분해. 기존 저장소 파일과 사용자 변경은 보존해줘. 완료 후 실행 방법, 검증 결과, 화면 캡처, 남은 제약을 정리해줘.

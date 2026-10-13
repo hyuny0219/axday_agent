@@ -2,7 +2,8 @@
 // 호출해 서버가 검증까지 끝낸 응답만 Statement/Ballot으로 옮긴다. 실제 판단은 서버(T28
 // handlers)가 하며 이 파일은 요청 조립·시간 예산·응답 형태 변환만 담당한다.
 //
-// 대기 시간은 stage별 상한(OPINIONS·VOTE 8초, REACTIONS·FOLLOWUP 12초, T65)과 ctx.budgetMs
+// 대기 시간은 stage별 상한(OPINIONS·VOTE·REACTIONS·FOLLOWUP, T65·T91 — 기본값은
+// server/config.ts, /api/health로 내려온다)과 ctx.budgetMs
 // 중 작은 쪽을 넘기지 않는다(스펙 6장). 값은 서버 /api/health가 내려준 것을 services/
 // transport/roundTimeouts.ts가 캐시해 두며, 하드코딩하지 않는다. ctx.signal이 먼저
 // abort되면(세션 리셋 등) 그 즉시 요청도 취소한다. 서버 응답이 배열이 아니거나 개별 항목이
@@ -117,6 +118,35 @@ function latestParticipantOpinion(ctx: BoardAgentsContext): string | undefined {
   return opinions[opinions.length - 1]?.originalText;
 }
 
+/** 참가자가 가장 최근 의견에서 밝힌 입장(T92). 아직 의견이 없거나 입장을 고르지 않았으면
+ * undefined — 서버 스키마가 그 경우를 null과 같게 다룬다. */
+function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | undefined {
+  const stance = ctx.session.opinions[ctx.session.opinions.length - 1]?.stance;
+  return stance ?? undefined;
+}
+
+/** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). 입장별 질문(T93)을 화면과 같은
+ * 기준으로 고른다 — REACTIONS는 지금 의견의 입장, 답을 낸 뒤(FOLLOWUP·VOTE)는 질문을 보여 준
+ * 입장(followUpStance, 없으면 첫 의견의 입장). */
+function visibleFollowUpQuestion(ctx: BoardAgentsContext, stage: StatementStage | 'VOTE') {
+  const { followUp } = ctx.scenario;
+  const opinions = ctx.session.opinions;
+  const stance =
+    stage === 'REACTIONS'
+      ? (opinions[opinions.length - 1]?.stance ?? null)
+      : (ctx.session.followUpStance ?? opinions[0]?.stance ?? null);
+  const prompt = followUp.byStance ? (stance === 'AGAINST' ? followUp.byStance.AGAINST : followUp.byStance.FOR) : followUp;
+  return { askedBy: prompt.askedBy, question: prompt.question };
+}
+
+/** 참가자가 추가 질문에 낸 답변 문장(T122). 답했을 때(두 번째 의견이 있을 때)만 싣고 서버 상한 300자로 자른다. */
+function followUpAnswerText(ctx: BoardAgentsContext): string | undefined {
+  const { followUpAnswered, opinions } = ctx.session;
+  if (!followUpAnswered || opinions.length < 2) return undefined;
+  const text = opinions[opinions.length - 1]?.originalText.trim();
+  return text ? text.slice(0, 300) : undefined;
+}
+
 function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutMs: number) {
   return {
     sessionId: ctx.sessionId,
@@ -125,6 +155,12 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     stage,
     transcript: transcriptPayload(ctx),
     participantOpinion: latestParticipantOpinion(ctx),
+    participantStance: latestParticipantStance(ctx),
+    followUpAnswered: ctx.session.followUpAnswered,
+    ...(stage === 'REACTIONS' || stage === 'FOLLOWUP'
+      ? { followUpQuestion: visibleFollowUpQuestion(ctx, stage) }
+      : {}),
+    ...(stage === 'FOLLOWUP' ? { followUpAnswerText: followUpAnswerText(ctx) } : {}),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,
     roleIds: ctx.roleIds,
@@ -225,6 +261,10 @@ function buildVoteBody(ctx: BoardAgentsContext, timeoutMs: number) {
       effectiveConditionIds: motion.effectiveConditionIds,
       executionMode: motion.executionMode,
     },
+    participantStance: latestParticipantStance(ctx),
+    followUpAnswered: ctx.session.followUpAnswered,
+    followUpQuestion: visibleFollowUpQuestion(ctx, 'VOTE'),
+    followUpAnswerText: followUpAnswerText(ctx),
     roleIds: ctx.roleIds,
   };
 }

@@ -21,8 +21,10 @@ describe('Header', () => {
     expect(screen.queryByTestId('progress-strip')).not.toBeInTheDocument();
     expect(document.querySelector('.app-header__stage')).not.toBeInTheDocument();
     // 좌·우 구역은 그대로 남는다.
-    expect(screen.getByText('BOARDROOM 2026')).toBeInTheDocument();
-    expect(screen.getByTestId('mode-badge')).toBeInTheDocument();
+    expect(screen.getByText('BECOME A BOARD')).toBeInTheDocument();
+    // T86(2026-10-07 사용자 — "실시간 표시는 제거해줘", 이어서 "사전 구성 시뮬레이션
+    // 표시도 빼줘"): 모드 배지는 live·scripted 가리지 않고 더 이상 그리지 않는다.
+    expect(screen.queryByTestId('mode-badge')).not.toBeInTheDocument();
   });
 
   it('진행 단계(BRIEFING 등)에서는 명패·단계 칩 없이 진행 스트립이 헤더 안에 나온다', () => {
@@ -41,21 +43,23 @@ describe('Header', () => {
   });
 
   // T78(2026-10-02, 안건 교체): 케이스 번호가 세션의 안건 caseLabel을 따르고, 안건이
-  // 아직 없으면(ATTRACT·SELECT) "No. --"를 보인다(시안 Main.html 형식 유지).
-  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 "No. --"를 보인다', () => {
+  // 아직 없으면(ATTRACT·SELECT) 사건 번호를 숨기고 세션 코드만 보인다("사건 --"가
+  // 엉뚱해 보여 Opus 최종 검토에서 제거, T83에서 한국어화).
+  it('케이스 번호가 안건 caseLabel(01/02)을 따르고, 안건이 없으면 안건 번호를 숨긴다', () => {
     const session = createInitialSession(0, 'session-case');
 
     const { rerender } = render(
       <Header session={session} scenario={null} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. --');
+    expect(document.querySelector('.app-header__case-file')).not.toHaveTextContent('안건');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('회의');
 
     rerender(<Header session={session} scenario={aiApprovalScenario} onOperatorReset={vi.fn()} />);
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. 01');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('안건 01');
 
     rerender(
       <Header session={session} scenario={experienceFirstScenario} onOperatorReset={vi.fn()} />,
     );
-    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('CASE FILE No. 02');
+    expect(document.querySelector('.app-header__case-file')).toHaveTextContent('안건 02');
   });
 });

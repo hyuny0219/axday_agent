@@ -14,6 +14,7 @@ const MARKER_DRAFT_TEXT = 'MARKER_초안_절대_전송_금지_XYZ';
 function sessionAtDiscuss(now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now);
@@ -120,7 +121,9 @@ describe('selectPublic', () => {
   });
 
   it('BRIEFING 이전에는 임원 의견 ID를 공개하지 않고, 그 이후에는 공개한다', () => {
-    const atSelect = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    const atIntro = reduce(createInitialSession(T0), { type: 'START' }, T0);
+    expect(atIntro.stage).toBe('INTRO');
+    const atSelect = reduce(atIntro, { type: 'NEXT_STAGE' }, T0);
     expect(atSelect.stage).toBe('SELECT');
     expect(selectPublic(atSelect, scenario, 1).memberOpinionIds).toEqual([]);
 
@@ -164,5 +167,13 @@ describe('selectPublic', () => {
     const payload = selectPublic(session, scenario, 42);
     expect(payload.sessionId).toBe(session.sessionId);
     expect(payload.revision).toBe(42);
+  });
+});
+
+describe('selectPublic의 followUpAnswered(T110)', () => {
+  it('세션의 추가 질문 답변 여부를 그대로 싣는다', () => {
+    const base = createInitialSession(0, 's-t110');
+    expect(selectPublic(base, null, 1).followUpAnswered).toBe(false);
+    expect(selectPublic({ ...base, followUpAnswered: true }, null, 1).followUpAnswered).toBe(true);
   });
 });

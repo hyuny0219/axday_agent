@@ -2,7 +2,7 @@
 // (CLAUDE_IMPLEMENTATION.md 3장 "현장 운영"). 참가자용 보안 기능이 아니라 현장 운영
 // 편의 메뉴다. 관람 창 열기(P1)는 이 카드 범위 밖이라 추가하지 않는다.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fetchHealth, probeModel, type HealthInfo, type ProbeResult } from '../../services/transport/probe';
 
 export interface OperatorMenuProps {
@@ -10,6 +10,9 @@ export interface OperatorMenuProps {
   /** scripted로 새 체험 확인 뒤 실행할 이동 함수. 기본값은 현재 경로(배포 base 유지)에
    * `?mode=scripted`를 붙여 location.assign하며, 테스트에서 가로채려면 이 prop을 주입한다. */
   onRestartScripted?: () => void;
+  /** 진행 도우미(T103)가 켜져 있는가. onToggleCoach와 함께 줄 때만 "안내 끄기/켜기" 항목이 보인다. */
+  coachEnabled?: boolean;
+  onToggleCoach?: () => void;
 }
 
 type PanelState =
@@ -21,6 +24,20 @@ type PanelState =
   | 'confirmRestartScripted';
 
 type ProbeStatus = 'pending' | 'ok' | 'fail';
+
+/** 지금 전체화면인가(T121). 전체화면에서는 운영 버튼을 숨기고, Esc로 전체화면을 나오면 다시 보인다. */
+function useIsFullscreen(): boolean {
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => typeof document !== 'undefined' && Boolean(document.fullscreenElement),
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  return isFullscreen;
+}
 
 function isFullscreenSupported(): boolean {
   return typeof document !== 'undefined' && document.fullscreenEnabled === true;
@@ -48,12 +65,46 @@ const FULLSCREEN_REJECTED_MESSAGE =
   '전체화면 요청이 거부되었습니다. 브라우저 또는 키오스크 모드 설정에서 전체화면을 사용해 주세요.';
 const PROBE_FAIL_GUIDANCE = '키·MODEL_PROVIDER를 확인하거나 scripted로 새 체험을 시작하세요';
 
-export function OperatorMenu({ onNewSession, onRestartScripted }: OperatorMenuProps) {
+export function OperatorMenu({
+  onNewSession,
+  onRestartScripted,
+  coachEnabled = true,
+  onToggleCoach,
+}: OperatorMenuProps) {
   const [panel, setPanel] = useState<PanelState>('closed');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('pending');
   const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
+  const isFullscreen = useIsFullscreen();
+
+  // T123: Windows 현장용 전체화면 단축키. F11(브라우저 기본 전체화면을 가로채 페이지 전체화면으로)
+  // 또는 Ctrl+Shift+F(Mac은 Command+Shift+K, T124)로 들어가고, 해제는 Esc(브라우저 기본 동작). 페이지 전체화면이라 운영
+  // 버튼도 숨는다(T121). 입력 중(textarea·input)에는 Ctrl+Shift+F를 무시한다.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isF11 = event.key === 'F11';
+      const isWinCombo = event.ctrlKey && event.shiftKey && (event.key === 'F' || event.key === 'f');
+      // T124: Mac은 Command+Shift+K.
+      const isMacCombo = event.metaKey && event.shiftKey && (event.key === 'K' || event.key === 'k');
+      const isCombo = isWinCombo || isMacCombo;
+      if (!isF11 && !isCombo) return;
+      const target = event.target as HTMLElement | null;
+      const typing = target?.closest?.('input, textarea, [contenteditable="true"]');
+      if (isCombo && typing) return;
+      if (document.fullscreenElement || !isFullscreenSupported()) {
+        if (isF11) event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      document.documentElement.requestFullscreen().catch(() => {
+        // 거부되면 아무것도 하지 않는다(운영 메뉴의 '전체화면'이 안내 문구를 보여 준다).
+      });
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   function close(): void {
     setPanel('closed');
@@ -109,6 +160,10 @@ export function OperatorMenu({ onNewSession, onRestartScripted }: OperatorMenuPr
     (onRestartScripted ?? defaultRestartScripted)();
   }
 
+  // T121: 전체화면(현장 진행 중)에서는 참가자 눈에 띄지 않게 운영 버튼 자체를 숨긴다.
+  // 운영자는 Esc로 전체화면을 나오면 버튼이 다시 보인다.
+  if (isFullscreen) return null;
+
   return (
     <div className="operator-menu">
       <button
@@ -132,6 +187,20 @@ export function OperatorMenu({ onNewSession, onRestartScripted }: OperatorMenuPr
           >
             새 체험
           </button>
+          {onToggleCoach && (
+            <button
+              type="button"
+              role="menuitem"
+              className="operator-menu__item"
+              onClick={() => {
+                onToggleCoach();
+                close();
+              }}
+              data-testid="operator-toggle-coach"
+            >
+              {coachEnabled ? '안내 끄기' : '안내 켜기'}
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"

@@ -26,6 +26,16 @@ export interface CallLogEntry {
   timeoutMs: number;
   promptVersion: string;
   modelId: string;
+  /** 이 역할에 실제로 시도한 횟수(T91, round·vote만 채운다). 1이면 재시도 없음, 2면 첫
+   * 시도가 timeout 외 이유(연결 오류·5xx·invalid_response 등)로 빠르게 실패해 한 번 더
+   * 시도했다는 뜻이다. 비워 두면(probe·refine·summarize) 재시도 로직이 없다는 뜻. */
+  attempts?: number;
+  /** 프롬프트 캐시 적중 토큰 수(T91, anthropic 제공자만 — mock은 항상 비움). */
+  cacheReadTokens?: number;
+  /** 프롬프트 캐시에 새로 쓴 토큰 수(T91, anthropic 제공자만). */
+  cacheWriteTokens?: number;
+  /** 응답을 서버가 손봤을 때의 표시(T114 `followup_verdict_masked`: FOLLOWUP 발언에 방향 단어가 남아 중립 문장으로 대체). */
+  note?: string;
 }
 
 const LOG_DIR = resolve(process.cwd(), 'logs');

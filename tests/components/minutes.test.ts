@@ -4,6 +4,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { chairMotionLine } from '../../src/components/chairMotionLine';
+import { collectConfirmedConditionIds } from '../../src/components/opinionConditions';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
 import {
@@ -22,6 +24,7 @@ function selectScenario(mode: SessionMode, now = T0): Session {
   let session = createInitialSession(now);
   session = reduce(session, { type: 'START' }, now);
   session = reduce(session, { type: 'SET_MODE', mode }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   return session;
 }
@@ -52,7 +55,7 @@ describe('buildMinutes(scripted)', () => {
     expect(entries.every((entry) => entry.kind === 'speech')).toBe(true);
   });
 
-  it('scripted 전 단계를 거치면 순서대로 8개 항목 묶음이 쌓이고 반응 없는 임원은 "기존 의견 유지"다', () => {
+  it('scripted 전 단계를 거치면 순서대로 8개 항목 묶음이 쌓이고 반응 없는 임원은 유지 문구다', () => {
     let session = selectScenario('scripted');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> DISCUSS
@@ -95,11 +98,19 @@ describe('buildMinutes(scripted)', () => {
     ]);
 
     // PILOT 조건을 확정했으므로 CFO는 실제 반응 문구, 조건과 무관한 CISO는
-    // "기존 의견 유지"다(scenario.reactions에 PILOT용 CISO 반응이 없다).
+    // 유지 이유(holdReasons)가 없는 시나리오는 고정 문구다(scenario.reactions에 PILOT용
+    // CISO 반응이 없다). holdReasons가 있으면 아래 T101 테스트처럼 그 문구를 쓴다.
     const cfoReaction = entries.find((entry) => entry.id === 'reaction-CFO');
     const cisoReaction = entries.find((entry) => entry.id === 'reaction-CISO');
     expect(cfoReaction?.text).toContain('처리 공수');
-    expect(cisoReaction?.text).toBe('기존 의견 유지');
+    expect(cisoReaction?.text).toBe('앞서 말씀드린 입장 그대로입니다.');
+    // T101: holdReasons가 있으면 반응 카드와 같은 역할별 유지 이유를 쓴다.
+    const withHold = buildMinutes(
+      session,
+      { ...scenario, holdReasons: { CEO: '가', CFO: '나', CAIO: '다', CISO: '라 유지 이유' } },
+      [],
+    );
+    expect(withHold.find((entry) => entry.id === 'reaction-CISO')?.text).toBe('라 유지 이유');
 
     const myOpinion = entries.find((entry) => entry.id === 'my-opinion');
     expect(myOpinion).toMatchObject({ speaker: 'PARTICIPANT', kind: 'mine' });
@@ -107,11 +118,17 @@ describe('buildMinutes(scripted)', () => {
     const myFollowup = entries.find((entry) => entry.id === 'my-followup');
     expect(myFollowup?.text).toBe('출처와 기준일을 표시하고 담당자가 확인한 뒤 공유합시다.');
 
+    // 의장의 안건 고정 발언은 무대 말풍선과 같은 문장(chairMotionLine — 조건 수·첫 조건명,
+    // 조건이 없으면 "원안 그대로", PR #20 Codex 3차 검토 P2).
     const chairMotion = entries.find((entry) => entry.id === 'chair-motion');
-    expect(chairMotion).toMatchObject({ speaker: 'CEO', kind: 'speech', text: '이 조건으로 안건을 고정합니다' });
+    expect(chairMotion).toMatchObject({ speaker: 'CEO', kind: 'speech' });
+    expect(chairMotion?.text).toMatch(/표결에 부칩니다$/);
+    expect(chairMotion?.text).toBe(
+      chairMotionLine(scenario, collectConfirmedConditionIds(session.opinions)),
+    );
   });
 
-  it('KEEP_PREVIOUS 경로에서는 내 답이 "앞서 전달한 의견을 유지"다', () => {
+  it('KEEP_PREVIOUS 경로에서는 내 답이 "(답하지 않고 넘어갔습니다)"다', () => {
     let session = selectScenario('scripted');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
@@ -129,7 +146,7 @@ describe('buildMinutes(scripted)', () => {
 
     const entries = buildMinutes(session, scenario, []);
     const myFollowup = entries.find((entry) => entry.id === 'my-followup');
-    expect(myFollowup?.text).toBe('앞서 전달한 의견을 유지');
+    expect(myFollowup?.text).toBe('(답하지 않고 넘어갔습니다)');
     // scripted는 후속 라운드가 없으므로 followup-* 항목이 없다.
     expect(entries.some((entry) => entry.id.startsWith('followup-'))).toBe(false);
   });
@@ -151,7 +168,7 @@ function statementFor(roleId: Statement['roleId'], stage: Statement['stage'], te
 }
 
 describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮어써도 남는다', () => {
-  it('OPINIONS에서 실패한 임원은 REACTIONS 라운드가 진행 중이어도 "응답 없음"으로 남는다', () => {
+  it('OPINIONS에서 실패한 임원은 REACTIONS 라운드가 진행 중이어도 실패 문구로 남는다', () => {
     let session = selectScenario('live');
     session = reduce(session, { type: 'NEXT_STAGE' }, T0); // -> OPINIONS
 
@@ -177,7 +194,7 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
     const beforeReactions = buildMinutes(session, scenario, roundLog);
     expect(beforeReactions.find((entry) => entry.id === 'opinion-CAIO')).toMatchObject({
       kind: 'failed',
-      text: '응답 없음',
+      text: '이번에는 답을 받지 못했습니다',
     });
     expect(beforeReactions.find((entry) => entry.id === 'opinion-CEO')).toMatchObject({
       kind: 'speech',
@@ -206,10 +223,10 @@ describe('buildMinutes(live) — roundLog는 뒤 라운드가 roleStatus를 덮�
     roundLog = upsertRoundLogEntry(roundLog, { stage: 'REACTIONS', roleId: 'CISO', status: 'pending' });
 
     const duringReactions = buildMinutes(session, scenario, roundLog);
-    // OPINIONS 라운드의 CAIO 항목은 그대로 "응답 없음"이다.
+    // OPINIONS 라운드의 CAIO 항목은 그대로 실패 문구다.
     expect(duringReactions.find((entry) => entry.id === 'opinion-CAIO')).toMatchObject({
       kind: 'failed',
-      text: '응답 없음',
+      text: '이번에는 답을 받지 못했습니다',
     });
     // REACTIONS 라운드는 아직 진행 중이므로 판단 중(점 세 개)으로 보인다.
     expect(duringReactions.find((entry) => entry.id === 'reaction-CAIO')).toMatchObject({

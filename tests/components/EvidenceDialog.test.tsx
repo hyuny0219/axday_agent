@@ -19,7 +19,7 @@ describe('EvidenceDialog', () => {
     trigger.focus();
     expect(trigger).toHaveFocus();
 
-    const { unmount } = render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={vi.fn()} />);
+    const { unmount } = render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={vi.fn()} />);
     expect(screen.getByTestId('evidence-dialog-close')).toHaveFocus();
 
     unmount();
@@ -29,14 +29,14 @@ describe('EvidenceDialog', () => {
 
   it('닫기 버튼 클릭이 onClose를 부른다', () => {
     const onClose = vi.fn();
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={onClose} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={onClose} />);
     fireEvent.click(screen.getByTestId('evidence-dialog-close'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('딤(배경) 클릭이 onClose를 부르지만, 팝업 안쪽 클릭은 부르지 않는다', () => {
     const onClose = vi.fn();
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={onClose} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={onClose} />);
 
     fireEvent.click(screen.getByTestId('evidence-dialog'));
     expect(onClose).not.toHaveBeenCalled();
@@ -47,13 +47,13 @@ describe('EvidenceDialog', () => {
 
   it('Esc 키가 onClose를 부른다', () => {
     const onClose = vi.fn();
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={onClose} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={onClose} />);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('role="dialog" aria-modal="true" aria-labelledby로 제목을 가리킨다', () => {
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={vi.fn()} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={vi.fn()} />);
     const dialog = screen.getByTestId('evidence-dialog');
     expect(dialog).toHaveAttribute('role', 'dialog');
     expect(dialog).toHaveAttribute('aria-modal', 'true');
@@ -63,7 +63,7 @@ describe('EvidenceDialog', () => {
   });
 
   it('자료 카드 4장을 클릭 없이 자료명·해석·원문과 함께 보여준다', () => {
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={vi.fn()} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={vi.fn()} />);
     for (const card of evidence) {
       expect(screen.getByTestId(`evidence-card-${card.id}`)).toBeInTheDocument();
     }
@@ -74,7 +74,7 @@ describe('EvidenceDialog', () => {
     outsideButton.textContent = '바깥 버튼';
     document.body.appendChild(outsideButton);
 
-    render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={vi.fn()} />);
+    render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={vi.fn()} />);
     const closeButton = screen.getByTestId('evidence-dialog-close');
     expect(closeButton).toHaveFocus();
 
@@ -91,7 +91,7 @@ describe('EvidenceDialog', () => {
 
   it('열려 있는 동안 문서 스크롤을 잠그고 닫히면 원래 값으로 되돌린다(PR #11 Codex 29차)', () => {
     document.documentElement.style.overflow = 'auto';
-    const { unmount } = render(<EvidenceDialog evidence={evidence} caseTag="CASE 02" statements={[]} onClose={vi.fn()} />);
+    const { unmount } = render(<EvidenceDialog evidence={evidence} caseTag="사건 02" onClose={vi.fn()} />);
     expect(document.documentElement.style.overflow).toBe('hidden');
     unmount();
     expect(document.documentElement.style.overflow).toBe('auto');

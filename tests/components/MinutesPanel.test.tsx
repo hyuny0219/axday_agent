@@ -55,7 +55,9 @@ describe('MinutesPanel 낭독', () => {
       />,
     );
     const before = screen.getByTestId('minutes-entry-op-CFO');
-    expect(before).toHaveTextContent('[--:--] CFO');
+    // 시각을 모르는 행(T85 #12)은 "[--:--]"를 지어내 보이지 않고 역할 코드만 보인다.
+    expect(before).not.toHaveTextContent('--:--');
+    expect(before).toHaveTextContent('CFO');
     expect(before).toHaveTextContent('대기 중');
 
     rerender(
@@ -94,14 +96,14 @@ describe('MinutesPanel 전체 표시·스크롤', () => {
     expect(panel.querySelectorAll('.minutes__entry--hidden')).toHaveLength(0);
     expect(panel).not.toHaveClass('minutes--collapsed');
     expect(screen.getByTestId('minutes-entry-entry-11')).toHaveTextContent(many[11]!.text);
-    // 시안 TRANSCRIPT 머리글 건수 배지 형식(T77): "N ENTRIES · 스크롤", 1건은 "1 ENTRY".
-    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12 ENTRIES · 스크롤');
+    // 시안 TRANSCRIPT 머리글 건수 배지 형식(T77, T83에서 한국어화): "N건".
+    expect(screen.getByTestId('minutes-count')).toHaveTextContent('12건');
   });
 
-  it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "발언 흐름"이다', () => {
+  it('목록은 키보드로 스크롤할 수 있게 포커스를 받고, 이름은 "지금까지 발언"이다', () => {
     render(<MinutesPanel entries={many} />);
     expect(screen.getByTestId('minutes-list')).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('region', { name: '발언 흐름' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '지금까지 발언' })).toBeInTheDocument();
   });
 
   it('새 항목이 오면 목록을 맨 아래로 내린다', () => {

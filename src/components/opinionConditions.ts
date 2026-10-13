@@ -19,3 +19,10 @@ export function collectConfirmedConditionIds(opinions: readonly Opinion[]): stri
   }
   return result;
 }
+
+/** 가장 최근 의견에 실린 참가자 입장(T92, 사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는
+ * 경향"). 의견이 없거나 입장을 고르지 않았으면(과거 기록 포함) null. */
+export function collectParticipantStance(opinions: readonly Opinion[]): 'FOR' | 'AGAINST' | null {
+  const latest = opinions[opinions.length - 1];
+  return latest?.stance ?? null;
+}

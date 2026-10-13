@@ -23,14 +23,16 @@ const SR_ONLY: React.CSSProperties = {
 
 export interface ExecStanceListProps {
   stances: Record<ExecMemberId, Stance>;
+  /** T114: 답변 뒤에는 방향을 알리지 않는다 — true면 stances를 읽지 않고 "입장 봉인"만 둔다. */
+  sealed?: boolean;
 }
 
-export function ExecStanceList({ stances }: ExecStanceListProps) {
+export function ExecStanceList({ stances, sealed = false }: ExecStanceListProps) {
   return (
     <ul style={SR_ONLY} aria-label="임원 입장" data-testid="exec-stance-list">
       {EXEC_MEMBER_ORDER.map((memberId) => (
         <li key={memberId} data-testid={`exec-mood-label-${memberId}`}>
-          {MEMBER_LABELS[memberId]} {STANCE_LABEL[stances[memberId]]}
+          {MEMBER_LABELS[memberId]} {sealed ? '입장 봉인' : STANCE_LABEL[stances[memberId]]}
         </li>
       ))}
     </ul>

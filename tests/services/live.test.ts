@@ -19,6 +19,7 @@ function toOpinionsStage(clock: FakeClock): Session {
   let session = createInitialSession(clock.now());
   session = reduce(session, { type: 'START' }, clock.now());
   session = reduce(session, { type: 'SET_MODE', mode: 'live' }, clock.now());
+  session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: anonBoardScenario.id }, clock.now());
   return reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // BRIEFING -> OPINIONS
 }

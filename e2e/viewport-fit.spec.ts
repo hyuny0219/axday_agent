@@ -4,6 +4,7 @@
 // 기존 무스크롤 잠금 임계값(699px)에서 2px 모자라 세로 1열로 풀렸었다.
 
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 async function expectNoPageScroll(page: Page, label: string) {
   const overflow = await page.evaluate(() => {
@@ -36,7 +37,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   page,
 }) => {
   await page.setViewportSize({ width: 1272, height: 698 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   // 2열 조종석 배치가 그대로 유지된다(1열로 풀리지 않는다) — 축소 wrapper가
   // data-fit="scale"일 때만 적용되는 상태다.
@@ -45,38 +46,50 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
 
   await expectNoPageScroll(page, 'ATTRACT');
   const startCta = page.getByRole('button', { name: '체험 시작' });
-  await expectInViewport(page, 'mode-badge', 'ATTRACT'); // 헤더가 잘리지 않았는지 곁다리 확인
+  // T86: 헤더 모드 배지는 없앴다 — 헤더가 잘리지 않았는지는 항상 있는 운영 메뉴
+  // 버튼으로 곁다리 확인한다.
+  await expectInViewport(page, 'operator-menu-button', 'ATTRACT');
   await startCta.click();
 
+  await expectNoPageScroll(page, 'INTRO');
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+
   await expectNoPageScroll(page, 'SELECT');
-  await page.getByTestId('scenario-card-ai-approval').click();
-  const enterBoard = page.getByRole('button', { name: '이사회 입장' });
-  await expect(enterBoard).toBeInViewport();
-  await enterBoard.click();
+  // T84 #10: 카드 자체가 입장 버튼이다 — 별도 "이사회 입장" CTA가 없다.
+  const scenarioCard = page.getByTestId('scenario-card-ai-approval');
+  await expect(scenarioCard).toBeInViewport();
+  await scenarioCard.click();
 
   await expect(page.getByTestId('chair-briefing')).toBeVisible();
   await expectNoPageScroll(page, 'BRIEFING');
   const hearOpinions = page.getByRole('button', { name: '의견 듣기' });
   await expect(hearOpinions).toBeInViewport();
+  // T95: 근거 자료를 한 번 열어 닫기 전에는 잠겨 있다.
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await hearOpinions.click();
 
-  await expect(page.getByRole('heading', { name: '임원 네 명의 첫 의견' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '임원 의견 듣기' })).toBeVisible();
   await expectNoPageScroll(page, 'OPINIONS');
-  const speakOpinion = page.getByRole('button', { name: '내 의견 말하기' });
+  const speakOpinion = page.getByRole('button', { name: '내 의견 쓰러 가기' });
   await expect(speakOpinion).toBeInViewport();
   await speakOpinion.click();
 
   await expectNoPageScroll(page, 'DISCUSS');
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
 
   // 축소 상태에서도 AI 비서실장 드로어가 화면 안(뷰포트 밖으로 잘리지 않음)에 뜬다
   // (드로어는 position:absolute라 축소 컨테이닝 블록의 영향을 받을 수 있다).
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectInViewport(page, 'assistant-panel', 'DISCUSS(비서실장 드로어 열림)');
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 드로어 열림)');
-  await page.getByTestId('assistant-toggle').click();
+  await expectInViewport(page, 'assistant-panel', 'DISCUSS(비서실장 팝업 열림)');
+  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
+  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글이 닫지 않고 팝업 자체의
+  // 닫기 버튼으로 닫는다.
+  await page.getByTestId('assistant-close').click();
 
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await expect(submitOpinion).toBeInViewport();
@@ -86,7 +99,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await expectNoPageScroll(page, 'REACTIONS');
-  const keepPrevious = page.getByTestId('followup-option-2');
+  const keepPrevious = page.getByTestId('keep-previous-answer');
   await expect(keepPrevious).toBeInViewport();
   await keepPrevious.click();
 
@@ -111,7 +124,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
 
 test('1272×698에서 운영 메뉴 패널이 화면 안에 정상 위치한다', async ({ page }) => {
   await page.setViewportSize({ width: 1272, height: 698 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
 
   await page.getByTestId('operator-menu-button').click();
   const panel = page.getByTestId('operator-menu-panel');
@@ -125,7 +138,7 @@ test('1920×1080·1280×720에서는 축소가 걸리지 않는다(natural, scal
     { width: 1280, height: 720 },
   ]) {
     await page.setViewportSize(size);
-    await page.goto('/?mode=scripted');
+    await page.goto('/?mode=scripted&coach=off');
     const fitMode = await page.locator('.app-scale-wrapper').getAttribute('data-fit');
     expect(fitMode, `${size.width}×${size.height}`).toBe('natural');
   }
@@ -137,14 +150,20 @@ test('1920×1080·1280×720에서는 축소가 걸리지 않는다(natural, scal
 // 세로 예산이 그대로 빠듯한 크기이며, 실측으로 잘림이 나던 창이다(2026-09-23).
 test('1568×777(축소가 걸리지 않는 창 모드)에서 회의록이 잘리지 않는다', async ({ page }) => {
   await page.setViewportSize({ width: 1568, height: 777 });
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+  await page.getByTestId('reactions-advance').click();
   await page.getByTestId('followup-option-0').click();
   await page.getByTestId('submit-followup').click();
 

@@ -1,5 +1,6 @@
 // 운영 메뉴 "모델 연결 확인"(T49, DESIGN_SPEC.md v1.0 10절)이 쓰는 진단 호출. 실제
-// 제공자에 아주 짧은 호출 1회(8초 상한)를 보내 응답 계약 { ok: true }를 확인한다. 라운드·
+// 제공자에 아주 짧은 호출 1회(ROUND_TIMEOUT_MS 상한)를 보내 응답 계약 { ok: true }를
+// 확인한다. 라운드·
 // 표·비서 핸들러와 달리 세션·요청 검증을 거치지 않는 순수 함수다 — 결과는 항상(성공이든
 // 실패든) 값으로 돌려주고 예외를 던지지 않는다(호출자인 server/index.ts가 그대로 200으로
 // 응답한다).
@@ -12,9 +13,11 @@ import { PROMPT_VERSION } from '../prompts/version';
 import { withTimeout } from './timeout';
 import { classifyFailure } from './shared';
 
-/** 진단 호출에 허용하는 최대 시간. DESIGN_SPEC.md v1.0 10절 "8초 상한"(T65: config.ts의
- * ROUND_TIMEOUT_MS와 같은 값 — probe도 OPINIONS·VOTE와 같은 예산을 쓴다). */
-export const PROBE_TIMEOUT_MS = 8000;
+/** 진단 호출에 허용하는 최대 시간(호환용 기본값, T65: config.ts의 ROUND_TIMEOUT_MS와 같은
+ * 값 — probe도 OPINIONS·VOTE와 같은 예산을 쓴다. server/index.ts는 항상 config.roundTimeoutMs를
+ * 명시해서 넘기므로 실제로는 이 값이 쓰이지 않는다, T91에서 DEFAULT_ROUND_TIMEOUT_MS와 같이
+ * 15000으로 올렸다). */
+export const PROBE_TIMEOUT_MS = 15000;
 
 /** 오류 메시지를 화면·로그에 남길 때 자르는 길이. */
 const MAX_ERROR_LENGTH = 200;

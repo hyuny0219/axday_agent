@@ -25,12 +25,20 @@ function speakerTag(speaker: MemberId): string {
   return speaker === 'PARTICIPANT' ? '나' : speaker;
 }
 
-/** 머리글 오른쪽 건수 배지(시안 TRANSCRIPT "N ENTRIES · 스크롤", 1건은 "1 ENTRY"). */
+/** 머리글 오른쪽 건수 배지(시안 TRANSCRIPT "N ENTRIES · 스크롤", 1건은 "1 ENTRY",
+ * T83에서 한국어화). */
 function entryCountLabel(count: number): string {
   if (count <= 1) {
-    return `${count} ENTRY`;
+    return `${count}건`;
   }
-  return `${count} ENTRIES · 스크롤`;
+  return `${count}건`;
+}
+
+// T101: 바닥에 붙인 목록은 맨 위 항목이 반쯤 잘려 "제목에 가려진" 것처럼 보였다. 위로 더 읽을
+// 내용이 있을 때만 위쪽 가장자리를 옅게 흐려(minutes.css .minutes__list[data-faded]) 잘림을
+// 의도된 스크롤 표시로 읽히게 한다.
+function syncFade(list: HTMLElement): void {
+  list.dataset.faded = list.scrollTop > 1 ? 'true' : 'false';
 }
 
 export function MinutesPanel({ entries }: MinutesPanelProps) {
@@ -47,6 +55,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
     const list = listRef.current;
     if (list) {
       list.scrollTop = list.scrollHeight;
+      syncFade(list);
     }
   }, [scrollKey]);
 
@@ -61,6 +70,7 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
     const pin = () => {
       if (followRef.current) {
         list.scrollTop = list.scrollHeight;
+        syncFade(list);
       }
     };
     const observer = new ResizeObserver(pin);
@@ -112,16 +122,17 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
       return;
     }
     followRef.current = list.scrollTop + list.clientHeight >= list.scrollHeight - 2;
+    syncFade(list);
   };
 
   return (
     <section
       className={`minutes${collapsed ? ' minutes--collapsed' : ''}`}
-      aria-label="발언 흐름"
+      aria-label="지금까지 발언"
       data-testid="minutes-panel"
     >
       <header className="minutes__head">
-        <h2 className="minutes__title">TRANSCRIPT · 발언 흐름</h2>
+        <h2 className="minutes__title">지금까지 발언</h2>
         <span className="minutes__count" data-testid="minutes-count">
           {entryCountLabel(entries.length)}
         </span>
@@ -151,11 +162,20 @@ export function MinutesPanel({ entries }: MinutesPanelProps) {
           >
             {/* 발화자 전체 직함은 스크린리더용으로만 남긴다(시안에 아바타·배지가 없어
                 화면에는 역할 코드만 보인다, T77). */}
-            <span className="minutes__speaker">{speakerLabel(entry.speaker)}</span>
+            <span className="minutes__speaker">
+              {speakerLabel(entry.speaker)}
+              {entry.speakerNote ? ` · ${entry.speakerNote}` : ''}
+            </span>
             {/* 시안 TRANSCRIPT 행 머리(타자기 앰버 "[mm:ss] 역할", T77). 위
-                minutes__speaker(sr-only)가 전체 직함을 이미 전하므로 장식으로 숨긴다. */}
+                minutes__speaker(sr-only)가 전체 직함을 이미 전하므로 장식으로 숨긴다.
+                시각을 모르는 행(scripted 각본 문구 등)은 "[--:--]"를 지어내 보이지
+                않고 역할 코드만 보여준다(T85 #12). */}
             <span className="minutes__tag" aria-hidden="true">
-              [{entry.timeLabel ?? TIME_UNKNOWN}] {speakerTag(entry.speaker)}
+              {entry.timeLabel !== TIME_UNKNOWN && entry.timeLabel !== undefined
+                ? `[${entry.timeLabel}] `
+                : ''}
+              {speakerTag(entry.speaker)}
+              {entry.speakerNote ? ` · ${entry.speakerNote}` : ''}
             </span>
             {/* 전문을 그대로 넣고 줄바꿈한다(2026-09-28 사용자: 잘리는 문장 없이 모두 보이게).
                 판단 중인 행은 시안 그대로 "▌ 대기 중"을 보여준다(T77, Main.html 예시). */}

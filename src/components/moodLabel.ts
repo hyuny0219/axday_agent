@@ -7,5 +7,13 @@ import type { Stance } from '../domain/types';
 export const STANCE_LABEL: Record<Stance, string> = {
   FOR: '찬성 쪽',
   AGAINST: '반대 쪽',
-  UNDECIDED: '미정',
+  UNDECIDED: '고민 중',
+};
+
+/** STANCE_LABEL보다 짧은 입장 라벨(T96) — "반대 → 찬성"·설득 현황판처럼 좁은 자리에
+ * 전후 입장을 나란히 보여줄 때 "쪽"을 뺀다. */
+export const SHORT_STANCE_LABEL: Record<Stance, string> = {
+  FOR: '찬성',
+  AGAINST: '반대',
+  UNDECIDED: '고민 중',
 };

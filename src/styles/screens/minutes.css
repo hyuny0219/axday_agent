@@ -84,6 +84,11 @@
   }
 }
 
+.minutes__list[data-faded='true'] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 22px);
+}
+
 .minutes__list:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -48,7 +48,10 @@ import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
 import { STANCE_LABEL } from '../moodLabel';
+import type { LeaningMap } from '../../domain/stance';
 import '../../styles/screens/live.css';
+import { HighlightText } from './HighlightText';
+import { statementHighlightTerms } from '../highlightTerms';
 
 /** 카드 역할색 띠·상태 칩 색에 쓰는 소문자 modifier(live.css가 읽는다). OpinionsScreen의
  * STANCE_MODIFIER와 같은 값이다. */
@@ -67,6 +70,8 @@ export interface LiveStatementCardsProps {
   statements: Statement[];
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63, "찬성 쪽/반대 쪽/미정"). */
   stances: Record<ExecMemberId, Stance>;
+  /** T118: 기울어진 방향(REACTIONS). 있는 임원은 "고민 중" 대신 "찬성 쪽"으로 보인다. */
+  leaning?: LeaningMap;
   /** 'grid'(기본, OPINIONS 4열) 또는 'reaction'(REACTIONS 2×2, T74). */
   variant?: 'grid' | 'reaction';
   /** 있으면 실패한 역할이 하나 이상일 때 "응답 없는 임원 다시 요청" 버튼을 보여준다(T65).
@@ -88,11 +93,9 @@ function referencedLabel(statements: Statement[], id: string): string {
   return referenced ? `${MEMBER_LABELS[referenced.roleId]}의 발언` : id;
 }
 
-// DiscussScreen도 live 모드 임원 카드에 같은 문구를 그대로 써야 하므로(Codex 18차 검토 P2)
-// export한다 — 참가자가 아직 답이 없는 임원을 두 화면에서 다른 말로 보면 안 된다.
-export const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
-  pending: '판단 중…',
-  failed: '응답 지연·확인 필요',
+const STATUS_TEXT: Record<Extract<RoleStatus, 'pending' | 'failed'>, string> = {
+  pending: '생각을 정리하고 있습니다…',
+  failed: '이번에는 답을 받지 못했습니다',
 };
 
 /** 임원 4명을 고정 순서(CEO/CFO/CAIO/CISO)로 그린다. roleStatus가 'idle'이면
@@ -104,6 +107,7 @@ export function LiveStatementCards({
   roleStatus,
   statements,
   stances,
+  leaning,
   variant = 'grid',
   onRetryFailedRoles,
   retryDisabled = false,
@@ -126,7 +130,7 @@ export function LiveStatementCards({
         disabled={retryDisabled}
         onClick={onRetryFailedRoles}
       >
-        {retryDisabled ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+        {retryDisabled ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
       </button>
     ) : null;
 
@@ -140,7 +144,7 @@ export function LiveStatementCards({
         // stale 값) 이 카드에 한해 'pending'으로 본다(위 모듈 주석 참고). 'failed'는
         // 그대로 둔다 — 실패는 정상 상태에서도 발언이 없는 게 맞다.
         const status: RoleStatus = rawStatus === 'answered' && !statement ? 'pending' : rawStatus;
-        const stance = stances[roleId];
+
         // REACTIONS만: 같은 역할의 OPINIONS·REACTIONS 발언 stance가 같으면(또는 둘 중
         // 하나라도 stance가 없으면 — 비교 대상이 없으니 "유지"로 본다) "유지", 다르면
         // "바뀜"이다(PR #12 Codex 3차 검토 1, 문장이 아니라 stance로 가른다). status가
@@ -148,6 +152,9 @@ export function LiveStatementCards({
         const opinionStatement = isReaction
           ? statements.find((item) => item.roleId === roleId && item.stage === 'OPINIONS')
           : undefined;
+        // 정상 응답한 카드에서만 기울음을 보인다(실패·대기는 그 상태가 우선, Codex 100차 P2).
+        const leanTo = status === 'answered' && statement ? leaning?.[roleId] : undefined;
+        const stance: Stance = leanTo ?? stances[roleId];
         const isMaintained =
           isReaction &&
           status === 'answered' &&
@@ -161,7 +168,7 @@ export function LiveStatementCards({
             key={roleId}
             className={`live-statement live-statement--${status}${
               isGrid || isReaction ? ` live-statement--grid live-statement--stance-${STANCE_MODIFIER[stance]}` : ''
-            }${isReaction ? ' live-statement--reaction' : ''}${isMaintained ? ' live-statement--maintained' : ''}`}
+            }${isReaction ? ' live-statement--reaction' : ''}${leanTo ? ` live-statement--leaning live-statement--leaning-${leanTo.toLowerCase()}` : ''}${isMaintained ? ' live-statement--maintained' : ''}`}
             data-testid={`live-role-${roleId}`}
           >
             <div className="live-statement__head">
@@ -180,11 +187,14 @@ export function LiveStatementCards({
                 data-testid={`exec-mood-label-${roleId}`}
               >
                 {STANCE_LABEL[stance]}
+                {leanTo ? ' · 미확정' : ''}
               </span>
             </div>
             {status === 'answered' && statement ? (
               <div data-testid={`statement-card-${roleId}`}>
-                <p className="live-statement__text">{statement.text}</p>
+                <p className="live-statement__text">
+                  <HighlightText text={statement.text} terms={statementHighlightTerms(scenario, statement.text)} />
+                </p>
                 {isGrid &&
                   // 시안은 "근거 · <자료명>" pill 하나만 둔다(evidenceIds가 여럿이면
                   // 마지막 것, OpinionsScreen.lastEvidenceLabel과 같은 규칙). REACTIONS
@@ -211,6 +221,11 @@ export function LiveStatementCards({
                 {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
               </p>
             )}
+            {leanTo && (
+              <p className="live-statement__leaning-note" data-testid={`live-leaning-note-${roleId}`}>
+                답변하면 확정됩니다
+              </p>
+            )}
             {isReaction && status === 'failed' && roleId === firstFailedRoleId && onRetryFailedRoles && (
               <button
                 type="button"
@@ -219,7 +234,7 @@ export function LiveStatementCards({
                 disabled={retryDisabled}
                 onClick={onRetryFailedRoles}
               >
-                {retryDisabled ? '다시 요청함 · 응답 없는 임원은 회의록에 남습니다' : '응답 없는 임원 다시 요청'}
+                {retryDisabled ? '다시 물어봤습니다 · 답이 없어도 그대로 진행됩니다' : '다시 물어보기'}
               </button>
             )}
           </article>

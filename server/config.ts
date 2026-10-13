@@ -12,11 +12,15 @@ export { PROMPT_VERSION };
 
 export const DEFAULT_PORT = 8787;
 
-/** OPINIONS·VOTE·probe 호출의 기본 타임아웃(T65, AGENT_BOARDROOM_SPEC.md 6장). */
-export const DEFAULT_ROUND_TIMEOUT_MS = 8000;
+/** OPINIONS·VOTE·probe 호출의 기본 타임아웃(T65, AGENT_BOARDROOM_SPEC.md 6장). 2026-10-07
+ * 시연 중 CISO 1건이 8001ms(=8초 예산 소진)로 provider_error 처리된 사례(실측 지연은
+ * 정상 회선에서 p50 3.4초·p90 4.1초·max 7.3초지만 회선이 느려지면 8초를 넘긴다)를 보고
+ * T91에서 8000→15000으로 올렸다. */
+export const DEFAULT_ROUND_TIMEOUT_MS = 15000;
 /** REACTIONS·FOLLOWUP 전용 예외 타임아웃(T65) — 프롬프트가 참가자 의견·이전 발언까지
- * 실어 OPINIONS·VOTE보다 길다(2026-09-29 시연 지연의 원인 중 하나였다). */
-export const DEFAULT_REACTION_TIMEOUT_MS = 12000;
+ * 실어 OPINIONS·VOTE보다 길다(2026-09-29 시연 지연의 원인 중 하나였다). T91에서
+ * DEFAULT_ROUND_TIMEOUT_MS와 같은 이유로 12000→20000으로 올렸다. */
+export const DEFAULT_REACTION_TIMEOUT_MS = 20000;
 
 export type ProviderName = 'mock' | 'anthropic';
 

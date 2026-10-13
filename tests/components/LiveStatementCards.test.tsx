@@ -86,8 +86,8 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('live-round-REACTIONS')).toHaveClass('live-round__cards');
     expect(screen.getByTestId('live-round-REACTIONS')).not.toHaveClass('live-round__cards--reply');
     expect(screen.getByTestId('statement-card-CEO')).toHaveTextContent('조건을 보니 작게 시작하는 데 찬성합니다.');
-    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
-    expect(screen.getByTestId('statement-failed-CAIO')).toHaveTextContent('응답 지연');
+    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('생각을 정리하고 있습니다');
+    expect(screen.getByTestId('statement-failed-CAIO')).toHaveTextContent('답을 받지 못했습니다');
     expect(screen.getByTestId('live-role-CEO')).toHaveClass(
       'live-statement--answered',
       'live-statement--grid',
@@ -98,7 +98,7 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('live-role-CEO')).not.toHaveClass('live-statement--maintained');
     expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
-    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('미정');
+    expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
   });
 
   it("variant='reaction'에서 stance가 같으면 문장이 다시 쓰여도 '유지'로 본다(PR #12 Codex 3차 검토 1)", () => {
@@ -217,7 +217,7 @@ describe('LiveStatementCards', () => {
     );
     // 본문은 "판단 중"이고(발언 카드가 아니다), 카드 자체도 pending 클래스를 쓴다 —
     // stale answered를 그대로 믿었다면 발언 카드도 유지/바뀜 배지도 잘못 나왔을 것이다.
-    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('판단 중');
+    expect(screen.getByTestId('statement-pending-CFO')).toHaveTextContent('생각을 정리하고 있습니다');
     expect(screen.queryByTestId('statement-card-CFO')).not.toBeInTheDocument();
     expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--pending');
     expect(screen.getByTestId('live-role-CFO')).not.toHaveClass('live-statement--answered');
@@ -239,7 +239,7 @@ describe('LiveStatementCards', () => {
     // CAIO만 failed다 — 버튼이 정확히 하나만 있어야 한다(그리드 아래 공용 버튼과
     // 중복되지 않는다).
     expect(screen.getAllByTestId('retry-failed-roles')).toHaveLength(1);
-    expect(screen.getByTestId('retry-failed-roles')).toHaveTextContent('응답 없는 임원 다시 요청');
+    expect(screen.getByTestId('retry-failed-roles')).toHaveTextContent('다시 물어보기');
   });
 
   it("variant='reaction'에서 실패한 역할이 둘 이상이어도 재요청 버튼은 하나만 그린다(PR #12 Codex 1차 검토 P2-b)", () => {

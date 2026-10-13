@@ -2,7 +2,7 @@
 
 이 문서는 **테스트·시연용** 배포 절차다. **행사 당일에는 무료 호스팅을 쓰지 않는다.**
 무료 플랜은 무접속 시 잠들고(Render), 트래픽·모델 호출 비용에 상한이 있으며, 응답 지연이
-현장 요구(스펙의 8초·5초 예산)를 보장하지 않는다. 행사 운영은 로컬 서버(`npm run booth`,
+현장 요구(스펙의 15초·5초 예산)를 보장하지 않는다. 행사 운영은 로컬 서버(`npm run booth`,
 갱신·빌드·기동·모델 연결 확인을 한 번에 묶은 스크립트. README "부스 운영(로컬 서버)" 참고)로
 한다.
 
@@ -73,14 +73,18 @@ REACTIONS·FOLLOWUP 기본 3회에 **라운드 단계마다 다시 요청 1회�
 64KiB를 넘으면 413이다. 이미 시작된 세션은 시간당 상한과 무관하게 계속
 진행할 수 있다. 행사 참가자 수에 맞춰 Render 환경변수에서 값을 조정할 수 있다.
 
-## 라운드 타임아웃(T65)
+## 라운드 타임아웃(T65, T91)
 
-`ROUND_TIMEOUT_MS`(기본 8000, OPINIONS·VOTE·모델 연결 확인 probe)와 `REACTION_TIMEOUT_MS`
-(기본 12000, REACTIONS·FOLLOWUP — 프롬프트가 참가자 발언·동료 발언까지 실어 더 길다)로
-서버의 임원 호출 타임아웃을 조정할 수 있다. `/api/health` 응답에 두 값이 실려 있어 클라이언트
-(`src/services/boardAgents/live.ts`)가 이 값을 읽어 쓴다 — 값을 바꾸면 서버·클라이언트가
-함께 새 상한을 따른다. 두 값은 **1 이상 120000 이하의 정수(ms)** 만 유효하고 소수·0·음수·문자열·120000 초과는 기본값으로 돌아간다(요청 스키마의 budgetMs가 정수만 받고, 32비트 타이머 한계를 넘는 값은 즉시 타임아웃이 난다 — PR #11 Codex 26·27차). 부스에서 응답이 자주 느리면(`logs/board-*.jsonl`로 확인) 이 값을
-올리기보다 먼저 네트워크·모델 상태를 점검한다.
+`ROUND_TIMEOUT_MS`(기본 15000, OPINIONS·VOTE·모델 연결 확인 probe)와 `REACTION_TIMEOUT_MS`
+(기본 20000, REACTIONS·FOLLOWUP — 프롬프트가 참가자 발언·동료 발언까지 실어 더 길다)로
+서버의 임원 호출 타임아웃을 조정할 수 있다(두 기본값은 2026-10-07 시연 중 CISO 응답 1건이
+8초 예산을 다 쓰고 provider_error로 끝난 사례를 보고 8000/12000에서 올렸다, T91). `/api/health`
+응답에 두 값이 실려 있어 클라이언트(`src/services/boardAgents/live.ts`)가 이 값을 읽어 쓴다 —
+값을 바꾸면 서버·클라이언트가 함께 새 상한을 따른다. 두 값은 **1 이상 120000 이하의 정수(ms)**
+만 유효하고 소수·0·음수·문자열·120000 초과는 기본값으로 돌아간다(요청 스키마의 budgetMs가
+정수만 받고, 32비트 타이머 한계를 넘는 값은 즉시 타임아웃이 난다 — PR #11 Codex 26·27차).
+부스에서 응답이 자주 느리면(`logs/board-*.jsonl`로 확인) 이 값을 올리기보다 먼저 네트워크·
+모델 상태를 점검한다.
 
 클라이언트의 fetch abort 타이머는 이 서버 타임아웃값 그대로가 아니라 `TRANSPORT_MARGIN_MS`
 (1.5초, `src/services/transport/roundTimeouts.ts`에 하드코딩, `boardAgents/live.ts`가 재export)를
@@ -89,7 +93,21 @@ REACTIONS·FOLLOWUP 기본 3회에 **라운드 단계마다 다시 요청 1회�
 
 `src/services/orchestrator/runner.ts`의 최종표 최초 대기도 같은 두 값을 쓴다(PR #11 Codex
 25차 P2): `ROUND_TIMEOUT_MS`(캐시된 `roundTimeoutMs`) + `TRANSPORT_MARGIN_MS`. `ROUND_TIMEOUT_MS`를
-8000보다 크게 올리면(행사장 네트워크가 느릴 때) 이 최초 대기도 자동으로 함께 늘어나 늘린
+기본값보다 크게 올리면(행사장 네트워크가 느릴 때) 이 최초 대기도 자동으로 함께 늘어나 늘린
 값 안에 도착한 정상 표를 UNCAST로 잘못 확정하지 않는다 — 값을 하드코딩해 두면 서버·표결
 대기가 어긋나 이 문제가 재발하므로, 새 타임아웃 관련 상수를 추가할 때도 항상
 `getRoundTimeouts()`를 거치게 한다.
+
+## 자동 재시도·프롬프트 캐시(T91)
+
+서버는 임원 호출이 timeout이 아닌 이유(연결 오류·5xx·invalid_response/스키마 거절 등)로
+빠르게 실패했고 남은 예산이 6초 이상이면(`server/handlers/shared.ts`의
+`MIN_RETRY_REMAINING_MS`) 같은 요청을 1회만 더 보낸다(`server/handlers/round.ts`·`vote.ts`).
+timeout은 이미 예산을 다 써서 재시도 대상이 아니다. 재시도 여부·횟수는
+`logs/board-*.jsonl`의 `attempts` 필드(1 또는 2)로 확인할 수 있다 — `attempts: 2`가 자주
+보이면 회선·모델 상태를 먼저 점검한다. 참가자가 화면에서 누르는 "다시 요청"(T65)과는
+별개로, 이 재시도는 자동이고 로그에만 남는다.
+
+`server/providers/anthropic.ts`는 system 프롬프트를 cache_control이 붙은 content 블록으로
+보낸다 — 같은 역할·같은 meeting_record로 다시 호출하면(위 자동 재시도 등) 캐시가 적중해
+TTFT·비용이 줄어든다. mock 제공자는 영향이 없다.

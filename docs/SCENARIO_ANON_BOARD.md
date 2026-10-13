@@ -1,7 +1,7 @@
 # 이전 안건(보존) — 익명이면 말할 수 있을까 (사내 게시판 익명제)
 
 > **2026-10-02(T78) 레지스트리 제외:** 이 안건은 더 이상 활성 안건이 아니다. 2026-10-02에
-> 사용자 확정으로 ① [AI Agent에게 결재권을 부여한다](SCENARIO_AI_APPROVAL.md) · ②
+> 사용자 확정으로 ① [AI 에이전트에게 결재권을 부여한다](SCENARIO_AI_APPROVAL.md) · ②
 > [데이터보다 경험이 더 중요하다](SCENARIO_EXPERIENCE_FIRST.md)로 교체됐다. 구현 파일
 > (`src/content/scenarios/anonBoard.ts`, `server/scenario-data.ts`의 `ANON_BOARD_MATERIALS`)은
 > 되돌릴 수 있게 그대로 보존했지만 `src/content/scenarios/index.ts`의 `scenarios` 레지스트리와

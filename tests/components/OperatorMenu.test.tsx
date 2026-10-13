@@ -3,7 +3,7 @@
 
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OperatorMenu, scriptedRestartUrl } from '../../src/components/parts/OperatorMenu';
 
@@ -106,5 +106,95 @@ describe('scriptedRestartUrl', () => {
     expect(scriptedRestartUrl('/axday_agent/')).toBe('/axday_agent/?mode=scripted');
     expect(scriptedRestartUrl('/axday_agent/index.html')).toBe('/axday_agent/index.html?mode=scripted');
     expect(scriptedRestartUrl('')).toBe('/?mode=scripted');
+  });
+});
+
+describe('OperatorMenu 안내 끄기/켜기(T103)', () => {
+  it('onToggleCoach를 주면 "안내 끄기"가 보이고, 누르면 콜백을 부르고 메뉴를 닫는다', async () => {
+    const onToggleCoach = vi.fn();
+    render(<OperatorMenu onNewSession={vi.fn()} coachEnabled onToggleCoach={onToggleCoach} />);
+    await openMenu();
+    await userEvent.click(screen.getByTestId('operator-toggle-coach'));
+    expect(onToggleCoach).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('operator-menu-panel')).not.toBeInTheDocument();
+  });
+
+  it('꺼져 있으면 "안내 켜기"로 보인다', async () => {
+    render(<OperatorMenu onNewSession={vi.fn()} coachEnabled={false} onToggleCoach={vi.fn()} />);
+    await openMenu();
+    expect(screen.getByTestId('operator-toggle-coach')).toHaveTextContent('안내 켜기');
+  });
+
+  it('onToggleCoach가 없으면 항목을 그리지 않는다', async () => {
+    render(<OperatorMenu onNewSession={vi.fn()} />);
+    await openMenu();
+    expect(screen.queryByTestId('operator-toggle-coach')).not.toBeInTheDocument();
+  });
+});
+
+
+describe('OperatorMenu — 전체화면에서 숨김(T121)', () => {
+  afterEach(() => {
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+  });
+
+  it('전체화면이면 운영 버튼을 그리지 않고, 전체화면을 나오면 다시 보인다', () => {
+    const el = document.createElement('div');
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => el });
+    render(<OperatorMenu onNewSession={() => {}} />);
+    expect(screen.queryByTestId('operator-menu-button')).toBeNull();
+
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+    act(() => {
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(screen.getByTestId('operator-menu-button')).toBeInTheDocument();
+  });
+});
+
+describe('OperatorMenu — 전체화면 단축키(T123)', () => {
+  afterEach(() => {
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, get: () => false });
+  });
+
+  function setup() {
+    const request = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(document, 'fullscreenEnabled', { configurable: true, get: () => true });
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+    document.documentElement.requestFullscreen = request;
+    render(<OperatorMenu onNewSession={() => {}} />);
+    return request;
+  }
+
+  it('F11을 누르면 페이지 전체화면을 요청하고 브라우저 기본 동작을 막는다', () => {
+    const request = setup();
+    const event = new KeyboardEvent('keydown', { key: 'F11', cancelable: true, bubbles: true });
+    document.body.dispatchEvent(event);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Ctrl+Shift+F로도 들어가고, 입력창에서는 무시한다', () => {
+    const request = setup();
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', ctrlKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    textarea.remove();
+  });
+
+  it('Mac의 Command+Shift+K로도 들어가고 브라우저 기본 동작을 막으며, 입력창에서는 무시한다(T124)', () => {
+    const request = setup();
+    const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, shiftKey: true, cancelable: true, bubbles: true });
+    document.body.dispatchEvent(event);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'K', metaKey: true, shiftKey: true, bubbles: true }));
+    expect(request).toHaveBeenCalledTimes(1);
+    textarea.remove();
   });
 });

@@ -17,7 +17,16 @@ export type { AssistantMode } from '../services/assistant/types';
 export type AssistantActionType =
   | 'OPINION_SUMMARY'
   | 'CONDITION_COMPARE'
-  | 'DRAFT_REFINE';
+  | 'DRAFT_REFINE'
+  // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
+  // 고르는 데 큰 도움이 된다고 느끼게"): "조건 추천"을 열어 확인할 때마다
+  // CONDITION_RECOMMEND_VIEW 한 건, 추천 조건을 눌러 실제로 체크에 반영할 때마다
+  // CONDITION_RECOMMEND_APPLY 한 건(evidenceIds에 반영한 조건 id 하나를 담는다 — 이
+  // 필드는 이름과 달리 "조건 id를 담는 범용 문자열 칸"으로 재사용한다, 아래 count
+  // 집계용). 기존 세 유형과 달리 "마지막 1건만"이 아니라 "몇 번·몇 개"로 모은다
+  // (describeAdditionalHelp의 countConditionRecommendation 참고).
+  | 'CONDITION_RECOMMEND_VIEW'
+  | 'CONDITION_RECOMMEND_APPLY';
 
 /** AssistantPanel이 실제로 결과를 렌더했을 때만 만드는 기록 한 건. requestedAt은
  * 참가자가 요청해 받은 결과(요약·비교·정리)의 시각이다. */
@@ -28,12 +37,16 @@ export interface AssistantAction {
   requestedAt?: number;
   /** '내 발언 정리'는 '내 발언에 적용'을 눌렀을 때만 true다. */
   applied?: boolean;
+  /** T97: 결과를 못 받고(실패·연결 지연) 안내 문구만 본 경우 true다. "써 봤다"로는
+   * 세지만(assistantFeaturesUsed) 결과 화면 'AI가 도운 일'에는 나오지 않는다. */
+  failed?: boolean;
 }
 
 /** AssistantPanel이 결과를 실제로 렌더·적용했을 때 넘기는 입력. requestedAt은 세션
  * reducer가 주입된 Clock(now)으로 채운다 — 컴포넌트가 자체 시계를 만들지 않는다. */
 export type AssistantActionEvent = Pick<AssistantAction, 'type' | 'mode' | 'evidenceIds'> & {
   applied?: boolean;
+  failed?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -48,6 +61,8 @@ const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = [
   'OPINION_SUMMARY',
   'CONDITION_COMPARE',
   'DRAFT_REFINE',
+  'CONDITION_RECOMMEND_VIEW',
+  'CONDITION_RECOMMEND_APPLY',
 ];
 
 /** AssistantActionEvent + requestedAt을 session.assistantActions(string[])에 그대로
@@ -59,6 +74,7 @@ export function encodeAssistantLogEntry(event: AssistantActionEvent, requestedAt
     evidenceIds: event.evidenceIds,
     requestedAt,
     applied: event.applied ?? false,
+    ...(event.failed ? { failed: true } : {}),
   };
   return JSON.stringify(entry);
 }
@@ -82,6 +98,7 @@ export function decodeAssistantLogEntry(label: string): AssistantAction | null {
         evidenceIds: parsed.evidenceIds,
         requestedAt: typeof parsed.requestedAt === 'number' ? parsed.requestedAt : undefined,
         applied: typeof parsed.applied === 'boolean' ? parsed.applied : undefined,
+        ...(parsed.failed === true ? { failed: true } : {}),
       };
     }
   } catch {
@@ -94,6 +111,9 @@ export function decodeAssistantLogEntry(label: string): AssistantAction | null {
  * 절대 "실제 AI 사용"이라 말하지 않는다(AGENT_BOARDROOM_SPEC.md 4장) — live일 때만
  * "(실제 AI 호출)"을 문장 끝에 덧붙인다. */
 function describeEntry(entry: AssistantAction): string | null {
+  if (entry.failed) {
+    return null;
+  }
   const base = (() => {
     switch (entry.type) {
       case 'OPINION_SUMMARY':
@@ -120,19 +140,93 @@ function describeEntry(entry: AssistantAction): string | null {
  * 디코딩할 수 없는 레이블(구조화되지 않은 값)은 조용히 무시해 실제로 없었던 도움을
  * 과장해 보여주지 않는다.
  */
-export function describeAdditionalHelp(actionLabels: readonly string[]): string[] {
+/** T96 "조건 추천" 전용 집계 — 기존 세 유형("마지막 1건만 보여준다")과 달리 "몇 번
+ * 열어 봤는지"·"조건을 몇 개 반영했는지"를 센다. appliedConditionIds는 evidenceIds[0]에
+ * 담긴 조건 id를 중복 없이 모은다(같은 조건을 두 번 눌러도 1개로 센다). */
+function countConditionRecommendation(actionLabels: readonly string[], finalConditionIds?: readonly string[]): {
+  viewCount: number;
+  appliedConditionIds: string[];
+  /** T101: 열어 본 "조건 추천"이 보여준 조건 id(중복 없이, 처음 나온 순서). */
+  recommendedConditionIds: string[];
+} {
+  let viewCount = 0;
+  const appliedConditionIds: string[] = [];
+  const recommendedConditionIds: string[] = [];
+  for (const label of actionLabels) {
+    const entry = decodeAssistantLogEntry(label);
+    if (!entry) {
+      continue;
+    }
+    if (entry.failed) {
+      continue;
+    }
+    if (entry.type === 'CONDITION_RECOMMEND_VIEW') {
+      viewCount += 1;
+      for (const id of entry.evidenceIds) {
+        if (!recommendedConditionIds.includes(id)) {
+          recommendedConditionIds.push(id);
+        }
+      }
+    } else if (entry.type === 'CONDITION_RECOMMEND_APPLY') {
+      const conditionId = entry.evidenceIds[0];
+      // 기록은 취소되지 않으므로, 최종안 조건이 주어지면 거기 남은 조건만 센다(PR #20 Codex 33차 P2-3).
+      if (finalConditionIds && conditionId && !finalConditionIds.includes(conditionId)) {
+        continue;
+      }
+      if (conditionId && !appliedConditionIds.includes(conditionId)) {
+        appliedConditionIds.push(conditionId);
+      }
+    }
+  }
+  return { viewCount, appliedConditionIds, recommendedConditionIds };
+}
+
+/** "조건 추천 N회 · 이름, 이름 → N개 반영" 한 줄(T101). 추천한 조건 이름은 세 개까지만
+ * 보여주고 나머지는 "외 N개"로 줄인다. 이름을 찾을 수 없는 id(옛 기록)는 건너뛴다. */
+function describeConditionRecommendation(
+  recommendation: ReturnType<typeof countConditionRecommendation>,
+  conditionLabelOf?: (conditionId: string) => string | undefined,
+): string | null {
+  const { viewCount, appliedConditionIds, recommendedConditionIds } = recommendation;
+  const applied = appliedConditionIds.length;
+  if (viewCount === 0) {
+    return applied > 0 ? `추천 조건 ${applied}개 반영` : null;
+  }
+  const names = recommendedConditionIds
+    .map((id) => conditionLabelOf?.(id))
+    .filter((name): name is string => Boolean(name));
+  const shown = names.slice(0, 3).join(', ');
+  const rest = names.length > 3 ? ` 외 ${names.length - 3}개` : '';
+  return (
+    `조건 추천 ${viewCount}회` +
+    (names.length > 0 ? ` · ${shown}${rest}` : '') +
+    (applied > 0 ? ` → ${applied}개 반영` : '')
+  );
+}
+
+export function describeAdditionalHelp(
+  actionLabels: readonly string[],
+  finalConditionIds?: readonly string[],
+  conditionLabelOf?: (conditionId: string) => string | undefined,
+): string[] {
   const order: AssistantActionType[] = [];
   const latestByType = new Map<AssistantActionType, AssistantAction>();
   for (const label of actionLabels) {
     const entry = decodeAssistantLogEntry(label);
-    if (!entry) {
+    if (!entry || entry.type === 'CONDITION_RECOMMEND_VIEW' || entry.type === 'CONDITION_RECOMMEND_APPLY') {
       continue;
     }
     const existing = latestByType.get(entry.type);
     if (!existing) {
       order.push(entry.type);
     }
-    if (!existing || (entry.applied && !existing.applied)) {
+    // 성공 기록(failed 아님)은 같은 유형의 실패 기록을 대체한다(재시도 성공). applied:true는
+    // 기존대로 먼저 있던 applied:false보다 우선하되, 실패 기록은 성공을 덮지 못한다.
+    const replaces =
+      !existing ||
+      (existing.failed && !entry.failed) ||
+      (!entry.failed && entry.applied && !existing.applied);
+    if (replaces) {
       latestByType.set(entry.type, entry);
     }
   }
@@ -144,7 +238,47 @@ export function describeAdditionalHelp(actionLabels: readonly string[]): string[
       lines.push(line);
     }
   }
+  const recommendation = countConditionRecommendation(actionLabels, finalConditionIds);
+  const recommendationLine = describeConditionRecommendation(recommendation, conditionLabelOf);
+  if (recommendationLine) {
+    lines.push(recommendationLine);
+  }
   return lines;
+}
+
+export type AssistantFeatureKey = 'summary' | 'compare' | 'refine';
+
+export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['summary', 'compare', 'refine'];
+
+const FEATURE_OF_ACTION: Partial<Record<AssistantActionType, AssistantFeatureKey>> = {
+  OPINION_SUMMARY: 'summary',
+  CONDITION_RECOMMEND_VIEW: 'compare',
+  CONDITION_COMPARE: 'compare',
+  DRAFT_REFINE: 'refine',
+};
+
+/**
+ * T97: DISCUSS에서 AI 비서실장 세 기능(한눈에 보기·조건 추천·발언 정리)을 각각 한 번
+ * 이상 써 봤는지. 결과를 렌더했을 때뿐 아니라 실패·연결 지연 안내를 본 경우(failed)도
+ * "써 본 것"으로 센다 — 연결이 늦어도 참가자가 막히지 않게 한다. 기록은 세션 단위라
+ * stage는 지금 'DISCUSS'뿐이지만, 단계별 요구가 생기면 여기서 가른다.
+ */
+export function assistantFeaturesUsed(
+  assistantActions: readonly string[],
+  stage: 'DISCUSS',
+): Set<AssistantFeatureKey> {
+  const used = new Set<AssistantFeatureKey>();
+  if (stage !== 'DISCUSS') {
+    return used;
+  }
+  for (const label of assistantActions) {
+    const entry = decodeAssistantLogEntry(label);
+    const feature = entry ? FEATURE_OF_ACTION[entry.type] : undefined;
+    if (feature) {
+      used.add(feature);
+    }
+  }
+  return used;
 }
 
 /** AI 비서실장 도움을 하나라도 사용했는지. ResultScreen이 안내 문구 분기에 쓴다. */

@@ -19,6 +19,7 @@ function sessionAtLiveVote(now = T0, confirmedConditionIds: string[] = []): Sess
   let session = createInitialSession(now);
   session = reduce(session, { type: 'SET_MODE', mode: 'live' }, now);
   session = reduce(session, { type: 'START' }, now);
+  session = reduce(session, { type: 'NEXT_STAGE' }, now); // INTRO -> SELECT
   session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, now);
   session = reduce(session, { type: 'NEXT_STAGE' }, now); // BRIEFING -> OPINIONS
   session = reduce(session, { type: 'NEXT_STAGE' }, now); // OPINIONS -> DISCUSS
@@ -261,6 +262,7 @@ describe('scripted 모드 결과가 기존과 동일', () => {
     let session = createInitialSession(T0);
     expect(session.mode).toBe('scripted');
     session = reduce(session, { type: 'START' }, T0);
+    session = reduce(session, { type: 'NEXT_STAGE' }, T0); // INTRO -> SELECT
     session = reduce(session, { type: 'SELECT_SCENARIO', scenarioId: scenario.id }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);
     session = reduce(session, { type: 'NEXT_STAGE' }, T0);

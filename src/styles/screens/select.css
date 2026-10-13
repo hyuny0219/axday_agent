@@ -238,40 +238,6 @@
   cursor: not-allowed;
 }
 
-/* 선택 = 시안색 3px 외곽선(offset 4px, T70 카드 문구 그대로). */
-.scenario-card--selected {
-  outline: 3px solid var(--hud-line);
-  outline-offset: 4px;
-}
-
-/* 우상단 체크 원(시안 svg 체크를 글리프 '✓'로 대체 — 앱 전체가 아이콘 대신
-   유니코드 글리프를 쓰는 기존 관행, old scenario-card--selected::after와 같다). */
-.scenario-card__check {
-  position: absolute;
-  top: -18px;
-  right: -18px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--hud-line);
-  color: #0b0d10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 18px;
-}
-
-@media (max-width: 1280px) {
-  .scenario-card__check {
-    top: -14px;
-    right: -14px;
-    width: 32px;
-    height: 32px;
-    font-size: 15px;
-  }
-}
-
 .scenario-card__stamp {
   position: absolute;
   top: 20px;
@@ -360,6 +326,21 @@
   }
 }
 
+/* 사건 한 줄(T84, incident.headline) — 제목과 footer 사이, 빈 공간을 채우는
+   한 줄 소개. 제목보다 작고 footer 타자기 라벨보다는 크다. */
+.scenario-card__headline {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1280px) {
+  .scenario-card__headline {
+    font-size: 14px;
+  }
+}
+
 .scenario-card__footer {
   margin-top: auto;
   font-family: var(--font-label);
@@ -370,35 +351,6 @@
 
 @media (max-width: 1280px) {
   .scenario-card__footer {
-    font-size: 12px;
-  }
-}
-
-/* 좌하단 CTA 줄(시안 "이사회 입장 ▶" + "선택한 안건: CASE 02"). 부모
-   align-items:center를 벗어나 왼쪽에 붙이고 맨 아래로 민다. */
-.select-screen__submit-row {
-  position: relative;
-  z-index: 1;
-  align-self: flex-start;
-  margin-top: auto;
-  gap: 22px;
-}
-
-@media (max-width: 1280px) {
-  .select-screen__submit-row {
-    gap: 18px;
-  }
-}
-
-.select-screen__selected-label {
-  font-family: var(--font-label);
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  color: #8f8a80;
-}
-
-@media (max-width: 1280px) {
-  .select-screen__selected-label {
     font-size: 12px;
   }
 }

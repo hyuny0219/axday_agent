@@ -8,13 +8,28 @@ import type { Session } from '../domain/types';
 import { persuasionStamp, type PersuasionStamp } from '../domain/stance';
 import { collectConfirmedConditionIds } from './opinionConditions';
 
-/** 표결 배지·도장 순차 공개 타이밍(초). CEO→CFO→CAIO→CISO→나 5석을 0.2초 간격으로
- * 튀어나오게 하고(마지막 0.8초), 도장은 그 직후 등장해 1초 안에 끝난다(카드 완료 확인
- * "RESULT 도장이 1초 안에 찍히고"). ResultScreen(5석)과 StageBand(도장)가 같은 값을
- * 쓰도록 여기 한 곳에 둔다. setTimeout이 아니라 이 값들을 CSS animation-delay로 그대로
- * 꽂아 Clock 규칙과 무관하게 만든다. */
-export const SEAT_REVEAL_STEP_SECONDS = 0.2;
-export const STAMP_DELAY_SECONDS = 0.8;
+/** 임원 표 순차 공개 타이밍(초, T114). 결과에 들어오면 임원 네 장이 봉인('?')으로 시작해
+ * EXEC_REVEAL_FIRST_SECONDS 뒤부터 EXEC_REVEAL_STEP_SECONDS 간격으로 CEO→CFO→CAIO→CISO
+ * 순서로 한 장씩 뒤집힌다. 참가자 표는 이미 아는 값이라 가리지 않는다. 집계 숫자·결론
+ * 문구·가결/부결 도장은 마지막 장이 다 뒤집힌 뒤에 나온다. ResultScreen(좌측 막대·우측
+ * 판단 행)과 StageBand(표 배지)가 같은 값을 쓰도록 여기 한 곳에 둔다. setTimeout이 아니라
+ * CSS animation-delay로 그대로 꽂아 Clock 규칙과 무관하게 만든다 — prefers-reduced-motion
+ * (base.css가 delay를 0으로)과 운영자 skip(`data-result-skip`)이면 즉시 전부 공개된다. */
+export const EXEC_REVEAL_FIRST_SECONDS = 0.9;
+export const EXEC_REVEAL_STEP_SECONDS = 0.9;
+/** 한 장이 뒤집히는 데 걸리는 시간(초). CSS의 `--reveal-flip` 값과 같다. */
+export const EXEC_REVEAL_FLIP_SECONDS = 0.5;
+
+/** i번째(0부터, EXEC_MEMBER_ORDER 순) 임원 표가 뒤집히기 시작하는 시각(초). */
+export function execRevealDelay(index: number): number {
+  return EXEC_REVEAL_FIRST_SECONDS + Math.max(index, 0) * EXEC_REVEAL_STEP_SECONDS;
+}
+
+/** 임원 네 장이 모두 공개된 시각(초) — 집계 숫자·결론 문구가 나오는 때. */
+export const ALL_EXEC_REVEALED_SECONDS = execRevealDelay(3) + EXEC_REVEAL_FLIP_SECONDS;
+
+/** 마지막 장 뒤에 기존 가결·부결 도장이 이어진다. */
+export const STAMP_DELAY_SECONDS = ALL_EXEC_REVEALED_SECONDS + 0.1;
 
 /** "설득 도장"(T63)은 기존 가결·부결 도장이 다 찍힌 0.4초 뒤에 등장한다. */
 export const PERSUASION_STAMP_DELAY_SECONDS = STAMP_DELAY_SECONDS + 0.4;

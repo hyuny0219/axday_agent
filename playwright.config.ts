@@ -12,7 +12,7 @@ export default defineConfig({
   // `?mode=scripted`로 scripted 경로를 강제해 영향을 받지 않는다(T30).
   webServer: [
     {
-      command: 'MODEL_PROVIDER=mock PORT=8787 npm run server',
+      command: 'MODEL_PROVIDER=mock MAX_SESSIONS_PER_HOUR=1000 PORT=8787 npm run server',
       url: 'http://localhost:8787/api/health',
       reuseExistingServer: !process.env.CI,
     },

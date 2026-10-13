@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { collectConfirmedConditionIds } from '../../src/components/opinionConditions';
-import type { Opinion } from '../../src/domain/types';
+import { collectConfirmedConditionIds, collectParticipantStance } from '../../src/components/opinionConditions';
+import type { Opinion, ParticipantStance } from '../../src/domain/types';
 
-function opinion(id: string, confirmedConditionIds: string[], createdAt: number): Opinion {
-  return { id, originalText: id, selectedPhraseIds: [], confirmedConditionIds, createdAt };
+function opinion(
+  id: string,
+  confirmedConditionIds: string[],
+  createdAt: number,
+  stance: ParticipantStance = null,
+): Opinion {
+  return { id, originalText: id, selectedPhraseIds: [], confirmedConditionIds, stance, createdAt };
 }
 
 describe('collectConfirmedConditionIds', () => {
@@ -30,5 +35,22 @@ describe('collectConfirmedConditionIds', () => {
 
   it('중복 ID는 한 번만', () => {
     expect(collectConfirmedConditionIds([opinion('o1', ['PILOT', 'PILOT'], 1)])).toEqual(['PILOT']);
+  });
+});
+
+// T92: 참가자 입장. 가장 최근 의견의 stance를 그대로 쓴다(합집합이 아니다).
+describe('collectParticipantStance', () => {
+  it('의견이 없으면 null', () => {
+    expect(collectParticipantStance([])).toBe(null);
+  });
+
+  it('가장 최근 의견의 stance를 돌려준다', () => {
+    const opinions = [opinion('o1', [], 1, 'FOR'), opinion('o2', [], 2, 'AGAINST')];
+    expect(collectParticipantStance(opinions)).toBe('AGAINST');
+  });
+
+  it('최근 의견이 입장을 고르지 않았으면(null) null', () => {
+    const opinions = [opinion('o1', [], 1, 'AGAINST'), opinion('o2', [], 2, null)];
+    expect(collectParticipantStance(opinions)).toBe(null);
   });
 });

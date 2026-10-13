@@ -1,6 +1,13 @@
 // @anthropic-ai/sdk 기반 실제 모델 제공자. 구조화 출력(json_schema)을 쓰고,
-// 재시도 0회, 호출별 timeout은 요청이 넘긴 남은 예산을 그대로 쓴다.
+// SDK 자체의 재시도는 0회(서버 handlers가 T91에서 1회 재시도를 직접 한다), 호출별 timeout은
+// 요청이 넘긴 남은 예산을 그대로 쓴다.
 // 키는 환경변수에서 SDK가 기본으로 해석한다(new Anthropic() 기본 동작, 코드에 저장하지 않음).
+//
+// T91: system을 문자열 그대로 보내지 않고 단일 텍스트 블록 배열로 감싸 마지막(유일한) 블록에
+// cache_control: { type: 'ephemeral' }를 붙인다. 같은 역할·같은 meeting_record로 다시
+// 호출하면(예: handlers의 1회 재시도) system 전체가 바이트 단위로 같아 캐시가 적중해 TTFT·
+// 비용이 줄어든다 — meeting_record가 매 라운드 자라므로 라운드를 건너뛴 재사용은 기대하지
+// 않는다.
 
 import Anthropic from '@anthropic-ai/sdk';
 import type { ModelCompleteRequest, ModelCompleteResult, ModelProvider } from './types';
@@ -26,7 +33,7 @@ export function createAnthropicProvider(opts: {
               effort: 'low',
               format: { type: 'json_schema', schema: req.schema },
             },
-            system: req.system,
+            system: [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }],
             messages: [{ role: 'user', content: req.user }],
           },
           { timeout: req.timeoutMs, maxRetries: 0, signal: req.signal },
@@ -71,6 +78,8 @@ export function createAnthropicProvider(opts: {
         usage: {
           inputTokens: message.usage.input_tokens,
           outputTokens: message.usage.output_tokens,
+          cacheReadInputTokens: message.usage.cache_read_input_tokens ?? undefined,
+          cacheCreationInputTokens: message.usage.cache_creation_input_tokens ?? undefined,
         },
       };
     },

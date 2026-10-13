@@ -1,0 +1,163 @@
+/* 진행 도우미(화면 사용법 안내, T103·T104). 문서 body로 portal되는 고정 카드 한 장이다.
+   어두운 덮개·스포트라이트가 없고 카드 바깥은 클릭이 그대로 통과한다(카드 자체만 눌린다).
+   위치는 Coach.tsx가 무대 사진(장식) 위로 잡는다. 붉은 박스·영문 UI 없음. */
+
+.coach {
+  position: fixed;
+  z-index: 35; /* 팝업(.dialog-shell__backdrop 40)보다 아래 — PR #20 Codex 43차 검토 P2 */
+  box-sizing: border-box;
+  padding: 12px 16px 14px;
+  background: #fbf7ee;
+  color: #1b1a17;
+  border: 2px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  font-family: var(--font-ui);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .coach {
+    animation: coach-in 160ms ease-out;
+  }
+}
+
+@keyframes coach-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.coach__head {
+  /* T112: 제목 줄 전체가 끌어서 옮기는 손잡이다. */
+  margin: -12px -16px 4px;
+  padding: 12px 16px 2px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.coach[data-dragging] {
+  user-select: none;
+}
+
+.coach[data-dragging] .coach__head,
+.coach-icon[data-dragging] {
+  cursor: grabbing;
+}
+
+.coach__progress {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a5a12;
+}
+
+.coach__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.coach__body,
+.coach__list {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #3d3a31;
+  word-break: keep-all;
+}
+
+.coach__list {
+  padding-left: 22px;
+}
+
+.coach__ack {
+  display: block;
+  min-height: 44px;
+  margin: 14px 5px 5px auto;
+  padding: 0 22px;
+  /* T111: 종이 위 주 버튼(shell.css .cta--solid와 같은 먹색 바탕 + 이중 테두리). */
+  background: #1b1a17;
+  color: #ece7dc;
+  border: 2px solid #1b1a17;
+  box-shadow: 0 0 0 3px #ece7dc, 0 0 0 5px #1b1a17;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+.coach__ack:hover {
+  filter: brightness(1.1);
+}
+
+.coach__ack:focus-visible {
+  outline: 3px solid #e0a34a;
+  outline-offset: 7px;
+}
+
+@media (max-width: 1280px) {
+  .coach {
+    padding: 8px 12px 10px;
+  }
+
+  .coach__head {
+    margin: -8px -12px 4px;
+    padding: 8px 12px 2px;
+  }
+
+  .coach__title {
+    font-size: 18px;
+  }
+
+  .coach__body,
+  .coach__list {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .coach__ack {
+    margin-top: 8px;
+  }
+}
+
+/* 말풍선이 닫힌 뒤 같은 자리에 남는 "안내" 둥근 버튼(T106). 무대 사진 왼쪽 위. */
+.coach-icon {
+  position: fixed;
+  z-index: 35; /* 팝업(.dialog-shell__backdrop 40)보다 아래 — PR #20 Codex 43차 검토 P2 */
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: #fbf7ee;
+  color: #1b1a17;
+  border: 2px solid #000;
+  border-radius: 50%;
+  box-shadow: 3px 3px 0 #000;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: grab;
+  user-select: none;
+  touch-action: none; /* T112: 터치로도 끌어 옮긴다. */
+}
+
+.coach-icon:hover {
+  background: #f1e6cc;
+}
+
+.coach-icon:focus-visible {
+  outline: 3px solid #1b1a17;
+  outline-offset: 2px;
+}

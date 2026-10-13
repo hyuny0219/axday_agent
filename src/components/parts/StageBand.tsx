@@ -26,8 +26,12 @@ import type {
   Statement,
 } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { execRevealDelay } from '../resultStamp';
 import { firstSentenceClipped } from '../stageText';
+import { bubbleLineOf } from '../bubbleText';
+import { reactionBubble } from '../reactionsFor';
 import { STANCE_LABEL } from '../moodLabel';
+import type { LeaningMap } from '../../domain/stance';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
 
@@ -41,6 +45,9 @@ export interface StageBandProps {
   /** 임원 4명이 지금 안건에 기울어 있는 쪽(T63, domain/stance.ts). RESULT에서는 쓰지 않는다
    * (표 배지가 대신한다). */
   stances: Record<ExecMemberId, Stance>;
+  /** T118: 첫 의견 뒤 REACTIONS에서 참가자 쪽으로 기울었지만 답변 전이라 확정되지 않은 임원.
+   * 표정은 목표 방향의 "기울음" 변형(점선 테두리)과 라벨 "찬성 쪽"으로 보인다. */
+  leaning?: LeaningMap;
   /** RESULT 단계에서만 넘긴다. 있으면 표결 배지를 순차 공개한다. */
   ballots?: Ballot[];
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
@@ -80,6 +87,8 @@ function scriptedReactionFor(
   scenario: Scenario,
   memberId: ExecMemberId,
   previousConfirmedIds: string[],
+  /** 조건은 맞았지만 추가 질문의 답을 기다리는 임원이면 true(T110) — pendingBubble을 쓴다. */
+  pending = false,
 ): string | null {
   const matches =
     previousConfirmedIds.length === 0
@@ -87,7 +96,11 @@ function scriptedReactionFor(
       : scenario.reactions.filter(
           (r) => r.memberId === memberId && previousConfirmedIds.includes(r.conditionId),
         );
-  return matches.length > 0 ? (matches[0]?.text ?? null) : null;
+  const first = matches[0];
+  if (!first) {
+    return null;
+  }
+  return reactionBubble(matches, pending) ?? bubbleLineOf(first.text);
 }
 
 /** 임원 한 명의 이번 단계 말풍선 상태를 계산한다(DESIGN_SPEC.md v1.0 1절 "화면별 상태"). */
@@ -100,6 +113,7 @@ function execSeatOverlay(
   opinions: Opinion[],
   scenario: Scenario,
   chairLine: string | undefined,
+  stance: Stance,
 ): SeatOverlay {
   if (stage === 'BRIEFING' || stage === 'MOTION') {
     if (memberId === 'CEO' && chairLine) {
@@ -116,7 +130,7 @@ function execSeatOverlay(
         (item) => item.roleId === memberId && item.stage === statementStage,
       );
       if (status === 'answered' && statement) {
-        return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(statement.text), dimmed: false };
+        return { bubbleKind: 'speech', bubbleText: bubbleLineOf(statement.text), dimmed: false };
       }
       if (status === 'failed') {
         // 응답 실패는 본문 카드(LiveStatementCards "응답 지연·확인 필요")가 전담한다.
@@ -128,14 +142,16 @@ function execSeatOverlay(
 
     if (stage === 'OPINIONS') {
       const opinion = scenario.initialOpinions.find((item) => item.memberId === memberId);
-      return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(opinion?.text ?? ''), dimmed: false };
+      const line = opinion ? (opinion.bubble ?? bubbleLineOf(opinion.text)) : '';
+      return { bubbleKind: 'speech', bubbleText: line, dimmed: false };
     }
 
     const lastOpinion = opinions[opinions.length - 1] ?? null;
     const previousConfirmedIds = lastOpinion?.confirmedConditionIds ?? [];
-    const reactionText = scriptedReactionFor(scenario, memberId, previousConfirmedIds);
+    // scripted REACTIONS에서 UNDECIDED는 곧 "조건은 맞았고 답을 기다리는 중"이다(T110, stance.ts).
+    const reactionText = scriptedReactionFor(scenario, memberId, previousConfirmedIds, stance === 'UNDECIDED');
     if (reactionText) {
-      return { bubbleKind: 'speech', bubbleText: firstSentenceClipped(reactionText), dimmed: false };
+      return { bubbleKind: 'speech', bubbleText: reactionText, dimmed: false };
     }
     return { bubbleKind: 'none', bubbleText: '', dimmed: true };
   }
@@ -156,7 +172,7 @@ function participantSeatOverlay(stage: SessionStage, opinions: Opinion[]): Parti
   }
   if (stage === 'REACTIONS') {
     const lastOpinion = opinions[opinions.length - 1] ?? null;
-    return { bubbleText: lastOpinion ? firstSentenceClipped(lastOpinion.originalText) : '', glow: false };
+    return { bubbleText: lastOpinion ? bubbleLineOf(lastOpinion.originalText) : '', glow: false };
   }
   return { bubbleText: '', glow: false };
 }
@@ -203,33 +219,55 @@ function MoodIcon({ stance }: { stance: Stance }) {
  * 이 span을 새로 마운트하게 해, mount 애니메이션(stage.css stage-band__mood 200ms
  * 스케일)이 그때마다 한 번씩 다시 재생된다(prefers-reduced-motion에서는 base.css 전역
  * 규칙이 지속 시간을 0으로 낮춘다). */
-function MoodBadge({ memberId, stance }: { memberId: ExecMemberId; stance: Stance }) {
+function MoodBadge({
+  memberId,
+  stance,
+  leaning,
+}: {
+  memberId: ExecMemberId;
+  stance: Stance;
+  leaning?: 'FOR' | 'AGAINST';
+}) {
+  const shown: Stance = leaning ?? stance;
   return (
     <span
-      key={stance}
-      className={`stage-band__mood stage-band__mood--${stance.toLowerCase()}`}
+      key={leaning ? `leaning-${leaning}` : stance}
+      className={`stage-band__mood stage-band__mood--${shown.toLowerCase()}${leaning ? ' stage-band__mood--leaning' : ''}`}
       data-testid={`stage-mood-${memberId}`}
     >
-      <MoodIcon stance={stance} />
+      <MoodIcon stance={shown} />
     </span>
   );
 }
 
-const RESULT_SEAT_ORDER: readonly MemberId[] = [...EXEC_MEMBER_ORDER, 'PARTICIPANT'];
-
-/** RESULT 단계에서만 쓰는 표결 배지. memberId의 등장 순서(CEO→CFO→CAIO→CISO→나)
- * 인덱스만큼 0.2초씩 늦춰 CSS animation-delay로 순차 공개한다(4장 규칙 — setTimeout
- * 대신 CSS로 구현해 Clock 규칙과 충돌하지 않는다). */
+/** RESULT 단계에서만 쓰는 표결 배지. 임원 4명은 봉인('?')으로 시작해 resultStamp.ts의
+ * execRevealDelay 시각에 한 장씩 뒤집힌다(T114, 순서 CEO→CFO→CAIO→CISO). 참가자 표는
+ * 이미 아는 값이라 가리지 않는다. setTimeout 대신 CSS animation-delay로 구현해 Clock
+ * 규칙과 충돌하지 않는다. 봉인 표시는 aria-hidden이고 표 배지의 testid는 그대로다. */
 function VoteBadge({ memberId, ballots }: { memberId: MemberId; ballots: Ballot[] }) {
-  const index = RESULT_SEAT_ORDER.indexOf(memberId);
+  const execIndex = EXEC_MEMBER_ORDER.indexOf(memberId as ExecMemberId);
+  const isExec = execIndex >= 0;
+  const delay = isExec ? execRevealDelay(execIndex) : 0;
   const vote = ballots.find((b) => b.memberId === memberId)?.vote ?? 'UNCAST';
   return (
-    <span
-      className={`stage-band__vote-badge stage-band__vote-badge--${vote.toLowerCase()}`}
-      style={{ animationDelay: `${Math.max(index, 0) * 0.2}s` }}
-      data-testid={`stage-vote-badge-${memberId}`}
-    >
-      {VOTE_BADGE_ICON[vote]}
+    <span className="stage-band__vote-slot">
+      {isExec && (
+        <span
+          className="stage-band__vote-seal reveal-anim"
+          style={{ animationDelay: `${delay}s` }}
+          data-testid={`stage-vote-seal-${memberId}`}
+          aria-hidden="true"
+        >
+          ?
+        </span>
+      )}
+      <span
+        className={`stage-band__vote-badge reveal-anim stage-band__vote-badge--${vote.toLowerCase()}`}
+        style={{ animationDelay: `${delay}s` }}
+        data-testid={`stage-vote-badge-${memberId}`}
+      >
+        {VOTE_BADGE_ICON[vote]}
+      </span>
     </span>
   );
 }
@@ -242,6 +280,7 @@ export function StageBand({
   opinions,
   scenario,
   stances,
+  leaning,
   ballots,
   chairLine,
 }: StageBandProps) {
@@ -259,9 +298,11 @@ export function StageBand({
         <div className="stage-band__bracket stage-band__bracket--bl" />
         <div className="stage-band__bracket stage-band__bracket--br" />
         <div className="stage-band__readout">
-          <span>CAM 01 · 회의실 A</span>
-          <span>REC ●</span>
+          <span>회의실 A</span>
+          <span>녹화중</span>
         </div>
+        {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
+            라벨만 영문으로 되돌렸다. */}
         <div className="stage-band__classified">CLASSIFIED</div>
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
@@ -273,6 +314,7 @@ export function StageBand({
             opinions,
             scenario,
             chairLine,
+            stances[memberId],
           );
           return (
             <div
@@ -314,13 +356,14 @@ export function StageBand({
                 {stage === 'RESULT' && ballots ? (
                   <VoteBadge memberId={memberId} ballots={ballots} />
                 ) : (
-                  <MoodBadge memberId={memberId} stance={stances[memberId]} />
+                  <MoodBadge memberId={memberId} stance={stances[memberId]} leaning={leaning?.[memberId]} />
                 )}
                 {/* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"). RESULT는 표 배지가
                     이미 결과를 보여주므로 캡션을 겹쳐 보여주지 않는다. */}
                 {stage !== 'RESULT' && (
                   <span className="stage-band__caption">
-                    {ROLE_INTEREST_WORD[memberId]} · {STANCE_LABEL[stances[memberId]]}
+                    {ROLE_INTEREST_WORD[memberId]} · {STANCE_LABEL[leaning?.[memberId] ?? stances[memberId]]}
+                    {leaning?.[memberId] ? ' · 미확정' : ''}
                   </span>
                 )}
                 <span
@@ -348,8 +391,15 @@ export function StageBand({
             {/* 참가자 좌석에는 명패를 두지 않는다(2026-09-28 사용자, T67에서 헤더 명패
                 자체를 없앤 뒤에도 유지되는 결정이다 — 임원 4석 사이에 참가자 표기가
                 끼면 임원이 다섯으로 읽힌다). 이 좌석은 글로우(DISCUSS)·말풍선
-                (REACTIONS)·표 배지(RESULT)만 맡는다. */}
-            {stage === 'RESULT' && ballots && <VoteBadge memberId="PARTICIPANT" ballots={ballots} />}
+                (REACTIONS)·표 배지(RESULT)만 맡는다. RESULT만 예외: 표결이 끝나
+                다섯으로 읽힐 위험이 없고, ✓/✕ 배지만으로는 그게 누구 표인지 알 수
+                없어 "나" 명패를 더한다(T85 #24). */}
+            {stage === 'RESULT' && ballots && (
+              <>
+                <span className="stage-band__nameplate stage-band__nameplate--participant">나</span>
+                <VoteBadge memberId="PARTICIPANT" ballots={ballots} />
+              </>
+            )}
             <span
               className={`stage-band__silhouette stage-band__silhouette--participant${
                 participant.glow ? ' stage-band__silhouette--glow' : ''

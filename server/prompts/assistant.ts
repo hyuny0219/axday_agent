@@ -7,6 +7,11 @@ import { buildCommonGuardrails } from './common';
 
 /** '내 발언 정리' 시스템 프롬프트. meetingRecordBlock에는 참가자 원문(draftText)이
  * participantOpinion으로 실려 있다. */
+// T93: 쉬운 말 규칙(PLAIN_LANGUAGE_RULE, prompts/roles/index.ts)은 임원 전용으로 두고
+// refine에는 붙이지 않는다 — refine은 참가자 본인이 쓴 문장을 참가자 목소리로 정리할 뿐이라
+// (아래 "원문의 입장을 바꾸지 마십시오"), 임원에게 맞는 쉬운 말 다듬기 지시를 더하면 참가자의
+// 원래 어휘·문체까지 바꾸게 될 수 있다(EXEC_STYLE_RULE·EXEC_DECISION_RULE을 공통 가드레일에
+// 두지 않은 것과 같은 이유).
 export function buildRefineSystemPrompt(meetingRecordBlock: string): string {
   return [
     buildCommonGuardrails(),

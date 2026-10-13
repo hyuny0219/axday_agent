@@ -6,32 +6,41 @@
 // 열의 스크롤 자체는 T45에서 없앴다 — 1280×720에서도 페이지 전체가 한 화면에 담긴다.
 
 import { test, expect, type Page } from './fixtures';
+import { tryAllAssistantFeatures } from './helpers/assistant';
 
 const MY_OPINION_TEXT = '소액부터 자동 승인하고 결과를 확인한 뒤 넓힙시다.';
 
 async function enterBriefing(page: Page) {
-  await page.goto('/?mode=scripted');
+  await page.goto('/?mode=scripted&coach=off');
   await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
-  await page.getByRole('button', { name: '이사회 입장' }).click();
 }
 
 async function enterReactions(page: Page) {
   await enterBriefing(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
+  await tryAllAssistantFeatures(page);
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await submitOpinion.click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
+  // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다 — 이 헬퍼를 쓰는
+  // 테스트는 모두 입력창·비서실장 토글(2/2 전용) 또는 무대 말풍선(두 단계 공통)을
+  // 확인하므로 2/2로 이동해도 문제없다.
+  await page.getByTestId('reactions-advance').click();
 }
 
 /** REACTIONS에서 시작해 VOTE까지 이동한다(빠른 답 3번 선택 → 최종안 고정). */
 async function enterVote(page: Page) {
-  await page.getByTestId('followup-option-2').click();
+  await page.getByTestId('keep-previous-answer').click();
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
   await expect(page.getByTestId('vote-motion-card')).toBeVisible();
@@ -48,12 +57,15 @@ function expectNoPageScroll(page: Page) {
  * CAM/CLASSIFIED 라벨·명패 겹침이 실제로 드러난 상태). */
 async function enterReactionsWithAllConditions(page: Page) {
   await enterBriefing(page);
+  await page.getByTestId('open-evidence').click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '의견 듣기' }).click();
-  await page.getByRole('button', { name: '내 의견 말하기' }).click();
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('phrase-card-P2').click();
   await page.getByTestId('phrase-card-P3').click();
-  await page.getByTestId('phrase-card-P4').click();
+  await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
@@ -121,14 +133,14 @@ test.describe('1920×1080에서 무대 열', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 
   test('BRIEFING부터 무대가 왼쪽 열에 원본 16:9로 렌더된다', async ({ page }) => {
-    await page.goto('/?mode=scripted');
+    await page.goto('/?mode=scripted&coach=off');
     await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '확인', exact: true }).click();
 
     // SELECT는 무대 렌더 대상이 아니다(진입 전, DESIGN_SPEC.md v1.0 1절).
     await expect(page.getByTestId('stage-band')).toHaveCount(0);
 
     await page.getByTestId('scenario-card-ai-approval').click();
-    await page.getByRole('button', { name: '이사회 입장' }).click();
 
     const stageBand = page.getByTestId('stage-band');
     await expect(stageBand).toBeVisible();
@@ -161,25 +173,46 @@ test.describe('1920×1080에서 무대 열', () => {
     expect(bubble!.y + bubble!.height).toBeLessThanOrEqual(stage!.y + stage!.height * 0.28 + 1);
   });
 
-  test('REACTIONS에서 내 말풍선 텍스트가 내 발언 첫 문장과 일치한다', async ({ page }) => {
+  test('REACTIONS에서 내 말풍선은 내 발언 첫 문장을 임원과 같은 규칙(최대 18자)으로 줄여 보인다', async ({ page }) => {
     await enterReactions(page);
-    // T74 2차 검토(제로 이탈): 시안에 없던 본문 인용 상자(reactions-quote)를 뺐다 —
-    // MY_OPINION_TEXT 자체가 40자 이내 한 문장이라 무대의 내 말풍선(장식)이 자르지
-    // 않고 그대로 보여준다.
-    await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText(MY_OPINION_TEXT);
+    // T102: 임원 말풍선과 같은 bubbleLineOf — MY_OPINION_TEXT(26자)는 17자 + "…"가 된다.
+    await expect(page.getByTestId('stage-bubble-PARTICIPANT')).toHaveText('소액부터 자동 승인하고 결과를…');
+  });
+
+  test('OPINIONS 말풍선은 18자 이하 한 구절이고 발언 흐름 패널은 없다(T102)', async ({ page }) => {
+    await enterBriefing(page);
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await expect(page.locator('.opinion-card')).toHaveCount(4);
+    for (const memberId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
+      const text = await page.getByTestId(`stage-bubble-${memberId}`).locator('.stage-band__bubble-text').innerText();
+      expect(text.length, `${memberId} 말풍선`).toBeGreaterThan(0);
+      expect(text.length, `${memberId} 말풍선은 한 구절`).toBeLessThanOrEqual(19);
+    }
+    await expect(page.getByTestId('minutes-panel')).toHaveCount(0);
+    await expect(page.getByTestId('opinions-read-hint')).toBeVisible();
   });
 
   test('BRIEFING·REACTIONS·VOTE·RESULT는 스크롤 없이 한 화면에 보인다', async ({ page }) => {
     await enterBriefing(page);
     await expectNoPageScroll(page);
 
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '의견 듣기' }).click();
-    await page.getByRole('button', { name: '내 의견 말하기' }).click();
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId('discuss-side-for').click();
     await page.getByTestId('draft-editor-textarea').fill(MY_OPINION_TEXT);
+    await tryAllAssistantFeatures(page);
     const submitOpinion = page.getByTestId('submit-opinion');
     await expect(submitOpinion).toBeInViewport();
     await submitOpinion.click();
 
+    // T89: "반응 듣기"(1/2)에서 "다시 답하기"(2/2)로 넘어간다.
+    await expect(page.getByTestId('reactions-advance')).toBeInViewport();
+    await expectNoPageScroll(page);
+    await page.getByTestId('reactions-advance').click();
     await expect(page.getByTestId('assistant-toggle')).toBeInViewport();
     await expect(page.getByTestId('submit-followup')).toBeInViewport();
     await expectNoPageScroll(page);
