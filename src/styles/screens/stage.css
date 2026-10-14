@@ -362,7 +362,13 @@
   color: #ff8f86;
 }
 
-/* 찬반 집계 한 줄(T131): 무대 위쪽 가운데. 말풍선은 그 아래(top)로 내렸다. */
+/* 찬반 집계 한 줄(T131): 무대 위쪽 가운데. 집계가 보이는 단계(.stage-band__stage--tally)에서만
+   임원 말풍선을 그 아래로 내린다(BRIEFING 등 집계 없는 단계의 28% 하늘 여백 규칙은 그대로).
+   '나' 말풍선은 자기 위치(top)를 따로 가진다. */
+.stage-band__stage--tally .stage-band__bubble:not(.stage-band__bubble--participant) {
+  top: 8%;
+}
+
 .stage-band__tally {
   position: absolute;
   top: 6px;
@@ -404,10 +410,11 @@
 
 @media (max-width: 1280px) {
   .stage-band__tally {
-    top: 4px;
+    top: 3px;
     gap: 10px;
-    padding: 2px 8px;
+    padding: 1px 8px;
     font-size: 11px;
+    line-height: 1.1;
   }
 
   .stage-band__tally-part b {
@@ -442,7 +449,7 @@
   /* T64가 발화자 라벨 줄을 더하며(아래) 말풍선이 커져 하늘 여백(28%) 밖으로
      밀려났다(실측). top을 8%에서 4%로 올려 늘어난 만큼의 여유를 되찾는다
      (e2e/stage.spec.ts). */
-  top: 8%;
+  top: 4%;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -694,10 +701,6 @@
     padding: 5px 8px;
   }
 
-  /* 집계 줄(T131) 아래로 내린다. '나' 말풍선은 자기 위치(top)를 따로 가진다. */
-  .stage-band__bubble:not(.stage-band__bubble--participant) {
-    top: 10%;
-  }
 
   .stage-band__bubble-text {
     -webkit-line-clamp: 2;

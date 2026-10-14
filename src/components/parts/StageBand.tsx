@@ -287,7 +287,7 @@ export function StageBand({
 
   return (
     <div className="stage-band" aria-hidden="true" data-testid="stage-band">
-      <div className="stage-band__stage" data-testid="stage-band-full">
+      <div className={`stage-band__stage${showTally ? ' stage-band__stage--tally' : ''}`} data-testid="stage-band-full">
         <img src={stageRender} alt="" className="stage-band__bg" />
         <div className="stage-band__scanlines" />
         <div className="stage-band__vignette stage-band__vignette--top" />
