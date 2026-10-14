@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  parseArgs,
   callRecordsByRole,
   evalFollowUpQuestion,
   newQuestionStats,
@@ -315,5 +316,19 @@ describe('newQuestionStats·evalFollowUpQuestion·평가 세트 답변 문장(T1
         expect(evalCase.followUpAnswerText!.length).toBeLessThanOrEqual(300);
       }
     }
+  });
+});
+
+describe('parseArgs --case (PR #21 Codex P2)', () => {
+  it('케이스 ID를 여러 개 받는다', () => {
+    expect(parseArgs(['--out', 'x.jsonl', '--case', 'a/1', '--case', 'b/2']).only).toEqual(['a/1', 'b/2']);
+  });
+  it('--case 값이 없거나 비었거나 다른 옵션이면 전체 실측으로 넘어가지 않고 멈춘다', () => {
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case'])).toThrow(/케이스 ID/);
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case', ''])).toThrow(/케이스 ID/);
+    expect(() => parseArgs(['--case', '--out', 'x.jsonl'])).toThrow(/케이스 ID/);
+  });
+  it('--case 없이 --out만 주면 전체 케이스(only 빈 배열)', () => {
+    expect(parseArgs(['--out', 'x.jsonl']).only).toEqual([]);
   });
 });

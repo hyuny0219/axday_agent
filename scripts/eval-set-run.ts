@@ -935,7 +935,7 @@ function runCheck(files: string[]): void {
   }
 }
 
-function parseArgs(argv: string[]): { out: string; check: string[]; only: string[] } {
+export function parseArgs(argv: string[]): { out: string; check: string[]; only: string[] } {
   let out = '';
   const check: string[] = [];
   // --case <id>(여러 번 가능): 일부 케이스만 다시 잰다(크레딧 절약·실패 케이스 재측정, T129).
@@ -947,8 +947,13 @@ function parseArgs(argv: string[]): { out: string; check: string[]; only: string
     } else if (argv[i] === '--check' && argv[i + 1] !== undefined) {
       check.push(argv[i + 1] as string);
       i += 1;
-    } else if (argv[i] === '--case' && argv[i + 1] !== undefined) {
-      only.push(argv[i + 1] as string);
+    } else if (argv[i] === '--case') {
+      // 값이 비었거나 다른 옵션이 오면 전체 실측으로 넘어가지 않게 바로 멈춘다(PR #21 Codex P2).
+      const value = argv[i + 1];
+      if (value === undefined || value === '' || value.startsWith('--')) {
+        throw new Error('--case 뒤에 케이스 ID가 필요합니다(예: --case ai-approval/unanswered-1)');
+      }
+      only.push(value);
       i += 1;
     }
   }
