@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T131 | 진행 | AI 임원 찬반 강조: 발언·반응 카드 색 머리띠(B안) + 무대 명패·얼굴 테두리 빛·집계(C안)(2026-10-14 사용자 지시, 시안 https://claude.ai/artifact/11mXmZZL4ig2DbYhBysQeN). 상세는 아래 T131 카드 |
 | T130 | 완료 | BGM 기본을 랜덤 재생으로(체험마다 한 곡, 바로 전 곡 피함), 운영자는 '소리'에서 특정 곡·끄기를 선택(2026-10-13 사용자 지시). 저장 키 v2 |
 | T129 | 완료 | 임원 발언의 "돈 한도" → "금액 한도"(2026-10-13 사용자 지시). scripted 발언·조건 문구(aiApproval.ts)·쉬운 말 규칙 예시(plainLanguage.ts) 수정, 프롬프트 v15 |
 | T128 | 완료 | BGM 3곡(운영자 선택)과 장면별 효과음(2026-10-13 사용자 지시, 시안 https://claude.ai/artifact/EkatwSB5iaKrPxAca2qvNs). 상세는 아래 T128 카드 |
@@ -113,6 +114,26 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T131 AI 임원 찬반 강조 — 카드 색 머리띠(B안) + 무대 명패·집계(C안)
+
+- 목표(2026-10-14 사용자 지시): "AI임원들의 반응(찬성/반대)가 더 눈에 띄었으면" → 시안(https://claude.ai/artifact/11mXmZZL4ig2DbYhBysQeN) 검토 뒤 결정: **B안(카드 색 머리띠)과 C안(무대 명패 + 얼굴 테두리 빛 + 집계)을 함께**. 움직임(팀리드 판단, 사용자 미지정): 입장이 **바뀐 순간에만** 머리띠·명패가 한 번 뒤집히며 바뀐다(rotateX, 0.6초 안팎), `prefers-reduced-motion`이면 바로 표시. 계속 반복하는 움직임은 넣지 않는다.
+- 적용 화면: 2단계 임원 의견 듣기(OPINIONS, scripted `.opinion-card`와 live `statement-card-*` 모두), 4단계 반응 듣기(REACTIONS listen, `reaction-card-*`), 그리고 무대(StageBand)가 보이는 모든 단계. 4단계 다시 답하기(answer)·최종 안건·표결·결과 보고서의 기존 표시는 바꾸지 않는다(결과 보고서의 순차 공개 T114는 그대로).
+- B안 카드 머리띠:
+  1. 카드 맨 위 전체 폭 띠. 찬성 = 초록(시안 `--for #2f8a5f`), 반대 = 빨강(`--against #c4473f`), 고민 중 = 회색(`#7d7768`). 띠 안 왼쪽에 큰 글자 판정("찬성"·"반대"·"고민 중", Black Han Sans 계열 디스플레이 서체), 그 옆에 변화 칩("유지" / "반대 → 찬성" 등, 지금 카드 오른쪽 위 작은 칩을 띠 안으로 옮김), 오른쪽에 임원 코드·이름.
+  2. **기울음(T118, 첫 반응 뒤 답하면 확정)** 은 확정과 다르게: 빗금 띠 + 판정 "찬성 쪽?"(또는 "반대 쪽?") + 칩 "반대 → 찬성 · 답하면 확정". 지금의 "답변하면 확정됩니다" 문구는 띠의 칩으로 대체해도 된다(정보 손실 없게).
+  3. 색만으로 구분하지 않는다: 판정 글자를 반드시 크게 둔다. 띠 위 글자 대비는 WCAG AA 이상.
+  4. 카드 본문 레이아웃·발언 강조(mark)·근거 칩은 그대로. 띠 높이만큼 늘어나도 1920×1080·1280×720 noscroll이 유지돼야 한다(카드 아래 빈 공간이 넉넉함 — 넘치면 띠 높이·글자 크기를 720에서 한 단계 줄인다).
+- C안 무대 명패·빛·집계:
+  1. StageBand의 각 임원 아래 작은 표정 점·"방향 · 찬성 쪽" 글자 자리를 **큰 명패**로 바꾼다: 찬성 초록 / 반대 빨강 / 고민 중 짙은 회색 바탕, 흰 글자 "찬성"·"반대"·"고민 중". 기울음은 점선 테두리 + "찬성 쪽?". 임원 코드(CEO 등) 표시는 유지.
+  2. 무대 그림 속 임원 얼굴 쪽(아바타 자리)에 같은 색 테두리 빛(box-shadow/outline). 기울음은 점선. 그림 위 좌표는 지금 표정 점·명패 위치를 기준으로 맞추고, 말풍선(무대 위 발언 요약)과 겹치지 않게.
+  3. 무대 위쪽 가운데(또는 겹치지 않는 자리)에 집계 한 줄: "찬성 N · 기울음 N · 반대 N · 고민 중 N"(0인 항목은 생략 가능). 
+  4. **봉인 규칙 유지(T114·T118·T120)**: 추가 질문에 답한 뒤 표결 전(MOTION·VOTE)에는 지금처럼 방향을 가린다 — 명패는 "?"(중립색), 빛 없음, 집계는 숨기거나 "표결 뒤 공개". 결과 단계의 표시는 기존 공개 연출을 따른다.
+  5. 지난 화면 보기(T126) 중에는 그 단계의 표시 규칙 그대로(새 뒤집힘 움직임 없음).
+- 읽을 것: `src/components/parts/StageBand.tsx`, `src/styles/screens/stage.css`, `src/components/parts/LiveStatementCards.tsx`, `src/components/screens/{Opinions,Reactions}Screen.tsx`와 관련 css, `src/domain/stance.ts`(leaningStances), DESIGN_SPEC T114·T118·T120·T126, 시안 소스 `/private/tmp/claude-501/-Users-hyun-Claude-MyProjects-axday-agent/3e33b3a2-6840-44a1-a8d2-6ad204f52c24/scratchpad/stance/index.html`(B·C안 블록).
+- 만들 것: 머리띠·명패·빛·집계 구현, 단위 테스트(판정 글자·색 클래스·기울음 표시·바뀐 순간에만 뒤집힘 클래스·reduced-motion·봉인 단계에서 "?"·집계 계산·지난 화면 보기), e2e(OPINIONS·REACTIONS에서 머리띠·명패 보임, MOTION·VOTE에서 가림 유지, 1080·720 noscroll), 스크린샷(opinions·reactions 갱신), DESIGN_SPEC "## T131", FACILITATOR_GUIDE 한 줄, TASKS 행 완료.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: 서버·프롬프트·표결 규칙 변경, 결과 보고서 공개 연출 변경, 영문 UI(임원 코드 CEO 등 기존 예외 제외).
+- 크기: M.
 
 ## T128 BGM·효과음 — 코드 합성, 운영자 BGM 선택
 
