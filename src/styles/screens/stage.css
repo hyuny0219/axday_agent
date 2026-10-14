@@ -330,46 +330,6 @@
   }
 }
 
-/* 얼굴 둘레 빛 고리(T131): 무대 그림 속 임원 얼굴 자리(좌석 열 가운데, 그림 높이의 ~37%)에 같은
-   색 테두리 빛을 둔다. 폭은 좌석 열(무대 폭 22%)의 절반쯤 = 얼굴 지름. 기울음은 점선, 고민 중은
-   가는 선. 정적 레이어라 애니메이션이 없다. */
-.stage-band__face-ring {
-  position: absolute;
-  left: 50%;
-  top: var(--face-ring-top, 38%);
-  width: 52%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.stage-band__face-ring--for {
-  box-shadow: 0 0 0 3px #3fae7c, 0 0 22px 5px rgba(63, 174, 124, 0.6);
-}
-
-.stage-band__face-ring--against {
-  box-shadow: 0 0 0 3px #ff6a60, 0 0 22px 5px rgba(255, 106, 96, 0.55);
-}
-
-.stage-band__face-ring--undecided {
-  box-shadow: 0 0 0 2px rgba(200, 193, 179, 0.7);
-}
-
-.stage-band__face-ring--leaning {
-  box-shadow: none;
-  outline: 3px dashed currentColor;
-  outline-offset: 4px;
-}
-
-.stage-band__face-ring--leaning.stage-band__face-ring--for {
-  color: #6fd3a2;
-}
-
-.stage-band__face-ring--leaning.stage-band__face-ring--against {
-  color: #ff8f86;
-}
-
 /* 찬반 집계 한 줄(T131): 무대 위쪽 가운데. 집계가 보이는 단계(.stage-band__stage--tally)에서만
    임원 말풍선을 그 아래로 내린다(BRIEFING 등 집계 없는 단계의 28% 하늘 여백 규칙은 그대로).
    '나' 말풍선은 자기 위치(top)를 따로 가진다. */

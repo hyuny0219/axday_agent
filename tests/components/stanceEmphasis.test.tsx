@@ -132,7 +132,7 @@ describe('StageBand 명패·빛·집계', () => {
     );
   }
 
-  it('REACTIONS: 큰 명패 글자·색 클래스·얼굴 빛 고리·집계가 보인다', () => {
+  it('REACTIONS: 큰 명패 글자·색 클래스·집계가 보이고 얼굴 동그라미는 없다', () => {
     const { container } = render(stage('REACTIONS', { leaning: { CFO: 'FOR' } }));
     expect(screen.getByTestId('stage-mood-CEO')).toHaveTextContent('찬성');
     expect(screen.getByTestId('stage-mood-CEO')).toHaveClass('stage-band__mood--for');
@@ -141,8 +141,8 @@ describe('StageBand 명패·빛·집계', () => {
     expect(screen.getByTestId('stage-mood-CAIO')).toHaveTextContent('고민 중');
     expect(screen.getByTestId('stage-mood-CFO')).toHaveTextContent('찬성 쪽?');
     expect(screen.getByTestId('stage-mood-CFO')).toHaveClass('stage-band__mood--leaning');
-    expect(container.querySelectorAll('.stage-band__face-ring')).toHaveLength(4);
-    expect(container.querySelectorAll('.stage-band__face-ring--leaning')).toHaveLength(1);
+    // 얼굴 동그라미(빛 고리)는 2026-10-14 사용자 지시로 뺐다.
+    expect(container.querySelector('.stage-band__face-ring')).toBeNull();
     expect(screen.getByTestId('stage-tally').textContent).toBe('찬성 1기울음 1반대 1고민 중 1');
     // 임원 코드 명패는 그대로다.
     expect(screen.getByTestId('stage-seat-CEO')).toHaveTextContent('CEO');

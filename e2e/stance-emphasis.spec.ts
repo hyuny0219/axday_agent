@@ -45,7 +45,7 @@ test('OPINIONS: 카드마다 색 머리띠와 큰 판정 글자, 무대 명패·
   await expect(page.getByTestId('stance-band-CEO')).toHaveClass(/stance-band--for/);
   await expect(page.getByTestId('stance-band-CFO')).toHaveClass(/stance-band--against/);
   await expect(page.getByTestId('stance-band-CAIO')).toHaveClass(/stance-band--undecided/);
-  await expect(page.locator('.stage-band__face-ring')).toHaveCount(4);
+  await expect(page.locator('.stage-band__face-ring')).toHaveCount(0); // 얼굴 동그라미는 뺐다(2026-10-14 사용자 지시)
   await expect(page.getByTestId('stage-tally')).toContainText('찬성');
   await expectVisibleInViewport(page, 'stage-tally', 'OPINIONS 집계');
   await expectNoPageScroll(page, 'OPINIONS');

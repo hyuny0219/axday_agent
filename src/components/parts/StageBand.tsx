@@ -183,11 +183,6 @@ const VOTE_BADGE_ICON: Record<Ballot['vote'], string> = {
   UNCAST: '–',
 };
 
-/** 얼굴 빛 고리는 BRIEFING(아직 입장 없음)·봉인·RESULT에서는 그리지 않는다. */
-function showFaceRing(stage: SessionStage, sealed: boolean): boolean {
-  return !sealed && stage !== 'RESULT' && stage !== 'BRIEFING';
-}
-
 /** 임원 한 명의 찬반 명패(T131, 지난 T63 표정 점을 대신한다). 확정은 찬성 초록·반대 빨강·
  * 고민 중 회색 바탕에 큰 글자, 기울음(T118)은 점선 테두리 + "찬성 쪽?", 봉인 단계는 "?"다.
  * 입장 글자가 바뀐 순간에만 한 번 뒤집히고(useChangeFlip), 계속 반복하는 움직임은 없다. */
@@ -218,19 +213,6 @@ function StageNameplate({
     >
       {text}
     </span>
-  );
-}
-
-/** 무대 그림 속 임원 얼굴 둘레의 같은 색 빛 고리(T131). 기울음은 점선, 고민 중은 가는 선,
- * 봉인 단계는 그리지 않는다. */
-function FaceRing({ stance, leaning }: { stance: Stance; leaning?: 'FOR' | 'AGAINST' }) {
-  const verdict = stanceVerdict(stance, leaning);
-  return (
-    <span
-      className={`stage-band__face-ring stage-band__face-ring--${verdict.tone}${
-        verdict.leaning ? ' stage-band__face-ring--leaning' : ''
-      }`}
-    />
   );
 }
 
@@ -353,9 +335,6 @@ export function StageBand({
                     </>
                   )}
                 </span>
-              )}
-              {showFaceRing(stage, sealed) && (
-                <FaceRing stance={stances[memberId]} leaning={leaning?.[memberId]} />
               )}
               <div className="stage-band__seat-foot">
                 {stage !== 'RESULT' && (
