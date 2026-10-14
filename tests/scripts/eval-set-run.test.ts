@@ -324,9 +324,14 @@ describe('parseArgs --case (PR #21 Codex P2)', () => {
     expect(parseArgs(['--out', 'x.jsonl', '--case', 'a/1', '--case', 'b/2']).only).toEqual(['a/1', 'b/2']);
   });
   it('--case 값이 없거나 비었거나 다른 옵션이면 전체 실측으로 넘어가지 않고 멈춘다', () => {
-    expect(() => parseArgs(['--out', 'x.jsonl', '--case'])).toThrow(/케이스 ID/);
-    expect(() => parseArgs(['--out', 'x.jsonl', '--case', ''])).toThrow(/케이스 ID/);
-    expect(() => parseArgs(['--case', '--out', 'x.jsonl'])).toThrow(/케이스 ID/);
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case'])).toThrow(/--case 뒤에 값이 필요/);
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case', ''])).toThrow(/--case 뒤에 값이 필요/);
+    expect(() => parseArgs(['--case', '--out', 'x.jsonl'])).toThrow(/--case 뒤에 값이 필요/);
+  });
+  it('--out·--check 값 자리에 옵션이 오면(빈 변수로 --case가 삼켜짐) 멈춘다', () => {
+    expect(() => parseArgs(['--out', '--case', 'ai-approval/unanswered-1'])).toThrow(/--out 뒤에 값이 필요/);
+    expect(() => parseArgs(['--check', '--case', 'x'])).toThrow(/--check 뒤에 값이 필요/);
+    expect(() => parseArgs(['--out'])).toThrow(/--out 뒤에 값이 필요/);
   });
   it('--case 없이 --out만 주면 전체 케이스(only 빈 배열)', () => {
     expect(parseArgs(['--out', 'x.jsonl']).only).toEqual([]);
