@@ -29,6 +29,8 @@ export const DEFAULT_SOUND_SETTINGS: SoundSettings = {
 // 버리고 음량·효과음 설정만 옮겨 온다 — 이미 쓰던 브라우저도 랜덤으로 시작하게.
 export const SOUND_STORAGE_KEY = 'boardroom.sound.v2';
 export const LEGACY_SOUND_STORAGE_KEY = 'boardroom.sound.v1';
+/** 마지막으로 재생한 BGM. 'scripted로 새 체험'처럼 페이지를 새로 불러와도 랜덤이 직전 곡을 피하게(PR #21 Codex P2). */
+export const LAST_BGM_STORAGE_KEY = 'boardroom.sound.lastBgm';
 
 export const BGM_CHOICE_LABELS: Record<BgmChoice, string> = {
   random: '랜덤(체험마다 바뀜)',
@@ -155,7 +157,14 @@ export function createSound(options: SoundOptions = {}): Sound {
   /** 랜덤 모드에서 이번 체험에 고른 곡. 체험이 끝나면(scene.playing false) 비운다. */
   let randomPick: BgmName | null = null;
   /** 실제로 마지막에 재생한 곡(랜덤·고정 모두). 랜덤은 이 곡을 피해 고른다(PR #21 Codex P2). */
-  let lastPlayedBgm: BgmName | null = null;
+  let lastPlayedBgm: BgmName | null = (() => {
+    try {
+      const saved = storage?.getItem(LAST_BGM_STORAGE_KEY) ?? null;
+      return BGM_NAMES.includes(saved as BgmName) ? (saved as BgmName) : null;
+    } catch {
+      return null;
+    }
+  })();
   let ctx: AudioContext | null = null;
   let synth: SynthEngine | null = null;
   let unavailable = false;
@@ -200,6 +209,11 @@ export function createSound(options: SoundOptions = {}): Sound {
     if (want && !bgm) {
       bgm = synth.startBgm(want);
       lastPlayedBgm = want;
+      try {
+        storage?.setItem(LAST_BGM_STORAGE_KEY, want);
+      } catch {
+        // 저장소를 못 쓰면 이번 페이지 안에서만 기억한다.
+      }
     }
     applyLevel();
   }

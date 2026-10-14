@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_SOUND_SETTINGS,
+  LAST_BGM_STORAGE_KEY,
   LEGACY_SOUND_STORAGE_KEY,
   SOUND_STORAGE_KEY,
   createSound,
@@ -146,6 +147,27 @@ describe('BGM', () => {
     sound.setScene({ playing: true, low: false });
     expect(sound.currentBgm()).not.toBe('pulse');
     expect(sound.currentBgm()).toBe('tension'); // pulse를 뺀 첫 번째
+  });
+
+  it('페이지를 새로 불러와도(scripted로 새 체험) 직전 곡을 기억해 피한다(PR #21 Codex P2)', () => {
+    const first = setup(undefined, () => 0);
+    first.sound.unlock();
+    first.sound.setScene({ playing: true, low: false });
+    expect(first.sound.currentBgm()).toBe('tension');
+    expect(first.storage.data[LAST_BGM_STORAGE_KEY]).toBe('tension');
+    // 새로고침: 같은 저장소로 컨트롤러를 새로 만든다.
+    const fake = createFakeContext();
+    const second = createSound({ createContext: () => fake.ctx, storage: first.storage, random: () => 0 });
+    second.unlock();
+    second.setScene({ playing: true, low: false });
+    expect(second.currentBgm()).toBe('pulse');
+  });
+
+  it('저장된 직전 곡 값이 이상하면 무시한다', () => {
+    const { sound } = setup({ [LAST_BGM_STORAGE_KEY]: 'jazz' }, () => 0);
+    sound.unlock();
+    sound.setScene({ playing: true, low: false });
+    expect(sound.currentBgm()).toBe('tension');
   });
 
   it('pickRandomBgm은 바로 전 곡을 빼고 고른다', () => {
