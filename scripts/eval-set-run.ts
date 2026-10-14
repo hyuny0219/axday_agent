@@ -975,6 +975,15 @@ async function main(): Promise<void> {
       return;
     }
   }
+  // 케이스 선택은 키 확인·연결 확인(유료 probe)보다 먼저 검사한다 — 오타로 크레딧을 쓰지 않게(PR #21 Codex P2).
+  const allCases = loadEvalSet();
+  const unknown = only.filter((id) => !allCases.some((c) => c.id === id));
+  if (unknown.length > 0) {
+    console.error(`[eval-set-run] 없는 케이스: ${unknown.join(', ')}`);
+    process.exit(1);
+    return;
+  }
+  const cases = only.length > 0 ? allCases.filter((c) => only.includes(c.id)) : allCases;
   const useMock = process.env.MODEL_PROVIDER === 'mock';
 
   if (!useMock && !hasAnthropicCredential()) {
@@ -997,14 +1006,6 @@ async function main(): Promise<void> {
   }
   console.log(`[eval-set-run] 연결 확인 OK · ${probe.modelId} · ${probe.latencyMs}ms`);
 
-  const allCases = loadEvalSet();
-  const cases = only.length > 0 ? allCases.filter((c) => only.includes(c.id)) : allCases;
-  const unknown = only.filter((id) => !allCases.some((c) => c.id === id));
-  if (unknown.length > 0) {
-    console.error(`[eval-set-run] 없는 케이스: ${unknown.join(', ')}`);
-    process.exit(1);
-    return;
-  }
   const allRows: EvalRow[] = [];
   for (const evalCase of cases) {
     const rows = await runCase(evalCase, provider, systemClock);
