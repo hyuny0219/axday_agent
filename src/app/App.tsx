@@ -849,6 +849,7 @@ function AppShell() {
                     }
                     leaning={session.stage === 'REACTIONS' && reactionsView ? reactionsView.leaning : leaningFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+                    readOnly={viewPage !== null}
                     chairLine={chairLineFor(
                       session.stage,
                       scenario,

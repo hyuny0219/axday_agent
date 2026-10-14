@@ -47,7 +47,9 @@ import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
-import { STANCE_LABEL } from '../moodLabel';
+import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
+import { leaningChipText } from '../stanceDisplay';
+import { StanceBand } from './StanceBand';
 import type { LeaningMap } from '../../domain/stance';
 import '../../styles/screens/live.css';
 import { HighlightText } from './HighlightText';
@@ -72,6 +74,8 @@ export interface LiveStatementCardsProps {
   stances: Record<ExecMemberId, Stance>;
   /** T118: 기울어진 방향(REACTIONS). 있는 임원은 "고민 중" 대신 "찬성 쪽"으로 보인다. */
   leaning?: LeaningMap;
+  /** T126: 지난 화면 보기 중이면 머리띠가 뒤집히지 않는다. */
+  readOnly?: boolean;
   /** 'grid'(기본, OPINIONS 4열) 또는 'reaction'(REACTIONS 2×2, T74). */
   variant?: 'grid' | 'reaction';
   /** 있으면 실패한 역할이 하나 이상일 때 "응답 없는 임원 다시 요청" 버튼을 보여준다(T65).
@@ -109,6 +113,7 @@ export function LiveStatementCards({
   stances,
   leaning,
   variant = 'grid',
+  readOnly = false,
   onRetryFailedRoles,
   retryDisabled = false,
 }: LiveStatementCardsProps) {
@@ -163,33 +168,57 @@ export function LiveStatementCards({
             statement.stance == null ||
             opinionStatement.stance === statement.stance);
 
+        // T131: 답이 온 카드(OPINIONS·REACTIONS)는 맨 위 색 머리띠가 입장·변화를 보인다.
+        // 판단 중·응답 없음 카드는 입장이 없으므로 지난 머리줄 그대로다.
+        const banded = (isGrid || isReaction) && status === 'answered' && !!statement;
+        const bandChip = !isReaction
+          ? undefined
+          : leanTo
+            ? leaningChipText('UNDECIDED', leanTo)
+            : isMaintained
+              ? '유지'
+              : opinionStatement?.stance
+                ? `${SHORT_STANCE_LABEL[opinionStatement.stance]} → ${SHORT_STANCE_LABEL[stance]}`
+                : '바뀜';
+
         return (
           <article
             key={roleId}
             className={`live-statement live-statement--${status}${
               isGrid || isReaction ? ` live-statement--grid live-statement--stance-${STANCE_MODIFIER[stance]}` : ''
-            }${isReaction ? ' live-statement--reaction' : ''}${leanTo ? ` live-statement--leaning live-statement--leaning-${leanTo.toLowerCase()}` : ''}${isMaintained ? ' live-statement--maintained' : ''}`}
+            }${isReaction ? ' live-statement--reaction' : ''}${leanTo ? ` live-statement--leaning live-statement--leaning-${leanTo.toLowerCase()}` : ''}${isMaintained ? ' live-statement--maintained' : ''}${banded ? ' live-statement--banded' : ''}`}
             data-testid={`live-role-${roleId}`}
           >
-            <div className="live-statement__head">
-              {/* OPINIONS(시안 S2_Opinions)는 아바타 대신 타자기 역할 코드를 쓰고,
-                  REACTIONS(시안 S4_Reactions)는 코드·아바타 모두 없다. */}
-              {isGrid && (
-                <span className="live-statement__code" aria-hidden="true">
-                  {roleId}
+            {banded ? (
+              <StanceBand
+                roleId={roleId}
+                stance={stances[roleId]}
+                leaningTo={leanTo}
+                chip={bandChip}
+                chipTestId={`live-band-chip-${roleId}`}
+                readOnly={readOnly}
+                heading={<h3 className="live-statement__member">{MEMBER_LABELS[roleId]}</h3>}
+              />
+            ) : (
+              <div className="live-statement__head">
+                {/* OPINIONS(시안 S2_Opinions)는 아바타 대신 타자기 역할 코드를 쓰고,
+                    REACTIONS(시안 S4_Reactions)는 코드·아바타 모두 없다. */}
+                {isGrid && (
+                  <span className="live-statement__code" aria-hidden="true">
+                    {roleId}
+                  </span>
+                )}
+                <h3 className="live-statement__member">{MEMBER_LABELS[roleId]}</h3>
+                <span
+                  className={`live-statement__mood${
+                    isGrid || isReaction ? ` live-statement__mood--${STANCE_MODIFIER[stance]}` : ''
+                  }`}
+                  data-testid={`exec-mood-label-${roleId}`}
+                >
+                  {STANCE_LABEL[stance]}
                 </span>
-              )}
-              <h3 className="live-statement__member">{MEMBER_LABELS[roleId]}</h3>
-              <span
-                className={`live-statement__mood${
-                  isGrid || isReaction ? ` live-statement__mood--${STANCE_MODIFIER[stance]}` : ''
-                }`}
-                data-testid={`exec-mood-label-${roleId}`}
-              >
-                {STANCE_LABEL[stance]}
-                {leanTo ? ' · 미확정' : ''}
-              </span>
-            </div>
+              </div>
+            )}
             {status === 'answered' && statement ? (
               <div data-testid={`statement-card-${roleId}`}>
                 <p className="live-statement__text">
@@ -219,11 +248,6 @@ export function LiveStatementCards({
                 data-testid={status === 'failed' ? `statement-failed-${roleId}` : `statement-pending-${roleId}`}
               >
                 {status === 'failed' ? STATUS_TEXT.failed : STATUS_TEXT.pending}
-              </p>
-            )}
-            {leanTo && (
-              <p className="live-statement__leaning-note" data-testid={`live-leaning-note-${roleId}`}>
-                답변하면 확정됩니다
               </p>
             )}
             {isReaction && status === 'failed' && roleId === firstFailedRoleId && onRetryFailedRoles && (

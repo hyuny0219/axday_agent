@@ -12,7 +12,10 @@
 // T64("기밀 작전실" 게임형 스킨): 프레임에 브래킷·스캔라인·CAM 판독 라벨·CLASSIFIED
 // 칩(모두 장식)을 더하고, 결론 도장은 오른쪽 종이 보고서로 옮겨 이 컴포넌트는 더는
 // 그리지 않는다(docs/design/mockups/README.md "도장은 결과 화면 오른쪽 종이 보고서
-// 우상단에"). 명패 아래 역할·기울기 캡션(예: "방향 · 찬성 쪽")도 이 카드에서 더했다.
+// 우상단에").
+// T131: 작은 표정 점·"방향 · 찬성 쪽" 캡션을 큰 찬반 명패(찬성 초록·반대 빨강·고민 중 회색,
+// 기울음은 점선 "찬성 쪽?", 봉인 단계는 "?")로 바꾸고, 얼굴 둘레 빛 고리와 위쪽 집계 한 줄을
+// 더했다. 봉인 단계(MOTION·VOTE)는 명패 "?"·빛 없음·집계 숨김이다.
 
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type {
@@ -30,7 +33,8 @@ import { execRevealDelay } from '../resultStamp';
 import { firstSentenceClipped } from '../stageText';
 import { bubbleLineOf } from '../bubbleText';
 import { reactionBubble } from '../reactionsFor';
-import { STANCE_LABEL } from '../moodLabel';
+import { stanceVerdict, tallyParts } from '../stanceDisplay';
+import { useChangeFlip } from '../useChangeFlip';
 import type { LeaningMap } from '../../domain/stance';
 import stageRender from '../../assets/stage-render-01.jpg';
 import '../../styles/screens/stage.css';
@@ -50,6 +54,8 @@ export interface StageBandProps {
   leaning?: LeaningMap;
   /** RESULT 단계에서만 넘긴다. 있으면 표결 배지를 순차 공개한다. */
   ballots?: Ballot[];
+  /** T126: 지난 화면 보기 중이면 명패가 뒤집히지 않는다. */
+  readOnly?: boolean;
   /** BRIEFING·MOTION 단계에서 의장(CEO) 말풍선에 쓸 원문. 다른 단계에서는 무시한다. */
   chairLine?: string;
 }
@@ -62,14 +68,8 @@ const SEAT_LEFT_PERCENT: Record<ExecMemberId, number> = {
   CISO: 87.5,
 };
 
-/** 역할·기울기 캡션의 관심사 한 단어(T64, Main.html "방향 · 찬성 쪽"/"비용 · 미정" 등).
- * STANCE_LABEL(찬성 쪽/반대 쪽/미정)과 합쳐 명패 아래에 보여준다. */
-const ROLE_INTEREST_WORD: Record<ExecMemberId, string> = {
-  CEO: '방향',
-  CFO: '비용',
-  CAIO: '시스템',
-  CISO: '보안',
-};
+/** T114·T118·T120: 추가 질문에 답한 뒤 표결 전에는 방향을 가린다 — 명패는 "?", 빛·집계 없음. */
+const SEALED_STAGES: ReadonlySet<SessionStage> = new Set(['MOTION', 'VOTE']);
 
 type BubbleKind = 'speech' | 'pending' | 'none';
 
@@ -183,60 +183,54 @@ const VOTE_BADGE_ICON: Record<Ballot['vote'], string> = {
   UNCAST: '–',
 };
 
-/** 임원 표정 배지(T63) 안의 얼굴선. 이모지를 쓰지 않고(부스 PC OS마다 다르게 그려진다)
- * CSS/inline SVG로만 그린다. 색뿐 아니라 눈·입 모양으로도 세 값을 구분한다(색만으로
- * 구분 금지). 선 색은 배지 배경(stage.css의 stage-band__mood--*)과 대비되도록
- * currentColor를 쓰고, 배지 쪽에서 color를 지정한다. */
-function MoodIcon({ stance }: { stance: Stance }) {
-  if (stance === 'FOR') {
-    return (
-      <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
-        <circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" />
-        <circle cx="13.5" cy="6.5" r="1.1" fill="currentColor" />
-        <path d="M4 10.5 Q9 14 14 10.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (stance === 'AGAINST') {
-    return (
-      <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
-        <circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" />
-        <circle cx="13.5" cy="6.5" r="1.1" fill="currentColor" />
-        <path d="M4 12.5 Q9 9 14 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 18 18" width="10" height="10" aria-hidden="true" focusable="false">
-      <circle cx="4" cy="9" r="1.3" fill="currentColor" />
-      <circle cx="9" cy="9" r="1.3" fill="currentColor" />
-      <circle cx="14" cy="9" r="1.3" fill="currentColor" />
-    </svg>
-  );
+/** 얼굴 빛 고리는 BRIEFING(아직 입장 없음)·봉인·RESULT에서는 그리지 않는다. */
+function showFaceRing(stage: SessionStage, sealed: boolean): boolean {
+  return !sealed && stage !== 'RESULT' && stage !== 'BRIEFING';
 }
 
-/** 임원 한 명의 표정 배지(RESULT 제외). key를 stance 값으로 둬 값이 바뀔 때마다 React가
- * 이 span을 새로 마운트하게 해, mount 애니메이션(stage.css stage-band__mood 200ms
- * 스케일)이 그때마다 한 번씩 다시 재생된다(prefers-reduced-motion에서는 base.css 전역
- * 규칙이 지속 시간을 0으로 낮춘다). */
-function MoodBadge({
+/** 임원 한 명의 찬반 명패(T131, 지난 T63 표정 점을 대신한다). 확정은 찬성 초록·반대 빨강·
+ * 고민 중 회색 바탕에 큰 글자, 기울음(T118)은 점선 테두리 + "찬성 쪽?", 봉인 단계는 "?"다.
+ * 입장 글자가 바뀐 순간에만 한 번 뒤집히고(useChangeFlip), 계속 반복하는 움직임은 없다. */
+function StageNameplate({
   memberId,
   stance,
   leaning,
+  sealed,
+  readOnly,
 }: {
   memberId: ExecMemberId;
   stance: Stance;
   leaning?: 'FOR' | 'AGAINST';
+  sealed: boolean;
+  readOnly: boolean;
 }) {
-  const shown: Stance = leaning ?? stance;
+  const verdict = stanceVerdict(stance, leaning);
+  const text = sealed ? '?' : verdict.text;
+  const tone = sealed ? 'undecided' : verdict.tone;
+  const flips = useChangeFlip(text, readOnly || sealed);
   return (
     <span
-      key={leaning ? `leaning-${leaning}` : stance}
-      className={`stage-band__mood stage-band__mood--${shown.toLowerCase()}${leaning ? ' stage-band__mood--leaning' : ''}`}
+      key={flips}
+      className={`stage-band__mood stage-band__mood--${tone}${verdict.leaning && !sealed ? ' stage-band__mood--leaning' : ''}${
+        sealed ? ' stage-band__mood--sealed' : ''
+      }${flips > 0 ? ' stage-band__mood--flip' : ''}`}
       data-testid={`stage-mood-${memberId}`}
     >
-      <MoodIcon stance={shown} />
+      {text}
     </span>
+  );
+}
+
+/** 무대 그림 속 임원 얼굴 둘레의 같은 색 빛 고리(T131). 기울음은 점선, 고민 중은 가는 선,
+ * 봉인 단계는 그리지 않는다. */
+function FaceRing({ stance, leaning }: { stance: Stance; leaning?: 'FOR' | 'AGAINST' }) {
+  const verdict = stanceVerdict(stance, leaning);
+  return (
+    <span
+      className={`stage-band__face-ring stage-band__face-ring--${verdict.tone}${
+        verdict.leaning ? ' stage-band__face-ring--leaning' : ''
+      }`}
+    />
   );
 }
 
@@ -282,13 +276,18 @@ export function StageBand({
   stances,
   leaning,
   ballots,
+  readOnly = false,
   chairLine,
 }: StageBandProps) {
   const participant = participantSeatOverlay(stage, opinions);
+  const sealed = SEALED_STAGES.has(stage);
+  // 집계는 임원이 의견을 낸 뒤(OPINIONS~REACTIONS)에만 보인다 — BRIEFING은 아직 아무도 말하지
+  // 않았고, 봉인 단계는 방향을 가리며, RESULT는 표 배지가 대신한다.
+  const showTally = stage === 'OPINIONS' || stage === 'DISCUSS' || stage === 'REACTIONS';
 
   return (
     <div className="stage-band" aria-hidden="true" data-testid="stage-band">
-      <div className="stage-band__stage" data-testid="stage-band-full">
+      <div className={`stage-band__stage${showTally ? ' stage-band__stage--tally' : ''}`} data-testid="stage-band-full">
         <img src={stageRender} alt="" className="stage-band__bg" />
         <div className="stage-band__scanlines" />
         <div className="stage-band__vignette stage-band__vignette--top" />
@@ -304,6 +303,15 @@ export function StageBand({
         {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
             라벨만 영문으로 되돌렸다. */}
         <div className="stage-band__classified">CLASSIFIED</div>
+        {showTally && (
+          <div className="stage-band__tally" data-testid="stage-tally">
+            {tallyParts(stances, leaning).map((part) => (
+              <span key={part.key} className={`stage-band__tally-part stage-band__tally-part--${part.key}`}>
+                {part.label} <b>{part.count}</b>
+              </span>
+            ))}
+          </div>
+        )}
         {EXEC_MEMBER_ORDER.map((memberId) => {
           const overlay = execSeatOverlay(
             memberId,
@@ -346,26 +354,26 @@ export function StageBand({
                   )}
                 </span>
               )}
+              {showFaceRing(stage, sealed) && (
+                <FaceRing stance={stances[memberId]} leaning={leaning?.[memberId]} />
+              )}
               <div className="stage-band__seat-foot">
+                {stage !== 'RESULT' && (
+                  <StageNameplate
+                    memberId={memberId}
+                    stance={stances[memberId]}
+                    leaning={leaning?.[memberId]}
+                    sealed={sealed}
+                    readOnly={readOnly}
+                  />
+                )}
                 {/* 무대 명패는 약칭만 쓴다(T52) — 전체 직함(MEMBER_LABELS)은 좌석 폭(22%)을
                     넘어 이웃 명패를 덮었다. 전체 직함은 임원 의견 카드 등 본문에서 계속
                     보여준다. memberId 자체가 이미 약칭(CEO/CFO/CAIO/CISO)이다. */}
                 <span className={`stage-band__nameplate stage-band__nameplate--${memberId.toLowerCase()}`}>
                   {memberId}
                 </span>
-                {stage === 'RESULT' && ballots ? (
-                  <VoteBadge memberId={memberId} ballots={ballots} />
-                ) : (
-                  <MoodBadge memberId={memberId} stance={stances[memberId]} leaning={leaning?.[memberId]} />
-                )}
-                {/* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"). RESULT는 표 배지가
-                    이미 결과를 보여주므로 캡션을 겹쳐 보여주지 않는다. */}
-                {stage !== 'RESULT' && (
-                  <span className="stage-band__caption">
-                    {ROLE_INTEREST_WORD[memberId]} · {STANCE_LABEL[leaning?.[memberId] ?? stances[memberId]]}
-                    {leaning?.[memberId] ? ' · 미확정' : ''}
-                  </span>
-                )}
+                {stage === 'RESULT' && ballots && <VoteBadge memberId={memberId} ballots={ballots} />}
                 <span
                   className={`stage-band__silhouette stage-band__silhouette--${memberId.toLowerCase()}${
                     overlay.dimmed ? ' stage-band__silhouette--dimmed' : ''

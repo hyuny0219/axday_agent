@@ -81,7 +81,7 @@ import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
-import { SHORT_STANCE_LABEL, STANCE_LABEL } from '../moodLabel';
+import { SHORT_STANCE_LABEL } from '../moodLabel';
 import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
 import {
@@ -102,6 +102,8 @@ import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
+import { StanceBand } from '../parts/StanceBand';
+import { leaningChipText } from '../stanceDisplay';
 import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
@@ -791,6 +793,7 @@ export function ReactionsScreen({
                 stances={stances}
                 leaning={leaning}
                 variant="reaction"
+                readOnly={readOnly}
                 onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
                 retryDisabled={retryUsed}
               />
@@ -818,7 +821,7 @@ export function ReactionsScreen({
                   const leanTo = leaning[memberId];
                   const shownStance: Stance = leanTo ?? stance;
                   const badgeText = leanTo
-                    ? `${SHORT_STANCE_LABEL[baseline]} → ${STANCE_LABEL[leanTo]}`
+                    ? leaningChipText(baseline, leanTo)
                     : changed
                       ? `${SHORT_STANCE_LABEL[baseline]} → ${SHORT_STANCE_LABEL[stance]}`
                       : awaiting
@@ -837,26 +840,21 @@ export function ReactionsScreen({
                       className={`reaction-card reaction-card--${STANCE_MODIFIER[shownStance]}${leanTo ? ' reaction-card--leaning' : ''}`}
                       data-testid={`reaction-card-${memberId}`}
                     >
-                      <div className="reaction-card__head">
-                        <h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>
-                        <span className="reaction-card__mood" data-testid={`exec-mood-label-${memberId}`}>
-                          {STANCE_LABEL[shownStance]}
-                        </span>
-                        <span className="reaction-card__badge" aria-hidden="true" data-testid={`reaction-card-badge-${memberId}`}>
-                          {badgeText}
-                        </span>
-                      </div>
+                      <StanceBand
+                        roleId={memberId}
+                        stance={stance}
+                        leaningTo={leanTo}
+                        chip={badgeText}
+                        chipTestId={`reaction-card-badge-${memberId}`}
+                        readOnly={readOnly}
+                        heading={<h3 className="reaction-card__member">{MEMBER_LABELS[memberId]}</h3>}
+                      />
                       <p className="reaction-card__text reaction-card__text--full">
                         <HighlightText
                           text={reactionBody}
                           terms={statementHighlightTerms(scenario, reactionBody)}
                         />
                       </p>
-                      {leanTo && (
-                        <p className="reaction-card__leaning-note" data-testid={`reaction-card-leaning-${memberId}`}>
-                          답변하면 확정됩니다
-                        </p>
-                      )}
                       {causeText && (
                         <p
                           className="reaction-card__cause"

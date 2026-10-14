@@ -6,7 +6,6 @@
 
    왼쪽 열(app-body__actions)의 무대는 StageBand(App.tsx)가 그린다 — 이 화면은 그
    아래 HUD 입력 상자 + 버튼 줄만 맡는다. */
-
 .reactions-screen__title {
   margin: 0;
   font-family: var(--font-display);
@@ -62,7 +61,6 @@
 }
 
 /* 조건 칩 자리는 공용 .hud-conditions-slot(discuss.css, T117 한 줄 + 충돌 안내 한 줄)이 예약한다. */
-
 /* [AI 비서실장 열기][답변 전달 ▶](시안 — discuss-screen__submit-row과 같은 크기). */
 .reactions-screen__submit-row {
   flex: none;
@@ -223,18 +221,6 @@
   border-left-color: var(--ink-muted);
 }
 
-.reaction-card__head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-@media (max-width: 1280px) {
-  .reaction-card__head {
-    gap: 8px;
-  }
-}
-
 .reaction-card__member {
   margin: 0;
   font-size: 16.25px;
@@ -245,49 +231,6 @@
 @media (max-width: 1280px) {
   .reaction-card__member {
     font-size: 13px;
-  }
-}
-
-.reaction-card__mood {
-  font-size: 13.75px;
-  white-space: nowrap;
-}
-
-@media (max-width: 1280px) {
-  .reaction-card__mood {
-    font-size: 11px;
-  }
-}
-
-.reaction-card--for .reaction-card__mood {
-  color: var(--paper-vote-yes);
-}
-
-.reaction-card--against .reaction-card__mood {
-  color: var(--stamp-red);
-}
-
-.reaction-card--undecided .reaction-card__mood {
-  color: var(--ink-muted);
-}
-
-/* 우측 "유지"/"반대 → 찬성" 칩(시안 — STEP 칩과 같은 라벨색, stance색이 아니다. T96:
-   "바뀜"을 전후 입장으로 바꿔 한 줄이 조금 길어졌으므로 nowrap을 명시한다). */
-.reaction-card__badge {
-  margin-left: auto;
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 1.25px 8.75px;
-  border: 1px solid var(--label);
-  font-family: var(--font-label);
-  font-size: 12.5px;
-  color: var(--label);
-}
-
-@media (max-width: 1280px) {
-  .reaction-card__badge {
-    padding: 1px 7px;
-    font-size: 10px;
   }
 }
 
@@ -382,7 +325,6 @@
    discuss-screen__phrase-list를 그대로 재사용한다 — 이 파일의 전용 규칙
    (.reactions-screen__recommend-hint·.reactions-screen__option-list)은 더 이상
    쓰지 않아 지웠다. */
-
 /* 점선 구분선 아래 "근거 자료 · 임원 발언 보기" 버튼 + 안내(시안). 버튼은 T86에서
    공용 .cta.cta--secondary(shell.css)로 바뀌었고, 안내 한 줄(.evidence-open-hint)만
    evidenceDialog.css의 공용 규칙이다 — 여기서는 점선 위 경계 + 배치만 맡는다
@@ -407,16 +349,4 @@
 /* T118: 기울음 카드 — 확정이 아니므로 왼쪽 선을 점선으로, 안내 줄은 흐린 글자로. */
 .reaction-card--leaning {
   border-left-style: dashed;
-}
-
-.reaction-card__leaning-note {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--ink-muted);
-}
-
-@media (max-width: 1280px) {
-  .reaction-card__leaning-note {
-    font-size: 10.5px;
-  }
 }

@@ -96,7 +96,8 @@ describe('LiveStatementCards', () => {
     // CEO의 OPINIONS stance(AGAINST)와 REACTIONS stance(FOR)가 다르므로 "바뀜"(유지
     // 아님)으로 본다(PR #12 Codex 3차 검토 1 — 문장이 아니라 stance로 가른다).
     expect(screen.getByTestId('live-role-CEO')).not.toHaveClass('live-statement--maintained');
-    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성');
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('반대 → 찬성');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
     expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
   });
