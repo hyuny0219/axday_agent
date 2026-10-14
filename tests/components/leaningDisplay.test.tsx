@@ -73,16 +73,16 @@ describe('StageBand 기울음', () => {
     );
   }
 
-  it('기울음 임원은 목표 방향 점선 표정과 "찬성 쪽" 캡션이다', () => {
+  it('기울음 임원은 목표 방향 점선 명패 "찬성 쪽?"이다', () => {
     band({ CFO: 'FOR' });
     expect(screen.getByTestId('stage-mood-CFO')).toHaveClass('stage-band__mood--for', 'stage-band__mood--leaning');
-    expect(screen.getByTestId('stage-seat-CFO')).toHaveTextContent('찬성 쪽 · 미확정');
+    expect(screen.getByTestId('stage-mood-CFO')).toHaveTextContent('찬성 쪽?');
     expect(screen.getByTestId('stage-seat-CFO')).not.toHaveTextContent('고민 중');
     expect(screen.getByTestId('stage-mood-CAIO')).not.toHaveClass('stage-band__mood--leaning');
-    expect(screen.getByTestId('stage-seat-CAIO')).toHaveTextContent('고민 중');
+    expect(screen.getByTestId('stage-mood-CAIO')).toHaveTextContent('고민 중');
   });
 
-  it('기울음이 사라지고 유효 stance가 반대면 캡션은 "반대 쪽"이다(2/2 칩 해제)', () => {
+  it('기울음이 사라지고 유효 stance가 반대면 명패는 확정 "반대"다(2/2 칩 해제)', () => {
     render(
       <StageBand
         stage="REACTIONS"
@@ -95,8 +95,9 @@ describe('StageBand 기울음', () => {
         leaning={{}}
       />,
     );
-    expect(screen.getByTestId('stage-seat-CAIO')).toHaveTextContent('반대 쪽');
-    expect(screen.getByTestId('stage-seat-CAIO')).not.toHaveTextContent('미확정');
+    expect(screen.getByTestId('stage-mood-CAIO')).toHaveTextContent('반대');
+    expect(screen.getByTestId('stage-mood-CAIO')).not.toHaveClass('stage-band__mood--leaning');
+    expect(screen.getByTestId('stage-mood-CAIO')).not.toHaveTextContent('?');
   });
 
   it('leaning이 없으면 기존 표정이다', () => {
@@ -132,11 +133,12 @@ describe('LiveStatementCards 기울음', () => {
     );
   }
 
-  it('answered 카드만 점선 스타일·"찬성 쪽 · 미확정"·"답변하면 확정됩니다"를 보인다', () => {
+  it('answered 카드만 점선 스타일·"찬성 쪽?" 빗금 띠·"답하면 확정" 칩을 보인다', () => {
     cards(roleStatus, [stmt('CEO'), stmt('CFO'), stmt('CAIO'), stmt('CISO')]);
     expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--leaning', 'live-statement--leaning-for');
-    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽 · 미확정');
-    expect(screen.getByTestId('live-leaning-note-CFO')).toHaveTextContent('답변하면 확정됩니다');
+    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽?');
+    expect(screen.getByTestId('stance-band-CFO')).toHaveClass('stance-band--leaning', 'stance-band--for');
+    expect(screen.getByTestId('live-band-chip-CFO')).toHaveTextContent('고민 중 → 찬성 · 답하면 확정');
     expect(screen.getByTestId('live-role-CISO')).not.toHaveClass('live-statement--leaning');
   });
 
@@ -144,7 +146,7 @@ describe('LiveStatementCards 기울음', () => {
     cards({ ...roleStatus, CFO: 'failed', CAIO: 'pending' }, [stmt('CEO'), stmt('CISO')]);
     for (const id of ['CFO', 'CAIO']) {
       expect(screen.getByTestId(`live-role-${id}`)).not.toHaveClass('live-statement--leaning');
-      expect(screen.queryByTestId(`live-leaning-note-${id}`)).toBeNull();
+      expect(screen.queryByTestId(`stance-band-${id}`)).toBeNull();
       expect(screen.getByTestId(`exec-mood-label-${id}`)).toHaveTextContent('고민 중');
     }
     expect(screen.getByTestId('live-role-CFO')).toHaveClass('live-statement--failed');

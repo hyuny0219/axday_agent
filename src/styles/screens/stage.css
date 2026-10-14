@@ -239,61 +239,180 @@
   border-color: var(--accent);
 }
 
-/* 역할·기울기 캡션(T64, Main.html "방향 · 찬성 쪽"): 명패 아래 작은 회색 한 줄.
-   StageBand.tsx가 역할별 관심사 단어(방향/비용/시스템/보안) + STANCE_LABEL을 합쳐 넣는다. */
-.stage-band__caption {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: #9fb6cc;
-  white-space: nowrap;
-}
-
-@media (max-width: 1280px) {
-  .stage-band__caption {
-    display: none;
-  }
-}
-
-/* 임원 표정 배지(T63): 명패 아래 지름 18px 원. RESULT에서는 표 배지(stage-band__vote-badge)가
-   같은 자리를 대신 쓴다. 색뿐 아니라 StageBand.tsx의 MoodIcon(눈+입 SVG)으로도 세 값을
-   구분한다(색만으로 구분 금지). key=stance 트릭으로 값이 바뀔 때마다 이 span이 다시
-   마운트되어 아래 mount 애니메이션이 한 번씩 재생된다(prefers-reduced-motion에서는
-   base.css 전역 규칙이 지속 시간을 0으로 낮춘다). */
+/* 찬반 명패(T131, 지난 T63 표정 점을 대신한다): 찬성 초록·반대 빨강·고민 중 짙은 회색 바탕에
+   흰 큰 글자. 기울음(T118)은 점선 테두리 + 어두운 바탕 + 밝은 글자 "찬성 쪽?", 봉인 단계
+   (MOTION·VOTE)는 중립색 "?"다. 입장이 바뀐 순간에만 한 번 뒤집힌다(key로 새로 마운트,
+   움직임 줄이기에서는 없음). RESULT에서는 표 배지가 같은 자리를 쓴다. */
 .stage-band__mood {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  animation: stage-mood-pop 200ms ease-out both;
+  min-width: 4.4em;
+  padding: 5px 12px 3px;
+  border: 2px solid transparent;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
-@keyframes stage-mood-pop {
-  from {
-    transform: scale(0.5);
-  }
-
-  to {
-    transform: scale(1);
-  }
-}
-
-/* 찬성 쪽은 표 배지 찬성(--accent)과 같은 계열, 반대 쪽은 --vote-no, 미정은 --text-muted
-   (카드가 요구한 --vote-yes 토큰은 없어 기존 찬성 색 --accent로 대신한다). */
 .stage-band__mood--for {
-  background-color: var(--accent);
-  color: var(--bg);
+  background-color: #26774f;
 }
 
 .stage-band__mood--against {
-  background-color: var(--vote-no);
-  color: var(--bg);
+  background-color: #c4473f;
 }
 
 .stage-band__mood--undecided {
-  background-color: var(--text-muted);
-  color: var(--bg);
+  background-color: #4d4a44;
+  color: #eee9dd;
+}
+
+.stage-band__mood--leaning {
+  background-color: rgba(5, 11, 20, 0.88);
+  border-style: dashed;
+}
+
+.stage-band__mood--leaning.stage-band__mood--for {
+  border-color: #6fd3a2;
+  color: #b4efd0;
+}
+
+.stage-band__mood--leaning.stage-band__mood--against {
+  border-color: #ff8f86;
+  color: #ffc4be;
+}
+
+/* 봉인: 방향을 알리지 않는 중립색. */
+.stage-band__mood--sealed {
+  background-color: rgba(5, 11, 20, 0.88);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.stage-band__mood--flip {
+  animation: stage-mood-flip 0.6s ease-out both;
+}
+
+@keyframes stage-mood-flip {
+  from {
+    transform: perspective(300px) rotateX(-90deg);
+  }
+
+  to {
+    transform: perspective(300px) rotateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-band__mood--flip {
+    animation: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .stage-band__mood {
+    padding: 3px 8px 2px;
+    font-size: 14px;
+    border-width: 1px;
+  }
+}
+
+/* 얼굴 둘레 빛 고리(T131): 무대 그림 속 임원 얼굴 자리(좌석 열 가운데, 그림 높이의 ~37%)에 같은
+   색 테두리 빛을 둔다. 폭은 좌석 열(무대 폭 22%)의 절반쯤 = 얼굴 지름. 기울음은 점선, 고민 중은
+   가는 선. 정적 레이어라 애니메이션이 없다. */
+.stage-band__face-ring {
+  position: absolute;
+  left: 50%;
+  top: var(--face-ring-top, 38%);
+  width: 52%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.stage-band__face-ring--for {
+  box-shadow: 0 0 0 3px #3fae7c, 0 0 22px 5px rgba(63, 174, 124, 0.6);
+}
+
+.stage-band__face-ring--against {
+  box-shadow: 0 0 0 3px #ff6a60, 0 0 22px 5px rgba(255, 106, 96, 0.55);
+}
+
+.stage-band__face-ring--undecided {
+  box-shadow: 0 0 0 2px rgba(200, 193, 179, 0.7);
+}
+
+.stage-band__face-ring--leaning {
+  box-shadow: none;
+  outline: 3px dashed currentColor;
+  outline-offset: 4px;
+}
+
+.stage-band__face-ring--leaning.stage-band__face-ring--for {
+  color: #6fd3a2;
+}
+
+.stage-band__face-ring--leaning.stage-band__face-ring--against {
+  color: #ff8f86;
+}
+
+/* 찬반 집계 한 줄(T131): 무대 위쪽 가운데. 말풍선은 그 아래(top)로 내렸다. */
+.stage-band__tally {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14px;
+  padding: 3px 12px;
+  background-color: rgba(5, 11, 20, 0.72);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.stage-band__tally-part b {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 400;
+}
+
+.stage-band__tally-part--for {
+  color: #7fe0ac;
+}
+
+.stage-band__tally-part--leaning {
+  color: #b4efd0;
+}
+
+.stage-band__tally-part--against {
+  color: #ff9d94;
+}
+
+.stage-band__tally-part--undecided {
+  color: #d6cfc0;
+}
+
+@media (max-width: 1280px) {
+  .stage-band__tally {
+    top: 4px;
+    gap: 10px;
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+
+  .stage-band__tally-part b {
+    font-size: 14px;
+  }
 }
 
 /* 발언 시 바닥 시안 글로우(v1.0 1절). silhouette는 좌석 바닥의 색 얼룩으로 표현하고,
@@ -323,7 +442,7 @@
   /* T64가 발화자 라벨 줄을 더하며(아래) 말풍선이 커져 하늘 여백(28%) 밖으로
      밀려났다(실측). top을 8%에서 4%로 올려 늘어난 만큼의 여유를 되찾는다
      (e2e/stage.spec.ts). */
-  top: 4%;
+  top: 8%;
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -573,6 +692,11 @@
   .stage-band__bubble {
     font-size: 11px;
     padding: 5px 8px;
+  }
+
+  /* 집계 줄(T131) 아래로 내린다. '나' 말풍선은 자기 위치(top)를 따로 가진다. */
+  .stage-band__bubble:not(.stage-band__bubble--participant) {
+    top: 10%;
   }
 
   .stage-band__bubble-text {

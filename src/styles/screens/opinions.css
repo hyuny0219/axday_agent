@@ -3,10 +3,8 @@
    규칙(1920×1080)에 그 값을 1.25배 키운 값을 쓰고, @media (max-width: 1280px)에서
    시안 값 그대로로 되돌린다(select.css·attract.css와 같은 비율, T70·T71). em 단위
    letter-spacing은 font-size를 따라 자동으로 커지므로 두 번 적지 않는다. */
-
 /* .opinions-screen(왼쪽 열 actions wrapper)은 CTA 한 개만 담으므로 추가 규칙이 없다
    — 공용 .app-body__actions.screen이 이미 세로로 쌓는다. */
-
 /* 오른쪽 열(.app-body__content)의 유일한 자식. 시안의 오른쪽 "종이" 그 자체다(한
    장짜리 서류철 — 개별 카드가 아니라 이 패널이 배경·그림자를 갖는다). */
 .opinions-screen__paper {
@@ -180,33 +178,6 @@
   border-left-color: var(--ink-muted);
 }
 
-.opinion-card__head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-@media (max-width: 1280px) {
-  .opinion-card__head {
-    gap: 8px;
-  }
-}
-
-/* 타자기 역할 코드("CEO", 시안). 머리줄의 직함(아래)이 이미 "대표이사(CEO)"로 같은
-   정보를 담으므로 장식이다. */
-.opinion-card__code {
-  font-family: var(--font-hud);
-  font-size: 14px;
-  letter-spacing: 0.14em;
-  color: var(--label);
-}
-
-@media (max-width: 1280px) {
-  .opinion-card__code {
-    font-size: 11px;
-  }
-}
-
 .opinion-card__member {
   margin: 0;
   font-size: 18px;
@@ -220,33 +191,7 @@
   }
 }
 
-/* 무대 표정 배지의 접근 가능한 대응 문구(T63, "찬성 쪽/반대 쪽/미정") — 색도 역할색
-   띠와 같은 3색을 쓴다(시안). */
-.opinion-card__mood {
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-@media (max-width: 1280px) {
-  .opinion-card__mood {
-    font-size: 11px;
-  }
-}
-
-.opinion-card--for .opinion-card__mood {
-  color: var(--paper-vote-yes);
-}
-
-.opinion-card--against .opinion-card__mood {
-  color: var(--stamp-red);
-}
-
-.opinion-card--undecided .opinion-card__mood {
-  color: var(--ink-muted);
-}
-
 /* 우측 "발언" 칩은 버튼처럼 보이는 장식이라 T85 #25에서 걷어냈다(OpinionsScreen.tsx). */
-
 /* T85 my#8: 바깥 .opinions-screen__paper가 overflow:hidden(무스크롤 규칙)이라
    너무 긴 문장은 문장 중간에서 말없이 잘렸다 — 줄 클램프 + 말줄임으로 항상 온전한
    단어에서 끊기게 한다. */

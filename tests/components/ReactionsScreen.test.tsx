@@ -118,7 +118,7 @@ describe('ReactionsScreen', () => {
     );
 
     const card = screen.getByTestId('reaction-card-CFO');
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('유지');
+    expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent('유지');
     // 본문은 reactionsFor가 찾은 실제 반응 문구를 그대로 보여준다(배지와는 별개).
     expect(card).toHaveTextContent('한 게시판에서 시작하면 처리 공수를 가늠할 수 있겠습니다');
   });
@@ -154,7 +154,7 @@ describe('ReactionsScreen', () => {
     const card = screen.getByTestId('reaction-card-CEO');
     // 본문이 "기존 의견 유지 — ..."로 시작해(연결된 반응 문구가 없다) 카드 전체
     // 텍스트에는 "유지"가 섞여 있다 — 배지 자체(.reaction-card__badge)만 따로 본다.
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('찬성 → 반대');
+    expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent('찬성 → 반대');
   });
 
   it('T96: 반응 카드 "바뀜"에는 원인 조건 한 줄이 함께 보인다(안건① CAIO, LOG 조건)', () => {
@@ -183,7 +183,7 @@ describe('ReactionsScreen', () => {
     );
 
     const card = screen.getByTestId('reaction-card-CAIO');
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('고민 중 → 찬성');
+    expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent('고민 중 → 찬성');
     expect(card.querySelector('.reaction-card__cause')).toHaveTextContent(
       "이사님의 '승인 사유 기록' 조건으로",
     );
@@ -215,7 +215,7 @@ describe('ReactionsScreen', () => {
     );
 
     const card = screen.getByTestId('reaction-card-CFO');
-    expect(card.querySelector('.reaction-card__badge')).toHaveTextContent('유지');
+    expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent('유지');
     expect(card).toHaveTextContent('금액 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아');
     expect(card.querySelector('.reaction-card__cause')).toBeNull();
   });
@@ -716,14 +716,13 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       const card = screen.getByTestId(`reaction-card-${memberId}`);
       // CAIO는 처음부터 미정이라 입장은 그대로(고민 중 유지), CFO·CISO는 반대에서 고민 중으로 움직인다.
-      expect(card.querySelector('.reaction-card__badge')).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 → 찬성 쪽' : '반대 → 찬성 쪽',
+      expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent(
+        memberId === 'CAIO' ? '고민 중 → 찬성 · 답하면 확정' : '반대 → 찬성 · 답하면 확정',
       );
       expect(card).toHaveTextContent('하나만 더 묻겠습니다');
-      expect(card).toHaveTextContent('답변하면 확정됩니다');
-      expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('찬성 쪽');
+      expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('찬성 쪽?');
     }
-    expect(screen.getByTestId('reaction-card-CEO').querySelector('.reaction-card__badge')).toHaveTextContent('유지');
+    expect(screen.getByTestId('reaction-card-badge-CEO')).toHaveTextContent('유지');
     expect(screen.getByTestId('reaction-card-CEO')).not.toHaveTextContent('하나만 더 묻겠습니다');
   });
 
@@ -915,8 +914,8 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
         step="listen"
       />,
     );
-    expect(screen.getByTestId('reaction-card-badge-CEO')).toHaveTextContent('찬성 → 반대 쪽');
-    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('반대 쪽');
+    expect(screen.getByTestId('reaction-card-badge-CEO')).toHaveTextContent('찬성 → 반대 · 답하면 확정');
+    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('반대 쪽?');
   });
 
   it('live: 모델 stance가 미정이어도 규칙표로 조건이 맞으면 카드 라벨이 "찬성 쪽"이다', () => {
@@ -934,7 +933,7 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
         step="listen"
       />,
     );
-    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('찬성 쪽?');
     // 실패한 CISO는 이전 stance로 기울지 않는다.
     expect(screen.getByTestId('exec-mood-label-CISO')).not.toHaveTextContent('찬성 쪽');
   });
