@@ -13,14 +13,19 @@ function prefersReducedMotion(): boolean {
 
 export function useChangeFlip(value: string, disabled = false): number {
   const previous = useRef(value);
+  const wasDisabled = useRef(disabled);
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    // 지난 화면 보기(disabled)에서 지금 화면으로 돌아오며 값이 달라진 것은 입장 변화가 아니라
+    // 표시를 맞추는 것이다 — 뒤집지 않는다(PR #21 Codex P3).
+    const leavingDisabled = wasDisabled.current && !disabled;
+    wasDisabled.current = disabled;
     if (previous.current === value) {
       return;
     }
     previous.current = value;
-    if (!disabled && !prefersReducedMotion()) {
+    if (!disabled && !leavingDisabled && !prefersReducedMotion()) {
       setCount((current) => current + 1);
     }
   }, [value, disabled]);
