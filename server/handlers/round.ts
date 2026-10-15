@@ -31,6 +31,7 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
+import { buildFirstReactionRule, classifyFirstReaction } from '../prompts/firstReaction';
 import { withTimeout } from './timeout';
 import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
 
@@ -59,6 +60,11 @@ export const roundRequestSchema = z.object({
   /** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). 첫 반응·후속에서 임원의
    * 남은 우려를 이 질문 하나에 맞추게 한다. 생략하면 v13까지의 동작이다. */
   followUpQuestion: followUpQuestionSchema.optional(),
+  /** 참가자의 최신 의견에 확정된 조건 ID(T132, 프롬프트 v16). REACTIONS 첫 반응에서 임원별 stance
+   * 지시를 고르는 데 쓴다. 생략하면 공통 규칙(v15까지의 동작)이다. */
+  confirmedConditionIds: z.array(z.string().min(1)).max(12).optional(),
+  /** 임원별 첫 의견 stance(T132). REACTIONS 첫 반응의 임원별 지시를 고르는 데 쓴다. 생략하면 공통 규칙. */
+  priorStances: z.record(z.string(), z.enum(STANCE_VALUES)).optional(),
   /** 참가자가 추가 질문에 낸 답변 문장(T122). 답했을 때만 싣는다(FOLLOWUP). */
   followUpAnswerText: z.string().min(1).max(300).optional(),
   scenarioId: z.string().min(1),
@@ -137,7 +143,11 @@ const STATEMENT_JSON_SCHEMA: Record<string, unknown> = {
   },
 };
 
-function stageInstruction(stage: RoundRequest['stage'], hasAnswerText = false): string {
+function stageInstruction(
+  stage: RoundRequest['stage'],
+  hasAnswerText = false,
+  firstReactionRule: string = REACTIONS_FIRST_PASS_RULE,
+): string {
   switch (stage) {
     case 'OPINIONS':
       return '지금은 초기 의견 단계입니다. 자료와 원안을 근거로 짧은 논거와 확인 질문을 내십시오.';
@@ -147,7 +157,7 @@ function stageInstruction(stage: RoundRequest['stage'], hasAnswerText = false): 
         ' 수정을 할 수 있습니다. referencedStatementIds에는 실제로 언급한 발언 ID만 넣으십시오.' +
         ' 참가자 발언의 핵심 주장 한 가지를 짚어 그 주장에 직접 답하십시오 — "말씀은 잘' +
         ' 들었습니다" 같은 수신 확인만 하고 넘어가지 마십시오. ' +
-        REACTIONS_FIRST_PASS_RULE
+        firstReactionRule
       );
     case 'FOLLOWUP':
       return (
@@ -187,7 +197,21 @@ function buildRoundSystemPrompt(
   return [
     buildCommonGuardrails(),
     rolePrompt,
-    stageInstruction(input.stage, input.followUpAnswerText !== undefined),
+    stageInstruction(
+      input.stage,
+      input.followUpAnswerText !== undefined,
+      input.stage === 'REACTIONS'
+        ? buildFirstReactionRule(
+            classifyFirstReaction({
+              scenarioId: input.scenarioId,
+              roleId,
+              participantStance: input.participantStance,
+              confirmedConditionIds: input.confirmedConditionIds,
+              priorStance: input.priorStances?.[roleId],
+            }),
+          )
+        : undefined,
+    ),
     ...(input.stage === 'REACTIONS' && input.followUpQuestion
       ? [buildReactionsQuestionRule(roleId, input.followUpQuestion)]
       : []),

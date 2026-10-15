@@ -510,7 +510,7 @@ describe('두 단계 설득 프롬프트(T110, v12)', () => {
   }
 
   it('프롬프트 버전이 v14이다', () => {
-    expect(PROMPT_VERSION).toBe('v15');
+    expect(PROMPT_VERSION).toBe('v16');
   });
 
   it('요청 스키마가 followUpAnswered(불리언, 선택)를 받고 다른 타입은 거절한다', () => {
