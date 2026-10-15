@@ -9,6 +9,7 @@ import {
   parseArgs,
   callRecordsByRole,
   evalFollowUpQuestion,
+  firstReactionStats,
   newQuestionStats,
   findFollowUpVerdictWords,
   followUpVerdictStats,
@@ -335,5 +336,54 @@ describe('parseArgs --case (PR #21 Codex P2)', () => {
   });
   it('--case 없이 --out만 주면 전체 케이스(only 빈 배열)', () => {
     expect(parseArgs(['--out', 'x.jsonl']).only).toEqual([]);
+  });
+});
+
+describe('firstReactionStats(T132)', () => {
+  function stageRow(
+    caseId: string,
+    roleId: EvalRow['roleId'],
+    stage: EvalRow['stage'],
+    stance: string,
+    pathId = 'no_condition',
+    participantStance?: string,
+  ): EvalRow {
+    return { ...row('x'), caseId, roleId, stage, stance, pathId, participantStance };
+  }
+
+  it('전이표·같은 편 유지율·조건 없는 경로의 고민 중 전환을 센다', () => {
+    const rows: EvalRow[] = [
+      stageRow('a', 'CEO', 'OPINIONS', 'FOR'),
+      stageRow('a', 'CEO', 'REACTIONS', 'FOR'),
+      stageRow('a', 'CFO', 'OPINIONS', 'FOR'),
+      stageRow('a', 'CFO', 'REACTIONS', 'UNDECIDED'),
+      stageRow('a', 'CAIO', 'OPINIONS', 'AGAINST'),
+      stageRow('a', 'CAIO', 'REACTIONS', 'UNDECIDED'),
+      stageRow('a', 'CISO', 'OPINIONS', 'AGAINST'),
+      stageRow('a', 'CISO', 'REACTIONS', 'AGAINST'),
+      // 조건 보완 경로의 반대→고민 중은 "조건 없는 경로" 집계에 들지 않는다.
+      stageRow('b', 'CFO', 'OPINIONS', 'AGAINST', 'condition_supplement'),
+      stageRow('b', 'CFO', 'REACTIONS', 'UNDECIDED', 'condition_supplement'),
+    ];
+    const stats = firstReactionStats(rows);
+    expect(stats.transitions).toEqual({ 'FOR→FOR': 1, 'FOR→UNDECIDED': 1, 'AGAINST→UNDECIDED': 2, 'AGAINST→AGAINST': 1 });
+    expect(stats.sameSide).toBe(2 + 0);
+    expect(stats.sameSideKept).toBe(1);
+    expect(stats.noConditionOpposed).toBe(2);
+    expect(stats.noConditionToUndecided).toBe(1);
+  });
+
+  it('참가자가 반대면 반대 쪽 임원이 같은 편이다', () => {
+    const rows: EvalRow[] = [
+      stageRow('c', 'CFO', 'OPINIONS', 'AGAINST', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CFO', 'REACTIONS', 'AGAINST', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CEO', 'OPINIONS', 'FOR', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CEO', 'REACTIONS', 'UNDECIDED', 'opposition_pure', 'AGAINST'),
+    ];
+    const stats = firstReactionStats(rows);
+    expect(stats.sameSide).toBe(1);
+    expect(stats.sameSideKept).toBe(1);
+    expect(stats.noConditionOpposed).toBe(1);
+    expect(stats.noConditionToUndecided).toBe(1);
   });
 });

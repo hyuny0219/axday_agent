@@ -316,6 +316,13 @@ async function runCase(
     // 첫 반응은 항상 "아직 답하기 전"이다(REACTIONS 단계 자체가 그 뜻이라 값은 영향이 없다).
     followUpAnswered: false,
     followUpQuestion: evalFollowUpQuestion(evalCase.scenarioId, evalCase.participantStance),
+    // T132(v16): 실제 앱처럼 확정 조건과 임원별 첫 의견 입장을 싣는다(임원별 첫 반응 지시 판정용).
+    confirmedConditionIds: [...evalCase.effectiveConditionIds],
+    priorStances: Object.fromEntries(
+      opinionsResults
+        .filter((r) => r.status === 'answered' && r.statement)
+        .map((r) => [r.roleId, r.statement!.stance]),
+    ),
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -749,6 +756,53 @@ export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplem
   return { eligible, persuaded };
 }
 
+export interface FirstReactionStats {
+  /** "첫 의견 stance→첫 반응 stance" 별 건수(둘 다 answered·stance 보유 행만). */
+  transitions: Record<string, number>;
+  /** 첫 의견이 참가자와 같은 편(참가자 입장 없음은 FOR)인 (케이스,임원) 수와 첫 반응이 그대로인 수. */
+  sameSide: number;
+  sameSideKept: number;
+  /** 조건 없는 경로(no_condition·opposition_pure)에서 참가자 반대 편으로 시작한 임원 수와 그중 첫 반응이 UNDECIDED인 수. */
+  noConditionOpposed: number;
+  noConditionToUndecided: number;
+}
+
+/**
+ * T132: 첫 반응 입장 분포(첫 의견→첫 반응 전이표)와 같은 편 임원 유지율, 조건 없는 경로의 고민 중 전환 수.
+ * v13~v15는 전이표가 거의 전부 "→UNDECIDED"였다(docs/eval/tuning-v16.md).
+ */
+export function firstReactionStats(rows: EvalRow[]): FirstReactionStats {
+  const stats: FirstReactionStats = {
+    transitions: {},
+    sameSide: 0,
+    sameSideKept: 0,
+    noConditionOpposed: 0,
+    noConditionToUndecided: 0,
+  };
+  const opening = new Map<string, string>();
+  for (const row of rows) {
+    if (row.stage === 'OPINIONS' && row.status === 'answered' && row.stance) {
+      opening.set(`${row.caseId}/${row.roleId}`, row.stance);
+    }
+  }
+  for (const row of rows) {
+    if (row.stage !== 'REACTIONS' || row.status !== 'answered' || !row.stance) continue;
+    const before = opening.get(`${row.caseId}/${row.roleId}`);
+    if (!before) continue;
+    const key = `${before}→${row.stance}`;
+    stats.transitions[key] = (stats.transitions[key] ?? 0) + 1;
+    const direction = row.participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+    if (before === direction) {
+      stats.sameSide += 1;
+      if (row.stance === before) stats.sameSideKept += 1;
+    } else if (before !== 'UNDECIDED' && (row.pathId === 'no_condition' || row.pathId === 'opposition_pure')) {
+      stats.noConditionOpposed += 1;
+      if (row.stance === 'UNDECIDED') stats.noConditionToUndecided += 1;
+    }
+  }
+  return stats;
+}
+
 export interface NewQuestionStats {
   /** REACTIONS answered 행 중 질문자가 아닌 임원의 발언 수. */
   nonAskerRows: number;
@@ -881,6 +935,7 @@ function runCheck(files: string[]): void {
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
     const newQuestions = newQuestionStats(rows);
+    const firstReaction = firstReactionStats(rows);
     const distribution = voteDistributionByPath(rows);
     const plainStats = plainLanguageStats(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
@@ -897,6 +952,16 @@ function runCheck(files: string[]): void {
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}` +
         ` · 첫 반응 새 질문(질문자 외) ${newQuestions.newQuestionRows}/${newQuestions.nonAskerRows}`,
+    );
+    // T132: 첫 반응 입장 분포와 같은 편 유지율.
+    console.log(
+      `    [첫 반응 입장] ${
+        Object.entries(firstReaction.transitions)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k} ${v}`)
+          .join(' · ') || '없음'
+      } · 같은 편 임원 유지 ${firstReaction.sameSideKept}/${firstReaction.sameSide}` +
+        ` · 조건 없는 경로 반대 쪽 임원의 고민 중 전환 ${firstReaction.noConditionToUndecided}/${firstReaction.noConditionOpposed}`,
     );
     // T93: 쉬운 말 가독성 지표(측정만, 거절하지 않음).
     console.log(

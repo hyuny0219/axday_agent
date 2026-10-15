@@ -107,3 +107,43 @@ describe('live 어댑터의 추가 질문·답변 전달(T122)', () => {
     expect(body.followUpQuestion).toBeUndefined();
   });
 });
+
+describe('live 어댑터의 첫 반응 판정 값 전달(T132)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('REACTIONS 요청에만 확정 조건과 임원별 첫 의견 입장을 싣는다', async () => {
+    const withConditions = { ...opinion(1, '찬성합니다.', 'FOR'), confirmedConditionIds: ['LIMIT', 'LOG'] };
+    const ctx = ctxFor({
+      stage: 'REACTIONS',
+      opinions: [withConditions],
+      transcript: {
+        revision: 1,
+        statements: [
+          {
+            id: 's1',
+            roleId: 'CFO',
+            stage: 'OPINIONS',
+            text: '반대합니다.',
+            evidenceIds: [],
+            referencedStatementIds: [],
+            concerns: [],
+            suggestedConditionIds: [],
+            stance: 'AGAINST',
+            source: 'live',
+            createdAt: 0,
+          },
+        ],
+      },
+    });
+    const body = await capturedBody((adapter) => adapter.reactions(ctx));
+    expect(body.confirmedConditionIds).toEqual(['LIMIT', 'LOG']);
+    expect((body.priorStances as Record<string, string>).CFO).toBe('AGAINST');
+    expect((body.priorStances as Record<string, string>).CEO).toBe('UNDECIDED');
+
+    const opinionsBody = await capturedBody((adapter) => adapter.initialOpinions(ctxFor({ stage: 'OPINIONS' })));
+    expect(opinionsBody.confirmedConditionIds).toBeUndefined();
+    expect(opinionsBody.priorStances).toBeUndefined();
+  });
+});

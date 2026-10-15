@@ -177,7 +177,10 @@ export function LiveStatementCards({
             ? // 처음 의견의 입장에서 출발한다(반대였으면 "반대 → 찬성", PR #21 Codex P2). 없으면 고민 중.
               leaningChipText(opinionStatement?.stance ?? 'UNDECIDED', leanTo)
             : isMaintained
-              ? '유지'
+              ? // T132: 첫 의견·첫 반응이 모두 고민 중이면 "유지"만으로는 반응이 없어 보인다(scripted T110과 같게).
+                opinionStatement?.stance === 'UNDECIDED' && statement?.stance === 'UNDECIDED'
+                ? '고민 중 유지'
+                : '유지'
               : opinionStatement?.stance
                 ? `${SHORT_STANCE_LABEL[opinionStatement.stance]} → ${SHORT_STANCE_LABEL[stance]}`
                 : '바뀜';

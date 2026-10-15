@@ -286,4 +286,34 @@ describe('LiveStatementCards', () => {
       screen.getByTestId('retry-failed-roles'),
     );
   });
+
+  it("variant='reaction'에서 첫 의견·첫 반응이 모두 고민 중이면 칩이 '고민 중 유지'다(T132)", () => {
+    const undecided: Statement[] = statements.map((statement) => ({ ...statement, stance: 'UNDECIDED' as const }));
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={undecided}
+        stances={{ ...stances, CEO: 'UNDECIDED' }}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('고민 중 유지');
+  });
+
+  it("variant='reaction'에서 찬성을 그대로 유지하면 칩은 '유지'다(T132)", () => {
+    const kept: Statement[] = statements.map((statement) => ({ ...statement, stance: 'FOR' as const }));
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={kept}
+        stances={stances}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO').textContent).toBe('유지');
+  });
 });
