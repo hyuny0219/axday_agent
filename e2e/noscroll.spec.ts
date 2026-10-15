@@ -700,9 +700,10 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
 // 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
 const T119_CASES = [
   { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
-  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 7, hinted: 'FULL_AUTO' },
+  // T133: 반대 쪽 추가 답변에서 함정 조건(FULL_AUTO·EXP_ONLY) 문구를 빼 카드가 하나 줄었다.
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 6, hinted: 'LIMIT' },
   { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
-  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 7, hinted: 'SCOPE' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 6, hinted: 'SCOPE' },
 ] as const;
 
 for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {

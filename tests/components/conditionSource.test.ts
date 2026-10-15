@@ -25,9 +25,11 @@ describe('conditionSourceHint', () => {
     expect(conditionSourceHint(aiApprovalScenario, 'OWNER', 'FOR', 'DISCUSS')).toBe(
       '다음 단계 추가 답변에서 고를 수 있습니다',
     );
-    expect(conditionSourceHint(aiApprovalScenario, 'FULL_AUTO', 'AGAINST', 'REACTIONS')).toBe(
+    expect(conditionSourceHint(aiApprovalScenario, 'LIMIT', 'AGAINST', 'REACTIONS')).toBe(
       '추가 답변에서 고를 수 있습니다',
     );
+    // T133: 반대 쪽에서는 함정 조건(FULL_AUTO)을 제안하지 않으므로 안내도 없다.
+    expect(conditionSourceHint(aiApprovalScenario, 'FULL_AUTO', 'AGAINST', 'REACTIONS')).toBeNull();
   });
 
   it('REACTIONS에서는 추천 문구 단계가 지나 추가 답변이 없으면 안내하지 않는다', () => {
@@ -39,12 +41,14 @@ describe('conditionSourceHint', () => {
     expect(isConditionOffered(withoutFollowUp, 'OWNER', 'FOR')).toBe(false);
   });
 
-  it('입장이 없으면 안내하지 않고, 두 안건의 모든 조건은 두 입장에서 닿는다', () => {
+  it('입장이 없으면 안내하지 않고, 모든 조건은 찬성 입장에서, 함정 조건을 뺀 조건은 반대 입장에서 닿는다(T133)', () => {
     expect(conditionSourceHint(aiApprovalScenario, 'LIMIT', null, 'DISCUSS')).toBeNull();
+    const traps: Record<string, string> = { 'ai-approval': 'FULL_AUTO', 'experience-first': 'EXP_ONLY' };
     for (const scenario of [aiApprovalScenario, experienceFirstScenario]) {
       for (const side of ['FOR', 'AGAINST'] as const) {
         for (const condition of scenario.conditions) {
-          expect(isConditionOffered(scenario, condition.id, side), `${scenario.id} ${side} ${condition.id}`).toBe(true);
+          const expected = !(side === 'AGAINST' && condition.id === traps[scenario.id]);
+          expect(isConditionOffered(scenario, condition.id, side), `${scenario.id} ${side} ${condition.id}`).toBe(expected);
         }
       }
     }
