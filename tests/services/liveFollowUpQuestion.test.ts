@@ -140,7 +140,8 @@ describe('live 어댑터의 첫 반응 판정 값 전달(T132)', () => {
     const body = await capturedBody((adapter) => adapter.reactions(ctx));
     expect(body.confirmedConditionIds).toEqual(['LIMIT', 'LOG']);
     expect((body.priorStances as Record<string, string>).CFO).toBe('AGAINST');
-    expect((body.priorStances as Record<string, string>).CEO).toBe('UNDECIDED');
+    // 첫 의견 발언이 없는 임원(응답 실패 등)은 만들어 넣지 않는다 — 서버가 그 임원만 공통 규칙으로 폴백한다.
+    expect(body.priorStances).toEqual({ CFO: 'AGAINST' });
 
     const opinionsBody = await capturedBody((adapter) => adapter.initialOpinions(ctxFor({ stage: 'OPINIONS' })));
     expect(opinionsBody.confirmedConditionIds).toBeUndefined();

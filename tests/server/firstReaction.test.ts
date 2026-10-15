@@ -55,6 +55,37 @@ describe('classifyFirstReaction', () => {
     ).toBe('KEEP');
   });
 
+  it('(d) 조건 때문에 표가 참가자에게서 멀어지는 임원은 같은 편이어도 REVERSED(함정 조건)', () => {
+    expect(
+      classifyFirstReaction({
+        scenarioId: 'ai-approval',
+        roleId: 'CEO',
+        participantStance: 'FOR',
+        confirmedConditionIds: ['FULL_AUTO'],
+        priorStance: 'FOR',
+      }),
+    ).toBe('REVERSED');
+    expect(
+      classifyFirstReaction({
+        scenarioId: 'experience-first',
+        roleId: 'CEO',
+        participantStance: 'FOR',
+        confirmedConditionIds: ['EXP_ONLY'],
+        priorStance: 'FOR',
+      }),
+    ).toBe('REVERSED');
+    // 같은 조건이어도 규칙표가 움직이지 않는 임원은 그대로 같은 편이다.
+    expect(
+      classifyFirstReaction({
+        scenarioId: 'ai-approval',
+        roleId: 'CFO',
+        participantStance: 'FOR',
+        confirmedConditionIds: ['FULL_AUTO'],
+        priorStance: 'FOR',
+      }),
+    ).toBe('SAME_SIDE');
+  });
+
   it('판정에 필요한 값이 없으면 null(공통 규칙으로 폴백)', () => {
     const base = { scenarioId: 'ai-approval', roleId: 'CFO', participantStance: 'FOR' as const };
     expect(classifyFirstReaction({ ...base, confirmedConditionIds: [] })).toBeNull();
@@ -71,6 +102,8 @@ describe('buildFirstReactionRule', () => {
     expect(buildFirstReactionRule('MAY_CROSS')).toBe(REACTIONS_FIRST_PASS_RULE);
     expect(buildFirstReactionRule('SAME_SIDE')).toContain('UNDECIDED(고민 중)로 바꾸지 마십시오');
     expect(buildFirstReactionRule('KEEP')).toContain('처음 입장 그대로 유지');
+    expect(buildFirstReactionRule('REVERSED')).toContain('받아들이기 어렵다는 쪽');
+    expect(buildFirstReactionRule('REVERSED')).not.toContain('바꾸지 마십시오');
     expect(buildFirstReactionRule('SAME_SIDE')).not.toContain('UNDECIDED(고민 중)까지만');
     expect(buildFirstReactionRule('KEEP')).not.toContain('UNDECIDED(고민 중)까지만');
   });
@@ -135,6 +168,32 @@ describe('REACTIONS 시스템 프롬프트의 임원별 첫 반응 지시', () =
     );
     expect(systems.CFO).toContain('아직 풀리지 않았습니다');
     expect(systems.CFO).not.toContain('UNDECIDED(고민 중)까지만');
+  });
+
+  it('함정 조건이 붙으면 CEO는 입장 유지 대신 REVERSED 지시를 받고 나머지는 그대로다', async () => {
+    const { systems, provider } = capture();
+    await handleRound(
+      input({
+        confirmedConditionIds: ['FULL_AUTO'],
+        priorStances: { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' },
+      }),
+      { provider },
+    );
+    expect(systems.CEO).toContain('받아들이기 어렵다는 쪽');
+    expect(systems.CEO).not.toContain('바꾸지 마십시오');
+    expect(systems.CFO).toContain('바꾸지 마십시오');
+  });
+
+  it('priorStances에 빠진 임원만 공통 규칙으로 폴백한다', async () => {
+    const { systems, provider } = capture();
+    await handleRound(
+      input({ confirmedConditionIds: [], priorStances: { CEO: 'FOR', CFO: 'AGAINST' } }),
+      { provider },
+    );
+    expect(systems.CEO).toContain('바꾸지 마십시오');
+    expect(systems.CFO).toContain('아직 풀리지 않았습니다');
+    expect(systems.CAIO).toContain(REACTIONS_FIRST_PASS_RULE);
+    expect(systems.CISO).toContain(REACTIONS_FIRST_PASS_RULE);
   });
 
   it('값이 없으면 v15 공통 규칙으로 폴백한다', async () => {

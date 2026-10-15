@@ -8,7 +8,7 @@ import type { ExecMemberId, Scenario } from '../../src/content/types';
 import { decideMember } from '../../src/domain/voting';
 import { REACTIONS_FIRST_PASS_RULE } from './common';
 
-export type FirstReactionKind = 'SAME_SIDE' | 'MAY_CROSS' | 'KEEP';
+export type FirstReactionKind = 'SAME_SIDE' | 'MAY_CROSS' | 'KEEP' | 'REVERSED';
 
 const SCENARIOS: Record<string, Scenario> = {
   [aiApprovalScenario.id]: aiApprovalScenario,
@@ -33,9 +33,6 @@ export function classifyFirstReaction(input: FirstReactionInput): FirstReactionK
     return null;
   }
   const direction: 'FOR' | 'AGAINST' = input.participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
-  if (input.priorStance === direction) {
-    return 'SAME_SIDE';
-  }
   const target = direction === 'FOR' ? 'YES' : 'NO';
   const ctx = {
     conditionIds: [...input.confirmedConditionIds],
@@ -43,9 +40,17 @@ export function classifyFirstReaction(input: FirstReactionInput): FirstReactionK
     participantStance: input.participantStance ?? null,
     followUpAnswered: true,
   };
-  return decideMember(rules, ctx) === target && decideMember(rules, { ...ctx, conditionIds: [] }) !== target
-    ? 'MAY_CROSS'
-    : 'KEEP';
+  const withConditions = decideMember(rules, ctx);
+  const withoutConditions = decideMember(rules, { ...ctx, conditionIds: [] });
+  // 조건 때문에 표가 참가자 쪽에서 멀어지는 임원(함정 조건 등)은 같은 편 지름길보다 먼저 가른다 —
+  // 규칙표가 반대로 가는데 입장 유지를 시키면 표결에서 갑자기 뒤집힌다.
+  if (withoutConditions === target && withConditions !== target) {
+    return 'REVERSED';
+  }
+  if (input.priorStance === direction) {
+    return 'SAME_SIDE';
+  }
+  return withConditions === target && withoutConditions !== target ? 'MAY_CROSS' : 'KEEP';
 }
 
 const KEEP_PRIOR_TAIL =
@@ -59,6 +64,13 @@ export function buildFirstReactionRule(kind: FirstReactionKind | null): string {
         '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 당신은 처음부터 참가자와 같은 편이었습니다.' +
         ' stance를 처음 입장(FOR 또는 AGAINST) 그대로 유지하고 UNDECIDED(고민 중)로 바꾸지 마십시오.' +
         ' 발언에서도 같은 편으로서 참가자의 주장을 받쳐 주십시오.' +
+        KEEP_PRIOR_TAIL
+      );
+    case 'REVERSED':
+      return (
+        '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자가 이번에 붙인 조건은 오히려 당신의 우려를' +
+        ' 키웁니다. 처음 입장을 그대로 지키지 말고, 그 조건을 받아들이기 어렵다는 쪽으로 stance를 정하십시오' +
+        '(참가자가 찬성이면 AGAINST, 반대면 FOR). 발언에는 그 조건이 왜 걱정인지 평서문으로 이유를 말하십시오.' +
         KEEP_PRIOR_TAIL
       );
     case 'MAY_CROSS':
