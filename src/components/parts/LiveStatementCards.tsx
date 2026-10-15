@@ -174,7 +174,8 @@ export function LiveStatementCards({
         const bandChip = !isReaction
           ? undefined
           : leanTo
-            ? leaningChipText('UNDECIDED', leanTo)
+            ? // 처음 의견의 입장에서 출발한다(반대였으면 "반대 → 찬성", PR #21 Codex P2). 없으면 고민 중.
+              leaningChipText(opinionStatement?.stance ?? 'UNDECIDED', leanTo)
             : isMaintained
               ? '유지'
               : opinionStatement?.stance

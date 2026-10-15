@@ -102,6 +102,26 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
   });
 
+  it('기울음 칩은 처음 의견의 입장에서 출발한다(반대 → 찬성, PR #21 Codex P2)', () => {
+    const undecidedReaction: Statement[] = [
+      statements[0]!, // CEO OPINIONS: AGAINST
+      { ...statements[1]!, stance: 'UNDECIDED' }, // REACTIONS: 고민 중이지만 찬성 쪽으로 기울음
+    ];
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={undecidedReaction}
+        stances={{ ...stances, CEO: 'UNDECIDED' }}
+        leaning={{ CEO: 'FOR' }}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('반대 → 찬성 · 답하면 확정');
+    expect(screen.getByTestId('live-band-chip-CEO')).not.toHaveTextContent('고민 중 →');
+  });
+
   it("variant='reaction'에서 stance가 같으면 문장이 다시 쓰여도 '유지'로 본다(PR #12 Codex 3차 검토 1)", () => {
     const sameStanceStatements: Statement[] = [
       {
