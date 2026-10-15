@@ -11,6 +11,8 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T133 | 진행 | 반대 쪽 추가 답변에서 함정 조건(FULL_AUTO·EXP_ONLY) 제안 문구 제거, T119 "모든 조건 도달" 불변식은 찬성 입장 한정(2026-10-15 사용자 지시). 상세는 아래 T133 카드 |
+| T132 | 진행 | live 첫 반응이 전원 "고민 중"으로 뭉개지는 문제(v13~v15 실측 83/83) — 임원별 첫 반응 지시 분리(프롬프트 v16), 칩 "고민 중 유지", 첫 반응 입장 분포 지표(2026-10-15 사용자 지시). 상세는 아래 T132 카드 |
 | T131 | 완료 | AI 임원 찬반 강조: 발언·반응 카드 색 머리띠(B안) + 무대 명패·집계(C안, 얼굴 동그라미는 사용자 지시로 제거)(2026-10-14 사용자 지시, 시안 https://claude.ai/artifact/11mXmZZL4ig2DbYhBysQeN). 상세는 아래 T131 카드 |
 | T130 | 완료 | BGM 기본을 랜덤 재생으로(체험마다 한 곡, 바로 전 곡 피함), 운영자는 '소리'에서 특정 곡·끄기를 선택(2026-10-13 사용자 지시). 저장 키 v2 |
 | T129 | 완료 | 임원 발언의 "돈 한도" → "금액 한도"(2026-10-13 사용자 지시). scripted 발언·조건 문구(aiApproval.ts)·쉬운 말 규칙 예시(plainLanguage.ts) 수정, 프롬프트 v15 |
@@ -114,6 +116,31 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T133 반대 쪽 추가 답변의 함정 조건 문구 제거
+
+- 사용자 지적(2026-10-15): AI 결재 안건에 반대 의견을 내고 반응에 답하기로 가면 반대 쪽 추천 답변에 "사람 확인 없이 전부 맡기기"(FULL_AUTO)가 뜬다 — "이게 맞아?" → 검토 결과 맞지 않음, "둘 다 진행해줘".
+- 원인: T119가 "추천 문구만으로 모든 조건에 도달"을 입장 구분 없이 적용해 반대 쪽에도 조건마다 "그래도 급하다면 ○○라면 다시 생각해 보겠습니다"를 만들었고, 함정 조건(ai-approval FULL_AUTO, experience-first EXP_ONLY)까지 넣었다. 반대 참가자가 결재권을 가장 많이 넘기는 조건을 "다시 생각해 보겠다"는 말은 앞뒤가 맞지 않고, 규칙표상 그 조건 하나로 임원 4명이 모두 반대가 돼 반대 쪽의 확실한 지름길이 된다.
+- 할 일: 두 안건의 `followUp.options` 중 `side: 'AGAINST'`이면서 함정 조건(각 안건 conflicts 쌍의 극단 쪽, 즉 모든 임원을 NO로 만드는 조건)을 제안하는 항목을 지운다. T119 불변식 테스트(tests/content/conditionCoverage.test.ts 등)는 "찬성 입장에서 모든 조건 도달"로 좁히고, "반대 쪽 추천 답변은 함정 조건을 제안하지 않는다"는 테스트를 더한다. 시나리오 문서(SCENARIO_*.md) 후속 표 갱신.
+- 남은 결정(사용자 미정): 반대 입장은 조건 없이도 기본 승리(같은 표 4석) — 난이도 조정은 별도.
+
+## T132 live 첫 반응 입장이 전원 "고민 중"이 되는 문제
+
+- 사용자 지적(2026-10-15): "반응에 답하기 첫화면에서 … 카드는 전부 고민중으로 보여 … 같은 의견이었던 임원들의 반응이 고민중으로 바뀌는것도 괜찮은건지" → 검토 결과 회귀, "둘 다 진행해줘".
+- 실측 근거(첫 의견 → 첫 반응 stance, answered 기준): v11 FOR→FOR 14·AGAINST→AGAINST 28·UNDECIDED→AGAINST 13·AGAINST→FOR 5 등 분화 / **v13 85건 중 83, v14 86/86, v15 83/83이 UNDECIDED**. 원인은 T110(v12)의 `REACTIONS_FIRST_PASS_RULE`("이번에는 stance를 UNDECIDED까지만") — 끝의 예외("처음부터 같은 편이면 유지, 우려가 안 풀렸으면 처음 입장 유지")를 모델이 무시한다. 결과: 조건 없이도 반대 임원이 전원 고민 중(가짜 진전), 같은 편 CEO가 고민 중(편이 줄어든 것처럼 보임), T131 머리띠·명패가 거의 회색.
+- 할 일:
+  1. **임원별 첫 반응 지시(프롬프트 v16)**: 서버(round.ts)가 REACTIONS 첫 반응에서 역할마다 다른 지시를 붙인다(T122 buildReactionsQuestionRule처럼). 판정은 서버가 이미 가진 안건 데이터·도메인 함수로: 참가자 입장(participantStance)·확정 조건(요청에 있는 값)과 그 임원의 첫 의견 stance로
+     - (a) 처음부터 참가자와 같은 편 → "처음 입장(FOR/AGAINST) 그대로 유지, 고민 중으로 바꾸지 말 것";
+     - (b) 이번 조건으로 그 임원의 표가 참가자 쪽으로 넘어갈 수 있는 경우(규칙표: 이 조건이면 목표 표, 조건 없으면 아님 — 클라이언트 `leaningStances`와 같은 판정) → 지금의 "UNDECIDED까지만, 하나만 더 묻겠다";
+     - (c) 그 외(우려가 안 풀림) → "처음 입장 그대로 유지(반대였으면 반대), 남은 우려를 말할 것".
+     함정 조건이 붙어 참가자 반대 방향으로 가는 경우 등 규칙표가 말하는 방향을 넘지 않게. 요청에 판정에 필요한 값이 없으면 지금 동작(공통 규칙)으로 떨어진다.
+  2. **칩 문구**: live 반응 카드에서 첫 의견·첫 반응 모두 UNDECIDED면 "유지" 대신 "고민 중 유지"(scripted T110과 같게). FOR/AGAINST 유지는 "찬성 유지"/"반대 유지"로 통일해도 좋다(scripted와 같은 규칙으로).
+  3. **지표**: `scripts/eval-set-run.ts --check`에 "첫 반응 입장 분포"(첫 의견→첫 반응 전이표)와 "같은 편 임원 유지율"·"조건 없는 경로에서 고민 중 전환 수"를 추가한다.
+  4. **실측**: 크레딧 절약 — `--case`로 대표 케이스만(예: ai-approval·experience-first 각각 no_condition·condition_supplement·opposition_pure 1개씩 = 6케이스). 목표: 같은 편 임원 첫 반응 유지 ≥ 90%, 조건 없는 경로의 반대→고민 중 0에 가깝게, 조건 보완 경로의 최종 YES 12/12 유지(해당 케이스 기준). 결과 `docs/eval/tuning-v16.md`.
+- 읽을 것: `server/handlers/round.ts`(stageInstruction·REACTIONS 지시 조립·T115 교정·T122 역할별 규칙), `server/prompts/common.ts`, `server/prompts/version.ts`, `server/scenario-data.ts`, `src/domain/stance.ts`(leaningStances·decideMember 사용법), `src/domain/voting.ts`, `src/components/parts/LiveStatementCards.tsx`(bandChip), `scripts/eval-set-run.ts`, docs/eval/tuning-v14.md·v15.md, DESIGN_SPEC T110·T118·T122·T131.
+- 만들 것: 위 1~4, 단위 테스트(역할별 지시 판정 a/b/c·요청값 없을 때 폴백·칩 문구·지표 계산), 프롬프트 버전 v16 기록, DESIGN_SPEC "## T132", TASKS 행 완료.
+- 허용 경로: `server/`, `src/`, `scripts/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: 표결 규칙표·봉인 규칙 변경, 전수 실측(344행) — 대표 케이스만.
+- 크기: M.
 
 ## T131 AI 임원 찬반 강조 — 카드 색 머리띠(B안) + 무대 명패·집계(C안)
 
