@@ -96,9 +96,30 @@ describe('LiveStatementCards', () => {
     // CEO의 OPINIONS stance(AGAINST)와 REACTIONS stance(FOR)가 다르므로 "바뀜"(유지
     // 아님)으로 본다(PR #12 Codex 3차 검토 1 — 문장이 아니라 stance로 가른다).
     expect(screen.getByTestId('live-role-CEO')).not.toHaveClass('live-statement--maintained');
-    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성 쪽');
+    expect(screen.getByTestId('exec-mood-label-CEO')).toHaveTextContent('찬성');
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('반대 → 찬성');
     expect(screen.getByTestId('exec-mood-label-CFO')).toHaveTextContent('반대 쪽');
     expect(screen.getByTestId('exec-mood-label-CAIO')).toHaveTextContent('고민 중');
+  });
+
+  it('기울음 칩은 처음 의견의 입장에서 출발한다(반대 → 찬성, PR #21 Codex P2)', () => {
+    const undecidedReaction: Statement[] = [
+      statements[0]!, // CEO OPINIONS: AGAINST
+      { ...statements[1]!, stance: 'UNDECIDED' }, // REACTIONS: 고민 중이지만 찬성 쪽으로 기울음
+    ];
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={undecidedReaction}
+        stances={{ ...stances, CEO: 'UNDECIDED' }}
+        leaning={{ CEO: 'FOR' }}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('반대 → 찬성 · 답하면 확정');
+    expect(screen.getByTestId('live-band-chip-CEO')).not.toHaveTextContent('고민 중 →');
   });
 
   it("variant='reaction'에서 stance가 같으면 문장이 다시 쓰여도 '유지'로 본다(PR #12 Codex 3차 검토 1)", () => {
@@ -264,5 +285,35 @@ describe('LiveStatementCards', () => {
     expect(screen.getByTestId('live-role-CFO')).toContainElement(
       screen.getByTestId('retry-failed-roles'),
     );
+  });
+
+  it("variant='reaction'에서 첫 의견·첫 반응이 모두 고민 중이면 칩이 '고민 중 유지'다(T132)", () => {
+    const undecided: Statement[] = statements.map((statement) => ({ ...statement, stance: 'UNDECIDED' as const }));
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={undecided}
+        stances={{ ...stances, CEO: 'UNDECIDED' }}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO')).toHaveTextContent('고민 중 유지');
+  });
+
+  it("variant='reaction'에서 찬성을 그대로 유지하면 칩은 '유지'다(T132)", () => {
+    const kept: Statement[] = statements.map((statement) => ({ ...statement, stance: 'FOR' as const }));
+    render(
+      <LiveStatementCards
+        scenario={scenario}
+        stage="REACTIONS"
+        roleStatus={roleStatus}
+        statements={kept}
+        stances={stances}
+        variant="reaction"
+      />,
+    );
+    expect(screen.getByTestId('live-band-chip-CEO').textContent).toBe('유지');
   });
 });

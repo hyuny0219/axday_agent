@@ -38,8 +38,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     // 본문 카드(임원 카드의 상태 칩 옆)에도 같은 문구가 접근 가능한 텍스트로 있다.
-    await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
-    await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대 쪽');
+    await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
+    await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대');
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 
     await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
@@ -59,17 +59,17 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // 같은 편인 CEO는 찬성 그대로다.
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CISO')).not.toHaveClass(/stage-band__mood--leaning/);
-    await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대 쪽');
+    await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대');
     for (const id of ['CFO', 'CAIO']) {
       await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--for/);
       await expect(moodBadge(page, id)).toHaveClass(/stage-band__mood--leaning/);
       await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('하나만 더 묻겠습니다');
-      await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('답변하면 확정됩니다');
-      await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('찬성 쪽');
+      await expect(page.getByTestId(`reaction-card-${id}`)).toContainText('답하면 확정');
+      await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('찬성 쪽?');
     }
     await expect(page.getByTestId('reaction-card-CEO')).not.toContainText('하나만 더 묻겠습니다');
-    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 찬성 쪽');
-    await expect(page.getByTestId('reaction-card-badge-CAIO')).toHaveText('고민 중 → 찬성 쪽');
+    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 찬성 · 답하면 확정');
+    await expect(page.getByTestId('reaction-card-badge-CAIO')).toHaveText('고민 중 → 찬성 · 답하면 확정');
 
     // 현황판: 기울어진 방향('반대 → 찬성 쪽')과 답변하면 확정된다는 안내를 보인다.
     // 1280 이하에서는 접혀 있고 넓은 화면에서는 펼쳐져 있다 — 펼친 상태로 맞춘다.
@@ -252,7 +252,7 @@ test.describe('live mock: 무대 표정', () => {
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
-    await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성 쪽');
+    await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 
     await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();

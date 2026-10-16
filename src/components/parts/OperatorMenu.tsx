@@ -3,6 +3,8 @@
 // 편의 메뉴다. 관람 창 열기(P1)는 이 카드 범위 밖이라 추가하지 않는다.
 
 import { useEffect, useState } from 'react';
+import { BGM_CHOICES, BGM_CHOICE_LABELS } from '../../audio/sound';
+import { useSoundSettings } from '../../audio/useSound';
 import { fetchHealth, probeModel, type HealthInfo, type ProbeResult } from '../../services/transport/probe';
 
 export interface OperatorMenuProps {
@@ -21,7 +23,8 @@ type PanelState =
   | 'confirmNewSession'
   | 'fullscreenError'
   | 'probe'
-  | 'confirmRestartScripted';
+  | 'confirmRestartScripted'
+  | 'sound';
 
 type ProbeStatus = 'pending' | 'ok' | 'fail';
 
@@ -77,6 +80,7 @@ export function OperatorMenu({
   const [probeResult, setProbeResult] = useState<ProbeResult | null>(null);
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
   const isFullscreen = useIsFullscreen();
+  const [soundSettings, updateSoundSettings] = useSoundSettings();
 
   // T123: Windows 현장용 전체화면 단축키. F11(브라우저 기본 전체화면을 가로채 페이지 전체화면으로)
   // 또는 Ctrl+Shift+F(Mac은 Command+Shift+K, T124)로 들어가고, 해제는 Esc(브라우저 기본 동작). 페이지 전체화면이라 운영
@@ -205,6 +209,15 @@ export function OperatorMenu({
             type="button"
             role="menuitem"
             className="operator-menu__item"
+            onClick={() => setPanel('sound')}
+            data-testid="operator-sound"
+          >
+            소리
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="operator-menu__item"
             onClick={handleProbeClick}
             data-testid="operator-probe"
           >
@@ -246,6 +259,70 @@ export function OperatorMenu({
           >
             닫기
           </button>
+        </div>
+      )}
+      {panel === 'sound' && (
+        <div
+          className="operator-menu__panel operator-sound"
+          role="group"
+          aria-label="소리"
+          data-testid="operator-sound-panel"
+        >
+          <fieldset className="operator-sound__group">
+            <legend>배경 음악</legend>
+            {BGM_CHOICES.map((choice) => (
+              <label key={choice} className="operator-sound__option">
+                <input
+                  type="radio"
+                  name="operator-bgm"
+                  checked={soundSettings.bgm === choice}
+                  onChange={() => updateSoundSettings({ bgm: choice })}
+                  data-testid={`operator-bgm-${choice}`}
+                />
+                <span>{BGM_CHOICE_LABELS[choice]}</span>
+              </label>
+            ))}
+          </fieldset>
+          <label className="operator-sound__slider">
+            <span>BGM 음량</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={soundSettings.bgmVolume}
+              onChange={(event) => updateSoundSettings({ bgmVolume: Number(event.target.value) })}
+              data-testid="operator-bgm-volume"
+            />
+          </label>
+          <label className="operator-sound__option">
+            <input
+              type="checkbox"
+              checked={soundSettings.sfxOn}
+              onChange={(event) => updateSoundSettings({ sfxOn: event.target.checked })}
+              data-testid="operator-sfx-on"
+            />
+            <span>효과음 켜기</span>
+          </label>
+          <label className="operator-sound__slider">
+            <span>효과음 음량</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={soundSettings.sfxVolume}
+              disabled={!soundSettings.sfxOn}
+              onChange={(event) => updateSoundSettings({ sfxVolume: Number(event.target.value) })}
+              data-testid="operator-sfx-volume"
+            />
+          </label>
+          <div className="operator-menu__actions">
+            <button type="button" onClick={() => setPanel('menu')} data-testid="operator-sound-back">
+              뒤로
+            </button>
+            <button type="button" onClick={close} data-testid="operator-sound-close">
+              닫기
+            </button>
+          </div>
         </div>
       )}
       {panel === 'confirmNewSession' && (

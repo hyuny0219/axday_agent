@@ -82,4 +82,16 @@
 // buildReactionsQuestionRule)을, FOLLOWUP·VOTE에 참가자의 답변 문장과 "그 답이 그 질문에 답했는지로
 // 판단"(ANSWER_JUDGMENT_RULE)을 더했다. round·vote 요청에 followUpQuestion·followUpAnswerText
 // (선택 필드)를 추가했다. v13의 FOLLOWUP 방향 단어 금지·서버 교정은 그대로. 비교는 docs/eval/tuning-v14.md.
-export const PROMPT_VERSION = 'v14';
+// v15(2026-10-13): 사용자 지시 "임원들의 말 중에 '돈 한도'라고 되어 있는데 '금액 한도'라고
+// 나와야해." 쉬운 말 규칙(plainLanguage.ts PLAIN_LANGUAGE_RULE)의 바꿔 쓰기 예시를 "한도"→"금액
+// 한도"로 고쳤다(v11부터 "돈 한도"). scripted 발언·조건 문구도 같은 말로 맞췄다. 이 예시 외 변경 없음.
+// v16(2026-10-15, T132): 사용자 지적 "반응에 답하기 첫화면에서 카드는 전부 고민중". v13~v15 live 첫 반응이
+// 거의 전원 UNDECIDED였다(T110의 "UNDECIDED까지만" 규칙을 같은 편 임원도 따랐다). REACTIONS 첫 반응
+// 지시를 임원별로 나눴다(prompts/firstReaction.ts): 처음부터 참가자와 같은 편이면 입장 유지, 이번 조건으로
+// 넘어올 수 있는 임원만 기존 "UNDECIDED까지만", 우려가 안 풀린 임원은 처음 입장 유지. 판정은 규칙표(decideMember)로
+// 하고 요청에 confirmedConditionIds·priorStances(선택 필드)가 없으면 v15 공통 규칙으로 폴백한다. 응답 스키마·표결 규칙은 그대로.
+// 비교는 docs/eval/tuning-v16.md.
+// v17(2026-10-16, T132 보강, PR #21 Codex P2): 첫 반응 REVERSED 지시를 참가자 방향으로 나눴다 — 찬성 참가자의
+// 조건(함정 조건 등)은 임원의 우려를 키워 AGAINST, 반대 참가자의 조건(예: 승인 사유 기록)은 우려를 풀어 FOR.
+// 그 외 지시는 v16 그대로다.
+export const PROMPT_VERSION = 'v17';

@@ -413,15 +413,11 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
   it.each([
     ['ai-approval', aiApprovalScenario, 'FULL_AUTO'],
     ['experience-first', experienceFirstScenario, 'EXP_ONLY'],
-  ])('AGAINST + %s: 다음 단계 추가 답변에서만 고르는 조건은 직접 쓰라는 말 없이 출처만 안내한다(T119)', async (_name, sc, conditionId) => {
+  ])('AGAINST + %s: 반대 쪽에서는 함정 조건을 추천하지 않는다(T133 — 반대 쪽 추천 답변에서 뺐으므로 닿을 곳이 없다)', async (_name, sc, conditionId) => {
     renderWith(sc, 'AGAINST');
     await openCompare();
-    expect(screen.getByTestId(`assistant-recommend-row-${conditionId}`)).toBeInTheDocument();
-    expect(screen.queryByTestId(`assistant-recommend-apply-${conditionId}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`assistant-recommend-row-${conditionId}`)).not.toBeInTheDocument();
     expect(screen.queryByTestId(`assistant-recommend-manual-${conditionId}`)).not.toBeInTheDocument();
-    expect(screen.getByTestId(`assistant-recommend-where-${conditionId}`)).toHaveTextContent(
-      '다음 단계 추가 답변에서 고를 수 있습니다',
-    );
   });
 
   it('experience-first 찬성 · 조건 0개: DATA_VETO 행에 "직접 써 주세요" 없이 추가 답변 안내만 있다(T119)', async () => {

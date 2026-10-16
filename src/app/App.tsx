@@ -68,6 +68,7 @@ import { ReactionsScreen } from '../components/screens/ReactionsScreen';
 import { MotionScreen } from '../components/screens/MotionScreen';
 import { VoteScreen } from '../components/screens/VoteScreen';
 import { ResultScreen } from '../components/screens/ResultScreen';
+import { SoundHost } from '../audio/SoundHost';
 import '../styles/screens/shell.css';
 
 /** 리셋 시 진행 중인 비동기 요청(AI 비서실장 등, T12)을 모두 abort하기 위한
@@ -752,7 +753,7 @@ const MINUTES_STAGES: ReadonlySet<Session['stage']> = new Set(['MOTION', 'VOTE']
  * 불러 계산하므로 여기서는 더는 StageBand에 넘기지 않는다.
  */
 function AppShell() {
-  const { shown: session, dispatch, roundLog, reactionsView, viewPage, viewNav, exitView } = useSession();
+  const { session: realSession, shown: session, dispatch, roundLog, reactionsView, viewPage, viewNav, exitView } = useSession();
   const shellRef = useRef<HTMLDivElement>(null);
   // T126: 지난 화면(data-past-screen) 안의 두 열을 inert로 막는다 — 클릭·키보드·포커스가 모두 차단된다.
   // 단 '근거 자료 보기' 버튼은 읽기 전용 정보라 열 수 있게 둔다: inert는 하위 전체에 걸리므로 그 버튼의
@@ -809,6 +810,8 @@ function AppShell() {
 
   return (
     <div className="app-scale-outer" data-fit={fit.mode}>
+      {/* T128: 소리는 실제 세션 단계 기준이다(지난 화면 보기 중에도 BGM 장면은 그대로). */}
+      <SoundHost stage={realSession.stage} />
       <div className="app-scale-wrapper" data-fit={fit.mode} style={wrapperStyle}>
         <div className="app-shell" ref={shellRef}>
           <Header
@@ -846,6 +849,7 @@ function AppShell() {
                     }
                     leaning={session.stage === 'REACTIONS' && reactionsView ? reactionsView.leaning : leaningFor(session, scenario)}
                     ballots={session.stage === 'RESULT' ? session.ballots : undefined}
+                    readOnly={viewPage !== null}
                     chairLine={chairLineFor(
                       session.stage,
                       scenario,

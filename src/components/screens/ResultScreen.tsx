@@ -37,6 +37,7 @@ import {
   computeResultStamp,
 } from '../resultStamp';
 import { useResultReveal } from '../useResultReveal';
+import { useResultSounds } from '../../audio/useResultSounds';
 import { epilogueText } from '../resultEpilogue';
 import { EndSessionConfirm } from '../parts/EndSessionConfirm';
 import { EndingCard } from '../parts/EndingCard';
@@ -188,6 +189,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
 
   // T114: 공개 전에는 해당 결과 블록을 스크린리더에서도 가린다(연출은 CSS, 이건 aria-hidden).
   const reveal = useResultReveal(skip);
+  useResultSounds(reveal);
   // 회의 기록 전문도 공개가 끝나기 전에는 FOLLOWUP 방향 단어를 가린다.
   const transcriptEntries = useMemo(
     () => buildMinutes(session, scenario, roundLog, { sealFollowUp: !reveal.allRevealed }),

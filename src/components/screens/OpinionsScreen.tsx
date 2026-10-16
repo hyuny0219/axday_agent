@@ -15,11 +15,11 @@ import type { ExecMemberId, Scenario } from '../../content/types';
 import type { RoleStatus, Stance, Statement } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { MEMBER_LABELS } from '../memberLabels';
-import { STANCE_LABEL } from '../moodLabel';
 import { useMatchMedia } from '../useMatchMedia';
 import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
+import { StanceBand } from '../parts/StanceBand';
 import '../../styles/screens/opinions.css';
 
 export interface OpinionsScreenProps {
@@ -180,6 +180,7 @@ export function OpinionsScreen({
               roleStatus={roleStatus}
               statements={statements}
               stances={stances}
+              readOnly={readOnly}
               onRetryFailedRoles={onRetryFailedRoles ? handleRetry : undefined}
               retryDisabled={retryUsed}
             />
@@ -203,19 +204,14 @@ export function OpinionsScreen({
                 <article
                   key={opinion.memberId}
                   className={`opinion-card opinion-card--${STANCE_MODIFIER[stance]}`}
+                  data-arrival-card={opinion.memberId}
                 >
-                  <div className="opinion-card__head">
-                    <span className="opinion-card__code" aria-hidden="true">
-                      {opinion.memberId}
-                    </span>
-                    <h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>
-                    <span
-                      className="opinion-card__mood"
-                      data-testid={`exec-mood-label-${opinion.memberId}`}
-                    >
-                      {STANCE_LABEL[stance]}
-                    </span>
-                  </div>
+                  <StanceBand
+                    roleId={opinion.memberId}
+                    stance={stance}
+                    readOnly={readOnly}
+                    heading={<h3 className="opinion-card__member">{MEMBER_LABELS[opinion.memberId]}</h3>}
+                  />
                   <p className="opinion-card__text">
                     <HighlightText text={opinion.text} terms={statementHighlightTerms(scenario, opinion.text)} />
                   </p>

@@ -125,6 +125,24 @@ function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | u
   return stance ?? undefined;
 }
 
+/** 참가자의 가장 최근 의견에 확정된 조건 ID(T132). 의견이 없으면 빈 배열. */
+function latestConfirmedConditionIds(ctx: BoardAgentsContext): string[] {
+  const opinions = ctx.session.opinions;
+  return [...(opinions[opinions.length - 1]?.confirmedConditionIds ?? [])];
+}
+
+/** 임원별 첫 의견(OPINIONS) stance(T132). 그 단계 발언이 없거나 stance가 없는 임원(응답 실패 등)은 넣지 않아
+ * 서버가 그 임원만 공통 규칙으로 폴백한다. 같은 임원의 OPINIONS 발언이 여럿이면 마지막 것을 쓴다. */
+function openingStances(ctx: BoardAgentsContext): Partial<Record<ExecMemberId, Stance>> {
+  const result: Partial<Record<ExecMemberId, Stance>> = {};
+  for (const statement of ctx.session.transcript.statements) {
+    if (statement.stage === 'OPINIONS' && statement.stance) {
+      result[statement.roleId] = statement.stance;
+    }
+  }
+  return result;
+}
+
 /** 화면이 참가자에게 보여 주는 추가 질문 하나(T122, 프롬프트 v14). 입장별 질문(T93)을 화면과 같은
  * 기준으로 고른다 — REACTIONS는 지금 의견의 입장, 답을 낸 뒤(FOLLOWUP·VOTE)는 질문을 보여 준
  * 입장(followUpStance, 없으면 첫 의견의 입장). */
@@ -159,6 +177,10 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     followUpAnswered: ctx.session.followUpAnswered,
     ...(stage === 'REACTIONS' || stage === 'FOLLOWUP'
       ? { followUpQuestion: visibleFollowUpQuestion(ctx, stage) }
+      : {}),
+    // T132(프롬프트 v16): 첫 반응에서 임원마다 다른 stance 지시를 고르려면 확정 조건과 각 임원의 첫 의견 입장이 필요하다.
+    ...(stage === 'REACTIONS'
+      ? { confirmedConditionIds: latestConfirmedConditionIds(ctx), priorStances: openingStances(ctx) }
       : {}),
     ...(stage === 'FOLLOWUP' ? { followUpAnswerText: followUpAnswerText(ctx) } : {}),
     scenarioId: ctx.scenario.id,

@@ -479,6 +479,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
+            data-sound="send"
             {...nextStepAttr(gate.visible && nextStep === 'submit')}
             aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
           >

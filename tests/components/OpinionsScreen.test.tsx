@@ -64,6 +64,8 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
       vi.advanceTimersByTime(800);
     });
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(1);
+    // T128: 도착음 감지 표시(src/audio/cues.ts countArrivals)
+    expect(document.querySelectorAll('.opinion-card[data-arrival-card]')).toHaveLength(1);
     expect(nextButton).toBeDisabled();
 
     act(() => {

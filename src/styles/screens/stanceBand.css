@@ -1,0 +1,149 @@
+/* T131 B안: 임원 카드 맨 위 전체 폭 색 머리띠. 찬성 초록·반대 빨강·고민 중 회색, 기울음(T118)은
+   빗금 띠. 흰 글자 대비는 AA 이상이 되도록 시안 색(#2f8a5f 등)보다 한 단계 짙게 잡았다
+   (찬성 5.5:1·반대 4.9:1·고민 중 5.7:1). 칩은 흰 반투명이 아니라 검은 반투명 바탕이라 글자
+   대비가 더 올라간다. 움직임은 입장이 바뀐 순간의 한 번 뒤집기뿐이다. */
+:root {
+  --stance-band-for: #26774f;
+  --stance-band-for-alt: #2d8559;
+  --stance-band-against: #c4473f;
+  --stance-band-against-alt: #b53f38;
+  --stance-band-undecided: #6b665a;
+}
+
+.stance-band {
+  box-sizing: border-box;
+  align-self: stretch;
+  display: flex;
+  /* 좁은 카드(1300~1600px 폭)에서는 이름이 다음 줄로 내려가 칩이 "…"로 잘리지 않게 한다. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 7px 14px;
+  color: #fff;
+  background-color: var(--stance-band-undecided);
+}
+
+.stance-band--for {
+  background-color: var(--stance-band-for);
+}
+
+.stance-band--against {
+  background-color: var(--stance-band-against);
+}
+
+/* 기울음: 확정과 달리 빗금 + 점선 아래 줄. */
+.stance-band--leaning.stance-band--for {
+  background-image: repeating-linear-gradient(-45deg, var(--stance-band-for) 0 12px, var(--stance-band-for-alt) 12px 24px);
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.35);
+}
+
+.stance-band--leaning.stance-band--against {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--stance-band-against) 0 12px,
+    var(--stance-band-against-alt) 12px 24px
+  );
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.35);
+}
+
+.stance-band__verdict {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.stance-band__chip {
+  flex-shrink: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.28);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 임원 이름(h3)은 띠 오른쪽 끝으로. 카드 종류별 .xxx__member 규칙의 색을 흰색으로 덮는다. */
+.stance-band > h3 {
+  margin: 0 0 0 auto;
+  flex-shrink: 1;
+  min-width: 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 카드 안쪽 여백만큼 띠를 가장자리까지 뽑아 낸다(카드별 padding과 같은 값). */
+.opinion-card > .stance-band,
+.live-statement--grid > .stance-band {
+  margin: -13px -15px 4px;
+}
+
+.reaction-card > .stance-band {
+  margin: -10px -12.5px 3px;
+}
+
+@media (max-width: 1280px) {
+  .stance-band {
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    padding: 5px 10px;
+  }
+
+  .stance-band__verdict {
+    font-size: 18px;
+  }
+
+  .stance-band__chip {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+
+  .stance-band > h3 {
+    font-size: 12px;
+  }
+
+  .opinion-card > .stance-band,
+  .live-statement--grid > .stance-band {
+    margin: -10px -12px 3px;
+  }
+
+  .reaction-card > .stance-band {
+    margin: -8px -10px 2px;
+  }
+}
+
+/* 입장이 바뀐 순간에만 한 번(StanceBand의 key가 바뀌어 새로 마운트될 때). 움직임 줄이기에서는
+   base.css 전역 규칙이 지속 시간을 없애고, 아래 규칙이 한 번 더 막는다. */
+@keyframes stance-flip {
+  from {
+    transform: perspective(500px) rotateX(-90deg);
+  }
+
+  to {
+    transform: perspective(500px) rotateX(0);
+  }
+}
+
+.stance-band--flip {
+  transform-origin: top center;
+  animation: stance-flip 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stance-band--flip {
+    animation: none;
+  }
+}
+
+/* 카드의 지난 머리줄/상태 칩(::after)은 머리띠가 대신하므로 머리띠 카드에는 그리지 않는다
+   (머리줄 자체를 렌더하지 않는다). 기울음 점선 표시는 live.css·reactions.css가 그대로 맡는다. */

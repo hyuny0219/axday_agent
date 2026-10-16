@@ -405,11 +405,9 @@ export const experienceFirstScenario: Scenario = {
         proposeConditionId: 'SCOPE',
         side: 'AGAINST',
       },
-      {
-        text: '그래도 어렵다면, 최종 결정은 언제나 경험 판단을 따르도록 하는 것도 다시 생각해 보겠습니다.',
-        proposeConditionId: 'EXP_ONLY',
-        side: 'AGAINST',
-      },
+      // T133: 반대 쪽 추가 답변에서 함정 조건(EXP_ONLY) 제안은 뺐다 — 반대 참가자가 결재권·경험을 가장
+      // 넓히는 조건을 "다시 생각해 보겠다"는 말은 앞뒤가 맞지 않고, 그 조건 하나로 임원 넷이 모두 반대가 돼
+      // 확실한 지름길이 된다(2026-10-15 사용자 지적).
       {
         text: '데이터와 경험을 어떻게 같이 쓸지는 더 논의가 필요하다고 생각합니다.',
         proposeConditionId: null,

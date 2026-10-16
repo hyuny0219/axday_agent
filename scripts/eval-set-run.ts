@@ -316,6 +316,13 @@ async function runCase(
     // 첫 반응은 항상 "아직 답하기 전"이다(REACTIONS 단계 자체가 그 뜻이라 값은 영향이 없다).
     followUpAnswered: false,
     followUpQuestion: evalFollowUpQuestion(evalCase.scenarioId, evalCase.participantStance),
+    // T132(v16): 실제 앱처럼 확정 조건과 임원별 첫 의견 입장을 싣는다(임원별 첫 반응 지시 판정용).
+    confirmedConditionIds: [...evalCase.effectiveConditionIds],
+    priorStances: Object.fromEntries(
+      opinionsResults
+        .filter((r) => r.status === 'answered' && r.statement)
+        .map((r) => [r.roleId, r.statement!.stance]),
+    ),
     scenarioId: evalCase.scenarioId,
     budgetMs: BUDGET_MS,
   };
@@ -749,6 +756,53 @@ export function conditionSupplementPersuasion(rows: EvalRow[]): ConditionSupplem
   return { eligible, persuaded };
 }
 
+export interface FirstReactionStats {
+  /** "첫 의견 stance→첫 반응 stance" 별 건수(둘 다 answered·stance 보유 행만). */
+  transitions: Record<string, number>;
+  /** 첫 의견이 참가자와 같은 편(참가자 입장 없음은 FOR)인 (케이스,임원) 수와 첫 반응이 그대로인 수. */
+  sameSide: number;
+  sameSideKept: number;
+  /** 조건 없는 경로(no_condition·opposition_pure)에서 참가자 반대 편으로 시작한 임원 수와 그중 첫 반응이 UNDECIDED인 수. */
+  noConditionOpposed: number;
+  noConditionToUndecided: number;
+}
+
+/**
+ * T132: 첫 반응 입장 분포(첫 의견→첫 반응 전이표)와 같은 편 임원 유지율, 조건 없는 경로의 고민 중 전환 수.
+ * v13~v15는 전이표가 거의 전부 "→UNDECIDED"였다(docs/eval/tuning-v16.md).
+ */
+export function firstReactionStats(rows: EvalRow[]): FirstReactionStats {
+  const stats: FirstReactionStats = {
+    transitions: {},
+    sameSide: 0,
+    sameSideKept: 0,
+    noConditionOpposed: 0,
+    noConditionToUndecided: 0,
+  };
+  const opening = new Map<string, string>();
+  for (const row of rows) {
+    if (row.stage === 'OPINIONS' && row.status === 'answered' && row.stance) {
+      opening.set(`${row.caseId}/${row.roleId}`, row.stance);
+    }
+  }
+  for (const row of rows) {
+    if (row.stage !== 'REACTIONS' || row.status !== 'answered' || !row.stance) continue;
+    const before = opening.get(`${row.caseId}/${row.roleId}`);
+    if (!before) continue;
+    const key = `${before}→${row.stance}`;
+    stats.transitions[key] = (stats.transitions[key] ?? 0) + 1;
+    const direction = row.participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+    if (before === direction) {
+      stats.sameSide += 1;
+      if (row.stance === before) stats.sameSideKept += 1;
+    } else if (before !== 'UNDECIDED' && (row.pathId === 'no_condition' || row.pathId === 'opposition_pure')) {
+      stats.noConditionOpposed += 1;
+      if (row.stance === 'UNDECIDED') stats.noConditionToUndecided += 1;
+    }
+  }
+  return stats;
+}
+
 export interface NewQuestionStats {
   /** REACTIONS answered 행 중 질문자가 아닌 임원의 발언 수. */
   nonAskerRows: number;
@@ -881,6 +935,7 @@ function runCheck(files: string[]): void {
     const openingByRole = openingStanceByRole(rows);
     const persuasion = conditionSupplementPersuasion(rows);
     const newQuestions = newQuestionStats(rows);
+    const firstReaction = firstReactionStats(rows);
     const distribution = voteDistributionByPath(rows);
     const plainStats = plainLanguageStats(rows);
     const promptVersions = [...new Set(rows.map((r) => r.promptVersion))].join(',');
@@ -897,6 +952,16 @@ function runCheck(files: string[]): void {
         ` · OPINIONS stance-최종 표 일치 ${agreement.agree}/${agreement.comparable}` +
         ` · 조건 보완 경로 반대·미정→YES ${persuasion.persuaded}/${persuasion.eligible}` +
         ` · 첫 반응 새 질문(질문자 외) ${newQuestions.newQuestionRows}/${newQuestions.nonAskerRows}`,
+    );
+    // T132: 첫 반응 입장 분포와 같은 편 유지율.
+    console.log(
+      `    [첫 반응 입장] ${
+        Object.entries(firstReaction.transitions)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k} ${v}`)
+          .join(' · ') || '없음'
+      } · 같은 편 임원 유지 ${firstReaction.sameSideKept}/${firstReaction.sameSide}` +
+        ` · 조건 없는 경로 반대 쪽 임원의 고민 중 전환 ${firstReaction.noConditionToUndecided}/${firstReaction.noConditionOpposed}`,
     );
     // T93: 쉬운 말 가독성 지표(측정만, 거절하지 않음).
     console.log(
@@ -935,32 +1000,58 @@ function runCheck(files: string[]): void {
   }
 }
 
-function parseArgs(argv: string[]): { out: string; check: string[] } {
+export function parseArgs(argv: string[]): { out: string; check: string[]; only: string[] } {
   let out = '';
   const check: string[] = [];
+  // --case <id>(여러 번 가능): 일부 케이스만 다시 잰다(크레딧 절약·실패 케이스 재측정, T129).
+  const only: string[] = [];
+  // 옵션 값이 비었거나 다른 옵션 토큰이면 바로 멈춘다 — 빈 셸 변수 때문에 "--out --case …"처럼
+  // 옵션이 값으로 삼켜지면 유료 실측 전체가 돌 수 있다(PR #21 Codex P2 두 건).
+  const valueAfter = (flag: string, index: number): string => {
+    const value = argv[index + 1];
+    if (value === undefined || value === '' || value.startsWith('--')) {
+      throw new Error(`${flag} 뒤에 값이 필요합니다(받은 값: ${value === undefined ? '없음' : JSON.stringify(value)})`);
+    }
+    return value;
+  };
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--out' && argv[i + 1] !== undefined) {
-      out = argv[i + 1] as string;
+    if (argv[i] === '--out') {
+      out = valueAfter('--out', i);
       i += 1;
-    } else if (argv[i] === '--check' && argv[i + 1] !== undefined) {
-      check.push(argv[i + 1] as string);
+    } else if (argv[i] === '--check') {
+      check.push(valueAfter('--check', i));
       i += 1;
+    } else if (argv[i] === '--case') {
+      only.push(valueAfter('--case', i));
+      i += 1;
+    } else {
+      // 오타(--csae 등)나 위치 인자를 조용히 무시하면 유료 실측 전체가 돈다 — 바로 멈춘다(PR #21 Codex P2).
+      throw new Error(`알 수 없는 인자: ${JSON.stringify(argv[i])} (쓸 수 있는 옵션: --out, --check, --case)`);
     }
   }
   if (!out && check.length === 0) {
-    throw new Error('usage: eval-set-run.ts --out <path.jsonl> | --check <path.jsonl> [--check ...]');
+    throw new Error('usage: eval-set-run.ts --out <path.jsonl> [--case <id> ...] | --check <path.jsonl> [--check ...]');
   }
-  return { out, check };
+  return { out, check, only };
 }
 
 async function main(): Promise<void> {
-  const { out, check } = parseArgs(process.argv.slice(2));
+  const { out, check, only } = parseArgs(process.argv.slice(2));
   if (check.length > 0) {
     runCheck(check);
     if (!out) {
       return;
     }
   }
+  // 케이스 선택은 키 확인·연결 확인(유료 probe)보다 먼저 검사한다 — 오타로 크레딧을 쓰지 않게(PR #21 Codex P2).
+  const allCases = loadEvalSet();
+  const unknown = only.filter((id) => !allCases.some((c) => c.id === id));
+  if (unknown.length > 0) {
+    console.error(`[eval-set-run] 없는 케이스: ${unknown.join(', ')}`);
+    process.exit(1);
+    return;
+  }
+  const cases = only.length > 0 ? allCases.filter((c) => only.includes(c.id)) : allCases;
   const useMock = process.env.MODEL_PROVIDER === 'mock';
 
   if (!useMock && !hasAnthropicCredential()) {
@@ -983,7 +1074,6 @@ async function main(): Promise<void> {
   }
   console.log(`[eval-set-run] 연결 확인 OK · ${probe.modelId} · ${probe.latencyMs}ms`);
 
-  const cases = loadEvalSet();
   const allRows: EvalRow[] = [];
   for (const evalCase of cases) {
     const rows = await runCase(evalCase, provider, systemClock);

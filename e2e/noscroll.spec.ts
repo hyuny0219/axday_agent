@@ -700,9 +700,10 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
 // 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
 const T119_CASES = [
   { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
-  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 7, hinted: 'FULL_AUTO' },
+  // T133: 반대 쪽 추가 답변에서 함정 조건(FULL_AUTO·EXP_ONLY) 문구를 빼 카드가 하나 줄었다.
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 6, hinted: 'LIMIT' },
   { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
-  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 7, hinted: 'SCOPE' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 6, hinted: 'SCOPE' },
 ] as const;
 
 for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
@@ -737,5 +738,79 @@ for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
     await expect(page.getByTestId('assistant-recommend-opening')).toBeVisible();
     await expect(page.getByTestId(`assistant-remaining-${hinted}`)).toContainText('추가 답변에서 고를 수 있습니다');
     await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 비서실장 열림`);
+  });
+}
+
+// 2026-10-15 사용자 지적: "전체화면으로 했을 때만 잘려보여". Mac 전체화면 폭(1300~1600px)에서 머리띠
+// 칩·이름 때문에 2열 카드 칸이 내용 폭보다 좁아지지 못해 오른쪽 카드가 종이 밖으로 넘쳤다. 카드 오른쪽
+// 끝이 담는 열 안에 있고, 머리띠 칩·이름이 "…"로 잘리지 않아야 한다.
+async function expectCardsInside(page: Page, label: string) {
+  const report = await page.evaluate(() => {
+    const out: string[] = [];
+    const content = document.querySelector('.app-body__content') as HTMLElement | null;
+    const right = content ? content.getBoundingClientRect().right : window.innerWidth;
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-testid^="live-role-"], .opinion-card, .reaction-card'))) {
+      const box = el.getBoundingClientRect();
+      if (box.width > 0 && box.right > right + 1) out.push(`card ${el.dataset.testid ?? el.className} right=${Math.round(box.right)} > ${Math.round(right)}`);
+    }
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('.stance-band__chip, .stance-band > h3'))) {
+      if (el.scrollWidth > el.clientWidth + 1) out.push(`truncated "${el.textContent}"`);
+    }
+    return out;
+  });
+  expect(report, label).toEqual([]);
+}
+
+// 실측 화면(2026-10-15, 8787 live 1512×982)과 같은 입장 조합 — 반응에서 CFO가 "반대 → 찬성 · 답하면 확정"
+// 기울음 칩, CAIO가 "고민 중 → 반대" 칩을 받아 머리띠가 가장 길어진다.
+async function mockRealisticStances(page: Page) {
+  const OPENING: Record<string, string> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+  const REACTION: Record<string, string> = { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'AGAINST', CISO: 'AGAINST' };
+  await page.route('**/api/board/round', async (route: Route) => {
+    const body = route.request().postDataJSON() as { stage?: string };
+    const table = body.stage === 'REACTIONS' ? REACTION : OPENING;
+    const json = EXEC_ROLE_IDS.map((roleId, index) => ({
+      roleId,
+      status: 'answered',
+      statement: {
+        roleId,
+        message: LONG_STATEMENT.slice(0, 120),
+        evidenceIds: ['E1', 'E2'],
+        referencedStatementIds: index === 0 ? [] : [`ref-${index}`],
+        concerns: [],
+        suggestedConditionIds: [],
+        stance: table[roleId],
+      },
+      latencyMs: 10,
+      modelId: 'mock',
+      promptVersion: 'mock',
+    }));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(json) });
+  });
+}
+
+for (const [width, height] of [[1512, 982], [1470, 956], [1440, 900], [1728, 1117]] as const) {
+  test(`Mac 전체화면 ${width}×${height}: live 의견·반응 카드가 오른쪽으로 넘치지 않고 머리띠 글자가 잘리지 않는다`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await mockRealisticStances(page);
+    await page.goto('/?coach=off');
+    await page.getByRole('button', { name: '체험 시작' }).click();
+    await page.getByRole('button', { name: '확인', exact: true }).click();
+    await page.getByTestId('scenario-card-ai-approval').click();
+    await page.getByTestId('open-evidence').click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '의견 듣기' }).click();
+    await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+    await expectCardsInside(page, `OPINIONS ${width}`);
+    await expectNoPageScroll(page, `OPINIONS ${width}`);
+    await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+    await page.getByTestId('discuss-side-for').click();
+    await page.getByTestId('phrase-card-P1').click();
+    await page.getByTestId('phrase-card-P3').click();
+    await tryAllAssistantFeatures(page);
+    await page.getByTestId('submit-opinion').click();
+    await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
+    await expectCardsInside(page, `REACTIONS ${width}`);
+    await expectNoPageScroll(page, `REACTIONS ${width}`);
   });
 }

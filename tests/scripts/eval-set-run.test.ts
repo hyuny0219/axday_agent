@@ -6,8 +6,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  parseArgs,
   callRecordsByRole,
   evalFollowUpQuestion,
+  firstReactionStats,
   newQuestionStats,
   findFollowUpVerdictWords,
   followUpVerdictStats,
@@ -315,5 +317,77 @@ describe('newQuestionStats·evalFollowUpQuestion·평가 세트 답변 문장(T1
         expect(evalCase.followUpAnswerText!.length).toBeLessThanOrEqual(300);
       }
     }
+  });
+});
+
+describe('parseArgs --case (PR #21 Codex P2)', () => {
+  it('케이스 ID를 여러 개 받는다', () => {
+    expect(parseArgs(['--out', 'x.jsonl', '--case', 'a/1', '--case', 'b/2']).only).toEqual(['a/1', 'b/2']);
+  });
+  it('--case 값이 없거나 비었거나 다른 옵션이면 전체 실측으로 넘어가지 않고 멈춘다', () => {
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case'])).toThrow(/--case 뒤에 값이 필요/);
+    expect(() => parseArgs(['--out', 'x.jsonl', '--case', ''])).toThrow(/--case 뒤에 값이 필요/);
+    expect(() => parseArgs(['--case', '--out', 'x.jsonl'])).toThrow(/--case 뒤에 값이 필요/);
+  });
+  it('--out·--check 값 자리에 옵션이 오면(빈 변수로 --case가 삼켜짐) 멈춘다', () => {
+    expect(() => parseArgs(['--out', '--case', 'ai-approval/unanswered-1'])).toThrow(/--out 뒤에 값이 필요/);
+    expect(() => parseArgs(['--check', '--case', 'x'])).toThrow(/--check 뒤에 값이 필요/);
+    expect(() => parseArgs(['--out'])).toThrow(/--out 뒤에 값이 필요/);
+  });
+  it('알 수 없는 옵션(오타)이나 위치 인자가 있으면 전체 실측으로 넘어가지 않고 멈춘다(PR #21 Codex P2)', () => {
+    expect(() => parseArgs(['--csae', 'ai-approval/no-condition-1', '--out', 'x.jsonl'])).toThrow(/알 수 없는 인자/);
+    expect(() => parseArgs(['--out', 'x.jsonl', 'ai-approval/no-condition-1'])).toThrow(/알 수 없는 인자/);
+  });
+  it('--case 없이 --out만 주면 전체 케이스(only 빈 배열)', () => {
+    expect(parseArgs(['--out', 'x.jsonl']).only).toEqual([]);
+  });
+});
+
+describe('firstReactionStats(T132)', () => {
+  function stageRow(
+    caseId: string,
+    roleId: EvalRow['roleId'],
+    stage: EvalRow['stage'],
+    stance: string,
+    pathId = 'no_condition',
+    participantStance?: string,
+  ): EvalRow {
+    return { ...row('x'), caseId, roleId, stage, stance, pathId, participantStance };
+  }
+
+  it('전이표·같은 편 유지율·조건 없는 경로의 고민 중 전환을 센다', () => {
+    const rows: EvalRow[] = [
+      stageRow('a', 'CEO', 'OPINIONS', 'FOR'),
+      stageRow('a', 'CEO', 'REACTIONS', 'FOR'),
+      stageRow('a', 'CFO', 'OPINIONS', 'FOR'),
+      stageRow('a', 'CFO', 'REACTIONS', 'UNDECIDED'),
+      stageRow('a', 'CAIO', 'OPINIONS', 'AGAINST'),
+      stageRow('a', 'CAIO', 'REACTIONS', 'UNDECIDED'),
+      stageRow('a', 'CISO', 'OPINIONS', 'AGAINST'),
+      stageRow('a', 'CISO', 'REACTIONS', 'AGAINST'),
+      // 조건 보완 경로의 반대→고민 중은 "조건 없는 경로" 집계에 들지 않는다.
+      stageRow('b', 'CFO', 'OPINIONS', 'AGAINST', 'condition_supplement'),
+      stageRow('b', 'CFO', 'REACTIONS', 'UNDECIDED', 'condition_supplement'),
+    ];
+    const stats = firstReactionStats(rows);
+    expect(stats.transitions).toEqual({ 'FOR→FOR': 1, 'FOR→UNDECIDED': 1, 'AGAINST→UNDECIDED': 2, 'AGAINST→AGAINST': 1 });
+    expect(stats.sameSide).toBe(2 + 0);
+    expect(stats.sameSideKept).toBe(1);
+    expect(stats.noConditionOpposed).toBe(2);
+    expect(stats.noConditionToUndecided).toBe(1);
+  });
+
+  it('참가자가 반대면 반대 쪽 임원이 같은 편이다', () => {
+    const rows: EvalRow[] = [
+      stageRow('c', 'CFO', 'OPINIONS', 'AGAINST', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CFO', 'REACTIONS', 'AGAINST', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CEO', 'OPINIONS', 'FOR', 'opposition_pure', 'AGAINST'),
+      stageRow('c', 'CEO', 'REACTIONS', 'UNDECIDED', 'opposition_pure', 'AGAINST'),
+    ];
+    const stats = firstReactionStats(rows);
+    expect(stats.sameSide).toBe(1);
+    expect(stats.sameSideKept).toBe(1);
+    expect(stats.noConditionOpposed).toBe(1);
+    expect(stats.noConditionToUndecided).toBe(1);
   });
 });

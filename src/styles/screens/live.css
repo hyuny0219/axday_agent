@@ -1,12 +1,11 @@
 /* live 모드 전용 공통 스타일: 임원 발언 카드(OPINIONS·REACTIONS), 최종 표 대기 문구,
    결과의 판단 근거·미표결 사유·제한 안내. scripted 모드는 이 클래스들을 쓰지 않는다. */
-
 /* 무대 열이 본문 폭을 줄여(T44) 4열은 좁아지므로 2열로 감싼다 — scripted 모드의
    opinions-screen__cards·discuss-screen__execs와 같은 규칙(DESIGN_SPEC.md v1.0
    5절 "임원 4열 카드는 2열"). */
 .live-round__cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 칸이 내용(머리띠 칩·이름)보다 좁아질 수 있게 — 1fr은 최소가 내용 폭이라 1300~1600px 폭(Mac 전체화면)에서 카드가 오른쪽으로 넘쳤다(2026-10-15 사용자 지적). */
   gap: var(--space-2);
 }
 
@@ -381,16 +380,6 @@
   }
 }
 
-/* 상태 칩 문구(시안 "유지"/"바뀜"/"응답 없음") — .live-statement--grid의 공용
-   판단 중/발언/응답 없음 규칙보다 선택자가 더 구체적이라 이긴다. */
-.live-statement--reaction.live-statement--answered.live-statement--maintained .live-statement__head::after {
-  content: '유지' / '';
-}
-
-.live-statement--reaction.live-statement--answered:not(.live-statement--maintained) .live-statement__head::after {
-  content: '바뀜' / '';
-}
-
 /* 실패 카드 안 재요청 버튼(시안 — 그리드 아래 공용 버튼 대신 카드 안에 바로 둔다). */
 .live-statement__retry {
   align-self: flex-start;
@@ -431,22 +420,4 @@
    모델 stance가 미정일 때만 생긴다). 유지/바뀜 칩보다 선택자가 구체적이라 이긴다. */
 .live-statement--leaning {
   border-style: dashed;
-}
-
-.live-statement--reaction.live-statement--leaning .live-statement__head::after {
-  border-style: dashed;
-}
-
-.live-statement--reaction.live-statement--leaning-for .live-statement__head::after {
-  content: '고민 중 → 찬성 쪽' / '';
-}
-
-.live-statement--reaction.live-statement--leaning-against .live-statement__head::after {
-  content: '고민 중 → 반대 쪽' / '';
-}
-
-.live-statement__leaning-note {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--ink-muted);
 }
