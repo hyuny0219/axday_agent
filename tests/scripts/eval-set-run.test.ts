@@ -334,6 +334,10 @@ describe('parseArgs --case (PR #21 Codex P2)', () => {
     expect(() => parseArgs(['--check', '--case', 'x'])).toThrow(/--check 뒤에 값이 필요/);
     expect(() => parseArgs(['--out'])).toThrow(/--out 뒤에 값이 필요/);
   });
+  it('알 수 없는 옵션(오타)이나 위치 인자가 있으면 전체 실측으로 넘어가지 않고 멈춘다(PR #21 Codex P2)', () => {
+    expect(() => parseArgs(['--csae', 'ai-approval/no-condition-1', '--out', 'x.jsonl'])).toThrow(/알 수 없는 인자/);
+    expect(() => parseArgs(['--out', 'x.jsonl', 'ai-approval/no-condition-1'])).toThrow(/알 수 없는 인자/);
+  });
   it('--case 없이 --out만 주면 전체 케이스(only 빈 배열)', () => {
     expect(parseArgs(['--out', 'x.jsonl']).only).toEqual([]);
   });

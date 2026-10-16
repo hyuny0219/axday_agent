@@ -1024,6 +1024,9 @@ export function parseArgs(argv: string[]): { out: string; check: string[]; only:
     } else if (argv[i] === '--case') {
       only.push(valueAfter('--case', i));
       i += 1;
+    } else {
+      // 오타(--csae 등)나 위치 인자를 조용히 무시하면 유료 실측 전체가 돈다 — 바로 멈춘다(PR #21 Codex P2).
+      throw new Error(`알 수 없는 인자: ${JSON.stringify(argv[i])} (쓸 수 있는 옵션: --out, --check, --case)`);
     }
   }
   if (!out && check.length === 0) {
