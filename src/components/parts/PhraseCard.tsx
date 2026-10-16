@@ -29,8 +29,7 @@ export interface PhraseCardProps {
   disabled?: boolean;
   /** T113: 지금 눌러야 할 다음 할 일이면 점선 테두리(`data-next-step`)를 붙인다. */
   nextStep?: boolean;
-  /** T137: 반대 근거 카드 위 작은 빨간 라벨("반대 근거 · 감사 메모"). 있으면 카드도 반대 근거 모양이 된다. */
-  objectionTag?: string;
+  objection?: boolean;
 }
 
 export function PhraseCard({
@@ -40,13 +39,13 @@ export function PhraseCard({
   testId,
   disabled = false,
   nextStep = false,
-  objectionTag,
+  objection = false,
 }: PhraseCardProps) {
   return (
     <label
       className={`phrase-card${selected ? ' phrase-card--selected' : ''}${
         disabled ? ' phrase-card--disabled' : ''
-      }${objectionTag ? ' phrase-card--objection' : ''}`}
+      }${objection ? ' phrase-card--objection' : ''}`}
       data-testid={testId ?? `phrase-card-${phrase.id}`}
       {...nextStepAttr(nextStep)}
     >
@@ -67,16 +66,7 @@ export function PhraseCard({
           </svg>
         )}
       </span>
-      {objectionTag ? (
-        <span className="phrase-card__body">
-          <span className="phrase-card__tag" data-testid={`phrase-tag-${phrase.id}`}>
-            {objectionTag}
-          </span>
-          <span className="phrase-card__text">{phrase.text}</span>
-        </span>
-      ) : (
-        <span className="phrase-card__text">{phrase.text}</span>
-      )}
+      <span className="phrase-card__text">{phrase.text}</span>
     </label>
   );
 }

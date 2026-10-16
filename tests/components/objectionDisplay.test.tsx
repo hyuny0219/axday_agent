@@ -5,7 +5,6 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { ConditionChips } from '../../src/components/parts/ConditionChips';
 import { PhraseCard } from '../../src/components/parts/PhraseCard';
 import { chairMotionLine } from '../../src/components/chairMotionLine';
-import { objectionTagFor } from '../../src/components/conditionSource';
 import { buildMotionDisplay } from '../../src/components/motionDisplay';
 import { computeResultStamp } from '../../src/components/resultStamp';
 import { buildResultSummary } from '../../src/components/resultSummary';
@@ -68,22 +67,13 @@ describe('ConditionChips — 반대 근거 칩(T137)', () => {
   });
 });
 
-describe('PhraseCard — 반대 근거 라벨(T137)', () => {
-  it('자료 이름이 있으면 "반대 근거 · 감사 메모", 함정은 "반대 근거"만 보인다', () => {
-    expect(objectionTagFor(aiApprovalScenario, 'AG_AUDIT')).toBe('조건 · 감사 메모');
-    expect(objectionTagFor(aiApprovalScenario, 'AG_BAN')).toBe('조건');
-    expect(objectionTagFor(aiApprovalScenario, 'LOG')).toBeUndefined();
-    expect(objectionTagFor(aiApprovalScenario, null)).toBeUndefined();
-    render(
-      <PhraseCard
-        phrase={{ id: 'N1', text: '문구' }}
-        selected={false}
-        onToggle={() => undefined}
-        objectionTag="조건 · 감사 메모"
-      />,
-    );
-    expect(screen.getByTestId('phrase-card-N1')).toHaveClass('phrase-card--objection');
-    expect(screen.getByTestId('phrase-tag-N1')).toHaveTextContent('조건 · 감사 메모');
+describe('PhraseCard — 반대 쪽 조건 카드(T137)', () => {
+  it('조건 표시 라벨 없이 문장만 보이고, objection이면 선택 색 modifier만 붙는다', () => {
+    render(<PhraseCard phrase={{ id: 'N1', text: '카드 문장' }} selected={false} onToggle={() => undefined} objection />);
+    const card = screen.getByTestId('phrase-card-N1');
+    expect(card).toHaveClass('phrase-card--objection');
+    expect(card).toHaveTextContent(/^카드 문장$/);
+    expect(screen.queryByTestId('phrase-tag-N1')).not.toBeInTheDocument();
   });
 });
 

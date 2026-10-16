@@ -5,15 +5,6 @@
 
 import type { Scenario } from '../content/types';
 
-/** 반대 근거(T137) 카드 위 작은 라벨. 조건이 반대 근거가 아니면 undefined.
- * 자료 이름이 있으면 "반대 근거 · 감사 메모", 없으면(지나친 주장 등) "반대 근거"만 적는다. */
-export function objectionTagFor(scenario: Scenario, conditionId: string | null): string | undefined {
-  if (!conditionId) return undefined;
-  const condition = scenario.conditions.find((c) => c.id === conditionId);
-  if (condition?.side !== 'AGAINST') return undefined;
-  return condition.source ? `조건 · ${condition.source}` : '조건';
-}
-
 export type ConditionSourceStage = 'DISCUSS' | 'REACTIONS';
 
 /** 그 입장에 보이는 추천 문구 중 조건을 제안하는 문구의 번호(1부터). 없으면 null. */

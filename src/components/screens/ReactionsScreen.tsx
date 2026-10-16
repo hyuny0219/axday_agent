@@ -76,7 +76,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
-import { confirmConditions, filterConditionIdsForStance, findConflicts, proposeFromText } from '../../domain/conditions';
+import { confirmConditions, filterConditionIdsForStance, findConflicts, isObjectionCondition, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
@@ -86,7 +86,6 @@ import {
   conditionSourceHint,
   isConditionOffered,
   isLaterStageOnly,
-  objectionTagFor,
   releasedHint,
 } from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
@@ -1070,7 +1069,7 @@ export function ReactionsScreen({
                   <PhraseCard
                     key={index}
                     phrase={{ id: String(index), text: option.text }}
-                    objectionTag={objectionTagFor(scenario, option.proposeConditionId)}
+                    objection={option.proposeConditionId !== null && isObjectionCondition(scenario, option.proposeConditionId)}
                     selected={selectedOptionIds.includes(String(index))}
                     onToggle={() => handleToggleOption(index)}
                     testId={`followup-option-${index}`}

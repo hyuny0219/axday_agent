@@ -30,6 +30,7 @@ import {
 import {
   confirmConditions,
   findConflicts,
+  isObjectionCondition,
   proposeFromPhrases,
   proposeFromText,
 } from '../../domain/conditions';
@@ -52,7 +53,6 @@ import {
   conditionSourceHint,
   isConditionOffered,
   isLaterStageOnly,
-  objectionTagFor,
   releasedHint,
 } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
@@ -563,7 +563,7 @@ export function DiscussScreen({
                       key={phrase.id}
                       nextStep={gate.visible && nextStep === 'phrase' && phraseIndex === 0}
                       phrase={phrase}
-                      objectionTag={objectionTagFor(scenario, phrase.conditionId)}
+                      objection={phrase.conditionId !== null && isObjectionCondition(scenario, phrase.conditionId)}
                       selected={draft.selectedPhraseIds.includes(phrase.id)}
                       disabled={pendingPhraseId !== null}
                       onToggle={() => handleTogglePhrase(phrase.id)}

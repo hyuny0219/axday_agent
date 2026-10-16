@@ -45,12 +45,10 @@ test('반대 근거 카드·칩은 빨강이고 자료 이름이 붙는다(안�
   await reachDiscussAgainst(page, 'ai-approval');
   await expectNoPageScroll(page, 'DISCUSS(반대 입장, 추천 문구)');
 
-  // 추천 문구: 반대 근거 카드에 "반대 근거 · 자료 이름" 라벨이 붙고, 함정 카드는 자료 이름 없이 "반대 근거"다.
-  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('조건 · 감사 메모');
-  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('조건 · 사용자 설문');
-  await expect(page.getByTestId('phrase-tag-N3')).toHaveText('조건');
-  await expect(page.getByTestId('phrase-tag-N4')).toHaveCount(0);
+  // 추천 문구 카드에는 조건 표시 라벨이 없다(번호+문장만, 찬성·반대·함정 모두).
+  await expect(page.locator('[data-testid^="phrase-tag-"]')).toHaveCount(0);
   await expect(page.getByTestId('phrase-card-N1')).toHaveClass(/phrase-card--objection/);
+  await expect(page.getByTestId('phrase-card-N1')).toHaveText(/^자동 승인한 건은.*알 수 없습니다\.$/);
 
   await page.getByTestId('phrase-card-N1').click();
   await page.getByTestId('phrase-card-N2').click();
@@ -85,7 +83,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await page.getByTestId('reactions-advance').click();
   // 추가 질문은 반대 근거를 묻는다. 답변 카드는 반대 근거이고 첫 의견에서 고른 문장은 숨긴다.
   await expect(page.getByTestId('followup-option-5')).toHaveCount(0);
-  await expect(page.getByTestId('phrase-tag-6')).toHaveText('조건 · 사용자 설문');
+  await expect(page.getByTestId('phrase-tag-6')).toHaveCount(0);
   await expectNoPageScroll(page, 'REACTIONS(답하기, 반대 근거 카드)');
   await page.getByTestId('followup-option-6').click();
   await expect(page.getByTestId('condition-chip-AG_TRUST')).toHaveClass(/condition-chip--objection/);
@@ -146,13 +144,10 @@ test('반대 쪽 함정(모두 막기)은 네 임원이 모두 찬성해 실패�
 
 test('안건 ②도 같은 구조: 반대 근거 + 추가 답변으로 성공하고 안건은 원안 그대로다', async ({ page }) => {
   await reachDiscussAgainst(page, 'experience-first');
-  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('조건 · 실패 사례 메모');
-  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('조건 · 베테랑 인터뷰 메모');
   await page.getByTestId('phrase-card-N1').click();
   await submitFirstOpinion(page);
   await page.getByTestId('reactions-advance').click();
   // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_WHY, 7 AG_SPLIT, 8 AG_NUMBERS, 9 BOTH
-  await expect(page.getByTestId('phrase-tag-7')).toHaveText('조건 · 지난 2년 주요 결정');
   await page.getByTestId('followup-option-7').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-objections')).toContainText('경고를 넘길 핑계가 생김');
