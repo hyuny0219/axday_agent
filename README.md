@@ -43,6 +43,8 @@ npm run build && npx playwright test   # e2e(1920×1080·1280×720 두 해상도
 
 ## 부스 운영(로컬 서버)
 
+새 PC에 처음 설치하는 절차(Mac·Windows, API 키 파일, 접속 주소, 자주 막히는 곳)는 [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)를 보세요.
+
 ```
 npm run booth                # git pull → npm ci(필요할 때만) → build → start → 모델 연결 확인
 npm run booth -- --skip-pull # 부스 회선이 없을 때: git pull 생략하고 있는 코드로 기동
