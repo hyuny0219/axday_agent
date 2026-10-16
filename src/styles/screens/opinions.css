@@ -132,7 +132,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 칸이 내용(머리띠 칩·이름)보다 좁아질 수 있게 — 1fr은 최소가 내용 폭이라 1300~1600px 폭(Mac 전체화면)에서 카드가 오른쪽으로 넘쳤다(2026-10-15 사용자 지적). */
   grid-auto-rows: minmax(0, 1fr);
   gap: 13px;
 }

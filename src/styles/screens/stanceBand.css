@@ -14,8 +14,10 @@
   box-sizing: border-box;
   align-self: stretch;
   display: flex;
+  /* 좁은 카드(1300~1600px 폭)에서는 이름이 다음 줄로 내려가 칩이 "…"로 잘리지 않게 한다. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   min-width: 0;
   padding: 7px 14px;
   color: #fff;
