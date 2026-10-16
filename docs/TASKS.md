@@ -11,6 +11,7 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T136 | 진행 | 표결 미표결(UNCAST) 방지 — 형식 오류 원인 로그, 실패 역할 자동 재요청, 끝내 실패하면 규칙표 기준 표(결과에 작게 밝힘)(2026-10-16 사용자 지시). 상세는 아래 T136 카드 |
 | T135 | 완료 | 찬성 쪽 문구가 입장과 어긋나던 3곳 수정 — 공통 요청 카드 2개(회의적 질문 → 어느 입장에서나 자연스러운 질문), 경험 안건 찬성 답변 "경험을 앞세우되, 데이터가 경고하면 …"(2026-10-16 사용자 지적). 반대 쪽 구조 문제는 A안(대칭 설계)으로 별도 진행 |
 | T134 | 완료 | 전체화면(Mac 1300~1600px 폭)에서 live 의견·반응 카드가 오른쪽으로 넘쳐 잘리던 문제 — 카드 2열 칸을 minmax(0,1fr)로, 머리띠 줄바꿈 허용, Mac 전체화면 4크기 e2e(2026-10-15 사용자 지적 "전체화면으로 했을 때만 잘려보여") |
 | T133 | 완료 | 반대 쪽 추가 답변에서 함정 조건(FULL_AUTO·EXP_ONLY) 제안 문구 제거, T119 "모든 조건 도달" 불변식은 찬성 입장 한정(2026-10-15 사용자 지시). 상세는 아래 T133 카드 |
@@ -118,6 +119,21 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T136 표결 미표결 방지
+
+- 사용자 지시(2026-10-16): "안건 투표시 미표결될 때가 있는데, 이 경우 다시 하게 해주거나 미표결이 안되도록 해줘."
+- 근거: 10월 10~16일 live 서버 로그(평가·테스트 세션 제외) 표결 73건 중 4건 실패. **모두 `invalid_response`**(응답 형식 검사 실패, 서버 1회 재시도 후에도 실패)이고, 10-16 02:13Z 한 세션에서 CFO·CAIO·CISO 3명이 동시에 실패했다. 평가 기록(v15·v16)도 VOTE 112건 중 5건 실패. 지금 화면은 실패 시 5초 동안 "미표결 임원 다시 요청" 버튼을 보이고 누르지 않으면 UNCAST로 확정한다(runner.ts VOTE_RETRY_GRACE_MS) — 짧아서 놓치기 쉽다.
+- 할 일:
+  1. **원인 기록**: `server/handlers/vote.ts`(와 round.ts의 같은 경로)에서 형식 검사 실패 시 zod issue의 경로·코드(예: `reason:too_big`, `motionHash:invalid_literal`, `reason:custom`)와, 영문 검사에 걸린 경우 걸린 토큰(짧은 식별자 하나, 예: `E4`·`LIMIT`)만 로그 필드(`invalidIssues`)로 남긴다. 응답 본문·발언 원문은 남기지 않는다. 테스트 추가.
+  2. **원인 줄이기(로그·코드로 근거가 서는 것만)**: 흔한 실패를 프롬프트나 검증으로 줄인다. 예: 판단 근거에 자료 ID·조건 ID·영문 약어를 쓰지 말라는 지시가 VOTE 지시에 있는지 확인하고 없으면 보강, reason 160자 초과가 원인이면 지시에 글자 수를 분명히. motionId·motionHash 정확 일치 검사는 유지(안건 고정 보증)하되, 지시에서 "meeting_record의 값을 그대로 복사"를 분명히. 프롬프트를 바꾸면 버전을 올리고 기록.
+  3. **자동 재요청**: 표결 응답이 실패한 역할은 사람이 누르지 않아도 runner가 자동으로 1회 다시 요청한다(기존 수동 버튼 대신 또는 그 앞에). 대기 상한은 예측 가능하게(서버 VOTE 타임아웃 + 여유 이내).
+  4. **미표결 안 되게(최후 대체)**: 자동 재요청까지 실패한 역할은 UNCAST 대신 **규칙표(decideMember)로 정한 표**를 기록한다 — live 요청과 같은 맥락(확정 조건·참가자 입장·추가 질문 답변 여부). 그 표에는 출처 표시(예: `ballot.source = 'rules'`)를 남기고, 결과 보고서의 그 임원 표 근거 자리에 작게 "응답이 늦어 기준표로 정했습니다" 같은 한 줄을 보인다(공개 연출 T114·엔딩 T127 계산은 이 표를 실제 표와 같게 센다). 판단 근거 문장은 규칙표 reason을 쓴다.
+  5. scripted 모드·mock은 지금 동작 그대로. 운영자 "scripted로 새 체험" 등 기존 복구 경로도 그대로.
+- 읽을 것: `src/services/orchestrator/runner.ts`(startFinalVotes·awaitResult·retryFinalVotes·VOTE_RETRY_GRACE_MS), `src/domain/session.ts`(FINALIZE_RESULT·fillMissingBallots·RECORD_EXEC_BALLOT), `src/components/screens/{Vote,Result}Screen.tsx`, `server/handlers/vote.ts`, `server/validate.ts`(voteResponseSchema·findStrayLatinRun), `server/prompts/*`(VOTE 지시), `src/domain/voting.ts`, DESIGN_SPEC T65·T114·T127.
+- 만들 것: 위 1~4, 단위 테스트(실패 로그 필드·자동 재요청·재요청 성공 시 실제 표·끝내 실패 시 규칙표 표와 출처·결과 표시 문구·UNCAST가 나오지 않음), e2e(live mock에서 한 임원 표결을 계속 실패시켜도 결과에 미표결이 없고 대체 표시가 보임, 1080·720), DESIGN_SPEC "## T136", FACILITATOR_GUIDE 한 줄, TASKS 행 완료.
+- 허용 경로: `server/`, `src/`, `scripts/`, `tests/`, `e2e/`, `docs/`. 하지 말 것: motionHash 검사 제거, 표결 규칙표 변경, 전수 실측. live 실측이 꼭 필요하면 `--case`로 대표 2~3케이스만.
+- 크기: M.
 
 ## T133 반대 쪽 추가 답변의 함정 조건 문구 제거
 
