@@ -36,7 +36,8 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
-    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
+    // T137: CISO도 처음엔 고민 중이다(1 찬성·1 반대·2 고민 중).
+    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--undecided/);
     // 본문 카드(임원 카드의 상태 칩 옆)에도 같은 문구가 접근 가능한 텍스트로 있다.
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
     await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대');
@@ -246,12 +247,12 @@ test.describe('live mock: 무대 표정', () => {
 
     // OPINIONS의 stance는 mock 제공자가 안건의 roleLenses.opening을 쓴다(PR #13 Codex
     // 3차 검토, server/providers/mock.ts scenarioAwareOpeningStance) — 안건①(ai-approval)
-    // 문서 기준 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST.
+    // 문서 기준(T137) CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO UNDECIDED.
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
-    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
+    await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 

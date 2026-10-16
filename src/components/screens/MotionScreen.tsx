@@ -173,7 +173,7 @@ export function MotionScreen({
                     </ul>
                   ) : (
                     <p className="motion-screen__no-conditions">
-                      {objectionSide ? '처음 안은 그대로 표결합니다.' : '확정한 조건이 없어 처음 안 그대로 표결합니다.'}
+                      확정한 조건이 없어 처음 안 그대로 표결합니다.
                     </p>
                   )}
                 </>

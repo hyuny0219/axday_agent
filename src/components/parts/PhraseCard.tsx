@@ -69,7 +69,7 @@ export function PhraseCard({
       </span>
       {objectionTag ? (
         <span className="phrase-card__body">
-          <span className="phrase-card__tag" data-testid={`${testId ?? `phrase-card-${phrase.id}`}-tag`}>
+          <span className="phrase-card__tag" data-testid={`phrase-tag-${phrase.id}`}>
             {objectionTag}
           </span>
           <span className="phrase-card__text">{phrase.text}</span>

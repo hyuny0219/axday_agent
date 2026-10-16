@@ -587,7 +587,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           className="result-summary__changed"
                           data-testid="result-summary-changed"
                         >
-                          이사님 조건으로 바뀜
+                          {resultSummary.objectionLabels.length > 0 ? '이사님 반대 근거로 바뀜' : '이사님 조건으로 바뀜'}
                         </span>
                       )}
                       {/* "한 끗 차이" 안내(T96): 부결(NO)한 임원이 조건 1~2개만 더

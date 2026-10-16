@@ -83,7 +83,7 @@ describe('PhraseCard — 반대 근거 라벨(T137)', () => {
       />,
     );
     expect(screen.getByTestId('phrase-card-N1')).toHaveClass('phrase-card--objection');
-    expect(screen.getByTestId('phrase-card-N1-tag')).toHaveTextContent('반대 근거 · 감사 메모');
+    expect(screen.getByTestId('phrase-tag-N1')).toHaveTextContent('반대 근거 · 감사 메모');
   });
 });
 
