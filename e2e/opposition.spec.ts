@@ -43,7 +43,6 @@ test('순수 반대(조건 없음, N4)는 반응 문구가 임원별로 다르�
 
   // MOTION: 조건이 없으므로 원안 그대로 — "요구한 조건" 문구는 보이지 않는다.
   await expect(page.getByTestId('motion-card')).toContainText(aiApprovalScenario.motionBreakdown.proposal);
-  await expect(page.getByText('이사님이 요구한 조건')).toHaveCount(0);
   await page.getByTestId('freeze-motion').click();
 
   // VOTE: 참가자도 반대(NO)로 완주한다.
@@ -69,12 +68,12 @@ test('반대 근거(N1)는 안건 문구를 바꾸지 않고 "반대 사유"로 
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
 
-  await expect(page.getByText('이사님이 요구한 조건')).toHaveCount(0);
   await expect(page.getByTestId('motion-card')).not.toContainText('아래 조건');
   await expect(page.getByTestId('motion-card')).toContainText(aiApprovalScenario.motionBreakdown.proposal);
   await expect(page.getByTestId('motion-objections')).toContainText('승인 이유를 확인할 수 없음');
+  await expect(page.getByTestId('motion-objections')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
 
-  await expect(page.getByTestId('vote-motion-objections')).toContainText('반대 사유');
+  await expect(page.getByTestId('vote-motion-objections')).toContainText('이사님이 요구한 조건');
   await expect(page.getByTestId('vote-motion-conditions')).toHaveCount(0);
 });

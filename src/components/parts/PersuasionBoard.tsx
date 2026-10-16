@@ -164,7 +164,7 @@ function buildRow(
       memberId,
       stanceText,
       stanceChanged,
-      conditionNote: targetVote === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '근거는 충분 · 답변 뒤 반대',
+      conditionNote: targetVote === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '조건은 충분 · 답변 뒤 반대',
     };
   }
 
@@ -197,7 +197,7 @@ function buildRow(
     stanceText,
     stanceChanged,
     conditionNote:
-      ids.length > 0 ? `움직일 반대 근거 · ${labelsOf(ids)}${refSuffix}` : '반대 근거로는 설득이 어렵습니다',
+      ids.length > 0 ? `움직일 조건 · ${labelsOf(ids)}${refSuffix}` : '조건으로는 설득이 어렵습니다',
   };
 }
 

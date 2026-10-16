@@ -31,7 +31,7 @@ describe('ConditionChips — 반대 근거 칩(T137)', () => {
         onToggle={noop}
       />,
     );
-    expect(screen.getByTestId('condition-chips-label')).toHaveTextContent('반대 근거');
+    expect(screen.getByTestId('condition-chips-label')).toHaveTextContent(/^조건$/);
     expect(screen.getByTestId('condition-chip-AG_AUDIT')).toHaveClass('condition-chip--objection');
     expect(screen.getByTestId('condition-chip-AG_AUDIT')).toHaveClass('condition-chip--accepted');
     expect(screen.getByTestId('condition-chip-AG_TRUST')).toHaveClass('condition-chip--objection');
@@ -64,14 +64,14 @@ describe('ConditionChips — 반대 근거 칩(T137)', () => {
         onToggle={noop}
       />,
     );
-    expect(screen.getByTestId('condition-chip-AG_WARN')).toHaveTextContent('+ 새 근거');
+    expect(screen.getByTestId('condition-chip-AG_WARN')).toHaveTextContent('+ 새 조건');
   });
 });
 
 describe('PhraseCard — 반대 근거 라벨(T137)', () => {
   it('자료 이름이 있으면 "반대 근거 · 감사 메모", 함정은 "반대 근거"만 보인다', () => {
-    expect(objectionTagFor(aiApprovalScenario, 'AG_AUDIT')).toBe('반대 근거 · 감사 메모');
-    expect(objectionTagFor(aiApprovalScenario, 'AG_BAN')).toBe('반대 근거');
+    expect(objectionTagFor(aiApprovalScenario, 'AG_AUDIT')).toBe('조건 · 감사 메모');
+    expect(objectionTagFor(aiApprovalScenario, 'AG_BAN')).toBe('조건');
     expect(objectionTagFor(aiApprovalScenario, 'LOG')).toBeUndefined();
     expect(objectionTagFor(aiApprovalScenario, null)).toBeUndefined();
     render(
@@ -79,11 +79,11 @@ describe('PhraseCard — 반대 근거 라벨(T137)', () => {
         phrase={{ id: 'N1', text: '문구' }}
         selected={false}
         onToggle={() => undefined}
-        objectionTag="반대 근거 · 감사 메모"
+        objectionTag="조건 · 감사 메모"
       />,
     );
     expect(screen.getByTestId('phrase-card-N1')).toHaveClass('phrase-card--objection');
-    expect(screen.getByTestId('phrase-tag-N1')).toHaveTextContent('반대 근거 · 감사 메모');
+    expect(screen.getByTestId('phrase-tag-N1')).toHaveTextContent('조건 · 감사 메모');
   });
 });
 
@@ -107,11 +107,11 @@ describe('반대 근거는 안건을 수정하지 않는다(T137)', () => {
     expect(display.undecidedLabels).toHaveLength(sc.motionBreakdown.undecidedItems.length);
   });
 
-  it('chairMotionLine: 반대 사유만 있으면 처음 안 그대로 표결한다고 말한다', () => {
+  it('chairMotionLine: 반대 쪽 조건도 찬성 쪽과 같은 "요구 조건" 문구를 쓴다', () => {
     expect(chairMotionLine(sc, ['AG_AUDIT'], 'AGAINST')).toBe(
-      '이사님의 반대 사유(승인 이유를 확인할 수 없음)를 적고, 처음 안 그대로 표결에 부칩니다',
+      '이사님의 반대 의견과 요구 조건(승인 이유를 확인할 수 없음)을 달아 표결에 부칩니다',
     );
-    expect(chairMotionLine(sc, ['AG_AUDIT', 'AG_TRUST'], 'AGAINST')).toContain('반대 사유 2개');
+    expect(chairMotionLine(sc, ['AG_AUDIT', 'AG_TRUST'], 'AGAINST')).toContain('요구 조건 2개');
   });
 
   function resultSession(conditionIds: string[], outcome: 'PASS' | 'REJECT'): Session {

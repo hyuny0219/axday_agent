@@ -135,7 +135,7 @@ export const FOLLOWUP_NO_VERDICT_RULE =
 export const VOTE_UNDECIDED_START_RULE =
   '당신은 이 안건에서 처음에 고민 중이었습니다. 참가자의 근거나 조건으로 마음이 정해지지 않았다면' +
   ' 참가자의 주장에 설득되지 않은 것이므로 참가자 입장의 반대편에 표를 던지십시오(참가자가 찬성이면' +
-  ' 반대표, 참가자가 반대이면 반대 근거가 약하다고 보고 원안대로 찬성표). 참가자의 근거가 당신의' +
+  ' 반대표, 참가자가 반대이면 내건 조건이 약하다고 보고 원안대로 찬성표). 참가자의 근거가 당신의' +
   ' 우려와 맞닿아 마음이 정해졌다면 참가자 쪽으로 표를 던져도 됩니다.';
 
 export const VOTE_UNANSWERED_RULE =
@@ -285,10 +285,10 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
       );
     }
     if (input.participantStance === 'AGAINST' && (input.participantObjections?.length ?? 0) > 0) {
-      lines.push('참가자가 든 반대 근거(안건은 바뀌지 않았고, 참가자가 반대하는 이유로 든 근거 자료의 사실입니다):');
+      lines.push('참가자가 내건 조건(안건은 바뀌지 않았고, 참가자가 반대하는 이유로 든 근거 자료의 사실입니다):');
       lines.push((input.participantObjections ?? []).map((label) => `- ${neutralizeTags(label)}`).join('\n'));
       lines.push(
-        '이 반대 근거가 제공된 자료에 실제로 있는 사실이고 당신의 우려를 키운다면 반대 쪽으로 기울 수' +
+        '이 조건이 제공된 자료에 실제로 있는 사실이고 당신의 우려를 키운다면 반대 쪽으로 기울 수' +
           ' 있습니다. 근거가 약하거나 지나친 주장이라면 오히려 안건대로 받아들일 수 있습니다.',
       );
     }

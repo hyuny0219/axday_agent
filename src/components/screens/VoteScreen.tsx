@@ -209,13 +209,13 @@ export function VoteScreen({
                 </ul>
               </div>
             )}
-            {/* T137: 반대 근거는 안건을 바꾸지 않고 "반대 사유"로 나란히 적는다(빨강). */}
+            {/* T137: 반대 근거는 안건을 바꾸지 않고 나란히 보인다(빨강, 라벨은 찬성 조건과 같다). */}
             {motionDisplay.objectionLabels.length > 0 && (
               <div
                 className="vote-screen__motion-conditions vote-screen__motion-conditions--objection"
                 data-testid="vote-motion-objections"
               >
-                <span className="vote-screen__motion-conditions-label">반대 사유</span>
+                <span className="vote-screen__motion-conditions-label">이사님이 요구한 조건</span>
                 <ul className="vote-screen__motion-conditions-list">
                   {motionDisplay.objectionLabels.map((label) => (
                     <li key={label}>{label}</li>

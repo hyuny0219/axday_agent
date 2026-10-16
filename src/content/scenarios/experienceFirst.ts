@@ -562,7 +562,7 @@ export const experienceFirstScenario: Scenario = {
       {
         when: { participantStance: 'AGAINST' },
         vote: 'YES',
-        reason: '반대 근거가 약해 안건대로 찬성합니다',
+        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },
@@ -599,7 +599,7 @@ export const experienceFirstScenario: Scenario = {
       {
         when: { participantStance: 'AGAINST' },
         vote: 'YES',
-        reason: '반대 근거가 약해 안건대로 찬성합니다',
+        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },

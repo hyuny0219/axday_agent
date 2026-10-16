@@ -795,13 +795,13 @@ export function AssistantPanel({
                   ) : (
                     <p>
                       {(compareView.objectionConditionIds?.length ?? 0) > 0
-                        ? '안건은 바뀌지 않았습니다. 반대 근거는 반대 사유로 적힙니다.'
+                        ? '안건 문장은 바뀌지 않았습니다.'
                         : '지금까지 확정한 조건이 없습니다.'}
                     </p>
                   )}
                   {(compareView.objectionConditionIds?.length ?? 0) > 0 && (
                     <>
-                      <h4>지금까지 든 반대 근거</h4>
+                      <h4>지금까지 붙인 조건</h4>
                       <ul data-testid="assistant-objections">
                         {compareView.objectionConditionIds?.map((id) => (
                           <li key={id}>{conditionLabel(scenario, id)}</li>
@@ -809,7 +809,7 @@ export function AssistantPanel({
                       </ul>
                     </>
                   )}
-                  <h4>{participantStance === 'AGAINST' ? '더 들 수 있는 반대 근거' : '남은 확인 사항'}</h4>
+                  <h4>남은 확인 사항</h4>
                   {remainingShown.length > 0 ? (
                     <ul>
                       {remainingShown.map((id) => (

@@ -43,15 +43,15 @@ test('반대 근거 카드·칩은 빨강이고 자료 이름이 붙는다(안�
   await expectNoPageScroll(page, 'DISCUSS(반대 입장, 추천 문구)');
 
   // 추천 문구: 반대 근거 카드에 "반대 근거 · 자료 이름" 라벨이 붙고, 함정 카드는 자료 이름 없이 "반대 근거"다.
-  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('반대 근거 · 감사 메모');
-  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('반대 근거 · 사용자 설문');
-  await expect(page.getByTestId('phrase-tag-N3')).toHaveText('반대 근거');
+  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('조건 · 감사 메모');
+  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('조건 · 사용자 설문');
+  await expect(page.getByTestId('phrase-tag-N3')).toHaveText('조건');
   await expect(page.getByTestId('phrase-tag-N4')).toHaveCount(0);
   await expect(page.getByTestId('phrase-card-N1')).toHaveClass(/phrase-card--objection/);
 
   await page.getByTestId('phrase-card-N1').click();
   await page.getByTestId('phrase-card-N2').click();
-  await expect(page.getByTestId('condition-chips-label')).toHaveText('반대 근거');
+  await expect(page.getByTestId('condition-chips-label')).toHaveText('조건');
   const chip = page.getByTestId('condition-chip-AG_AUDIT');
   await expect(chip).toHaveClass(/condition-chip--objection/);
   await expect(chip).toHaveClass(/condition-chip--accepted/);
@@ -82,7 +82,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await page.getByTestId('reactions-advance').click();
   // 추가 질문은 반대 근거를 묻는다. 답변 카드는 반대 근거이고 첫 의견에서 고른 문장은 숨긴다.
   await expect(page.getByTestId('followup-option-5')).toHaveCount(0);
-  await expect(page.getByTestId('phrase-tag-6')).toHaveText('반대 근거 · 사용자 설문');
+  await expect(page.getByTestId('phrase-tag-6')).toHaveText('조건 · 사용자 설문');
   await expectNoPageScroll(page, 'REACTIONS(답하기, 반대 근거 카드)');
   await page.getByTestId('followup-option-6').click();
   await expect(page.getByTestId('condition-chip-AG_TRUST')).toHaveClass(/condition-chip--objection/);
@@ -99,7 +99,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await expectNoPageScroll(page, 'MOTION(반대 사유)');
   await page.getByTestId('freeze-motion').click();
 
-  await expect(page.getByTestId('vote-motion-objections')).toContainText('반대 사유');
+  await expect(page.getByTestId('vote-motion-objections')).toContainText('이사님이 요구한 조건');
   await expect(page.getByTestId('vote-motion-conditions')).toHaveCount(0);
   await expectNoPageScroll(page, 'VOTE(반대 사유)');
   await page.getByTestId('vote-radio-NO').check();
@@ -108,7 +108,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   // RESULT: CAIO·CISO가 반대로 돌아 CEO만 찬성이다(반대 4석 = 성공). 도장은 "조건부 가결"이 아니다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 1 · 반대 4');
-  await expect(page.getByTestId('result-summary-objections')).toContainText('반대 사유');
+  await expect(page.getByTestId('result-summary-objections')).toContainText('이사님이 요구한 조건');
   await expect(page.getByTestId('result-summary-objections')).toContainText('승인 이유를 확인할 수 없음');
   await expect(page.getByTestId('result-summary-conditions')).toContainText('조건 없이 처음 안 그대로 표결');
   await expect(page.getByTestId('result-stamp')).not.toContainText('조건부');
@@ -143,13 +143,13 @@ test('반대 쪽 함정(모두 막기)은 네 임원이 모두 찬성해 실패�
 
 test('안건 ②도 같은 구조: 반대 근거 + 추가 답변으로 성공하고 안건은 원안 그대로다', async ({ page }) => {
   await reachDiscussAgainst(page, 'experience-first');
-  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('반대 근거 · 실패 사례 메모');
-  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('반대 근거 · 베테랑 인터뷰 메모');
+  await expect(page.getByTestId('phrase-tag-N1')).toHaveText('조건 · 실패 사례 메모');
+  await expect(page.getByTestId('phrase-tag-N2')).toHaveText('조건 · 베테랑 인터뷰 메모');
   await page.getByTestId('phrase-card-N1').click();
   await submitFirstOpinion(page);
   await page.getByTestId('reactions-advance').click();
   // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_WHY, 7 AG_SPLIT, 8 AG_NUMBERS, 9 BOTH
-  await expect(page.getByTestId('phrase-tag-7')).toHaveText('반대 근거 · 지난 2년 주요 결정');
+  await expect(page.getByTestId('phrase-tag-7')).toHaveText('조건 · 지난 2년 주요 결정');
   await page.getByTestId('followup-option-7').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-objections')).toContainText('경고를 넘길 핑계가 생김');

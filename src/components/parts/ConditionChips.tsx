@@ -79,10 +79,8 @@ export function ConditionChips({
     return () => window.removeEventListener('resize', measure);
   }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
 
-  const objectionCount = proposedIds.filter((id) => isObjection(scenario, id)).length;
-  // 칩 줄 라벨: 반대 근거만 있으면 "반대 근거", 섞여 있으면 둘 다 적는다.
-  const rowLabel =
-    objectionCount === 0 ? '조건' : objectionCount === proposedIds.length ? '반대 근거' : '조건·반대 근거';
+  // 칩 줄 라벨은 두 입장 모두 "조건"이다(색만 다르다: 반대 쪽 빨강).
+  const rowLabel = '조건';
 
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
@@ -127,13 +125,13 @@ export function ConditionChips({
                 className={`condition-chip${modifier}`}
                 aria-pressed={accepted}
                 data-testid={`condition-chip-${id}`}
-                title={objection ? `반대 근거 · ${conditionLabel(scenario, id)}` : conditionLabel(scenario, id)}
+                title={conditionLabel(scenario, id)}
                 onClick={() => onToggle(id)}
               >
                 <span className="condition-chip__label">{conditionLabel(scenario, id)}</span>
                 {accepted && (
                   <span className="condition-chip__tail" aria-hidden="true">
-                    {isNew ? (objection ? '+ 새 근거' : '+ 새 조건') : '✓'}
+                    {isNew ? '+ 새 조건' : '✓'}
                   </span>
                 )}
               </button>

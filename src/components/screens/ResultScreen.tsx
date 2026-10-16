@@ -440,13 +440,13 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                       ? resultSummary.conditionLabels.join(', ')
                       : '조건 없이 처음 안 그대로 표결'}
                   </p>
-                  {/* T137: 반대 근거는 안건을 수정하지 않고 "반대 사유"로 나란히 적는다. */}
+                  {/* T137: 반대 근거는 안건을 수정하지 않고 */}
                   {resultSummary.objectionLabels.length > 0 && (
                     <p
                       className="result-your-card__value result-your-card__value--objection"
                       data-testid="result-summary-objections"
                     >
-                      <span className="result-your-card__objection-label">반대 사유</span>{' '}
+                      <span className="result-your-card__objection-label">이사님이 요구한 조건</span>{' '}
                       {resultSummary.objectionLabels.join(', ')}
                     </p>
                   )}
@@ -587,7 +587,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           className="result-summary__changed"
                           data-testid="result-summary-changed"
                         >
-                          {resultSummary.objectionLabels.length > 0 ? '이사님 반대 근거로 바뀜' : '이사님 조건으로 바뀜'}
+                          이사님 조건으로 바뀜
                         </span>
                       )}
                       {/* "한 끗 차이" 안내(T96): 부결(NO)한 임원이 조건 1~2개만 더
@@ -681,9 +681,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             <p className="result-epilogue-card__text">{epilogue}</p>
             <div className="result-epilogue-card__conditions">
               <span className="result-epilogue-card__conditions-label">
-                {resultSummary.conditionLabels.length === 0 && resultSummary.objectionLabels.length > 0
-                  ? '이사님이 든 반대 사유'
-                  : '이사님이 붙인 조건'}
+                이사님이 붙인 조건
               </span>
               {resultSummary.conditionLabels.length + resultSummary.objectionLabels.length > 0 ? (
                 <ul className="result-epilogue-card__chips">

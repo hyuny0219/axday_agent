@@ -241,7 +241,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
               (id) => result.tally.persuaded.includes(id),
             );
             expect(result.headline).toContain(
-              toward.length > 0 ? (side === 'AGAINST' ? '발언과 반대 근거' : '발언과 조건') : '발언으로',
+              toward.length > 0 ? '발언과 조건' : '발언으로',
             );
           } else {
             expect(match).toBeNull();
@@ -323,7 +323,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     expect(againstLabel).not.toBe(forLabel);
     expect(result.headline).toBe(
       againstLabel
-        ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${againstLabel}' 반대 근거를 들어 보세요`
+        ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${againstLabel}' 조건을 붙여 보세요`
         : '이번엔 임원의 입장을 바꾸지 못했습니다',
     );
   });

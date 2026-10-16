@@ -93,8 +93,8 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('처음부터 같은 편');
     // T137: CISO는 고민 중이라 설득 대상이고, 어떤 반대 근거가 움직이는지 안내한다.
-    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('움직일 반대 근거 · 믿지 못해 책임이 흐려짐');
-    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('움직일 반대 근거 · 넓히면 잘못 승인도 늘어남');
+    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('움직일 조건 · 믿지 못해 책임이 흐려짐');
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('움직일 조건 · 넓히면 잘못 승인도 늘어남');
     // CFO만 처음부터 반대라 분모에서 빠지고, CEO·CAIO·CISO 셋이 설득 대상이다(아직 0명).
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
@@ -144,6 +144,6 @@ describe('PersuasionBoard 답변 대기 표기(T110)', () => {
         awaitingAnswerIds={['CEO']}
       />,
     );
-    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('근거는 충분 · 답변 뒤 반대');
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('조건은 충분 · 답변 뒤 반대');
   });
 });

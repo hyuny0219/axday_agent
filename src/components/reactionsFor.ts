@@ -66,19 +66,16 @@ export function oppositionReactionText(
  * 없이 입장이 바뀐 경우) "이사님 의견을 듣고"로 되돌아간다. */
 export function changeCauseLabel(scenario: Scenario, reactions: Reaction[]): string {
   const labels: string[] = [];
-  let objectionOnly = true;
   for (const reaction of reactions) {
     if (reaction.conditionId === 'none') continue;
     const condition = scenario.conditions.find((candidate) => candidate.id === reaction.conditionId);
     const text = condition?.label ?? reaction.conditionId;
-    if (condition?.side !== 'AGAINST') objectionOnly = false;
     if (!labels.includes(text)) labels.push(text);
   }
   if (labels.length === 0) {
     return '이사님 의견을 듣고';
   }
-  // T137: 반대 근거로 입장이 바뀌었으면 "조건"이 아니라 "반대 근거"라고 부른다.
-  return `이사님의 '${labels.join('·')}' ${objectionOnly ? '반대 근거로' : '조건으로'}`;
+  return `이사님의 '${labels.join('·')}' 조건으로`;
 }
 
 /** 참가자 입장별 후속 질문(T93). `byStance`가 있는 시나리오는 참가자가 AGAINST일 때만

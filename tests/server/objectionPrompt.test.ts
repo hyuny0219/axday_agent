@@ -70,11 +70,11 @@ function voteInput(overrides: Partial<VoteRequest> = {}): VoteRequest {
 }
 
 describe('표결 프롬프트(v19) — 반대 근거', () => {
-  it('반대 근거는 "적용 조건"이 아니라 "참가자가 든 반대 근거"로 한국어 라벨만 실린다', async () => {
+  it('반대 근거는 "적용 조건"이 아니라 "참가자가 내건 조건"로 한국어 라벨만 실린다', async () => {
     const { provider, systems } = capture();
     await handleVote(voteInput(), { provider });
     const system = systems.CAIO ?? '';
-    expect(system).toContain('참가자가 든 반대 근거');
+    expect(system).toContain('참가자가 내건 조건');
     expect(system).toContain('- 승인 이유를 확인할 수 없음');
     expect(system).toContain('적용 조건: 없음');
     expect(system).not.toContain('AG_AUDIT');
@@ -95,7 +95,7 @@ describe('표결 프롬프트(v19) — 반대 근거', () => {
       voteInput({ participantStance: 'FOR', motion: { ...voteInput().motion, effectiveConditionIds: ['LOG'] } }),
       { provider },
     );
-    expect(systems.CAIO).not.toContain('참가자가 든 반대 근거');
+    expect(systems.CAIO).not.toContain('참가자가 내건 조건');
     expect(systems.CAIO).toContain('적용 조건: 승인 사유 기록');
   });
 
@@ -128,7 +128,7 @@ describe('라운드 프롬프트(v19) — 반대 근거', () => {
     const { provider, systems } = capture();
     await handleRound(roundInput(), { provider });
     const system = systems.CISO ?? '';
-    expect(system).toContain('참가자가 든 반대 근거');
+    expect(system).toContain('참가자가 내건 조건');
     expect(system).toContain('- 판단 이유를 설명할 수 없음');
     expect(system).not.toContain('AG_WHY');
   });
@@ -136,6 +136,6 @@ describe('라운드 프롬프트(v19) — 반대 근거', () => {
   it('반대 근거를 확정하지 않았으면 블록이 없다', async () => {
     const { provider, systems } = capture();
     await handleRound(roundInput({ confirmedConditionIds: [] }), { provider });
-    expect(systems.CISO).not.toContain('참가자가 든 반대 근거');
+    expect(systems.CISO).not.toContain('참가자가 내건 조건');
   });
 });

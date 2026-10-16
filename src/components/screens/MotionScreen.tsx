@@ -104,7 +104,6 @@ export function MotionScreen({
     .map((condition) => condition.label);
   const hasConditionLabels = motionDisplay.conditionLabels.length > 0;
   const hasObjections = motionDisplay.objectionLabels.length > 0;
-  const objectionSide = participantStance === 'AGAINST';
 
   return (
     <>
@@ -181,7 +180,7 @@ export function MotionScreen({
               {hasObjections && (
                 <>
                   <span className="motion-screen__box-label motion-screen__box-label--objection">
-                    반대 사유 {motionDisplay.objectionLabels.length}
+                    이사님이 요구한 조건 {motionDisplay.objectionLabels.length}
                   </span>
                   <ul
                     className="motion-screen__conditions motion-screen__conditions--objection"
@@ -191,19 +190,16 @@ export function MotionScreen({
                       <li key={label}>{label}</li>
                     ))}
                   </ul>
-                  <p className="motion-screen__not-included-text">안건은 바꾸지 않고, 반대 사유로 나란히 적습니다.</p>
                 </>
               )}
             </div>
             <div className="motion-screen__cols-box">
               <span className="motion-screen__box-label">
-                {objectionSide ? '이번에 들지 않은 반대 근거' : '이번에 넣지 않은 조건'}
+                이번에 넣지 않은 조건
               </span>
               <p className="motion-screen__not-included-text">
                 {notIncludedLabels.length > 0 ? (
                   <>{notIncludedLabels.join(', ')}</>
-                ) : objectionSide ? (
-                  '준비된 반대 근거를 모두 들었습니다.'
                 ) : (
                   '제안하신 조건이 모두 들어갔습니다.'
                 )}

@@ -11,7 +11,7 @@ export function objectionTagFor(scenario: Scenario, conditionId: string | null):
   if (!conditionId) return undefined;
   const condition = scenario.conditions.find((c) => c.id === conditionId);
   if (condition?.side !== 'AGAINST') return undefined;
-  return condition.source ? `반대 근거 · ${condition.source}` : '반대 근거';
+  return condition.source ? `조건 · ${condition.source}` : '조건';
 }
 
 export type ConditionSourceStage = 'DISCUSS' | 'REACTIONS';
