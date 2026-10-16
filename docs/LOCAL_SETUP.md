@@ -73,12 +73,14 @@ $env:ANTHROPIC_API_KEY="sk-ant-여기에키"; $env:MODEL_PROVIDER="anthropic"; n
 npm ci
 npm run build
 npm run preview -- --port 8787
+# 같은 와이파이의 다른 기기에서도 보려면: npm run preview -- --port 8787 --host 0.0.0.0
 ```
 
 ### 접속
 
 - 그 PC 브라우저(Chrome 권장)에서 **http://localhost:8787/**
 - 같은 와이파이의 다른 기기에서 보려면 **http://<그 PC의 IP>:8787/** (Mac: 시스템 설정 → 네트워크, Windows: `ipconfig`). 처음 실행할 때 방화벽 허용 창이 뜨면 "허용"을 누릅니다.
+  - 이 주소는 **API 키가 있는 live 서버**(`npm run booth` 또는 `npm start`)일 때 됩니다. 키 없이 띄운 사전 구성(scripted) 정적 서버는 기본으로 그 PC 안에서만 받습니다 — PowerShell 명령에 `--host 0.0.0.0`을 붙인 경우에만 다른 기기에서 열립니다(`npm run booth`의 키 없는 경로는 그 PC 전용).
 
 ## 4. 시작 전 점검
 
