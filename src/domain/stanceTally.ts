@@ -14,9 +14,16 @@ export interface StanceTally {
   undecided: number;
 }
 
-export function stanceTally(stances: Record<ExecMemberId, Stance>, leaning: LeaningMap = {}): StanceTally {
+/** counted를 주면 그 임원만 센다 — live에서 아직 의견이 없거나 응답이 실패한 임원의 자리표시 UNDECIDED를
+ * "고민 중"으로 세지 않기 위해서다(PR #21 Codex P2). */
+export function stanceTally(
+  stances: Record<ExecMemberId, Stance>,
+  leaning: LeaningMap = {},
+  counted?: ReadonlySet<ExecMemberId>,
+): StanceTally {
   const tally: StanceTally = { for: 0, leaning: 0, against: 0, undecided: 0 };
   for (const memberId of EXEC_MEMBER_ORDER) {
+    if (counted && !counted.has(memberId)) continue;
     if (leaning[memberId] !== undefined) {
       tally.leaning += 1;
     } else if (stances[memberId] === 'FOR') {

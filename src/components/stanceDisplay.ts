@@ -45,8 +45,12 @@ const TALLY_LABEL: Record<TallyPart['key'], string> = {
 };
 
 /** 집계 한 줄의 조각들("찬성 1 · 기울음 2 · 반대 1"). 0인 항목은 생략한다. */
-export function tallyParts(stances: Record<ExecMemberId, Stance>, leaning: LeaningMap = {}): TallyPart[] {
-  const tally: StanceTally = stanceTally(stances, leaning);
+export function tallyParts(
+  stances: Record<ExecMemberId, Stance>,
+  leaning: LeaningMap = {},
+  counted?: ReadonlySet<ExecMemberId>,
+): TallyPart[] {
+  const tally: StanceTally = stanceTally(stances, leaning, counted);
   const keys: TallyPart['key'][] = ['for', 'leaning', 'against', 'undecided'];
   return keys.filter((key) => tally[key] > 0).map((key) => ({ key, label: TALLY_LABEL[key], count: tally[key] }));
 }

@@ -132,6 +132,38 @@ describe('StageBand 명패·빛·집계', () => {
     );
   }
 
+  it('live 집계는 발언이 있는 임원만 센다 — 의견 전·응답 실패 임원을 고민 중으로 세지 않는다(PR #21 Codex P2)', () => {
+    const one = (roleId: ExecMemberId, stance: Stance) => ({
+      id: `s-${roleId}`,
+      roleId,
+      stage: 'OPINIONS' as const,
+      text: '의견입니다.',
+      evidenceIds: [],
+      referencedStatementIds: [],
+      concerns: [],
+      suggestedConditionIds: [],
+      stance,
+      source: 'live' as const,
+      createdAt: 0,
+    });
+    const live = (statements: ReturnType<typeof one>[]) => (
+      <StageBand
+        stage="OPINIONS"
+        mode="live"
+        roleStatus={{ CEO: 'answered', CFO: 'failed', CAIO: 'pending', CISO: 'answered' }}
+        statements={statements}
+        opinions={[]}
+        scenario={ai}
+        stances={{ CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' }}
+      />
+    );
+    const { rerender } = render(live([one('CEO', 'FOR'), one('CISO', 'AGAINST')]));
+    expect(screen.getByTestId('stage-tally').textContent).toBe('찬성 1반대 1');
+    // 아직 아무도 말하지 않았으면 "고민 중 4"를 보이지 않고 집계를 숨긴다.
+    rerender(live([]));
+    expect(screen.queryByTestId('stage-tally')).toBeNull();
+  });
+
   it('REACTIONS: 큰 명패 글자·색 클래스·집계가 보이고 얼굴 동그라미는 없다', () => {
     const { container } = render(stage('REACTIONS', { leaning: { CFO: 'FOR' } }));
     expect(screen.getByTestId('stage-mood-CEO')).toHaveTextContent('찬성');

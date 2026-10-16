@@ -266,6 +266,11 @@ export function StageBand({
   // 집계는 임원이 의견을 낸 뒤(OPINIONS~REACTIONS)에만 보인다 — BRIEFING은 아직 아무도 말하지
   // 않았고, 봉인 단계는 방향을 가리며, RESULT는 표 배지가 대신한다.
   const showTally = stage === 'OPINIONS' || stage === 'DISCUSS' || stage === 'REACTIONS';
+  // live는 발언이 하나라도 있는 임원만 센다 — 아직 의견이 없거나 응답이 실패한 임원의 자리표시 UNDECIDED를
+  // "고민 중"으로 세지 않는다(PR #21 Codex P2). scripted는 규칙표로 네 명 모두 입장이 정해져 있다.
+  const counted =
+    mode === 'live' ? new Set(EXEC_MEMBER_ORDER.filter((id) => statements.some((item) => item.roleId === id))) : undefined;
+  const parts = showTally ? tallyParts(stances, leaning, counted) : [];
 
   return (
     <div className="stage-band" aria-hidden="true" data-testid="stage-band">
@@ -285,9 +290,9 @@ export function StageBand({
         {/* T87(사용자 — "붉은 상자 안의 글씨는 영어로"): T83에서 한국어로 바꿨던 이
             라벨만 영문으로 되돌렸다. */}
         <div className="stage-band__classified">CLASSIFIED</div>
-        {showTally && (
+        {showTally && parts.length > 0 && (
           <div className="stage-band__tally" data-testid="stage-tally">
-            {tallyParts(stances, leaning).map((part) => (
+            {parts.map((part) => (
               <span key={part.key} className={`stage-band__tally-part stage-band__tally-part--${part.key}`}>
                 {part.label} <b>{part.count}</b>
               </span>
