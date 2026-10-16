@@ -13,6 +13,7 @@ import {
   explainBoard,
   participantDecisive,
   requiredConditionsFor,
+  rulesFallbackBallot,
   tally,
   type TallyResult,
   type VoteContext,
@@ -589,5 +590,46 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
     const motion: Motion = { ...motionFor(['SCOPE', 'DATA_VETO', 'RECORD', 'REVIEW']), scenarioId: ef.id, text: ef.originalMotion.text };
     expect(votesOf(decideBoard(ef, motion, 'FOR', true))).toEqual(['YES', 'YES', 'YES', 'YES']);
     expect(votesOf(decideBoard(ef, motion, 'FOR', false))).toEqual(['YES', 'NO', 'NO', 'NO']);
+  });
+});
+
+describe('rulesFallbackBallot (T136)', () => {
+  const motion: Motion = {
+    id: 'm-rules',
+    scenarioId: scenario.id,
+    kind: 'amended',
+    conditionIds: ['PILOT', 'MEASURE'],
+    baseConditionIds: [],
+    effectiveConditionIds: ['PILOT', 'MEASURE'],
+    executionMode: 'DEFAULT',
+    frozenAt: 0,
+    text: scenario.originalMotion.text,
+    hash: 'hash-rules',
+  };
+
+  it('decideMember와 같은 표를 UNCAST 없이 source rules로 만들고 규칙표 reason을 쓴다', () => {
+    for (const memberId of EXEC_MEMBER_ORDER) {
+      for (const answered of [true, false]) {
+        const ballot = rulesFallbackBallot(scenario, motion, memberId, 'FOR', answered, 5);
+        const expected = decideMember(scenario.voteRules[memberId], {
+          conditionIds: motion.effectiveConditionIds,
+          executionMode: motion.executionMode,
+          participantStance: 'FOR',
+          followUpAnswered: answered,
+        });
+        expect(ballot.vote).toBe(expected);
+        expect(ballot.vote).not.toBe('UNCAST');
+        expect(ballot.source).toBe('rules');
+        expect(ballot.motionHash).toBe(motion.hash);
+        expect(ballot.confirmedAt).toBe(5);
+        expect((ballot.reason ?? '').length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('추가 질문에 답하지 않았으면 답변 게이트가 같은 맥락으로 적용된다', () => {
+    const answered = EXEC_MEMBER_ORDER.map((m) => rulesFallbackBallot(scenario, motion, m, 'FOR', true, 0).vote);
+    const unanswered = EXEC_MEMBER_ORDER.map((m) => rulesFallbackBallot(scenario, motion, m, 'FOR', false, 0).vote);
+    expect(answered.filter((v) => v === 'YES').length).toBeGreaterThanOrEqual(unanswered.filter((v) => v === 'YES').length);
   });
 });

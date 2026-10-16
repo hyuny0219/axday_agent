@@ -23,7 +23,7 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens, summarizeInvalidIssues, mergeInvalidIssues } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -178,8 +178,10 @@ function buildVoteSystemPrompt(
     '지금은 최종 표결 단계입니다. 위 meeting_record의 고정된 안건(motionId/motionHash)에 대해' +
       ' 당신의 최종 판단 한 번만 내리십시오. 다른 임원이나 참가자가 어떻게 표결했는지는 전달되지' +
       ' 않으며, 당신은 그것을 알 수 없다는 전제로 스스로 판단하십시오.',
-    '응답의 motionId·motionHash는 meeting_record에 적힌 값과 정확히 같아야 하고, reason은' +
-      ' 160자 이내여야 합니다.',
+    '응답 형식 규칙(어기면 응답 전체가 거절되어 표가 인정되지 않습니다): ① motionId·motionHash는' +
+      ' meeting_record에 적힌 값을 한 글자도 바꾸지 말고 그대로 복사하십시오. ② reason은 한국어' +
+      ' 문장 하나로 공백 포함 160자 이내(길면 줄여 쓰기)이며, 자료 ID(E1 등)·조건 ID(LIMIT 등)·영문' +
+      ' 약어를 쓰지 말고 자료·조건의 한국어 이름으로 쓰십시오("AI"와 임원 역할 이름만 예외입니다).',
     ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
     ...(input.followUpAnswered !== false && input.followUpAnswerText !== undefined ? [ANSWER_JUDGMENT_RULE] : []),
     meetingRecord,
@@ -194,6 +196,8 @@ interface VoteAttemptResult extends VoteRoleResult {
   latencyMs: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
+  /** invalid_response일 때 원인 코드(T136, 로그 전용). */
+  invalidIssues?: string[];
 }
 
 /** 제공자 호출 1회(파싱 포함). 로그를 남기지 않는다 — callRoleVote가 재시도 여부를 정한
@@ -243,6 +247,9 @@ async function attemptRoleVote(
         status: 'failed',
         failReason: 'invalid_response',
         providerErrorClass: 'invalid_response',
+        invalidIssues: !parsed.success
+          ? summarizeInvalidIssues(parsed.error, result.json, ['reason'])
+          : ['roleId:mismatch'],
         latencyMs,
         modelId: result.modelId,
         // 응답까지는 받았으므로 캐시 토큰은 실제로 쓰였다 — 재시도 합산에 넣는다(Codex 36차 P2).
@@ -313,6 +320,7 @@ async function callRoleVote(
         ...second,
         cacheReadTokens: sumTokens(first.cacheReadTokens, second.cacheReadTokens),
         cacheWriteTokens: sumTokens(first.cacheWriteTokens, second.cacheWriteTokens),
+        invalidIssues: mergeInvalidIssues(first.invalidIssues, second.invalidIssues),
       };
     }
   }
@@ -334,6 +342,7 @@ async function callRoleVote(
     cacheWriteTokens: outcome.cacheWriteTokens,
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
+    invalidIssues: outcome.status === 'failed' ? outcome.invalidIssues : undefined,
   });
   return {
     roleId,

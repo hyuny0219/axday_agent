@@ -33,7 +33,7 @@ import { logCall } from '../log';
 import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
 import { buildFirstReactionRule, classifyFirstReaction } from '../prompts/firstReaction';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens, summarizeInvalidIssues, mergeInvalidIssues } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -233,6 +233,8 @@ interface RoleAttemptResult extends RoundRoleResult {
   verdictStatement?: StatementResponse;
   /** T115: OPINIONS·REACTIONS 응답의 문장 방향이 구조화된 stance와 명백히 어긋나 거절된 시도의 원본과 문장 방향. */
   directionMismatch?: { statement: StatementResponse; direction: 'FOR' | 'AGAINST' };
+  /** invalid_response일 때 원인 코드(T136, 로그 전용). */
+  invalidIssues?: string[];
 }
 
 /** T115: 문장이 선언한 방향과 stance가 명백히 반대(또는 고민 중인데 방향 선언)이면 그 방향을 돌려준다. */
@@ -313,6 +315,9 @@ async function attemptRole(
         status: 'failed',
         failReason: 'invalid_response',
         providerErrorClass: 'invalid_response',
+        invalidIssues: !parsed.success
+          ? summarizeInvalidIssues(parsed.error, result.json, ['message'])
+          : [parsed.data.roleId !== roleId ? 'roleId:mismatch' : 'suggestedConditionIds:foreign'],
         latencyMs,
         modelId: result.modelId,
         // 응답까지는 받았으므로 캐시 토큰은 실제로 쓰였다 — 재시도 합산에 넣는다(Codex 36차 P2).
@@ -423,6 +428,7 @@ async function callRole(
         ...second,
         cacheReadTokens: sumTokens(first.cacheReadTokens, second.cacheReadTokens),
         cacheWriteTokens: sumTokens(first.cacheWriteTokens, second.cacheWriteTokens),
+        invalidIssues: mergeInvalidIssues(first.invalidIssues, second.invalidIssues),
       };
     }
   }
@@ -476,6 +482,7 @@ async function callRole(
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
     note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : undefined,
+    invalidIssues: outcome.status === 'failed' ? outcome.invalidIssues : undefined,
   });
   return {
     roleId,

@@ -558,6 +558,14 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           row.reason
                         )}
                       </span>
+                      {row.fallback && (
+                        <span
+                          className="result-seat__fallback"
+                          data-testid={`result-seat-fallback-${row.memberId}`}
+                        >
+                          응답이 늦어 기준표로 정했습니다
+                        </span>
+                      )}
                       {row.changed && (
                         <span
                           className="result-summary__changed"

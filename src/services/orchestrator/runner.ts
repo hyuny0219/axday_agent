@@ -21,6 +21,12 @@
 // RECORD_EXEC_BALLOT으로 실제 표를 기록할 수 있고, 재요청을 안 쓰거나 실패해도 자동 확정
 // (awaitResult, 최대 finalVoteWaitMs())이 그대로 UNCAST로 끝맺어 기존 동작과 같다.
 //
+// T136 "미표결 방지": 표 응답이 실패한 임원은 사람이 버튼을 누르지 않아도 awaitResult가 자동으로
+// 1회 다시 요청한다(대기 상한은 finalVoteWaitMs() — 서버 VOTE 타임아웃 + 전송 여유). 그래도 끝내
+// 표가 없으면 UNCAST로 두지 않고 규칙표(rulesFallbackBallot, source 'rules')로 정한 표를 기록한다.
+// 수동 "다시 물어보기"는 자동 재요청이 시작되기 전 짧은 틈에만 보이고, 이미 재요청이 시작됐으면
+// 자동 재요청은 건너뛴다(임원당 재요청은 최대 1회).
+//
 // PR #11 Codex 20차 P1: startFinalVotes()는 roundChain 뒤에 이어 붙기 때문에 REACTIONS·
 // FOLLOWUP이 아직 응답 전이면 실제 표 호출은 그 라운드가 끝날 때까지(최대
 // reactionTimeoutMs) 시작되지 않는다. 그런데 awaitResult()의 FINAL_VOTE_WAIT_MS 타이머는
@@ -36,7 +42,7 @@ import type { RequestRegistry } from '../../app/requests';
 import type { Clock } from '../../domain/clock';
 import type { SessionAction } from '../../domain/session';
 import type { Session, Statement, StatementStage } from '../../domain/types';
-import { EXEC_MEMBER_ORDER } from '../../domain/voting';
+import { EXEC_MEMBER_ORDER, rulesFallbackBallot } from '../../domain/voting';
 import type {
   BallotOutcome,
   BoardAgentsAdapter,
@@ -60,10 +66,8 @@ function finalVoteWaitMs(): number {
   return getRoundTimeouts().roundTimeoutMs + TRANSPORT_MARGIN_MS;
 }
 
-/** 실패한 역할이 있을 때 "미표결 임원 다시 요청"을 위해 자동 확정 전에 더 기다리는 시간
- * (T65, 스펙 6장 예외). 참가자가 이 안에 재요청을 누르면 그 결과가 끝날 때까지(자체
- * 타임아웃만큼) 기다렸다가 확정하고, 누르지 않으면 그대로 UNCAST로 확정한다 — 대기 시간이
- * 예측 가능하도록(부스 운영) 한 번 더 기다리는 상한을 둔다. */
+/** 최초 표 요청이 상한(finalVoteWaitMs())에 닿았는데 아직 settle되지 않았을 때 늦은 응답을 더
+ * 기다리는 시간(T65). T136부터는 이 뒤에 자동 재요청이 이어지고, 재요청도 실패하면 규칙표로 정한다. */
 export const VOTE_RETRY_GRACE_MS = 5000;
 
 function delay(ms: number): Promise<void> {
@@ -136,18 +140,14 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
   // baseRevision을 읽게 해서 발언이 사라지지 않게 한다. 리셋은 abortAll로 앞 라운드를 즉시
   // 끝내므로 대기가 길어지지 않는다.
   let roundChain: Promise<void> = Promise.resolve();
-  // VOTE 재요청 신호(T65): 매 VOTE 라운드 시작 시 새로 만든다. retryFinalVotes가 불리는
-  // 즉시(네트워크 완료를 기다리지 않고) resolveVoteRetryStarted()를 호출해 awaitResult의
-  // 대기(VOTE_RETRY_GRACE_MS)를 실제 재요청 완료 대기로 바꿔 준다. 한 번도 재요청하지
-  // 않으면 이 promise는 그 VOTE 라운드 동안 계속 pending이라 grace 타이머만 작동한다.
-  let voteRetryStarted: Promise<void> = new Promise(() => undefined);
-  let resolveVoteRetryStarted: () => void = () => undefined;
+  // VOTE 재요청 완료 신호(T65): 매 VOTE 라운드 시작 시 새로 만든다. 재요청(수동·자동)이 시작되면
+  // voteRetryCompletion이 그 완료를 가리켜, awaitResult가 확정 전에 그 끝을 기다릴 수 있다.
   let voteRetryCompletion: Promise<void> = Promise.resolve();
+  // 이 VOTE 라운드에서 재요청(수동·자동)을 이미 시작했는지(T136) — 임원당 재요청은 1회다.
+  let voteRetryUsed = false;
 
   function resetVoteRetrySignal(): void {
-    voteRetryStarted = new Promise((resolve) => {
-      resolveVoteRetryStarted = resolve;
-    });
+    voteRetryUsed = false;
     voteRetryCompletion = Promise.resolve();
   }
 
@@ -355,9 +355,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
       return;
     }
 
-    // awaitResult가 이 재요청이 끝날 때까지 확정을 미룰 수 있도록, 실제 호출 전에 먼저
-    // "재요청을 시작했다"는 신호부터 보낸다.
-    resolveVoteRetryStarted();
+    voteRetryUsed = true;
 
     for (const roleId of roleIds) {
       deps.store.dispatch({ type: 'SET_ROLE_STATUS', roleId, status: 'pending' });
@@ -391,6 +389,37 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
     await completion;
   }
 
+  function isVotePending(sessionId: string): boolean {
+    const current = deps.store.getSession();
+    return current.sessionId === sessionId && current.stage === 'VOTE' && current.execBallotsPending;
+  }
+
+  /** 아직 표가 기록되지 않은 임원(고정 순서). */
+  function missingExecRoles(): ExecMemberId[] {
+    const { ballots } = deps.store.getSession();
+    return EXEC_MEMBER_ORDER.filter((roleId) => !ballots.some((b) => b.memberId === roleId));
+  }
+
+  /** 표가 없는 임원을 규칙표로 정한 표로 채운다(T136). live 요청과 같은 맥락(확정 조건·참가자
+   * 입장·추가 질문 답변 여부)으로 decideMember를 평가한다. 도메인의 RECORD_EXEC_BALLOT이
+   * 중복·다른 안건 해시를 막는다. */
+  function recordRulesFallbackBallots(sessionId: string): void {
+    const session = deps.store.getSession();
+    const motion = session.finalMotion;
+    const scenario = session.scenarioId ? deps.getScenario(session.scenarioId) : undefined;
+    if (session.sessionId !== sessionId || session.mode !== 'live' || !motion || !scenario) {
+      return;
+    }
+    const stance = session.opinions[session.opinions.length - 1]?.stance ?? null;
+    const now = deps.clock.now();
+    for (const roleId of missingExecRoles()) {
+      deps.store.dispatch({
+        type: 'RECORD_EXEC_BALLOT',
+        ballot: rulesFallbackBallot(scenario, motion, roleId, stance, session.followUpAnswered, now),
+      });
+    }
+  }
+
   async function awaitResult(): Promise<void> {
     const session = deps.store.getSession();
     if (session.stage !== 'VOTE') {
@@ -411,46 +440,25 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
 
     await Promise.race([finalVotesSettled, delay(finalVoteWaitMs())]);
 
-    // 실패한 역할이 있으면(execBallotsPending) 바로 확정하지 않고 "미표결 임원 다시
-    // 요청"을 위해 한 번 더 기다린다(T65, 스펙 6장 예외). 재요청이 이미 시작됐으면 grace
-    // 타이머 대신 그 완료를 기다리고, 시작되지 않았으면 grace 시간만큼만 기다린 뒤 그대로
-    // 진행한다 — 어느 쪽이든 대기 시간은 예측 가능한 상한 안에서 끝난다.
-    //
-    // PR #11 Codex 24·25차: 위 첫 대기(finalVoteWaitMs())가 이미 서버 타임아웃+전송 여유를
-    // 반영하지만, 그래도 그 경계 바로 뒤에 응답이 도착하는 경우가 있다. grace 대기 중에도
-    // finalVotesSettled를 함께 지켜봐서, 그 사이 표 요청이 실제로 settle되면
-    // (delay가 다 지나가길 기다리지 않고) 바로 다시 판단한다 — 이미 4표가 다 도착했으면 그대로
-    // FINALIZE_RESULT로 넘어가고, 그래도 일부만 실패로 남아 있으면 그 시점부터 재요청 grace를
-    // 새로 준다(참가자가 방금 도착한 결과를 보고도 재요청 버튼을 누를 시간을 온전히 갖도록).
-    const afterVotes = deps.store.getSession();
-    if (
-      afterVotes.sessionId === session.sessionId &&
-      afterVotes.stage === 'VOTE' &&
-      afterVotes.execBallotsPending
-    ) {
-      const waited = await Promise.race([
-        delay(VOTE_RETRY_GRACE_MS).then(() => 'grace' as const),
-        voteRetryStarted.then(() => 'retry' as const),
-        finalVotesSettled.then(() => 'settled' as const),
-      ]);
-      if (waited === 'retry') {
-        await voteRetryCompletion;
-      } else if (waited === 'settled') {
-        const afterSettle = deps.store.getSession();
-        if (
-          afterSettle.sessionId === session.sessionId &&
-          afterSettle.stage === 'VOTE' &&
-          afterSettle.execBallotsPending
-        ) {
-          const started = await Promise.race([
-            delay(VOTE_RETRY_GRACE_MS).then(() => false as const),
-            voteRetryStarted.then(() => true as const),
-          ]);
-          if (started) {
-            await voteRetryCompletion;
-          }
-        }
+    // T136: 표가 비는 임원이 있으면 사람이 누르기를 기다리지 않고 자동으로 1회 다시 요청한다.
+    // 최초 요청이 상한까지 settle되지 않았으면 늦은 응답을 VOTE_RETRY_GRACE_MS만 더 기다린 뒤
+    // (그 사이 settle되면 바로) 빈 임원을 판단한다. 이미 수동 재요청이 시작됐으면 그 완료를 기다린다.
+    // 재요청 대기는 finalVoteWaitMs()(서버 VOTE 타임아웃 + 전송 여유)를 넘기지 않는다.
+    if (isVotePending(session.sessionId)) {
+      await Promise.race([finalVotesSettled, delay(VOTE_RETRY_GRACE_MS)]);
+    }
+    if (isVotePending(session.sessionId)) {
+      const missing = missingExecRoles();
+      if (voteRetryUsed) {
+        await Promise.race([voteRetryCompletion, delay(finalVoteWaitMs())]);
+      } else if (missing.length > 0) {
+        await Promise.race([retryFinalVotes(missing), delay(finalVoteWaitMs())]);
       }
+    }
+
+    // 자동 재요청까지 실패한 임원은 UNCAST 대신 규칙표로 정한 표를 기록한다(T136, live만).
+    if (isVotePending(session.sessionId)) {
+      recordRulesFallbackBallots(session.sessionId);
     }
 
     const current = deps.store.getSession();

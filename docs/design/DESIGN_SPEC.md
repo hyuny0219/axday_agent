@@ -1298,3 +1298,12 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 원인: live 의견·반응 카드(`.live-round__cards`)와 scripted 의견 카드(`.opinions-screen__cards`)의 2열이 `repeat(2, 1fr)`라 칸의 최소 폭이 내용 폭이었다. T131 머리띠의 긴 칩("반대 → 찬성 · 답하면 확정")과 이름이 한 줄로 붙으면 1300~1600px 폭(Mac 전체화면 1440·1470·1512)에서 오른쪽 카드가 종이 밖으로 넘쳤다. 1920은 여유가 있고 1280 이하는 머리띠가 줄을 바꿔 드러나지 않았다.
 - 바뀐 것: 두 그리드를 `repeat(2, minmax(0, 1fr))`로(반응 scripted 카드와 같게), 머리띠는 모든 폭에서 줄바꿈을 허용해 칩·이름이 "…"로 잘리지 않게 했다. e2e `noscroll.spec.ts`에 Mac 전체화면 4크기(1512×982·1470×956·1440×900·1728×1117) × live 의견·반응 검사를 더했다(수정 전 3크기 실패 확인).
 
+
+## T136 표결 미표결 방지 (프롬프트 v18, 2026-10-16)
+
+- 배경: 10월 10~16일 live 표결 73건 중 4건이 `invalid_response`로 실패해 UNCAST가 됐다(한 세션에서 3명 동시). 이제 live 결과에는 미표결이 나오지 않는다.
+- 원인 기록: 표결·라운드 로그에 `invalidIssues`(경로:zod 코드, 영문 검사는 걸린 토큰 하나, 예 `reason:too_big`·`motionHash:invalid_literal`·`reason:custom:E4`)를 남긴다. 본문은 남기지 않는다. 가능성이 큰 원인은 reason 160자 초과, reason 안의 자료·조건 ID·영문 약어, motionId·motionHash 복사 오류다. VOTE 지시에 이 세 형식 규칙을 모아 분명히 했다(v18). motionHash 정확 일치 검사는 그대로다.
+- 자동 재요청: 최초 표 요청이 끝났는데 표가 빈 임원이 있으면 runner(`awaitResult`)가 사람이 누르지 않아도 그 임원만 1회 다시 요청한다. 최초 요청이 상한(`finalVoteWaitMs()`)까지 끝나지 않으면 `VOTE_RETRY_GRACE_MS`(5초)만 더 기다린 뒤 판단하고, 재요청 대기도 `finalVoteWaitMs()`를 넘기지 않는다. 임원당 재요청은 1회이며 VOTE 화면의 수동 "다시 물어보기" 버튼은 없앴다(다른 단계의 재요청 버튼은 그대로).
+- 규칙표 대체: 재요청까지 실패한 임원은 UNCAST 대신 `rulesFallbackBallot`(domain/voting.ts)으로 만든 표를 `source: 'rules'`로 기록한다. live 요청과 같은 맥락(확정 조건·참가자 입장·추가 질문 답변 여부)으로 `decideMember`와 같게 평가하고, reason은 규칙표 reason이다. 공개 연출(T114)·엔딩(T127) 계산은 이 표를 실제 표와 같게 센다.
+- 결과 표시: 임원별 판단 행에 작은 회색 pill "응답이 늦어 기준표로 정했습니다"(`result-seat-fallback-<ROLE>`)를 붙인다. 1280×720에서도 행 안에서 두 줄로 접힌다.
+- scripted·mock·"scripted로 새 체험" 등 복구 경로는 그대로다.

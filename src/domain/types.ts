@@ -27,8 +27,9 @@ export interface Motion {
   hash: string;
 }
 
-/** RECORD_EXEC_BALLOT·MARK_EXEC_UNAVAILABLE·FINALIZE_RESULT가 채우는 표 출처. */
-export type BallotSource = 'live' | 'scripted' | 'unavailable';
+/** RECORD_EXEC_BALLOT·MARK_EXEC_UNAVAILABLE·FINALIZE_RESULT가 채우는 표 출처. 'rules'는 live에서
+ * 자동 재요청까지 실패한 임원의 표를 규칙표(decideMember)로 정해 기록한 것이다(T136). */
+export type BallotSource = 'live' | 'scripted' | 'unavailable' | 'rules';
 
 export interface Ballot {
   memberId: MemberId;

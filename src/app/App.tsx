@@ -433,7 +433,6 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
     modeCheckPending,
     roundLog,
     retryRound: realRetryRound,
-    retryFinalVotes: realRetryFinalVotes,
     reactionsStep: realReactionsStep,
     setReactionsStep: realSetReactionsStep,
     setReactionsView: setLiveReactionsView,
@@ -448,7 +447,6 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
   const noop = useCallback(() => {}, []);
   const dispatch = readOnly ? noop : realDispatch;
   const retryRound = readOnly ? async () => {} : realRetryRound;
-  const retryFinalVotes = readOnly ? async () => {} : realRetryFinalVotes;
   const reactionsStep = readOnly && viewPage ? (viewPage === 'REACTIONS_ANSWER' ? 'answer' : 'listen') : realReactionsStep;
   const setReactionsStep = readOnly ? noop : realSetReactionsStep;
   // 지난 의견(전달한 것). DISCUSS는 첫 의견, 다시 답하기는 후속 답변을 그대로 보여 준다.
@@ -626,7 +624,7 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
           roleStatus={session.roleStatus}
           onSelectVote={(vote) => dispatch({ type: 'SELECT_VOTE', vote })}
           onConfirmVote={() => dispatch({ type: 'CONFIRM_VOTE' })}
-          onRetryFailedRoles={session.mode === 'live' && !readOnly ? (roleIds) => void retryFinalVotes(roleIds) : undefined}
+          // T136: 표결 실패는 runner가 자동으로 1회 다시 요청하므로 수동 버튼을 두지 않는다.
         />
       );
 

@@ -36,6 +36,9 @@ export interface CallLogEntry {
   cacheWriteTokens?: number;
   /** 응답을 서버가 손봤을 때의 표시(T114 `followup_verdict_masked`: FOLLOWUP 발언에 방향 단어가 남아 중립 문장으로 대체). */
   note?: string;
+  /** 응답 형식 검사 실패(invalid_response)의 원인 코드(T136): `reason:too_big`·`motionHash:invalid_literal`·
+   * `reason:custom:E4`처럼 경로·zod 코드(영문 검사는 걸린 토큰 하나)만 담는다. 본문은 남기지 않는다. */
+  invalidIssues?: string[];
 }
 
 const LOG_DIR = resolve(process.cwd(), 'logs');

@@ -418,3 +418,32 @@ export function fillMissingBallots(
     matching.find((b) => b.memberId === 'PARTICIPANT') ?? uncastBallot('PARTICIPANT');
   return [...execBallots, participantBallot];
 }
+
+/** live에서 자동 재요청까지 실패한 임원의 표를 규칙표로 정해 기록용 Ballot으로 만든다(T136).
+ * live 표결 요청과 같은 맥락(확정 조건·참가자 입장·추가 질문 답변 여부)으로 decideMember와
+ * 같은 평가를 하고, 판단 근거는 규칙표 reason(없으면 고정 문구)을 쓴다. source는 'rules'다. */
+export function rulesFallbackBallot(
+  scenario: Scenario,
+  motion: Motion,
+  memberId: ExecMemberId,
+  participantStance: 'FOR' | 'AGAINST' | null,
+  followUpAnswered: boolean,
+  now: number,
+): Ballot {
+  const { vote, reason } = explainMember(scenario.voteRules[memberId], {
+    conditionIds: motion.effectiveConditionIds,
+    executionMode: motion.executionMode,
+    participantStance,
+    followUpAnswered,
+  });
+  return {
+    memberId,
+    motionId: motion.id,
+    motionHash: motion.hash,
+    vote,
+    source: 'rules',
+    reason: reason ?? '기준표에 따라 정했습니다',
+    remainingConcerns: [],
+    confirmedAt: now,
+  };
+}

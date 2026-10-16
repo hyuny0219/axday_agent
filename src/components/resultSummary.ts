@@ -19,6 +19,8 @@ export interface ResultSummaryExecRow {
   reason: string;
   /** scripted에서만 true일 수 있다(조건 없는 안건의 표와 실제 표가 다를 때). */
   changed: boolean;
+  /** live에서 응답을 못 받아 규칙표로 정한 표인지(T136, ballot.source === 'rules'). */
+  fallback: boolean;
 }
 
 export interface ResultSummaryParticipant {
@@ -67,6 +69,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
           vote: row.vote,
           reason: row.reason ?? NO_REASON_TEXT,
           changed: row.changed,
+          fallback: false,
         }))
       : EXEC_MEMBER_ORDER.map((memberId) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);
@@ -75,6 +78,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
             vote: ballot?.vote ?? 'UNCAST',
             reason: ballot?.reason ?? ballot?.unavailableReason ?? NO_REASON_TEXT,
             changed: false,
+            fallback: ballot?.source === 'rules',
           };
         });
 

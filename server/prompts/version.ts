@@ -94,4 +94,8 @@
 // v17(2026-10-16, T132 보강, PR #21 Codex P2): 첫 반응 REVERSED 지시를 참가자 방향으로 나눴다 — 찬성 참가자의
 // 조건(함정 조건 등)은 임원의 우려를 키워 AGAINST, 반대 참가자의 조건(예: 승인 사유 기록)은 우려를 풀어 FOR.
 // 그 외 지시는 v16 그대로다.
-export const PROMPT_VERSION = 'v17';
+// v18(2026-10-16, T136): 표결 형식 검사 실패(invalid_response, 10월 10~16일 live 73건 중 4건)를 줄이려고 VOTE
+// 단계 지시에 형식 규칙을 모아 분명히 했다 — reason은 한국어 160자 이내(공백 포함, 길면 줄여 쓰기)·자료 ID/조건 ID/영문
+// 약어 금지(역할 이름·AI만 예외, 걸리면 응답 전체가 거절됨), motionId·motionHash는 meeting_record 값을 한 글자도
+// 바꾸지 말고 그대로 복사. 판단 기준·응답 스키마·표결 규칙은 그대로다.
+export const PROMPT_VERSION = 'v18';
