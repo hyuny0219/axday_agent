@@ -28,6 +28,11 @@ function conditionLabel(scenario: Scenario, conditionId: string): string {
   return scenario.conditions.find((condition) => condition.id === conditionId)?.label ?? conditionId;
 }
 
+/** 반대 근거(T137)면 true — 빨간 칩으로 그린다. */
+function isObjection(scenario: Scenario, conditionId: string): boolean {
+  return scenario.conditions.find((condition) => condition.id === conditionId)?.side === 'AGAINST';
+}
+
 // ACCESS/OPEN_ALL 충돌은 docs/SCENARIO_AI_ASSISTANT.md "추천 문구와 구조화 조건" 절의
 // 문구를 그대로 쓴다. 다른 충돌쌍은 라벨을 채운 일반 템플릿을 쓴다.
 const ACCESS_OPEN_ALL_MESSAGE =
@@ -74,6 +79,11 @@ export function ConditionChips({
     return () => window.removeEventListener('resize', measure);
   }, [proposedIds, acceptedIds, newlyProposedIds, conflictPairs.length]);
 
+  const objectionCount = proposedIds.filter((id) => isObjection(scenario, id)).length;
+  // 칩 줄 라벨: 반대 근거만 있으면 "반대 근거", 섞여 있으면 둘 다 적는다.
+  const rowLabel =
+    objectionCount === 0 ? '조건' : objectionCount === proposedIds.length ? '반대 근거' : '조건·반대 근거';
+
   if (proposedIds.length === 0) {
     if (!showNoMatchHint) {
       return null;
@@ -94,7 +104,9 @@ export function ConditionChips({
           라벨이었으나(STEP·EXHIBIT 등과 같은 규칙) T83에서 한국어로 바꿨다. 확정 칩의
           체크는 배지가 아니라 시안처럼 라벨 문구 끝에 그대로 붙는 글자다. */}
       <div className="condition-chips__row">
-        <p className="condition-chips__label">조건</p>
+        <p className="condition-chips__label" data-testid="condition-chips-label">
+          {rowLabel}
+        </p>
         <div
           className="condition-chips__list"
           ref={listRef}
@@ -104,7 +116,10 @@ export function ConditionChips({
           {proposedIds.map((id) => {
             const accepted = acceptedIds.includes(id);
             const isNew = newlyProposedIds.includes(id);
-            const modifier = accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '';
+            const objection = isObjection(scenario, id);
+            const modifier =
+              (objection ? ' condition-chip--objection' : '') +
+              (accepted ? (isNew ? ' condition-chip--new' : ' condition-chip--accepted') : '');
             return (
               <button
                 key={id}
@@ -112,12 +127,14 @@ export function ConditionChips({
                 className={`condition-chip${modifier}`}
                 aria-pressed={accepted}
                 data-testid={`condition-chip-${id}`}
-                title={conditionLabel(scenario, id)}
+                title={objection ? `반대 근거 · ${conditionLabel(scenario, id)}` : conditionLabel(scenario, id)}
                 onClick={() => onToggle(id)}
               >
                 <span className="condition-chip__label">{conditionLabel(scenario, id)}</span>
                 {accepted && (
-                  <span className="condition-chip__tail" aria-hidden="true">{isNew ? '+ 새 조건' : '✓'}</span>
+                  <span className="condition-chip__tail" aria-hidden="true">
+                    {isNew ? (objection ? '+ 새 근거' : '+ 새 조건') : '✓'}
+                  </span>
                 )}
               </button>
             );

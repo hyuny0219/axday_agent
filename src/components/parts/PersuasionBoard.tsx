@@ -164,7 +164,7 @@ function buildRow(
       memberId,
       stanceText,
       stanceChanged,
-      conditionNote: targetVote === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '조건은 충분 · 답변 뒤 반대',
+      conditionNote: targetVote === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '근거는 충분 · 답변 뒤 반대',
     };
   }
 

@@ -231,6 +231,17 @@
   }
 }
 
+/* T137: 반대 사유(반대 근거) — 찬성 조건 칩과 같은 모양, 색만 빨강. */
+.motion-screen__conditions--objection li {
+  border-color: var(--paper-vote-no);
+  color: var(--paper-vote-no);
+  background-color: rgba(184, 58, 50, 0.08);
+}
+
+.motion-screen__box-label--objection {
+  color: var(--paper-vote-no);
+}
+
 .motion-screen__no-conditions {
   margin: 0;
   font-size: 15px;

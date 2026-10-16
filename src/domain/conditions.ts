@@ -407,6 +407,15 @@ export function isObjectionCondition(scenario: Scenario, conditionId: string): b
   return scenario.conditions.find((condition) => condition.id === conditionId)?.side === 'AGAINST';
 }
 
+/** 확정 ID를 안건에 붙는 조건과 반대 근거(T137)로 나눈다. 순서는 그대로 유지한다. */
+export function splitConditionIds(
+  scenario: Scenario,
+  conditionIds: readonly string[],
+): { conditionIds: string[]; objectionIds: string[] } {
+  const objectionIds = conditionIds.filter((id) => isObjectionCondition(scenario, id));
+  return { conditionIds: conditionIds.filter((id) => !objectionIds.includes(id)), objectionIds };
+}
+
 /**
  * 참가자 입장에서 고를 수 있는 조건 목록(T137). 반대 참가자는 "반대 근거"(side 'AGAINST')를, 그 외(찬성·
  * 입장 미선택)는 안건에 붙는 조건(side 없음)을 쓴다 — 설득 현황판·조건 추천·"다음엔" 안내가 입장과 맞지

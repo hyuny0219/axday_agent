@@ -656,6 +656,22 @@
   color: var(--paper-vote-yes);
 }
 
+/* T137: 반대 사유 칩 — 조건 칩과 같은 모양, 색만 빨강. */
+.result-epilogue-card__chips li.result-epilogue-card__chip--objection {
+  border-color: var(--paper-vote-no);
+  color: var(--paper-vote-no);
+  background-color: rgba(184, 58, 50, 0.08);
+}
+
+.result-your-card__value--objection {
+  margin-top: 2px;
+}
+
+.result-your-card__objection-label {
+  color: var(--paper-vote-no);
+  font-weight: 700;
+}
+
 .result-epilogue-card__no-conditions {
   font-size: 14px;
   color: var(--ink-muted);

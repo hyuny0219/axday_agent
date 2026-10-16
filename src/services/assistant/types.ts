@@ -57,8 +57,10 @@ export interface SummarizeOpinionsResult {
 export interface CompareConditionsResult {
   mode: AssistantMode;
   evidenceIds: string[];
-  /** 원안에는 없고 참가자가 확정한 조건 ID. */
+  /** 원안에는 없고 참가자가 확정한 조건 ID(반대 근거는 안건을 수정하지 않으므로 뺀다, T137). */
   addedConditionIds: string[];
+  /** 참가자가 든 반대 근거 ID(T137). 없으면 생략한다. */
+  objectionConditionIds?: string[];
   /** 아직 확정하지 않아 남아 있는 조건 ID(남은 확인 사항). */
   remainingConditionIds: string[];
 }

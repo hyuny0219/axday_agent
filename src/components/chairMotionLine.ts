@@ -6,6 +6,7 @@
 // "반대 의견과 요구 조건을 달아"로 — 그 조건이 참가자의 요구였다는 점을 의장도 밝힌다.
 
 import type { Scenario } from '../content/types';
+import { splitConditionIds } from '../domain/conditions';
 
 export function chairMotionLine(
   scenario: Scenario | null,
@@ -14,6 +15,16 @@ export function chairMotionLine(
 ): string {
   if (confirmedConditionIds.length === 0) {
     return '처음 안 그대로 표결에 부칩니다';
+  }
+  // T137: 반대 근거는 안건을 수정하지 않는다 — 조건 없이 반대 사유만 있으면 처음 안 그대로 표결하고 사유만 밝힌다.
+  if (scenario) {
+    const { conditionIds, objectionIds } = splitConditionIds(scenario, confirmedConditionIds);
+    if (conditionIds.length === 0 && objectionIds.length > 0) {
+      const firstObjection = scenario.conditions.find((condition) => condition.id === objectionIds[0])?.label ?? objectionIds[0];
+      return objectionIds.length === 1
+        ? `이사님의 반대 사유(${firstObjection})를 적고, 처음 안 그대로 표결에 부칩니다`
+        : `이사님의 반대 사유 ${objectionIds.length}개를 적고, 처음 안 그대로 표결에 부칩니다`;
+    }
   }
   const firstLabel =
     scenario?.conditions.find((condition) => condition.id === confirmedConditionIds[0])?.label ??

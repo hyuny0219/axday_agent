@@ -82,7 +82,13 @@ import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
+import {
+  conditionSourceHint,
+  isConditionOffered,
+  isLaterStageOnly,
+  objectionTagFor,
+  releasedHint,
+} from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
 import {
   changeCauseLabel,
@@ -1062,6 +1068,7 @@ export function ReactionsScreen({
                   <PhraseCard
                     key={index}
                     phrase={{ id: String(index), text: option.text }}
+                    objectionTag={objectionTagFor(scenario, option.proposeConditionId)}
                     selected={selectedOptionIds.includes(String(index))}
                     onToggle={() => handleToggleOption(index)}
                     testId={`followup-option-${index}`}

@@ -9,6 +9,7 @@
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
 import { EXEC_MEMBER_ORDER, explainBoard, participantDecisive, tally, type TallyResult } from '../domain/voting';
+import { splitConditionIds } from '../domain/conditions';
 import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
 const NO_REASON_TEXT = '판단 근거 없음';
@@ -34,6 +35,8 @@ export interface ResultSummary {
   /** 참가자가 확정하고 최종 안건에 반영된 조건의 라벨(순서 유지). 비어 있으면 "조건 없이
    * 원안 그대로 상정"을 화면이 표시한다. */
   conditionLabels: string[];
+  /** 반대 사유(T137): 참가자가 든 반대 근거의 라벨. 안건을 수정하지 않으므로 conditionLabels와 따로 둔다. */
+  objectionLabels: string[];
   execRows: ResultSummaryExecRow[];
   participant: ResultSummaryParticipant;
   /** 내 의견 원문(제출 순서, DISCUSS + REACTIONS 후속 보완 포함). */
@@ -55,9 +58,10 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
   const includedIds = allConfirmedIds.filter((id) =>
     finalMotion.effectiveConditionIds.includes(id),
   );
-  const conditionLabels = includedIds.map(
-    (id) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id,
-  );
+  const labelOf = (id: string) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
+  const split = splitConditionIds(scenario, includedIds);
+  const conditionLabels = split.conditionIds.map(labelOf);
+  const objectionLabels = split.objectionIds.map(labelOf);
 
   const execRows: ResultSummaryExecRow[] =
     session.mode === 'scripted'
@@ -87,6 +91,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
   return {
     tally: tallyResult,
     conditionLabels,
+    objectionLabels,
     execRows,
     participant: {
       vote: participantBallot?.vote ?? 'UNCAST',

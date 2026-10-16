@@ -144,6 +144,6 @@ describe('PersuasionBoard 답변 대기 표기(T110)', () => {
         awaitingAnswerIds={['CEO']}
       />,
     );
-    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('조건은 충분 · 답변 뒤 반대');
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('근거는 충분 · 답변 뒤 반대');
   });
 });

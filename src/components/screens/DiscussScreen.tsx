@@ -48,7 +48,13 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
+import {
+  conditionSourceHint,
+  isConditionOffered,
+  isLaterStageOnly,
+  objectionTagFor,
+  releasedHint,
+} from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -557,6 +563,7 @@ export function DiscussScreen({
                       key={phrase.id}
                       nextStep={gate.visible && nextStep === 'phrase' && phraseIndex === 0}
                       phrase={phrase}
+                      objectionTag={objectionTagFor(scenario, phrase.conditionId)}
                       selected={draft.selectedPhraseIds.includes(phrase.id)}
                       disabled={pendingPhraseId !== null}
                       onToggle={() => handleTogglePhrase(phrase.id)}

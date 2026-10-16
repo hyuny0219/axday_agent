@@ -628,14 +628,14 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     expect(where).not.toHaveTextContent('이미 쓴 내용');
   });
 
-  it('첫 의견(찬성)의 문구 번호는 2/2에서 반대로 바꿔도 첫 의견 당시 입장 기준으로 안내한다(T119)', async () => {
-    renderWithFirstOpinion(['P2'], 'AGAINST');
+  it('첫 의견(찬성)의 문구 번호는 칩을 해제해도 첫 의견에서 고른 문구 번호로 안내한다(T119)', async () => {
+    // T137: 두 입장의 조건이 달라 입장을 바꾸면 찬성 조건은 "남은 확인 사항"에서 빠지므로 같은 입장에서 확인한다.
+    renderWithFirstOpinion(['P2']);
     const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
     fireEvent.click(screen.getByTestId(`followup-option-${both}`));
     fireEvent.click(screen.getByTestId('condition-chip-LOG'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    // 반대 목표의 조건 추천 행에는 LOG가 없을 수 있어 "남은 확인 사항"의 안내로 확인한다.
     const remaining = await screen.findByTestId('assistant-remaining-LOG', {}, { timeout: 2000 });
     expect(remaining).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다');
     expect(remaining).not.toHaveTextContent('이미 쓴 내용');

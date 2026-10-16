@@ -3,7 +3,8 @@
 // 도장을 무대 열 우하단으로 옮기며 App.tsx(StageBand에 넘길 값 계산)와 ResultScreen이
 // 함께 쓰는 순수 함수로 뽑아냈다 — 표결 판정 자체(domain/voting.ts)는 손대지 않는다.
 
-import type { Vote } from '../content/types';
+import type { Scenario, Vote } from '../content/types';
+import { isObjectionCondition } from '../domain/conditions';
 import type { Session } from '../domain/types';
 import { persuasionStamp, type PersuasionStamp } from '../domain/stance';
 import { collectConfirmedConditionIds } from './opinionConditions';
@@ -50,13 +51,16 @@ export interface ResultStamp {
 }
 
 /** finalMotion이 없으면(RESULT 진입 전) null을 돌려준다. */
-export function computeResultStamp(session: Session): ResultStamp | null {
+export function computeResultStamp(session: Session, scenario?: Scenario | null): ResultStamp | null {
   const finalMotion = session.finalMotion;
   if (!finalMotion) {
     return null;
   }
   const allConfirmedIds = collectConfirmedConditionIds(session.opinions);
-  const includedIds = allConfirmedIds.filter((id) => finalMotion.effectiveConditionIds.includes(id));
+  // 반대 근거(T137)는 안건에 반영되는 조건이 아니라서 "조건부 가결"의 근거로 세지 않는다.
+  const includedIds = allConfirmedIds.filter(
+    (id) => finalMotion.effectiveConditionIds.includes(id) && !(scenario && isObjectionCondition(scenario, id)),
+  );
   const text = stampText(session.outcome, includedIds.length > 0);
   if (!text) {
     return null;

@@ -61,7 +61,7 @@ describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
                 continue;
               }
               if (awaiting.includes(m)) {
-                expect(note, ctx).toBe(side === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '조건은 충분 · 답변 뒤 반대');
+                expect(note, ctx).toBe(side === 'FOR' ? '조건은 충분 · 답변 뒤 찬성' : '근거는 충분 · 답변 뒤 반대');
                 continue;
               }
               if (note.startsWith('움직일 조건 · ')) {
