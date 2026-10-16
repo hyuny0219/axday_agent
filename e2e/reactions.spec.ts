@@ -278,7 +278,7 @@ test('직접 쓴 내용이 있을 때 추천 답변을 체크한 뒤 "다시 구
   await page.getByTestId('rebuild-confirm-rebuild').click();
   await expect(page.getByTestId('rebuild-confirm')).toHaveCount(0);
   await expect(page.getByTestId('followup-textarea')).toHaveValue(
-    '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
+    '경험을 앞세우되, 데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
   );
   // 다시 구성한 뒤에는(dirty가 풀렸으므로) 체크한 옵션의 조건이 다시 제안된다.
   await expect(page.getByTestId('condition-chip-DATA_VETO')).toBeVisible();

@@ -143,7 +143,7 @@ export const experienceFirstScenario: Scenario = {
     // 답변(followUp.options)에서 고를 수 있다.
     {
       id: 'P6',
-      text: '경험을 먼저 믿어야 할 이유를 더 설명해 주십시오.',
+      text: '경험을 앞세울 때 무엇을 함께 확인하면 좋을지 말씀해 주십시오.',
       conditionId: null,
       tag: 'request',
       side: 'BOTH',
@@ -354,7 +354,8 @@ export const experienceFirstScenario: Scenario = {
     },
     options: [
       {
-        text: '데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
+        // 찬성(경험 우선) 쪽 답변이므로 경험을 앞세운다는 말로 시작한다 — 그냥 "멈추자"는 반대 쪽 말로 읽혔다(2026-10-16 사용자 지적).
+        text: '경험을 앞세우되, 데이터가 경고하면 결정을 잠시 멈추고 다시 봅시다.',
         proposeConditionId: 'DATA_VETO',
         side: 'FOR',
       },

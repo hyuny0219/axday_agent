@@ -121,7 +121,7 @@ describe('조건 키워드 격리(proposeFromText)', () => {
   });
 
   it('P6(요청형)과 조건 무관 문장은 빈 배열을 제안한다', () => {
-    expect(proposeFromText(scenario, '맡겨도 될지 판단할 근거를 더 제시해 주십시오.')).toEqual([]);
+    expect(proposeFromText(scenario, 'AI에게 결재를 맡기려면 무엇이 더 필요한지 말씀해 주십시오.')).toEqual([]);
     expect(proposeFromText(scenario, '오늘 점심 메뉴는 무엇입니까?')).toEqual([]);
   });
 

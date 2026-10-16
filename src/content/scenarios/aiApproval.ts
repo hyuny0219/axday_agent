@@ -134,7 +134,7 @@ export const aiApprovalScenario: Scenario = {
     // 한다는 불변식은 tests/content/conditionCoverage.test.ts.
     {
       id: 'P6',
-      text: '맡겨도 될지 판단할 근거를 더 제시해 주십시오.',
+      text: 'AI에게 결재를 맡기려면 무엇이 더 필요한지 말씀해 주십시오.',
       conditionId: null,
       tag: 'request',
       side: 'BOTH',
