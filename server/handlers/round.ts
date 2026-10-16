@@ -209,6 +209,7 @@ function buildRoundSystemPrompt(
               confirmedConditionIds: input.confirmedConditionIds,
               priorStance: input.priorStances?.[roleId],
             }),
+            input.participantStance,
           )
         : undefined,
     ),

@@ -91,4 +91,7 @@
 // 넘어올 수 있는 임원만 기존 "UNDECIDED까지만", 우려가 안 풀린 임원은 처음 입장 유지. 판정은 규칙표(decideMember)로
 // 하고 요청에 confirmedConditionIds·priorStances(선택 필드)가 없으면 v15 공통 규칙으로 폴백한다. 응답 스키마·표결 규칙은 그대로.
 // 비교는 docs/eval/tuning-v16.md.
-export const PROMPT_VERSION = 'v16';
+// v17(2026-10-16, T132 보강, PR #21 Codex P2): 첫 반응 REVERSED 지시를 참가자 방향으로 나눴다 — 찬성 참가자의
+// 조건(함정 조건 등)은 임원의 우려를 키워 AGAINST, 반대 참가자의 조건(예: 승인 사유 기록)은 우려를 풀어 FOR.
+// 그 외 지시는 v16 그대로다.
+export const PROMPT_VERSION = 'v17';

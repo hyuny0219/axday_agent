@@ -55,6 +55,18 @@ describe('classifyFirstReaction', () => {
     ).toBe('KEEP');
   });
 
+  it('(d2) 반대 참가자의 조건(승인 사유 기록)이 CAIO의 우려를 풀어 찬성 쪽으로 가면 REVERSED이고, 지시는 FOR 쪽이다(PR #21 Codex P2)', () => {
+    const kind = classifyFirstReaction({
+      scenarioId: 'ai-approval',
+      roleId: 'CAIO',
+      participantStance: 'AGAINST',
+      confirmedConditionIds: ['LOG'],
+      priorStance: 'UNDECIDED',
+    });
+    expect(kind).toBe('REVERSED');
+    expect(buildFirstReactionRule(kind, 'AGAINST')).toContain('stance를 FOR로');
+  });
+
   it('(d) 조건 때문에 표가 참가자에게서 멀어지는 임원은 같은 편이어도 REVERSED(함정 조건)', () => {
     expect(
       classifyFirstReaction({
@@ -103,7 +115,15 @@ describe('buildFirstReactionRule', () => {
     expect(buildFirstReactionRule('SAME_SIDE')).toContain('UNDECIDED(고민 중)로 바꾸지 마십시오');
     expect(buildFirstReactionRule('KEEP')).toContain('처음 입장 그대로 유지');
     expect(buildFirstReactionRule('REVERSED')).toContain('받아들이기 어렵다는 쪽');
+    expect(buildFirstReactionRule('REVERSED')).toContain('AGAINST');
     expect(buildFirstReactionRule('REVERSED')).not.toContain('바꾸지 마십시오');
+    // PR #21 Codex P2: 반대 참가자의 조건이 임원의 우려를 풀어 찬성 쪽으로 가는 REVERSED는 뜻이 반대다.
+    const opposed = buildFirstReactionRule('REVERSED', 'AGAINST');
+    expect(opposed).toContain('우려를 풀어 줍니다');
+    expect(opposed).toContain('stance를 FOR로');
+    expect(opposed).not.toContain('키웁니다');
+    expect(opposed).not.toContain('받아들이기 어렵다');
+    expect(buildFirstReactionRule('REVERSED', 'FOR')).toBe(buildFirstReactionRule('REVERSED'));
     expect(buildFirstReactionRule('SAME_SIDE')).not.toContain('UNDECIDED(고민 중)까지만');
     expect(buildFirstReactionRule('KEEP')).not.toContain('UNDECIDED(고민 중)까지만');
   });

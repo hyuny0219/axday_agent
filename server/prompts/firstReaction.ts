@@ -56,8 +56,13 @@ export function classifyFirstReaction(input: FirstReactionInput): FirstReactionK
 const KEEP_PRIOR_TAIL =
   ' 이 지침은 위의 "첫 의견부터 방향을 밝히라"는 stance 지침보다 우선합니다.';
 
-/** 임원별 첫 반응 지시. 판정 불가(null)면 기존 공통 규칙(v12~v15)을 그대로 쓴다. */
-export function buildFirstReactionRule(kind: FirstReactionKind | null): string {
+/** 임원별 첫 반응 지시. 판정 불가(null)면 기존 공통 규칙(v12~v15)을 그대로 쓴다.
+ * REVERSED는 참가자 방향에 따라 뜻이 반대다(PR #21 Codex P2): 찬성 참가자의 조건(함정 조건 등)은
+ * 임원의 우려를 키워 AGAINST로, 반대 참가자의 조건(예: 승인 사유 기록)은 임원의 우려를 풀어 FOR로 간다. */
+export function buildFirstReactionRule(
+  kind: FirstReactionKind | null,
+  participantStance?: 'FOR' | 'AGAINST',
+): string {
   switch (kind) {
     case 'SAME_SIDE':
       return (
@@ -67,10 +72,19 @@ export function buildFirstReactionRule(kind: FirstReactionKind | null): string {
         KEEP_PRIOR_TAIL
       );
     case 'REVERSED':
+      if (participantStance === 'AGAINST') {
+        return (
+          '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자는 안건에 반대하지만, 참가자가 이번에 붙인' +
+          ' 조건은 오히려 당신의 우려를 풀어 줍니다. 그 조건이 붙는다면 안건을 받아들일 만하다고 보고' +
+          ' stance를 FOR로 정하십시오. 발언에는 그 조건이 왜 당신의 우려를 덜어 주는지 평서문으로 이유를' +
+          ' 말하십시오.' +
+          KEEP_PRIOR_TAIL
+        );
+      }
       return (
         '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자가 이번에 붙인 조건은 오히려 당신의 우려를' +
-        ' 키웁니다. 처음 입장을 그대로 지키지 말고, 그 조건을 받아들이기 어렵다는 쪽으로 stance를 정하십시오' +
-        '(참가자가 찬성이면 AGAINST, 반대면 FOR). 발언에는 그 조건이 왜 걱정인지 평서문으로 이유를 말하십시오.' +
+        ' 키웁니다. 처음 입장을 그대로 지키지 말고, 그 조건을 받아들이기 어렵다는 쪽으로 stance를 AGAINST로' +
+        ' 정하십시오. 발언에는 그 조건이 왜 걱정인지 평서문으로 이유를 말하십시오.' +
         KEEP_PRIOR_TAIL
       );
     case 'MAY_CROSS':
