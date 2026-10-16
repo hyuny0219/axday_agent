@@ -2,6 +2,7 @@
 // 이 파일은 그 데이터를 결정적으로 해석만 한다. LLM은 표를 정하지 않는다.
 
 import type { ExecMemberId, Predicate, Scenario, Vote, VoteRule } from '../content/types';
+import { conditionsForStance } from './conditions';
 import type { Ballot, BallotSource, MemberId, Motion } from './types';
 
 export const EXEC_MEMBER_ORDER: readonly ExecMemberId[] = ['CEO', 'CFO', 'CAIO', 'CISO'];
@@ -166,7 +167,7 @@ export function membersChangedByConditionsToward(
 }
 
 export interface RequiredConditions {
-  /** 이미 YES(찬성)로 설득됐으면 true — 더 필요한 조건이 없다. */
+  /** 이미 목표 표(기본 YES 찬성)로 설득됐으면 true — 더 필요한 조건이 없다. */
   persuaded: boolean;
   /** 아직 확정하지 않은 조건 중, 추가로 확정하면 YES로 바뀌는 가장 작은 조합(조건 id,
    * scenario.conditions 순서). 이미 확정한 조건이 이 임원을 영구히 NO로 묶어(예: 조건
@@ -192,6 +193,8 @@ export function requiredConditionsFor(
   memberId: ExecMemberId,
   confirmedIds: readonly string[],
   participantStance: 'FOR' | 'AGAINST' | null = null,
+  /** 설득 목표 표(T137). 반대 참가자는 'NO'로 부른다 — 후보는 그 입장의 카드(반대 근거)만이다. */
+  targetVote: 'YES' | 'NO' = 'YES',
 ): RequiredConditions {
   const rules = scenario.voteRules[memberId];
   function voteWith(extra: readonly string[]): Vote {
@@ -202,17 +205,18 @@ export function requiredConditionsFor(
     };
     return decideMember(rules, ctx);
   }
-  if (voteWith([]) === 'YES') {
+  if (voteWith([]) === targetVote) {
     return { persuaded: true, conditionIds: [] };
   }
-  const candidates = scenario.conditions
+  // T137: 입장과 맞는 카드만 후보다(반대 참가자는 반대 근거, 그 외는 찬성 조건).
+  const candidates = conditionsForStance(scenario, participantStance)
     .map((condition) => condition.id)
     .filter((id) => !confirmedIds.includes(id));
   // 조합 크기를 늘려가며(1개부터) 처음 YES가 되는 조합을 찾는다. 후보 수가 두 활성
   // 시나리오 모두 5개 이하라 2^n 전수 탐색도 가볍다. 같은 크기에서는 candidates 순서
   // (= scenario.conditions 순서)대로 가장 먼저 찾은 조합을 쓴다(결정적).
   for (let size = 1; size <= candidates.length; size += 1) {
-    const combo = findComboOfSize(candidates, size, (extra) => voteWith(extra) === 'YES');
+    const combo = findComboOfSize(candidates, size, (extra) => voteWith(extra) === targetVote);
     if (combo) {
       return { persuaded: false, conditionIds: combo };
     }

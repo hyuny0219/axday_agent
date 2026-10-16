@@ -58,7 +58,7 @@ const KEEP_PRIOR_TAIL =
 
 /** 임원별 첫 반응 지시. 판정 불가(null)면 기존 공통 규칙(v12~v15)을 그대로 쓴다.
  * REVERSED는 참가자 방향에 따라 뜻이 반대다(PR #21 Codex P2): 찬성 참가자의 조건(함정 조건 등)은
- * 임원의 우려를 키워 AGAINST로, 반대 참가자의 조건(예: 승인 사유 기록)은 임원의 우려를 풀어 FOR로 간다. */
+ * 임원의 우려를 키워 AGAINST로, 반대 참가자의 지나친 근거(T137: 모두 막기 등)는 오히려 안건을 받아들이게 해 FOR로 간다. */
 export function buildFirstReactionRule(
   kind: FirstReactionKind | null,
   participantStance?: 'FOR' | 'AGAINST',
@@ -74,10 +74,9 @@ export function buildFirstReactionRule(
     case 'REVERSED':
       if (participantStance === 'AGAINST') {
         return (
-          '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자는 안건에 반대하지만, 참가자가 이번에 붙인' +
-          ' 조건은 오히려 당신의 우려를 풀어 줍니다. 그 조건이 붙는다면 안건을 받아들일 만하다고 보고' +
-          ' stance를 FOR로 정하십시오. 발언에는 그 조건이 왜 당신의 우려를 덜어 주는지 평서문으로 이유를' +
-          ' 말하십시오.' +
+          '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자는 안건에 반대하지만, 참가자가 이번에 낸' +
+          ' 내용은 지나치거나 오히려 당신의 우려를 풀어 줍니다. 그렇다면 안건을 받아들일 만하다고 보고' +
+          ' stance를 FOR로 정하십시오. 발언에는 그 이유를 평서문으로 말하십시오.' +
           KEEP_PRIOR_TAIL
         );
       }

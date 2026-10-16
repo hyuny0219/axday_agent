@@ -26,10 +26,10 @@ describe('experienceFirstScenario 기본 구조', () => {
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   const conditionIds = new Set(scenario.conditions.map((c) => c.id));
 
-  it('자료 카드가 4개, 추천 문구가 8개(찬성 3·반대 4·요청 1, T119: 찬성 쪽 2개는 추가 답변으로), 조건이 5개다', () => {
+  it('자료 카드가 4개, 추천 문구가 8개(찬성 3·반대 4·요청 1, T119: 찬성 쪽 2개는 추가 답변으로), 반대 근거 4개 포함 조건이 9개다(T137)', () => {
     expect(scenario.evidence).toHaveLength(4);
     expect(scenario.phrases).toHaveLength(8);
-    expect(scenario.conditions).toHaveLength(5);
+    expect(scenario.conditions).toHaveLength(9);
   });
 
   it('추천 문구의 side가 FOR/AGAINST/BOTH 중 하나이고, AGAINST가 정확히 4개다(T87)', () => {
@@ -83,14 +83,14 @@ describe('experienceFirstScenario 기본 구조', () => {
     }
   });
 
-  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 2, CFO 3, CAIO 3, CISO 4)', () => {
-    expect(scenario.voteRules.CEO).toHaveLength(2);
-    expect(scenario.voteRules.CFO).toHaveLength(3);
-    expect(scenario.voteRules.CAIO).toHaveLength(3);
-    expect(scenario.voteRules.CISO).toHaveLength(4);
+  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 4, CFO 4, CAIO 6, CISO 7, T137)', () => {
+    expect(scenario.voteRules.CEO).toHaveLength(4);
+    expect(scenario.voteRules.CFO).toHaveLength(4);
+    expect(scenario.voteRules.CAIO).toHaveLength(6);
+    expect(scenario.voteRules.CISO).toHaveLength(7);
   });
 
-  it('12개 규칙 모두 판단 이유가 있고 수치 표현이 없다', () => {
+  it('21개 규칙 모두 판단 이유가 있고 수치 표현이 없다', () => {
     const NUMERIC_COPY_PATTERN = /%|절감/;
     let total = 0;
     for (const memberId of Object.keys(scenario.voteRules) as ExecMemberId[]) {
@@ -100,7 +100,7 @@ describe('experienceFirstScenario 기본 구조', () => {
         expect(rule.reason).not.toMatch(NUMERIC_COPY_PATTERN);
       }
     }
-    expect(total).toBe(12);
+    expect(total).toBe(21);
   });
 });
 

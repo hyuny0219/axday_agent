@@ -565,7 +565,8 @@ export function ReactionsScreen({
           : isHiddenOnlyCondition(id)
             ? releasedSourceText(id)
             : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
-      offered: (id: string) => isConditionOffered(scenario, id, guideSide),
+      // 칩만 해제한 조건은 입장이 바뀌어 추천 답변에 없어도 칩을 다시 눌러 붙일 수 있다(T137: 두 입장의 조건이 다르다).
+      offered: (id: string) => isReleasedCondition(id) || isConditionOffered(scenario, id, guideSide),
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

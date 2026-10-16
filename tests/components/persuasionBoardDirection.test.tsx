@@ -20,7 +20,7 @@ function subsets<T>(items: readonly T[]): T[][] {
 }
 
 const scenarios: Scenario[] = [aiApprovalScenario, experienceFirstScenario];
-const sawKeepAgainst = { value: false };
+const sawObjectionNote = { value: false };
 
 describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
   for (const scenario of scenarios) {
@@ -76,20 +76,23 @@ describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
                 expect(side, ctx).toBe('FOR');
                 expect(stances[m], ctx).toBe('FOR');
               }
-              if (note === '이미 찬성 쪽입니다') {
+              if (note.startsWith('움직일 반대 근거 · ')) {
+                // T137: 반대 목표에서는 아직 반대가 아닌 임원에게 반대 근거를 안내하고, 적용하면 NO가 된다.
                 expect(side, ctx).toBe('AGAINST');
-                expect(stances[m], ctx).toBe('FOR');
+                expect(stances[m], ctx).not.toBe('AGAINST');
+                const labels = note.replace('움직일 반대 근거 · ', '');
+                const ids = scenario.conditions.filter((c) => labels.includes(c.label)).map((c) => c.id);
+                expect(ids.length, ctx).toBeGreaterThan(0);
+                expect(ids.every((id) => scenario.conditions.find((c) => c.id === id)?.side === 'AGAINST'), ctx).toBe(true);
+                expect(voteWith([...confirmed, ...ids]), ctx).toBe(target);
+                sawObjectionNote.value = true;
               }
-              if (note.includes('반대로 남습니다') || note.includes('반대를 유지')) {
+              if (note === '반대 쪽입니다') {
                 expect(side, ctx).toBe('AGAINST');
                 expect(stances[m], ctx).toBe('AGAINST');
               }
-              if (note.includes('반대로 남습니다')) {
-                expect(note, ctx).toMatch(/조건을 넣지 않아야 반대로 남습니다$/);
-                sawKeepAgainst.value = true;
-              }
               // 찬성 목표에서 반대 방향 안내가, 반대 목표에서 찬성 방향 안내가 나오면 안 된다.
-              if (side === 'FOR') expect(note, ctx).not.toMatch(/반대로 남|반대를 유지|이미 찬성/);
+              if (side === 'FOR') expect(note, ctx).not.toMatch(/반대 쪽|반대 근거|반대를 유지|이미 찬성/);
               if (side === 'AGAINST') expect(note, ctx).not.toMatch(/움직일 조건|설득 완료/);
             }
             cleanup();
@@ -101,8 +104,8 @@ describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
 });
 
 describe('T115 반대 목표 문구', () => {
-  it('"조건을 넣지 않아야 반대로 남습니다" 문구가 실제로 나온다', () => {
-    expect(sawKeepAgainst.value).toBe(true);
+  it('"움직일 반대 근거" 문구가 실제로 나온다(T137)', () => {
+    expect(sawObjectionNote.value).toBe(true);
   });
 });
 
@@ -138,7 +141,7 @@ describe('T115 live 현황판 비고 — 빈 조건·방향 확인', () => {
     expect(screen.getByTestId('persuasion-board-note-CISO').textContent).not.toContain('승인 사유');
     expect(screen.getByTestId('persuasion-board-note-CISO').textContent).toContain('움직일 조건');
   });
-  it('live 반대 목표에서 규칙표상 이미 YES인 임원이 반대여도 빈 따옴표 조건을 적지 않는다', () => {
+  it('live 반대 목표에서 이미 반대인 임원은 조건 대신 "반대 쪽입니다"만 적는다', () => {
     render(
       <PersuasionBoard
         scenario={aiApprovalScenario}
@@ -151,7 +154,7 @@ describe('T115 live 현황판 비고 — 빈 조건·방향 확인', () => {
     );
     fireEvent.click(screen.getByTestId('persuasion-board-toggle'));
     const note = screen.getByTestId('persuasion-board-note-CAIO').textContent ?? '';
-    expect(note).toBe('조건과 무관하게 반대를 유지합니다');
+    expect(note).toBe('반대 쪽입니다');
   });
 });
 

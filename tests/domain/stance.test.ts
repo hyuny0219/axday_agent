@@ -81,12 +81,12 @@ describe('scriptedStances', () => {
 // 말하지 않은 동안(OPINIONS·DISCUSS) 그대로 쓰고, 의견을 전달한 뒤(REACTIONS~)에는
 // 조건이 그 rule을 충족하는 순간 voteRules 기반으로 넘어가 전환되는지 확인한다.
 describe('scriptedStances의 OPINIONS 출발 성향(안건①·②, PR #13 Codex 3차 검토)', () => {
-  const EXPECTED_OPENING = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' } as const;
+  const EXPECTED_OPENING = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' } as const;
 
   it.each([
     ['ai-approval', aiApprovalScenario],
     ['experience-first', experienceFirstScenario],
-  ] as const)('%s의 OPINIONS 표정은 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST다', (_label, s) => {
+  ] as const)('%s의 OPINIONS 표정은 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO UNDECIDED다(T137: 1 찬성·1 반대·2 고민 중)', (_label, s) => {
     expect(scriptedStances(s, sessionAt('OPINIONS', []))).toEqual(EXPECTED_OPENING);
   });
 

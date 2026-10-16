@@ -199,7 +199,7 @@ export function buildPersuasionResult(
   if (persuadedCount > 0) {
     headline =
       changedByConditions > 0
-        ? `이사님의 발언과 조건 ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
+        ? `이사님의 발언과 ${target === 'AGAINST' ? '반대 근거' : '조건'} ${input.conditionCount}개로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`
         : `이사님의 발언으로 임원 ${persuadedCount}명이 이사님 편이 됐습니다`;
   } else if (wouldMoveIfAnswered > 0) {
     headline = '조건은 맞았지만 추가 질문에 답하지 않아 임원의 마음을 바꾸지 못했습니다 — 다음엔 답하러 가 보세요';
@@ -209,7 +209,7 @@ export function buildPersuasionResult(
         ? nextTrySuggestionLabel(scenario, input.finalConditionIds, target, finalStances)
         : null;
     headline = suggestion
-      ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${suggestion}' 조건을 붙여 보세요`
+      ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${suggestion}' ${target === 'AGAINST' ? '반대 근거를 들어' : '조건을 붙여'} 보세요`
       : '이번엔 임원의 입장을 바꾸지 못했습니다';
   }
   return { tally, headline };

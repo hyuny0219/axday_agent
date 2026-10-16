@@ -3,7 +3,7 @@
 // 조건 키워드는 시나리오 데이터(Condition.keywords)에 명시된 것만 쓰고,
 // 라벨·문구 텍스트에서 토큰을 파생하지 않는다.
 
-import type { ConflictPair, Scenario } from '../content/types';
+import type { Condition, ConflictPair, Scenario } from '../content/types';
 
 // 키워드 뒤쪽, 같은 절 안(문장 부호·쉼표 전, 최대 NEGATION_WINDOW자)에 부정 표지가 나오면
 // 그 언급은 제안하지 않는다(4장 명시 예 "없이·생략·말고"). 후속 직접 답변 "작성자를
@@ -400,4 +400,23 @@ export function confirmConditions(
     id,
     status: acceptedSet.has(id) && !blockedByConflict.has(id) ? 'confirmed' : 'proposed',
   }));
+}
+
+/** 조건이 반대 근거(T137)인지. side가 없으면 찬성 조건이다. */
+export function isObjectionCondition(scenario: Scenario, conditionId: string): boolean {
+  return scenario.conditions.find((condition) => condition.id === conditionId)?.side === 'AGAINST';
+}
+
+/**
+ * 참가자 입장에서 고를 수 있는 조건 목록(T137). 반대 참가자는 "반대 근거"(side 'AGAINST')를, 그 외(찬성·
+ * 입장 미선택)는 안건에 붙는 조건(side 없음)을 쓴다 — 설득 현황판·조건 추천·"다음엔" 안내가 입장과 맞지
+ * 않는 카드를 제안하지 않게 하는 기준이다. 반대 근거가 하나도 없는 과거 시나리오는 입장과 상관없이
+ * 모든 조건을 돌려준다.
+ */
+export function conditionsForStance(scenario: Scenario, participantStance: 'FOR' | 'AGAINST' | null): Condition[] {
+  if (!scenario.conditions.some((condition) => condition.side === 'AGAINST')) {
+    return scenario.conditions;
+  }
+  const against = participantStance === 'AGAINST';
+  return scenario.conditions.filter((condition) => (condition.side === 'AGAINST') === against);
 }

@@ -328,15 +328,15 @@ describe('ReactionsScreen', () => {
         />,
       );
       fireEvent.click(screen.getByTestId('reactions-side-for'));
-      // aiApprovalScenario.followUp.options: 0~4=FOR, 5~9=AGAINST(T133: 함정 조건 문구 제거), 10=BOTH.
+      // aiApprovalScenario.followUp.options: 0~4=FOR, 5~8=AGAINST(T137: 반대 근거 4개), 9=BOTH.
       expect(screen.getByTestId('followup-option-0')).toBeInTheDocument();
       expect(screen.queryByTestId('followup-option-5')).not.toBeInTheDocument();
-      expect(screen.getByTestId('followup-option-10')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-9')).toBeInTheDocument();
 
       fireEvent.click(screen.getByTestId('reactions-side-against'));
       expect(screen.queryByTestId('followup-option-0')).not.toBeInTheDocument();
       expect(screen.getByTestId('followup-option-5')).toBeInTheDocument();
-      expect(screen.getByTestId('followup-option-10')).toBeInTheDocument();
+      expect(screen.getByTestId('followup-option-9')).toBeInTheDocument();
     });
 
     it('입장을 바꾸면 체크된 추천 답변이 해제된다', () => {
@@ -715,9 +715,9 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     renderListen();
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       const card = screen.getByTestId(`reaction-card-${memberId}`);
-      // CAIO는 처음부터 미정이라 입장은 그대로(고민 중 유지), CFO·CISO는 반대에서 고민 중으로 움직인다.
+      // CAIO·CISO는 처음부터 고민 중(T137)이라 입장은 그대로(고민 중 유지), CFO는 반대에서 고민 중으로 움직인다.
       expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 → 찬성 · 답하면 확정' : '반대 → 찬성 · 답하면 확정',
+        memberId === 'CFO' ? '반대 → 찬성 · 답하면 확정' : '고민 중 → 찬성 · 답하면 확정',
       );
       expect(card).toHaveTextContent('하나만 더 묻겠습니다');
       expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('찬성 쪽?');
@@ -732,7 +732,7 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       expect(screen.getByTestId(`persuasion-board-note-${memberId}`)).toHaveTextContent('답변하면 확정');
       expect(screen.getByTestId(`persuasion-board-stance-${memberId}`)).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 → 찬성 쪽' : '반대 → 찬성 쪽',
+        memberId === 'CFO' ? '반대 → 찬성 쪽' : '고민 중 → 찬성 쪽',
       );
     }
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('(기울음 3)');
@@ -879,7 +879,7 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
     const onViewChange = (value: { leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null) => {
       calls.push(value);
     };
-    const opinions = mk(['FULL_AUTO'], 'FOR');
+    const opinions = mk(['AG_SCALE'], 'FOR');
     const props = {
       ...baseProps(),
       scenario: ai,
@@ -1039,13 +1039,14 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       expect(texts.length).toBe(withoutPick.length - limitOptions.length);
     });
 
-    it('입장을 바꾸면 조건이 같다는 이유로는 숨기지 않는다', () => {
+    it('입장을 바꾸면 첫 의견 문구 때문에 숨기는 카드가 없다(T137: 두 입장의 조건이 서로 다르다)', () => {
       renderAi('AGAINST', 'FOR', ['P1']);
-      const againstLimit = ai.followUp.options.filter(
-        (o) => o.proposeConditionId === 'LIMIT' && (o.side ?? 'FOR') === 'AGAINST',
+      const againstOptions = ai.followUp.options.filter(
+        (o) => !o.keepPrevious && ((o.side ?? 'FOR') === 'AGAINST' || o.side === 'BOTH'),
       );
-      expect(againstLimit.length).toBeGreaterThan(0);
-      for (const option of againstLimit) {
+      expect(againstOptions.length).toBeGreaterThan(0);
+      expect(visibleOptionTexts().length).toBe(againstOptions.length);
+      for (const option of againstOptions) {
         expect(visibleOptionTexts()).toContain(option.text);
       }
     });

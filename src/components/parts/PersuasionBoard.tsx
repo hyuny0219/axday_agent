@@ -120,7 +120,14 @@ function buildRow(
   // 참가자 목표: AGAINST면 임원을 NO(반대)에 묶어 두는 것, 그 외(FOR·미선택)는 YES(찬성)로
   // 설득하는 것이다(설득 도장·persuasionStamp와 같은 "참가자 표와 같은 쪽"이라는 전제).
   const targetVote: Stance = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
-  const required = requiredConditionsFor(scenario, memberId, confirmedConditionIds, participantStance ?? null);
+  // T137: 반대 참가자는 임원을 NO로 돌리는 반대 근거를 찾는다(후보는 그 입장의 카드만).
+  const required = requiredConditionsFor(
+    scenario,
+    memberId,
+    confirmedConditionIds,
+    participantStance ?? null,
+    targetVote === 'AGAINST' ? 'NO' : 'YES',
+  );
 
   // T115: 임원이 앞서 제안한 조건을 참가자가 이미 확정했다면 "움직일 조건"이 아니다.
   const liveHints =
@@ -181,21 +188,17 @@ function buildRow(
 
   // targetVote === 'AGAINST'(참가자가 반대 쪽)
   if (current === 'AGAINST') {
-    const ids = uniqueInOrder([...(required.conditionIds ?? []), ...liveHints]);
-    if (ids.length === 0) {
-      return { memberId, stanceText, stanceChanged, conditionNote: '조건과 무관하게 반대를 유지합니다' };
-    }
-    return {
-      memberId,
-      stanceText,
-      stanceChanged,
-      conditionNote: `'${labelsOf(ids)}' 조건을 넣지 않아야 반대로 남습니다${refSuffix}`,
-    };
+    return { memberId, stanceText, stanceChanged, conditionNote: '반대 쪽입니다' };
   }
-  if (current === 'FOR') {
-    return { memberId, stanceText, stanceChanged, conditionNote: '이미 찬성 쪽입니다' };
-  }
-  return { memberId, stanceText, stanceChanged, conditionNote: '아직 의견을 내지 않았습니다' };
+  // 찬성 쪽이거나 아직 고민 중인 임원: 이 임원을 반대로 돌릴 반대 근거를 안내한다.
+  const ids = required.conditionIds ?? [];
+  return {
+    memberId,
+    stanceText,
+    stanceChanged,
+    conditionNote:
+      ids.length > 0 ? `움직일 반대 근거 · ${labelsOf(ids)}${refSuffix}` : '반대 근거로는 설득이 어렵습니다',
+  };
 }
 
 /** 1280px보다 넓고 800px보다 높은 화면인지 — 현황판 기본 펼침/접힘 판단(persuasionBoard.css의

@@ -109,11 +109,11 @@ describe('nextTrySuggestionLabel(T96)', () => {
 describe('반대 참가자 결과 안내(Codex 33차 P2-2)', () => {
   const allFor = { CEO: 'FOR', CFO: 'FOR', CAIO: 'FOR', CISO: 'FOR' } as const;
 
-  it('AGAINST면 찬성으로 돌리는 조건(LIMIT 등)을 "다음엔" 추천하지 않는다 — 두 안건 모두', () => {
+  it('AGAINST면 찬성 조건(LIMIT 등)이 아니라 반대 근거만 "다음엔" 추천한다 — 두 안건 모두', () => {
     for (const sc of [aiApprovalScenario, experienceFirstScenario]) {
       const label = nextTrySuggestionLabel(sc, [], 'AGAINST', { ...allFor });
-      // 적용 가능한 반대 방향 조건이 없으면 생략(null), 있으면 NO로 돌리는 조건뿐이다.
-      expect(label).toBeNull();
+      const objectionLabels = sc.conditions.filter((c) => c.side === 'AGAINST').map((c) => c.label);
+      expect(objectionLabels).toContain(label);
     }
     // 같은 입력의 FOR 경로는 기존대로 찬성으로 돌리는 조건을 추천한다.
     expect(nextTrySuggestionLabel(aiApprovalScenario, [], 'FOR')).toBe('결재 금액 한도');
@@ -177,19 +177,19 @@ describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 �
     }
   });
 
-  it('안건①: 찬성이면 처음부터 찬성인 CEO를 분모에서 빼 "설득한 임원 0/3"이고, 반대면 CFO·CISO를 빼 "0/2"다', () => {
+  it('안건①: 찬성이면 처음부터 찬성인 CEO를, 반대면 처음부터 반대인 CFO를 분모에서 빼 둘 다 "설득한 임원 0/3"이다(T137)', () => {
     const none: Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance> = {
       CEO: 'FOR',
       CFO: 'AGAINST',
       CAIO: 'UNDECIDED',
-      CISO: 'AGAINST',
+      CISO: 'UNDECIDED',
     };
     const forTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'FOR', none);
     expect(forTally.alreadySame).toEqual(['CEO']);
     expect(persuadedCountLabel(forTally)).toBe('설득한 임원 0/3');
     const againstTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'AGAINST', none);
-    expect(againstTally.alreadySame).toEqual(['CFO', 'CISO']);
-    expect(persuadedCountLabel(againstTally)).toBe('설득한 임원 0/2');
+    expect(againstTally.alreadySame).toEqual(['CFO']);
+    expect(persuadedCountLabel(againstTally)).toBe('설득한 임원 0/3');
   });
 
   it('모두 처음부터 같은 편이면 숫자 대신 말로 표시한다', () => {
@@ -237,10 +237,12 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
             expect(Number(match?.[1])).toBe(m);
             // 조건 문구는 조건을 뺀 기준 표에서 참가자 목표 방향으로 넘어온 임원이 설득된 임원 안에
             // 있을 때만 쓴다(Codex 35차 P2-2 → 46차 P2: 방향·교집합).
-            const toward = membersChangedByConditionsToward(sc, motion, side === 'FOR' ? 'YES' : 'NO').filter((id) =>
-              result.tally.persuaded.includes(id),
+            const toward = membersChangedByConditionsToward(sc, motion, side === 'FOR' ? 'YES' : 'NO', side, true).filter(
+              (id) => result.tally.persuaded.includes(id),
             );
-            expect(result.headline).toContain(toward.length > 0 ? '발언과 조건' : '발언으로');
+            expect(result.headline).toContain(
+              toward.length > 0 ? (side === 'AGAINST' ? '발언과 반대 근거' : '발언과 조건') : '발언으로',
+            );
           } else {
             expect(match).toBeNull();
             expect(result.headline).toContain('이번엔 임원의 입장을 바꾸지 못했습니다');
@@ -250,14 +252,14 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     }
   });
 
-  it('참가자 반대·조건 없음(안건①): 현황판처럼 CAIO(미정→반대) 한 명을 설득한 것으로 제목에도 나온다', () => {
+  it('참가자 반대·조건 없음(안건①): 현황판처럼 CAIO·CISO(고민 중→반대) 둘을 설득한 것으로 제목에도 나온다', () => {
     const stances = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
     const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 0, finalConditionIds: [],
     });
-    expect(result.tally.persuaded).toEqual(['CAIO']);
-    expect(result.headline).toBe('이사님의 발언으로 임원 1명이 이사님 편이 됐습니다');
+    expect(result.tally.persuaded).toEqual(['CAIO', 'CISO']);
+    expect(result.headline).toBe('이사님의 발언으로 임원 2명이 이사님 편이 됐습니다');
   });
 
   it('live: 첫 입장과 달리 이사님 편이 된 임원 수를 인과(조건) 없이 말한다', () => {
@@ -275,7 +277,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     expect(result.headline).not.toContain('조건');
   });
 
-  it('Codex 35차 P2-2: 참가자 반대 + REVIEW만 확정이면 CAIO는 조건 없이도 NO라 "조건"을 말하지 않는다', () => {
+  it('Codex 35차 P2-2: 참가자 반대 + 찬성 조건(REVIEW)만 확정이면 표가 조건 때문에 바뀐 임원이 없어 "조건"을 말하지 않는다', () => {
     const motion: Motion = {
       id: 'm', scenarioId: aiApprovalScenario.id, kind: 'amended', conditionIds: ['REVIEW'],
       baseConditionIds: [], effectiveConditionIds: ['REVIEW'], executionMode: 'DEFAULT',
@@ -287,7 +289,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 1,
       finalConditionIds: ['REVIEW'], finalMotion: motion,
     });
-    expect(result.headline).toBe('이사님의 발언으로 임원 1명이 이사님 편이 됐습니다');
+    expect(result.headline).toBe('이사님의 발언으로 임원 2명이 이사님 편이 됐습니다');
   });
 
   it('Codex 46차 P2: 참가자 반대 + LIMIT+REVIEW면 CFO는 조건으로 찬성(반대편)이 되고 CAIO는 조건 없이도 NO라 "조건"을 말하지 않는다', () => {
@@ -321,7 +323,7 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     expect(againstLabel).not.toBe(forLabel);
     expect(result.headline).toBe(
       againstLabel
-        ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${againstLabel}' 조건을 붙여 보세요`
+        ? `이번엔 임원의 입장을 바꾸지 못했습니다 — 다음엔 '${againstLabel}' 반대 근거를 들어 보세요`
         : '이번엔 임원의 입장을 바꾸지 못했습니다',
     );
   });

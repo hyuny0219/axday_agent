@@ -92,9 +92,11 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     );
     expand();
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('처음부터 같은 편');
-    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('처음부터 같은 편');
-    // CFO·CISO는 처음부터 반대라 분모에서 빠지고, CEO·CAIO 둘만 설득 대상이다(아직 0명).
-    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/2');
+    // T137: CISO는 고민 중이라 설득 대상이고, 어떤 반대 근거가 움직이는지 안내한다.
+    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('움직일 반대 근거 · 믿지 못해 책임이 흐려짐');
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('움직일 반대 근거 · 넓히면 잘못 승인도 늘어남');
+    // CFO만 처음부터 반대라 분모에서 빠지고, CEO·CAIO·CISO 셋이 설득 대상이다(아직 0명).
+    expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 
   it('입장을 아직 고르지 않았으면(participantStance=null) 찬성 목표로 계산하지 않고 한 줄 안내만 보인다(T101)', () => {

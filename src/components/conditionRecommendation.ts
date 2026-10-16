@@ -17,6 +17,7 @@
 
 import type { ExecMemberId, Scenario } from '../content/types';
 import type { ParticipantStance, SessionMode, Stance } from '../domain/types';
+import { conditionsForStance } from '../domain/conditions';
 import { EXEC_MEMBER_ORDER, decideMember, requiredConditionsFor } from '../domain/voting';
 
 export interface ConditionRecommendationRow {
@@ -109,7 +110,8 @@ export function buildConditionRecommendation(
     (memberId) =>
       stances[memberId] !== targetStance && !alreadyNoByRules(memberId) && !awaitingMembers.includes(memberId),
   );
-  const candidates = scenario.conditions.filter(
+  // T137: 입장과 맞는 카드만 추천한다(반대 참가자는 반대 근거, 그 외는 찬성 조건).
+  const candidates = conditionsForStance(scenario, participantStance).filter(
     (condition) => !confirmedConditionIds.includes(condition.id) && isConditionOffered(condition.id),
   );
 

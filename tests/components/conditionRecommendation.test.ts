@@ -147,25 +147,32 @@ describe('buildConditionRecommendation(T96, live 모드, Codex 27차 검토 P2-4
   });
 });
 
-describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2)', () => {
-  it('AGAINST면 이미 반대인 CFO·CISO는 대상에서 빠지고 지금 찬성인 CEO를 반대로 돌리는 조건을 추천한다', () => {
+describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2, T137 반대 근거)', () => {
+  it('AGAINST면 이미 반대인 CFO는 대상에서 빠지고 CEO·CAIO·CISO를 반대로 돌리는 반대 근거를 추천한다', () => {
     const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
-    // 안건① 초기 상태: CEO 찬성, CFO·CISO 반대(참가자와 같은 쪽).
-    expect(stances.CEO).toBe('FOR');
-    expect(stances.CFO).toBe('AGAINST');
+    // 안건① 초기 상태(T137): CEO 찬성, CFO 반대, CAIO·CISO 고민 중.
+    expect(stances).toEqual({ CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' });
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
 
-    expect(result.openingLine).toContain('CEO');
-    expect(result.openingLine).not.toContain('CAIO'); // 미정이지만 규칙표 표가 이미 NO라 돌릴 필요가 없다
+    expect(result.openingLine).toContain('CEO·CAIO·CISO');
     expect(result.openingLine).not.toContain('CFO');
-    expect(result.openingLine).not.toContain('CISO');
     expect(result.openingLine).toContain('반대로 돌리려면');
-    // 조건 방향도 반대 쪽 — 표를 NO로 바꾸는 FULL_AUTO가 CEO를 움직인다.
     const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
-    expect(byId.get('FULL_AUTO')?.movedMemberIds).toEqual(['CEO']);
-    // 찬성 쪽으로 움직이는 조건(LOG 등)은 추천하지 않는다.
+    expect(byId.get('AG_AUDIT')?.movedMemberIds).toEqual(['CAIO']);
+    expect(byId.get('AG_TRUST')?.movedMemberIds).toEqual(['CISO']);
+    expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CEO']);
+    // 함정(AG_BAN)과 찬성 조건(LOG·FULL_AUTO 등)은 추천하지 않는다.
+    expect(byId.has('AG_BAN')).toBe(false);
     expect(byId.has('LOG')).toBe(false);
+    expect(byId.has('FULL_AUTO')).toBe(false);
     expect(result.bundles).toEqual([]);
+  });
+
+  it('찬성 참가자는 반대 근거를 추천받지 않는다', () => {
+    const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
+    const result = buildConditionRecommendation(scenario, [], 'FOR', 'scripted', stances);
+    expect(result.rows.some((row) => row.conditionId.startsWith('AG_'))).toBe(false);
+    expect(result.bundles.some((bundle) => bundle.conditionIds.some((id) => id.startsWith('AG_')))).toBe(false);
   });
 
   it('AGAINST인데 임원 4명이 모두 반대면 그렇게 말한다', () => {
@@ -184,14 +191,14 @@ describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2)', () => 
 describe('buildConditionRecommendation(반대 입장 보강)', () => {
   it('표정은 미정이어도 규칙표 표가 이미 NO인 CAIO는 대상에서 빠진다', () => {
     const stances: Record<ExecMemberId, Stance> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
-    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    const result = buildConditionRecommendation(scenario, ['AG_AUDIT'], 'AGAINST', 'scripted', stances);
     expect(result.openingLine).toContain('CEO');
     expect(result.openingLine).not.toContain('CAIO');
   });
 
   it('미정·반대뿐이고 규칙표도 NO면 돌릴 임원이 없다고 말한다', () => {
     const stances: Record<ExecMemberId, Stance> = { CEO: 'AGAINST', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
-    const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
+    const result = buildConditionRecommendation(scenario, ['AG_AUDIT'], 'AGAINST', 'scripted', stances);
     expect(result.openingLine).toBe('지금 찬성 쪽인 임원이 없습니다.');
   });
 
@@ -200,7 +207,7 @@ describe('buildConditionRecommendation(반대 입장 보강)', () => {
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'live', stances, { CEO: ['LOG'] });
     const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
     expect(byId.has('LOG')).toBe(false);
-    expect(byId.get('FULL_AUTO')?.movedMemberIds).toEqual(['CEO']);
+    expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CEO']);
     expect(result.usedRuleFallback).toBe(true);
   });
 });

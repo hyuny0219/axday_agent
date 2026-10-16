@@ -4,7 +4,7 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
-import { findConflicts } from '../domain/conditions';
+import { conditionsForStance, findConflicts } from '../domain/conditions';
 import { EXEC_MEMBER_ORDER, decideMember } from '../domain/voting';
 import type { PersuasionTally } from './persuasionSummary';
 
@@ -47,7 +47,9 @@ function canFlipByReachableConditions(
   participantStance: 'FOR' | 'AGAINST' | null,
   target: Vote,
 ): boolean {
-  const candidates = scenario.conditions.map((condition) => condition.id).filter((id) => !finalConditionIds.includes(id));
+  const candidates = conditionsForStance(scenario, participantStance)
+    .map((condition) => condition.id)
+    .filter((id) => !finalConditionIds.includes(id));
   const rules = scenario.voteRules[memberId];
   for (let mask = 1; mask < 1 << candidates.length; mask += 1) {
     const extra = candidates.filter((_, index) => (mask & (1 << index)) !== 0);

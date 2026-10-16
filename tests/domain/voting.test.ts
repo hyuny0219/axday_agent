@@ -420,20 +420,30 @@ describe('반대 입장 경로의 표 분포(T92, 안건①②)', () => {
     return ballots.filter((b) => b.vote === 'YES').length;
   }
 
-  it('안건① 순수 반대(조건 없음)는 YES가 1명(CEO)뿐이라 참가자 NO까지 더하면 부결', () => {
-    expect(voteCounts(aiApprovalScenario, [])).toBe(1);
+  // T137: 고민 중 임원(CAIO·CISO)은 설득되지 않으면 참가자 반대편(찬성)에 표를 던진다. 반대 근거 하나가
+  // 겨눈 임원을 NO로 돌리면 YES가 3명에서 2명으로 줄어 부결(참가자 성공)이다.
+  it('안건① 순수 반대(조건 없음)는 YES가 3명이라 가결 — 반대 참가자는 근거를 더 대야 한다', () => {
+    expect(voteCounts(aiApprovalScenario, [])).toBe(3);
   });
 
-  it('안건① 조건부 반대(REVIEW 1개만)도 YES 과반에 못 미친다', () => {
-    expect(voteCounts(aiApprovalScenario, ['REVIEW'])).toBeLessThan(3);
+  it('안건① 반대 근거 1개(감사 메모)면 YES가 2명으로 줄어 부결', () => {
+    expect(voteCounts(aiApprovalScenario, ['AG_AUDIT'])).toBe(2);
   });
 
-  it('안건② 순수 반대(조건 없음)는 YES가 1명(CEO)뿐이라 참가자 NO까지 더하면 부결', () => {
-    expect(voteCounts(experienceFirstScenario, [])).toBe(1);
+  it('안건① 찬성 조건(REVIEW 1개만)은 반대 참가자에게 도움이 되지 않는다', () => {
+    expect(voteCounts(aiApprovalScenario, ['REVIEW'])).toBe(3);
   });
 
-  it('안건② 조건부 반대(RECORD 1개만)도 YES 과반에 못 미친다', () => {
-    expect(voteCounts(experienceFirstScenario, ['RECORD'])).toBeLessThan(3);
+  it('안건② 순수 반대(조건 없음)는 YES가 3명이라 가결', () => {
+    expect(voteCounts(experienceFirstScenario, [])).toBe(3);
+  });
+
+  it('안건② 반대 근거 1개(실패 사례)면 YES가 2명으로 줄어 부결', () => {
+    expect(voteCounts(experienceFirstScenario, ['AG_WARN'])).toBe(2);
+  });
+
+  it('안건② 찬성 조건(RECORD 1개만)은 반대 참가자에게 도움이 되지 않는다', () => {
+    expect(voteCounts(experienceFirstScenario, ['RECORD'])).toBe(3);
   });
 });
 
@@ -496,10 +506,28 @@ describe('requiredConditionsFor(T96, 안건①②)', () => {
     });
   });
 
-  it('참가자 입장(participantStance)을 바꿔도 현재 두 안건의 voteRules는 그 값을 쓰지 않으므로 결과가 같다', () => {
-    const forResult = requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'FOR');
-    const againstResult = requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'AGAINST');
-    expect(forResult).toEqual(againstResult);
+  // T137: 후보 조건은 입장의 카드뿐이다 — 찬성은 안건 조건, 반대는 반대 근거. 목표 표는 NO.
+  it('찬성 입장 후보에는 반대 근거가 없고, 반대 입장 후보에는 찬성 조건이 없다', () => {
+    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'FOR')).toEqual({
+      persuaded: false,
+      conditionIds: ['LIMIT', 'REVIEW'],
+    });
+    expect(requiredConditionsFor(aiApprovalScenario, 'CAIO', [], 'AGAINST', 'NO')).toEqual({
+      persuaded: false,
+      conditionIds: ['AG_AUDIT'],
+    });
+    expect(requiredConditionsFor(aiApprovalScenario, 'CEO', [], 'AGAINST', 'NO')).toEqual({
+      persuaded: false,
+      conditionIds: ['AG_SCALE'],
+    });
+    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'AGAINST', 'NO')).toEqual({
+      persuaded: true,
+      conditionIds: [],
+    });
+    expect(requiredConditionsFor(experienceFirstScenario, 'CISO', [], 'AGAINST', 'NO')).toEqual({
+      persuaded: false,
+      conditionIds: ['AG_WHY'],
+    });
   });
 });
 
@@ -549,13 +577,19 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
     expect(votesOf(decideBoard(ai, motionFor(['FULL_AUTO']), 'FOR', false))).toEqual(['NO', 'NO', 'NO', 'NO']);
   });
 
-  it('반대 참가자(대칭): 조건 덕분에 반대로 돌아선 CEO도 답하지 않으면 처음 입장(찬성)으로 돌아간다', () => {
-    expect(votesOf(decideBoard(ai, motionFor(['FULL_AUTO']), 'AGAINST', true))).toEqual(['NO', 'NO', 'NO', 'NO']);
-    expect(votesOf(decideBoard(ai, motionFor(['FULL_AUTO']), 'AGAINST', false))).toEqual(['YES', 'NO', 'NO', 'NO']);
+  it('반대 참가자(대칭, T137): 반대 근거로 돌아선 CEO·CAIO·CISO도 답하지 않으면 처음 표(찬성)로 돌아간다', () => {
+    const all = ['AG_AUDIT', 'AG_TRUST', 'AG_SCALE'];
+    expect(votesOf(decideBoard(ai, motionFor(all), 'AGAINST', true))).toEqual(['NO', 'NO', 'NO', 'NO']);
+    expect(votesOf(decideBoard(ai, motionFor(all), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'YES']);
   });
 
   it('반대 참가자: 찬성 쪽으로 움직이는 조건은 목표 반대 방향이라 게이트가 없다', () => {
-    expect(votesOf(decideBoard(ai, motionFor(['LOG']), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'NO']);
+    expect(votesOf(decideBoard(ai, motionFor(['LOG']), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'YES']);
+  });
+
+  it('반대 쪽 함정(AG_BAN)은 네 임원 모두 찬성이고 답 여부와 상관없다', () => {
+    expect(votesOf(decideBoard(ai, motionFor(['AG_BAN']), 'AGAINST', true))).toEqual(['YES', 'YES', 'YES', 'YES']);
+    expect(votesOf(decideBoard(ai, motionFor(['AG_BAN']), 'AGAINST', false))).toEqual(['YES', 'YES', 'YES', 'YES']);
   });
 
   it('decideMember: 컨텍스트에 followUpAnswered:false를 넣으면 같은 게이트를 적용한다', () => {
@@ -574,7 +608,7 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
     const rows = explainBoard(ai, motionFor(ALL_FOR_CONDITIONS), { participantStance: 'FOR', followUpAnswered: false });
     expect(rows.map((r) => r.vote)).toEqual(['YES', 'NO', 'NO', 'NO']);
     expect(rows[1]?.reason).toContain('추가 질문');
-    expect(rows[0]?.reason).toBe(ai.voteRules.CEO[1]?.reason);
+    expect(rows[0]?.reason).toBe(ai.voteRules.CEO[3]?.reason);
     const answered = explainBoard(ai, motionFor(ALL_FOR_CONDITIONS), { participantStance: 'FOR', followUpAnswered: true });
     expect(answered.map((r) => r.vote)).toEqual(['YES', 'YES', 'YES', 'YES']);
   });

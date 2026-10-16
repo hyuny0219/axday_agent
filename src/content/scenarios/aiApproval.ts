@@ -117,10 +117,11 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       memberId: 'CISO',
-      text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 이유도 안 남는다면 더 믿기 어렵습니다. 기록과 책임질 사람부터 정해야 합니다.',
-      bubble: '책임자부터 정해야',
+      text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 누가 책임지는지, 무엇을 보고 승인했는지 확인되면 따를 수 있습니다.',
+      bubble: '확인되면 따를 수 있습니다',
       evidenceIds: ['E3', 'E4'],
-      openingStance: 'AGAINST',
+      // T137: 처음 입장을 1 찬성·1 반대·2 고민 중으로 맞췄다(반대였던 CISO를 고민 중으로).
+      openingStance: 'UNDECIDED',
     },
   ],
   phrases: [
@@ -139,28 +140,26 @@ export const aiApprovalScenario: Scenario = {
       tag: 'request',
       side: 'BOTH',
     },
-    // 반대 쪽 추천 문구(T87, 사용자 지적 "추천 문구가 찬성 쪽에 편중"). N1~N3은
-    // "이 조건이 보장되지 않는 한 반대한다"는 뜻이라 그 조건과 연결했다(선택 시
-    // proposeFromPhrases가 conditionId로 바로 제안 — proposeFromText는 문장 속
-    // '하지 않는'을 부정으로 봐 같은 조건을 제안하지 않지만, 그건 이 문구가 조건을
-    // "원한다"는 뜻과 다른 경로일 뿐 상충하지 않는다). N4는 결재권 자체에 대한
-    // 순수 반대라 조건과 연결하지 않는다.
+    // 반대 쪽 추천 문구(T87 → T137 개편). 반대 쪽 카드는 찬성의 반대말이 아니라 근거 자료의 사실을 짚는
+    // "반대 근거"다 — 고르면 그 근거(AG_*)가 내 의견에 빨간 칩으로 붙고, 안건은 바뀌지 않는다.
+    // SCALE(CEO를 겨눔)은 첫 단계에서 빼고 추가 답변에서만 고른다(T119와 같은 1~2개 규칙). N3은 지나친
+    // 함정(모두 막기)이고, N4는 근거 없이 안건 자체에 반대하는 말이라 조건과 연결하지 않는다.
     {
       id: 'N1',
-      text: '사람이 일부를 다시 보지 않는 한 자동 승인에 반대합니다.',
-      conditionId: 'REVIEW',
+      text: '자동 승인한 건은 승인 이유가 남지 않았습니다. 이유를 확인할 수 없으면 잘못된 승인을 찾아도 무엇을 고칠지 알 수 없습니다.',
+      conditionId: 'AG_AUDIT',
       side: 'AGAINST',
     },
     {
       id: 'N2',
-      text: '승인 사유를 기록하지 않는 자동 승인에는 반대합니다.',
-      conditionId: 'LOG',
+      text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 보게 되고, 일은 줄지 않은 채 책임만 흐려집니다.',
+      conditionId: 'AG_TRUST',
       side: 'AGAINST',
     },
     {
       id: 'N3',
-      text: '책임자를 지정하지 않고는 결재권을 넘길 수 없어 반대합니다.',
-      conditionId: 'OWNER',
+      text: 'AI는 결재에 아예 쓰지 말고 모두 막읍시다.',
+      conditionId: 'AG_BAN',
       side: 'AGAINST',
     },
     {
@@ -211,6 +210,35 @@ export const aiApprovalScenario: Scenario = {
       // 묶어야 질문에 걸리지 않는다. '전부 자동'도 '승인'까지
       // 묶어 "전부 자동이 뭔가요?" 같은 질문을 피한다.
       keywords: ['확인을 빼고 전부 자동', '전부 자동 승인'],
+    },
+    // T137: 반대 근거(side 'AGAINST'). 안건에 붙는 조건이 아니라 근거 자료를 짚는 카드이고, 겨눈 임원을
+    // 반대로 돌린다. 키워드는 추천 문구 문장 그대로의 한 구절이라 질문·정보 요청에는 걸리지 않는다.
+    {
+      id: 'AG_AUDIT',
+      label: '승인 이유를 확인할 수 없음',
+      source: '감사 메모',
+      side: 'AGAINST',
+      keywords: ['승인 이유가 남지 않았습니다'],
+    },
+    {
+      id: 'AG_TRUST',
+      label: '믿지 못해 책임이 흐려짐',
+      source: '사용자 설문',
+      side: 'AGAINST',
+      keywords: ['믿는 직원은 열에 넷뿐'],
+    },
+    {
+      id: 'AG_SCALE',
+      label: '넓히면 잘못 승인도 늘어남',
+      source: '시범 결과와 처리 기록',
+      side: 'AGAINST',
+      keywords: ['매달 열 건 넘게 잘못 승인'],
+    },
+    {
+      id: 'AG_BAN',
+      label: 'AI 결재 아예 막기',
+      side: 'AGAINST',
+      keywords: ['모두 막읍시다'],
     },
   ],
   conflicts: [['REVIEW', 'FULL_AUTO']],
@@ -266,6 +294,56 @@ export const aiApprovalScenario: Scenario = {
       pendingText: '사람 검토를 없애면 위험하다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
       pendingBubble: '알겠습니다. 하나만 더',
     },
+    // T137: 반대 근거에 대한 반응. 겨눈 임원은 근거를 인정하며 반대 쪽으로 기울고(pendingText), 지나친
+    // 근거(AG_BAN)에는 네 임원이 모두 "지나치다"며 안건대로 찬성한다.
+    {
+      conditionId: 'AG_AUDIT',
+      memberId: 'CAIO',
+      text: '승인 이유를 남기는 장치가 없다는 지적은 맞습니다. 이유를 모르면 무엇을 고칠지도 모릅니다. 저도 이대로는 반대합니다.',
+      bubble: '지적이 맞습니다',
+      pendingText: '승인 이유를 남기는 장치가 없다는 지적은 맞습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '지적은 맞습니다. 하나만 더',
+    },
+    {
+      conditionId: 'AG_TRUST',
+      memberId: 'CISO',
+      text: '믿지 못하는 결재는 결국 사람이 다시 봅니다. 책임만 흐려진다는 말씀에 동의합니다. 저도 이대로는 반대합니다.',
+      bubble: '책임이 흐려진다는 말에 동의',
+      pendingText: '책임이 흐려진다는 점은 저도 걸립니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '걸리는 점입니다. 하나만 더',
+    },
+    {
+      conditionId: 'AG_SCALE',
+      memberId: 'CEO',
+      text: '한 달에 천 건 넘게 맡기면 잘못 승인도 늘어납니다. 되돌리는 시간이 더 든다면 저도 다시 생각해야 합니다.',
+      bubble: '잘못 승인도 늘어납니다',
+      pendingText: '넓히면 잘못 승인도 늘어난다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '알겠습니다. 하나만 더',
+    },
+    {
+      conditionId: 'AG_BAN',
+      memberId: 'CEO',
+      text: '아예 쓰지 말자는 말씀은 지나칩니다. 막으면 느린 결재를 풀 길이 없습니다. 저는 안건대로 찬성합니다.',
+      bubble: '아예 막는 건 지나칩니다',
+    },
+    {
+      conditionId: 'AG_BAN',
+      memberId: 'CFO',
+      text: '아예 막자는 말씀은 지나칩니다. 한도를 두고 맡기는 길도 있습니다. 그래서 안건대로 찬성합니다.',
+      bubble: '한도를 두면 됩니다',
+    },
+    {
+      conditionId: 'AG_BAN',
+      memberId: 'CAIO',
+      text: '모두 막기보다 승인 이유를 남기는 장치로 풀 수 있습니다. 그래서 안건대로 찬성합니다.',
+      bubble: '막기보다 장치로 풉니다',
+    },
+    {
+      conditionId: 'AG_BAN',
+      memberId: 'CISO',
+      text: '아예 막는 것은 책임 문제의 답이 아닙니다. 말씀이 지나칩니다. 안건대로 찬성합니다.',
+      bubble: '아예 막는 건 답이 아닙니다',
+    },
     {
       conditionId: 'none',
       memberId: 'CEO',
@@ -282,7 +360,7 @@ export const aiApprovalScenario: Scenario = {
     CEO: '사람이 판단해야 한다는 말씀, 이해합니다. 다만 담당자가 없으면 일이 멈추니, 범위를 좁혀서라도 맡겨 보자는 제안입니다.',
     CFO: '사람이 판단해야 한다는 말씀에는 저도 동의합니다. 금액 한도도, 다시 확인하는 절차도 없이 넘기는 건 저도 반대입니다.',
     CAIO: '말씀하신 걱정에는 공감합니다. 다만 승인 이유를 남기는 장치가 있다면, 좁은 범위에서는 맡겨볼 수 있다고 봅니다.',
-    CISO: '사람이 판단해야 한다는 말씀, 감사 메모에서도 같은 걱정이 나왔습니다. 책임질 사람부터 정하지 않으면 저도 반대합니다.',
+    CISO: '사람이 판단해야 한다는 말씀, 감사 메모에서도 같은 걱정이 나왔습니다. 다만 근거를 더 들어 보고 정하겠습니다.',
   },
   // 유지 이유(T96, 2026-10-08 사용자 지시 "내 발언에 따라 임원 입장이 변하는 것이 잘
   // 보이게"): REACTIONS 반응 카드가 "유지"일 때 빈 대사("앞서 말씀드린 입장 그대로입니다")
@@ -317,7 +395,7 @@ export const aiApprovalScenario: Scenario = {
     '이유를 남기는',
     '열에 넷',
     '책임질 사람',
-    '누구에게 책임을 맡기',
+    '지나칩니다',
     '잘못된 승인',
   ],
   holdReasons: {
@@ -352,7 +430,8 @@ export const aiApprovalScenario: Scenario = {
         askedBy: 'CISO',
       },
       AGAINST: {
-        question: 'AI에게 맡기지 않는다면, 하루 수십 건씩 밀리는 결재는 어떻게 풀어야 할까요?',
+        // T137: 반대 근거를 묻는 질문으로 바꿨다 — 답변 카드가 근거 자료를 짚는 반대 근거다.
+        question: '결재가 밀리는 건 사실입니다. 그래도 맡기면 안 되는 가장 큰 이유는 무엇입니까?',
         askedBy: 'CEO',
       },
     },
@@ -387,33 +466,27 @@ export const aiApprovalScenario: Scenario = {
         side: 'FOR',
       },
       {
-        text: '사람을 더 투입하거나 순서를 바꿔 풀어야지, AI에게 맡기면 안 된다고 생각합니다.',
-        proposeConditionId: null,
+        text: '자동 승인한 건은 승인 이유가 남지 않았습니다. 이유를 확인할 수 없으면 잘못된 승인을 찾아도 무엇을 고칠지 알 수 없습니다.',
+        proposeConditionId: 'AG_AUDIT',
         side: 'AGAINST',
       },
       {
-        text: '그래도 급하다면, 결재 금액 한도를 정해 일부만 맡기는 것은 다시 생각해 보겠습니다.',
-        proposeConditionId: 'LIMIT',
+        text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 보게 되고, 일은 줄지 않은 채 책임만 흐려집니다.',
+        proposeConditionId: 'AG_TRUST',
         side: 'AGAINST',
       },
       {
-        text: '그래도 급하다면, 사람이 일부를 다시 보도록 하는 선에서는 다시 생각해 보겠습니다.',
-        proposeConditionId: 'REVIEW',
+        // T119 규칙: 첫 단계 추천 문구에서 뺀 반대 근거(CEO를 겨눔)는 추가 답변에서 고른다.
+        text: '시범에서 310건 중 4건이 규칙을 벗어났습니다. 한 달 천 건 넘게 맡기면 매달 열 건 넘게 잘못 승인돼, 빨라진 시간보다 되돌리는 시간이 더 듭니다.',
+        proposeConditionId: 'AG_SCALE',
         side: 'AGAINST',
       },
       {
-        text: '그래도 급하다면, 승인 사유를 기록한다면 다시 생각해 보겠습니다.',
-        proposeConditionId: 'LOG',
+        // T137: 반대 쪽 함정. 지나친 주장이라 임원 넷이 모두 안건대로 찬성한다.
+        text: 'AI는 결재에 아예 쓰지 말고 모두 막읍시다.',
+        proposeConditionId: 'AG_BAN',
         side: 'AGAINST',
       },
-      {
-        text: '그래도 급하다면, 책임자를 지정한다면 다시 생각해 보겠습니다.',
-        proposeConditionId: 'OWNER',
-        side: 'AGAINST',
-      },
-      // T133: 반대 쪽 추가 답변에서 함정 조건(FULL_AUTO) 제안은 뺐다 — 반대 참가자가 결재권·경험을 가장
-      // 넓히는 조건을 "다시 생각해 보겠다"는 말은 앞뒤가 맞지 않고, 그 조건 하나로 임원 넷이 모두 반대가 돼
-      // 확실한 지름길이 된다(2026-10-15 사용자 지적).
       {
         text: '책임을 어떻게 나눌지는 더 논의가 필요하다고 생각합니다.',
         proposeConditionId: null,
@@ -433,12 +506,28 @@ export const aiApprovalScenario: Scenario = {
   // participantStance 분기를 추가하지 않았다(tests/domain/voting.test.ts에 반대 입장
   // 경로 회귀 테스트로 이 분포를 고정해 둔다).
   // T93: reason 전부를 같은 쉬운 말 기준으로 다시 썼다(판단 분기·조건 참조는 그대로).
+  // (아래 T137에서 "별도 participantStance 분기를 두지 않았다"는 위 설명을 바꿨다.)
+  // T137(반대 입장 대칭 설계): 처음 입장은 1 찬성(CEO)·1 반대(CFO)·2 고민 중(CAIO·CISO)이다. 고민 중인
+  // 임원은 참가자가 설득하지 못하면 참가자 반대편에 표를 던진다(찬성 참가자 → 반대표, 반대 참가자 →
+  // 찬성표 "반대 근거가 약하면 원안대로"). 그래서 어느 입장이든 처음엔 같은 표 2석이다. 반대 쪽에서는
+  // 근거(AG_*)가 겨눈 임원이 그 근거를 받아들여 NO로 돌아선다. AG_BAN은 지나친 주장이라 넷 모두 YES.
+  // 반대 근거는 안건을 수정하지 않는다 — 표만 바꾼다.
   voteRules: {
     CEO: [
       {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 사고가 나도 되돌릴 수 없어 반대합니다',
+      },
+      {
+        when: { has: 'AG_BAN' },
+        vote: 'YES',
+        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
+      },
+      {
+        when: { has: 'AG_SCALE' },
+        vote: 'NO',
+        reason: '넓히면 잘못 승인도 늘어나 되돌리는 시간이 더 든다니 반대합니다',
       },
       { when: { always: true }, vote: 'YES', reason: '느린 결재를 풀어주는 방향이라 찬성합니다' },
     ],
@@ -447,6 +536,11 @@ export const aiApprovalScenario: Scenario = {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 얼마나 잘못 승인됐는지 알 수 없어 반대합니다',
+      },
+      {
+        when: { has: 'AG_BAN' },
+        vote: 'YES',
+        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { all: [{ has: 'LIMIT' }, { has: 'REVIEW' }] },
@@ -466,9 +560,24 @@ export const aiApprovalScenario: Scenario = {
         reason: '사람 검토를 아예 없애면 기록 없는 승인만 늘어 반대합니다',
       },
       {
+        when: { has: 'AG_BAN' },
+        vote: 'YES',
+        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
+      },
+      {
+        when: { has: 'AG_AUDIT' },
+        vote: 'NO',
+        reason: '승인 이유를 확인할 수 없다는 지적이 맞아 반대합니다',
+      },
+      {
         when: { has: 'LOG' },
         vote: 'YES',
         reason: '승인 사유를 남긴다니 그러면 찬성합니다',
+      },
+      {
+        when: { participantStance: 'AGAINST' },
+        vote: 'YES',
+        reason: '반대 근거가 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },
@@ -483,14 +592,29 @@ export const aiApprovalScenario: Scenario = {
         reason: '사람 검토를 아예 없애면 책임질 사람이 아무도 없어 반대합니다',
       },
       {
+        when: { has: 'AG_BAN' },
+        vote: 'YES',
+        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
+      },
+      {
+        when: { has: 'AG_TRUST' },
+        vote: 'NO',
+        reason: '믿지 못하는 결재는 책임만 흐려져 반대합니다',
+      },
+      {
         when: { all: [{ has: 'OWNER' }, { has: 'LOG' }] },
         vote: 'YES',
         reason: '책임질 사람도 정하고 사유도 남긴다니 그러면 찬성합니다',
       },
       {
-        when: { has: 'OWNER' },
+        when: { all: [{ has: 'OWNER' }, { not: { participantStance: 'AGAINST' } }] },
         vote: 'NO',
         reason: '책임질 사람은 정했지만 사유 기록이 없어 반대합니다',
+      },
+      {
+        when: { participantStance: 'AGAINST' },
+        vote: 'YES',
+        reason: '반대 근거가 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },
