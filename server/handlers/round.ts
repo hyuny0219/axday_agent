@@ -15,7 +15,7 @@ import {
 } from '../validate';
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
-import { getScenarioMaterials } from '../scenario-data';
+import { getScenarioMaterials, splitConditionLabels } from '../scenario-data';
 import {
   ANSWER_JUDGMENT_RULE,
   FOLLOWUP_ANSWERED_RULE,
@@ -190,6 +190,8 @@ function buildRoundSystemPrompt(
     statements: input.transcript.statements,
     participantOpinion: input.participantOpinion,
     participantStance: input.participantStance ?? null,
+    // T137: 확정한 반대 근거는 한국어 라벨로만 싣는다(ID 노출 금지).
+    participantObjections: splitConditionLabels(materials, input.confirmedConditionIds ?? []).objections,
     followUpAnswered: input.followUpAnswered,
     followUpQuestion: input.followUpQuestion,
     followUpAnswerText: input.followUpAnswerText,

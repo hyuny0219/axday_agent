@@ -98,4 +98,10 @@
 // 단계 지시에 형식 규칙을 모아 분명히 했다 — reason은 한국어 160자 이내(공백 포함, 길면 줄여 쓰기)·자료 ID/조건 ID/영문
 // 약어 금지(역할 이름·AI만 예외, 걸리면 응답 전체가 거절됨), motionId·motionHash는 meeting_record 값을 한 글자도
 // 바꾸지 말고 그대로 복사. 판단 기준·응답 스키마·표결 규칙은 그대로다.
-export const PROMPT_VERSION = 'v18';
+// v19(2026-10-16, T137): 반대 입장 대칭 설계. 반대 근거(Condition.side 'AGAINST', 8개)를 조건과 따로 싣는다 —
+// meeting_record의 허용 조건 목록·ID 대응표에서 빼고, 반대 참가자가 확정한 근거는 "참가자가 든 반대 근거"(한국어
+// 라벨만, ID 노출 금지)로 안건을 수정하지 않는다는 설명과 함께 싣는다(common.ts participantObjections). CAIO·CISO가
+// 처음 입장 고민 중으로 바뀌어(roleLenses.opening) 표결 지시에 VOTE_UNDECIDED_START_RULE("설득되지 않았다면 참가자
+// 입장의 반대편에 표")를 더했고, 첫 반응 REVERSED(반대 참가자) 지시를 "지나치거나 우려를 풀어 주는 내용"으로 바꿨다.
+// 응답 스키마·검증은 그대로다(조건 ID enum만 반대 근거 ID가 늘었다).
+export const PROMPT_VERSION = 'v19';

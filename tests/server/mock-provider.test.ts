@@ -242,11 +242,11 @@ describe('createMockProvider 안건별 OPINIONS 출발 성향(PR #13 Codex 3차 
     CEO: 'FOR',
     CFO: 'AGAINST',
     CAIO: 'UNDECIDED',
-    CISO: 'AGAINST',
+    CISO: 'UNDECIDED',
   };
 
   it.each(['ai-approval', 'experience-first'] as const)(
-    '%s의 OPINIONS stance는 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST다',
+    '%s의 OPINIONS stance는 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO UNDECIDED다(T137)',
     async (scenarioId) => {
       const provider = createMockProvider('mock-model');
       for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO'] as const) {

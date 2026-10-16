@@ -29,6 +29,15 @@ export const CONDITION_IDS = [
   'RECORD',
   'DATA_VETO',
   'EXP_ONLY',
+  // T137: 반대 근거(Condition.side 'AGAINST') — 안건을 수정하지 않고 반대 참가자가 근거 자료를 짚는 카드.
+  'AG_AUDIT',
+  'AG_TRUST',
+  'AG_SCALE',
+  'AG_BAN',
+  'AG_WARN',
+  'AG_WHY',
+  'AG_SPLIT',
+  'AG_NUMBERS',
 ] as const;
 
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;

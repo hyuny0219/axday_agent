@@ -14,6 +14,8 @@ export interface MeetingRecordEvidence {
 export interface MeetingRecordCondition {
   id: string;
   label: string;
+  /** 반대 근거(T137)면 'AGAINST' — 허용 조건 목록·ID 대응표에서 빼고 "참가자가 든 반대 근거"로만 싣는다. */
+  side?: 'AGAINST';
 }
 
 export interface MeetingRecordStatement {
@@ -40,6 +42,9 @@ export interface MeetingRecordInput {
   participantOpinion?: string;
   /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). null·생략은 입장을 고르지 않음. */
   participantStance?: 'FOR' | 'AGAINST' | null;
+  /** 참가자가 든 반대 근거의 한국어 라벨(T137, 프롬프트 v19). 안건은 바뀌지 않는다 — 반대 참가자가 근거 자료의
+   * 사실을 짚어 반대하는 이유다. 생략하거나 비어 있으면 줄을 싣지 않는다. */
+  participantObjections?: string[];
   /** 참가자가 추가 질문에 답을 전달했는지(T110, 프롬프트 v12). 생략하면 줄을 싣지 않는다
    * (기존 요청은 동작이 그대로다). */
   followUpAnswered?: boolean;
@@ -122,6 +127,16 @@ export const FOLLOWUP_NO_VERDICT_RULE =
   ' "반대표를 던지겠습니다" 같은 말은 쓰지 않습니다). 지지·동의·같은 편·표를 보탠다·통과·승인·' +
   ' 부결 등 어떤 표현으로도 최종 방향을 밝히지 마십시오. 방향은 표결 결과로 공개되며, stance' +
   ' 필드에만 지금 기울어 있는 쪽을 정직하게 적으십시오.';
+
+/**
+ * T137(프롬프트 v19): 처음에 고민 중이던 임원(CAIO·CISO)의 표결 지시. 규칙표(voteRules)의 "설득 안 된 고민 중
+ * 임원은 참가자 반대편에 표"를 방향 지시로만 옮긴 것이다 — 어떤 근거가 누구를 움직이는지는 싣지 않는다.
+ */
+export const VOTE_UNDECIDED_START_RULE =
+  '당신은 이 안건에서 처음에 고민 중이었습니다. 참가자의 근거나 조건으로 마음이 정해지지 않았다면' +
+  ' 참가자의 주장에 설득되지 않은 것이므로 참가자 입장의 반대편에 표를 던지십시오(참가자가 찬성이면' +
+  ' 반대표, 참가자가 반대이면 반대 근거가 약하다고 보고 원안대로 찬성표). 참가자의 근거가 당신의' +
+  ' 우려와 맞닿아 마음이 정해졌다면 참가자 쪽으로 표를 던져도 됩니다.';
 
 export const VOTE_UNANSWERED_RULE =
   'meeting_record에 "추가 질문 답변: 없음"이라고 적혀 있다면, 참가자는 당신의 추가 질문에' +
@@ -228,14 +243,16 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
   lines.push(neutralizeTags(input.originalMotionText));
   lines.push('자료:');
   lines.push(formatEvidence(input.evidence));
+  // T137: 반대 근거는 안건에 붙는 조건이 아니므로 허용 조건 목록·ID 대응표에서 뺀다.
+  const attachable = input.conditions.filter((item) => item.side !== 'AGAINST');
   lines.push('허용 조건 목록(발언·이유에서는 아래 한국어 이름으로만 부르십시오):');
-  lines.push(formatConditionLabels(input.conditions));
-  if (input.conditions.length > 0) {
+  lines.push(formatConditionLabels(attachable));
+  if (attachable.length > 0) {
     lines.push(
       '조건 이름-ID 대응표(응답 JSON의 evidenceIds·suggestedConditionIds 같은 ID 필드를 채울' +
         ' 때만 참고하고, 이 ID는 문장·이유·발언 본문에 절대 쓰지 마십시오):',
     );
-    lines.push(formatConditionIdMap(input.conditions));
+    lines.push(formatConditionIdMap(attachable));
   }
   if (input.motion) {
     lines.push('최종 표결 안건(고정됨, 이 내용과 다르게 판단하지 마십시오):');
@@ -260,11 +277,19 @@ export function buildMeetingRecordBlock(input: MeetingRecordInput): string {
     const stanceLabel =
       input.participantStance === 'FOR' ? '찬성' : input.participantStance === 'AGAINST' ? '반대' : '미정';
     lines.push(`참가자 입장: ${stanceLabel}`);
-    if (input.participantStance === 'AGAINST' && input.conditions.length > 0) {
+    if (input.participantStance === 'AGAINST' && attachable.length > 0) {
       lines.push(
         '참가자는 안건에 반대하며, 위 조건은 "이 조건이어야 받아들일 수 있다"는 참가자의' +
           ' 요구입니다. 조건이 붙어 있다는 사실만으로 찬성하지 말고, 그 조건이 당신의 우려를' +
           ' 실제로 해소하는지로 판단하십시오.',
+      );
+    }
+    if (input.participantStance === 'AGAINST' && (input.participantObjections?.length ?? 0) > 0) {
+      lines.push('참가자가 든 반대 근거(안건은 바뀌지 않았고, 참가자가 반대하는 이유로 든 근거 자료의 사실입니다):');
+      lines.push((input.participantObjections ?? []).map((label) => `- ${neutralizeTags(label)}`).join('\n'));
+      lines.push(
+        '이 반대 근거가 제공된 자료에 실제로 있는 사실이고 당신의 우려를 키운다면 반대 쪽으로 기울 수' +
+          ' 있습니다. 근거가 약하거나 지나친 주장이라면 오히려 안건대로 받아들일 수 있습니다.',
       );
     }
   }

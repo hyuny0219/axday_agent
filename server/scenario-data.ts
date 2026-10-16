@@ -15,6 +15,8 @@ export interface ScenarioEvidence {
 export interface ScenarioCondition {
   id: string;
   label: string;
+  /** 반대 근거(T137)면 'AGAINST'. 안건을 수정하지 않고 반대 참가자가 근거 자료를 짚는 카드다. 없으면 찬성 조건. */
+  side?: 'AGAINST';
 }
 
 /**
@@ -90,6 +92,12 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     { id: 'REVIEW', label: '사람이 일부 다시 보기' },
     { id: 'OWNER', label: '결재 규칙 책임자' },
     { id: 'FULL_AUTO', label: '사람 확인 없이 전부 맡기기' },
+    // T137: 반대 근거(src/content/scenarios/aiApproval.ts와 같은 라벨). FOR 조건 뒤에 둔다 — mock이 역할 순서로
+    // 앞의 조건을 고른다.
+    { id: 'AG_AUDIT', label: '승인 이유를 확인할 수 없음', side: 'AGAINST' },
+    { id: 'AG_TRUST', label: '믿지 못해 책임이 흐려짐', side: 'AGAINST' },
+    { id: 'AG_SCALE', label: '넓히면 잘못 승인도 늘어남', side: 'AGAINST' },
+    { id: 'AG_BAN', label: 'AI 결재 아예 막기', side: 'AGAINST' },
   ],
   // T79(2026-10-02 사용자 결정): CEO 찬성 쪽·CFO 반대 쪽·CAIO 미정·CISO 반대 쪽으로 네 명이
   // 갈리게 한다. 문구는 docs/TASKS.md T79 카드에 적힌 그대로 옮긴다.
@@ -109,10 +117,11 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
       evidenceIds: ['E3'],
       opening: 'UNDECIDED',
     },
+    // T137: 처음 입장을 1 찬성·1 반대·2 고민 중으로 맞췄다 — CISO는 책임과 기록이 확인되면 따를 수 있다.
     CISO: {
       lens: '감사 메모의 기록 부재를 권한 위임의 책임 문제로 봅니다.',
       evidenceIds: ['E3'],
-      opening: 'AGAINST',
+      opening: 'UNDECIDED',
     },
   },
 };
@@ -161,6 +170,11 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     { id: 'DATA_VETO', label: '데이터가 경고하면 멈춤' },
     { id: 'REVIEW', label: '결정 결과 돌아보기' },
     { id: 'EXP_ONLY', label: '언제나 경험 먼저' },
+    // T137: 반대 근거(src/content/scenarios/experienceFirst.ts와 같은 라벨).
+    { id: 'AG_WARN', label: '경고를 넘길 핑계가 생김', side: 'AGAINST' },
+    { id: 'AG_WHY', label: '판단 이유를 설명할 수 없음', side: 'AGAINST' },
+    { id: 'AG_SPLIT', label: '반반인데 한쪽만 앞세움', side: 'AGAINST' },
+    { id: 'AG_NUMBERS', label: '숫자만으로 결정', side: 'AGAINST' },
   ],
   // T79(2026-10-02 사용자 결정): 안건①과 같은 배치(CEO 찬성·CFO 반대·CAIO 미정·CISO 반대).
   roleLenses: {
@@ -182,7 +196,7 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     CISO: {
       lens: '인터뷰 메모의 기록 부재를 사후 검증 불가 문제로 봅니다.',
       evidenceIds: ['E3'],
-      opening: 'AGAINST',
+      opening: 'UNDECIDED',
     },
   },
 };
@@ -234,6 +248,22 @@ const SCENARIOS: Record<string, ScenarioMaterials> = {
   'ai-approval': AI_APPROVAL_MATERIALS,
   'experience-first': EXPERIENCE_FIRST_MATERIALS,
 };
+
+/** 확정 조건 ID를 안건에 붙는 조건과 반대 근거(T137)의 한국어 라벨로 나눈다. 라벨만 돌려주므로 프롬프트에
+ * ID가 새지 않는다. 알 수 없는 ID는 건너뛴다. */
+export function splitConditionLabels(
+  materials: ScenarioMaterials,
+  conditionIds: readonly string[],
+): { conditions: string[]; objections: string[] } {
+  const byId = new Map(materials.conditions.map((c) => [c.id, c] as const));
+  const result = { conditions: [] as string[], objections: [] as string[] };
+  for (const id of conditionIds) {
+    const condition = byId.get(id);
+    if (!condition) continue;
+    (condition.side === 'AGAINST' ? result.objections : result.conditions).push(condition.label);
+  }
+  return result;
+}
 
 export function getScenarioMaterials(scenarioId: string): ScenarioMaterials | undefined {
   return SCENARIOS[scenarioId];

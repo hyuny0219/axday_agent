@@ -15,8 +15,14 @@ import {
 } from '../validate';
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
-import { getScenarioMaterials } from '../scenario-data';
-import { ANSWER_JUDGMENT_RULE, VOTE_UNANSWERED_RULE, buildCommonGuardrails, buildMeetingRecordBlock } from '../prompts/common';
+import { getScenarioMaterials, splitConditionLabels } from '../scenario-data';
+import {
+  ANSWER_JUDGMENT_RULE,
+  VOTE_UNANSWERED_RULE,
+  VOTE_UNDECIDED_START_RULE,
+  buildCommonGuardrails,
+  buildMeetingRecordBlock,
+} from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
@@ -139,13 +145,6 @@ function voteJsonSchema(): Record<string, unknown> {
   };
 }
 
-function conditionLabels(
-  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
-  conditionIds: string[],
-): string[] {
-  const byId = new Map(materials.conditions.map((c) => [c.id, c.label] as const));
-  return conditionIds.map((id) => byId.get(id) ?? id);
-}
 
 function buildVoteSystemPrompt(
   roleId: ExecRoleId,
@@ -153,6 +152,8 @@ function buildVoteSystemPrompt(
   input: VoteRequest,
 ): string {
   const rolePrompt = ROLE_PROMPT_BUILDERS[roleId](materials, 'VOTE');
+  // T137: 반대 근거는 안건을 수정하지 않으므로 "적용 조건"이 아니라 "참가자가 든 반대 근거"로 따로 싣는다.
+  const labels = splitConditionLabels(materials, input.motion.effectiveConditionIds);
   const meetingRecord = buildMeetingRecordBlock({
     scenarioId: materials.scenarioId,
     originalMotionText: materials.originalMotionText,
@@ -164,10 +165,11 @@ function buildVoteSystemPrompt(
     motion: {
       id: input.motion.id,
       text: input.motion.text,
-      effectiveConditionLabels: conditionLabels(materials, input.motion.effectiveConditionIds),
+      effectiveConditionLabels: labels.conditions,
       executionMode: input.motion.executionMode,
     },
     participantStance: input.participantStance ?? null,
+    participantObjections: labels.objections,
     followUpAnswered: input.followUpAnswered,
     followUpQuestion: input.followUpQuestion,
     followUpAnswerText: input.followUpAnswerText,
@@ -182,6 +184,9 @@ function buildVoteSystemPrompt(
       ' meeting_record에 적힌 값을 한 글자도 바꾸지 말고 그대로 복사하십시오. ② reason은 한국어' +
       ' 문장 하나로 공백 포함 160자 이내(길면 줄여 쓰기)이며, 자료 ID(E1 등)·조건 ID(LIMIT 등)·영문' +
       ' 약어를 쓰지 말고 자료·조건의 한국어 이름으로 쓰십시오("AI"와 임원 역할 이름만 예외입니다).',
+    ...(materials.roleLenses?.[roleId]?.opening === 'UNDECIDED' && input.participantStance !== undefined
+      ? [VOTE_UNDECIDED_START_RULE]
+      : []),
     ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
     ...(input.followUpAnswered !== false && input.followUpAnswerText !== undefined ? [ANSWER_JUDGMENT_RULE] : []),
     meetingRecord,
