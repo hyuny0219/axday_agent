@@ -104,4 +104,8 @@
 // 처음 입장 고민 중으로 바뀌어(roleLenses.opening) 표결 지시에 VOTE_UNDECIDED_START_RULE("설득되지 않았다면 참가자
 // 입장의 반대편에 표")를 더했고, 첫 반응 REVERSED(반대 참가자) 지시를 "지나치거나 우려를 풀어 주는 내용"으로 바꿨다.
 // 응답 스키마·검증은 그대로다(조건 ID enum만 반대 근거 ID가 늘었다).
-export const PROMPT_VERSION = 'v19';
+// v20(2026-10-16, T137 보강): v19 live 실측에서 반대 참가자 경로의 최종표가 규칙표와 무관하게 "원안에 조건이
+// 없다"며 전원 반대였다. 반대 참가자일 때 VOTE 지시에 임원별 표 방향(prompts/voteDirection.ts, 규칙표 decideMember로
+// 계산한 방향 지시만 싣고 규칙표 값·조건별 매핑은 싣지 않는다)과 "참가자가 내건 조건은 안건을 바꾸지 않는다"를 더했다.
+// 찬성 참가자·응답 스키마는 그대로다.
+export const PROMPT_VERSION = 'v20';

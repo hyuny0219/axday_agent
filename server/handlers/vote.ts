@@ -24,6 +24,7 @@ import {
   buildMeetingRecordBlock,
 } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
+import { buildVoteDirectionRule, ruleVoteDirection } from '../prompts/voteDirection';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
@@ -187,6 +188,19 @@ function buildVoteSystemPrompt(
     ...(materials.roleLenses?.[roleId]?.opening === 'UNDECIDED' && input.participantStance !== undefined
       ? [VOTE_UNDECIDED_START_RULE]
       : []),
+    ...(() => {
+      // T137(v20): 반대 참가자 경로는 규칙표로 이 임원의 표 방향을 계산해 지시한다(T132 첫 반응과 같은 방식).
+      const rule = buildVoteDirectionRule(
+        ruleVoteDirection({
+          scenarioId: input.scenarioId,
+          roleId,
+          participantStance: input.participantStance,
+          effectiveConditionIds: input.motion.effectiveConditionIds,
+          followUpAnswered: input.followUpAnswered,
+        }),
+      );
+      return rule ? [rule] : [];
+    })(),
     ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
     ...(input.followUpAnswered !== false && input.followUpAnswerText !== undefined ? [ANSWER_JUDGMENT_RULE] : []),
     meetingRecord,

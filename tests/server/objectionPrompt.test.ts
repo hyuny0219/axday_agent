@@ -139,3 +139,26 @@ describe('라운드 프롬프트(v19) — 반대 근거', () => {
     expect(systems.CISO).not.toContain('참가자가 내건 조건');
   });
 });
+
+describe('표결 방향 지시(v20)', () => {
+  it('반대 참가자: 규칙표 방향대로 임원별 지시가 붙는다(겨눈 임원 NO, 그 밖 YES, 함정은 전원 YES)', async () => {
+    const run = async (ids: string[]) => {
+      const { provider, systems } = capture();
+      await handleVote(voteInput({ motion: { ...voteInput().motion, effectiveConditionIds: ids as never } }), { provider });
+      return systems;
+    };
+    const one = await run(['AG_AUDIT']);
+    expect(one.CAIO).toContain('당신의 표는 반대(NO)입니다');
+    for (const roleId of ['CEO', 'CISO']) expect(one[roleId]).toContain('당신의 표는 안건대로 찬성(YES)입니다');
+    expect(one.CFO).toContain('당신의 표는 반대(NO)입니다');
+    expect(one.CAIO).toContain('원안에 조건이 하나도 없다');
+    const trap = await run(['AG_BAN']);
+    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) expect(trap[roleId]).toContain('안건대로 찬성(YES)입니다');
+  });
+
+  it('찬성 참가자·입장 없음에는 방향 지시가 없다', async () => {
+    const { provider, systems } = capture();
+    await handleVote(voteInput({ participantStance: 'FOR' }), { provider });
+    expect(systems.CAIO).not.toContain('당신의 표는');
+  });
+});

@@ -20,6 +20,9 @@ async function reachDiscussAgainst(page: Page, scenarioId: 'ai-approval' | 'expe
 }
 
 async function expectNoPageScroll(page: Page, label: string) {
+  // 사용자 지시(T137): 화면 어디에도 "반대 근거"·"반대 사유"라는 말을 쓰지 않는다(반대 쪽 카드도 "조건", 색만 다르다).
+  const text = (await page.locator('body').innerText()) + (await page.locator('body').textContent());
+  expect(text, `${label}: 금지 표기`).not.toMatch(/반대 근거|반대 사유/);
   const overflow = await page.evaluate(() => {
     const el = document.scrollingElement ?? document.documentElement;
     return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
