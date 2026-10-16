@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
@@ -424,5 +425,26 @@ describe('live board agents adapter', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(outcomes).toHaveLength(4);
     expect(outcomes.every((o) => o.status === 'failed' && o.failReason === 'no_final_motion')).toBe(true);
+  });
+});
+
+describe('live 요청의 확정 조건(T137, Codex P1)', () => {
+  it('입장을 바꾼 마지막 의견에 남은 반대 쪽 조건은 요청에 싣지 않는다(반대 → 찬성)', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ results: [] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const clock = fakeClock(0);
+    const session: Session = {
+      ...toOpinionsStage(clock),
+      opinions: [
+        { id: 'o1', originalText: '반대', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT'], stance: 'AGAINST', createdAt: 0 },
+        { id: 'o2', originalText: '찬성으로 바꿉니다', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT', 'LOG'], stance: 'FOR', createdAt: 1 },
+      ],
+    };
+    const adapter = createLiveBoardAgentsAdapter();
+    await adapter.reactions({ ...makeCtx(session), scenario: aiApprovalScenario });
+    const calls = fetchMock.mock.calls as unknown as Array<[string, { body: string }]>;
+    const body = JSON.parse(calls[0]![1].body) as { confirmedConditionIds?: string[]; participantStance?: string };
+    expect(body.participantStance).toBe('FOR');
+    expect(body.confirmedConditionIds).toEqual(['LOG']);
   });
 });

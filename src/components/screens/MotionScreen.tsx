@@ -61,7 +61,7 @@ export function MotionScreen({
   onFreeze,
   statements,
 }: MotionScreenProps) {
-  const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions), [opinions]);
+  const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions, scenario), [opinions, scenario]);
   const participantStance = useMemo(() => collectParticipantStance(opinions), [opinions]);
   // 라운드당 1회(T65) — 세션 호출 상한(server/sessionLimit.ts)이 최종 방어선이다. 세션
   // 전체에서 라운드 재요청은 1회뿐이라(OPINIONS·REACTIONS·FOLLOWUP 중 먼저 쓴 곳에서

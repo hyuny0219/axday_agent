@@ -56,7 +56,7 @@ export function computeResultStamp(session: Session, scenario?: Scenario | null)
   if (!finalMotion) {
     return null;
   }
-  const allConfirmedIds = collectConfirmedConditionIds(session.opinions);
+  const allConfirmedIds = collectConfirmedConditionIds(session.opinions, scenario);
   // 반대 근거(T137)는 안건에 반영되는 조건이 아니라서 "조건부 가결"의 근거로 세지 않는다.
   const includedIds = allConfirmedIds.filter(
     (id) => finalMotion.effectiveConditionIds.includes(id) && !(scenario && isObjectionCondition(scenario, id)),

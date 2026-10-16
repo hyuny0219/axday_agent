@@ -154,7 +154,7 @@ describe('scriptedStances의 두 단계 설득(T110)', () => {
   });
 
   it('반대 참가자(대칭): 조건으로 돌아설 CEO가 1차 반응에서는 고민 중, 답하면 반대, 넘어가면 찬성 그대로', () => {
-    const opinions = [againstOpinion(['FULL_AUTO'])];
+    const opinions = [againstOpinion(['AG_SCALE'])];
     expect(scriptedStances(ai, { stage: 'REACTIONS', opinions, followUpUsed: false, followUpAnswered: false }).CEO).toBe('UNDECIDED');
     expect(scriptedStances(ai, { stage: 'MOTION', opinions: [...opinions, ...opinions], followUpUsed: true, followUpAnswered: true }).CEO).toBe('AGAINST');
     expect(scriptedStances(ai, { stage: 'MOTION', opinions, followUpUsed: true, followUpAnswered: false }).CEO).toBe('FOR');

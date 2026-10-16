@@ -13,6 +13,7 @@
 // ctx.roleIds가 있으면("다시 요청"/"미표결 임원 다시 요청", T65) 그 역할만 요청하고 응답도
 // 그 역할만큼만 만든다 — 이미 성공한 역할의 발언·표를 건드리지 않는다(runner.ts가 병합한다).
 
+import { collectConfirmedConditionIds } from '../../components/opinionConditions';
 import type { ExecMemberId, Vote } from '../../content/types';
 import type { Stance, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -127,8 +128,8 @@ function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | u
 
 /** 참가자의 가장 최근 의견에 확정된 조건 ID(T132). 의견이 없으면 빈 배열. */
 function latestConfirmedConditionIds(ctx: BoardAgentsContext): string[] {
-  const opinions = ctx.session.opinions;
-  return [...(opinions[opinions.length - 1]?.confirmedConditionIds ?? [])];
+  // T137: 마지막 의견의 입장과 다른 쪽 조건(입장 전환 뒤 남은 것)은 요청에 싣지 않는다 — 규칙표·화면과 같은 집합.
+  return collectConfirmedConditionIds(ctx.session.opinions, ctx.scenario);
 }
 
 /** 임원별 첫 의견(OPINIONS) stance(T132). 그 단계 발언이 없거나 stance가 없는 임원(응답 실패 등)은 넣지 않아

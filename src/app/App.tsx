@@ -851,7 +851,7 @@ function AppShell() {
                     chairLine={chairLineFor(
                       session.stage,
                       scenario,
-                      collectConfirmedConditionIds(session.opinions),
+                      collectConfirmedConditionIds(session.opinions, scenario),
                       collectParticipantStance(session.opinions),
                     )}
                   />

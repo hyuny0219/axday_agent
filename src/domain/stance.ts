@@ -5,6 +5,7 @@
 
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Ballot, Opinion, Session, SessionStage, Stance } from './types';
+import { filterConditionIdsForStance } from './conditions';
 import { EXEC_MEMBER_ORDER, decideMember, isGatedByUnanswered } from './voting';
 import type { VoteContext } from './voting';
 
@@ -39,7 +40,7 @@ function voteToStance(vote: Vote): Stance {
 /** 가장 최근 의견의 확정 조건 ID를 그대로 쓴다(합집합이 아니다) —
  * components/opinionConditions.ts의 collectConfirmedConditionIds와 같은 규칙이다.
  * 후속 보완에서 조건을 해제했을 때 그 조건이 되살아나지 않게 하기 위해서다. */
-function latestConfirmedConditionIds(opinions: readonly Opinion[]): string[] {
+function latestConfirmedConditionIds(opinions: readonly Opinion[], scenario: Scenario): string[] {
   const latest = opinions[opinions.length - 1];
   if (!latest) {
     return [];
@@ -50,7 +51,8 @@ function latestConfirmedConditionIds(opinions: readonly Opinion[]): string[] {
       result.push(id);
     }
   }
-  return result;
+  // T137: 마지막 의견의 입장과 다른 쪽 조건(입장 전환 뒤 남은 것)은 규칙표가 보지 않는다.
+  return filterConditionIdsForStance(scenario, result, latest.stance ?? null);
 }
 
 /** 참가자가 아직 한 번도 의견을 전달하지 않은 동안(OPINIONS·DISCUSS) scenario의
@@ -96,7 +98,7 @@ export function scriptedStances(scenario: Scenario, session: ScriptedStanceSessi
     return openingStances(scenario);
   }
   const ctx: VoteContext = {
-    conditionIds: latestConfirmedConditionIds(session.opinions),
+    conditionIds: latestConfirmedConditionIds(session.opinions, scenario),
     executionMode: 'DEFAULT',
     participantStance: session.opinions[session.opinions.length - 1]?.stance ?? null,
     followUpAnswered: session.followUpAnswered ?? true,
@@ -122,7 +124,7 @@ export function membersAwaitingAnswer(scenario: Scenario, session: ScriptedStanc
     return [];
   }
   const ctx: VoteContext = {
-    conditionIds: latestConfirmedConditionIds(session.opinions),
+    conditionIds: latestConfirmedConditionIds(session.opinions, scenario),
     executionMode: 'DEFAULT',
     participantStance: session.opinions[session.opinions.length - 1]?.stance ?? null,
     followUpAnswered: false,
@@ -160,7 +162,7 @@ export function leaningStances(
     }
     return result;
   }
-  const conditionIds = latestConfirmedConditionIds(session.opinions);
+  const conditionIds = latestConfirmedConditionIds(session.opinions, scenario);
   const targetVote: Vote = direction === 'FOR' ? 'YES' : 'NO';
   for (const memberId of EXEC_MEMBER_ORDER) {
     // 이번 단계(REACTIONS)에 정상 응답(answered)한 임원만 후보다 — 실패·대기 임원은 이전 단계 stance로

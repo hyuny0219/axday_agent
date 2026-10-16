@@ -407,6 +407,23 @@ export function isObjectionCondition(scenario: Scenario, conditionId: string): b
   return scenario.conditions.find((condition) => condition.id === conditionId)?.side === 'AGAINST';
 }
 
+/**
+ * 확정 조건 ID 중 참가자의 지금 입장 쪽 카드만 남긴다(T137). 입장을 바꾸면(예: 반대로 시작해 추가 답변 화면에서
+ * 찬성으로 바꿈) 첫 의견에서 붙인 반대 쪽 조건(빨강)은 새 입장의 조건이 아니므로 버린다 — 규칙표·표시·안건·live
+ * 요청이 모두 같은 집합을 보게 하는 기준이다. 반대 쪽 조건이 없는 과거 시나리오는 그대로 둔다.
+ */
+export function filterConditionIdsForStance(
+  scenario: Scenario,
+  conditionIds: readonly string[],
+  participantStance: 'FOR' | 'AGAINST' | null | undefined,
+): string[] {
+  if (!scenario.conditions.some((condition) => condition.side === 'AGAINST')) {
+    return [...conditionIds];
+  }
+  const against = participantStance === 'AGAINST';
+  return conditionIds.filter((id) => isObjectionCondition(scenario, id) === against);
+}
+
 /** 확정 ID를 안건에 붙는 조건과 반대 근거(T137)로 나눈다. 순서는 그대로 유지한다. */
 export function splitConditionIds(
   scenario: Scenario,

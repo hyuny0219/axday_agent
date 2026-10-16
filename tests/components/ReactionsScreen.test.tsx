@@ -899,7 +899,7 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   });
 
   it('반대 참가자 카드: 배지는 "찬성 → 반대 쪽", 무드 라벨은 "반대 쪽"이다', () => {
-    const opinions = mk(['FULL_AUTO'], 'AGAINST');
+    const opinions = mk(['AG_SCALE'], 'AGAINST');
     render(
       <ReactionsScreen
         {...baseProps()}
@@ -1103,3 +1103,49 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   });
 });
 
+
+// T137(Codex P1): 입장을 바꾸면 첫 의견의 반대 쪽 조건(빨강)을 이어받지 않는다 — 화면 칩·제출 조건이 새 입장 쪽만 본다.
+describe('ReactionsScreen 입장 전환과 조건(T137)', () => {
+  function renderSwitch(first: { stance: 'FOR' | 'AGAINST'; ids: string[] }, now: 'FOR' | 'AGAINST') {
+    const submitted: string[][] = [];
+    const opinions: Opinion[] = [
+      { id: 'o1', originalText: '첫 의견', selectedPhraseIds: [], confirmedConditionIds: first.ids, stance: first.stance, createdAt: 0 },
+    ];
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={aiApprovalScenario}
+        opinions={opinions}
+        side={now}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(aiApprovalScenario, { stage: 'DISCUSS', opinions: [] })}
+        step="answer"
+        onSubmitFollowup={(payload) => submitted.push(payload.confirmedConditionIds)}
+      />,
+    );
+    // 답을 시작해야 조건 칩이 보인다 — 입장과 무관한 BOTH 답변 하나를 고른다.
+    const both = aiApprovalScenario.followUp.options.findIndex((option) => option.side === 'BOTH');
+    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
+    return submitted;
+  }
+
+  it('반대 → 찬성: 첫 의견의 반대 쪽 조건 칩은 사라지고 찬성 쪽 조건만 남는다', () => {
+    renderSwitch({ stance: 'AGAINST', ids: ['AG_AUDIT', 'LOG'] }, 'FOR');
+    expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+  });
+
+  it('찬성 → 반대: 첫 의견의 찬성 쪽 조건 칩은 사라지고 반대 쪽 조건만 남는다', () => {
+    renderSwitch({ stance: 'FOR', ids: ['LOG', 'AG_AUDIT'] }, 'AGAINST');
+    expect(screen.queryByTestId('condition-chip-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('condition-chip-AG_AUDIT')).toHaveClass('condition-chip--objection');
+  });
+
+  it('입장을 바꾸지 않으면 그대로 이어받는다', () => {
+    renderSwitch({ stance: 'AGAINST', ids: ['AG_AUDIT'] }, 'AGAINST');
+    expect(screen.getByTestId('condition-chip-AG_AUDIT')).toBeInTheDocument();
+  });
+});

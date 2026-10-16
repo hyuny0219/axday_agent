@@ -103,7 +103,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
   // 않는다(computePersuasion이 null을 돌려준다).
   const persuasion = useMemo(() => computePersuasion(session), [session]);
 
-  const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions), [session.opinions]);
+  const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions, scenario), [session.opinions, scenario]);
   // T137: 안건에 반영된 조건만 센다 — 반대 근거는 안건을 수정하지 않으므로 "조건부 가결"·남은 과제 계산에서 뺀다.
   const includedIds = useMemo(
     () =>

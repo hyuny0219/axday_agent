@@ -67,7 +67,7 @@ function selectReactionIds(session: Session, scenario: Scenario | null): string[
   if (!scenario) {
     return [];
   }
-  const confirmedIds = collectConfirmedConditionIds(session.opinions);
+  const confirmedIds = collectConfirmedConditionIds(session.opinions, scenario);
   return scenario.reactions
     .filter((reaction) => reaction.conditionId !== 'none' && confirmedIds.includes(reaction.conditionId))
     .map((reaction) => `${scenario.id}-reaction-${reaction.conditionId}`);

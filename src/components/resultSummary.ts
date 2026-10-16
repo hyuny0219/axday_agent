@@ -54,7 +54,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
 
   const tallyResult = tally(session.ballots);
 
-  const allConfirmedIds = collectConfirmedConditionIds(session.opinions);
+  const allConfirmedIds = collectConfirmedConditionIds(session.opinions, scenario);
   const includedIds = allConfirmedIds.filter((id) =>
     finalMotion.effectiveConditionIds.includes(id),
   );

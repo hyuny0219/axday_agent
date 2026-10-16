@@ -114,7 +114,7 @@ describe('반대 근거는 안건을 수정하지 않는다(T137)', () => {
     expect(chairMotionLine(sc, ['AG_AUDIT', 'AG_TRUST'], 'AGAINST')).toContain('요구 조건 2개');
   });
 
-  function resultSession(conditionIds: string[], outcome: 'PASS' | 'REJECT'): Session {
+  function resultSession(conditionIds: string[], outcome: 'PASS' | 'REJECT', stance: 'FOR' | 'AGAINST' = 'AGAINST'): Session {
     const base = createInitialSession(0, 's');
     const motion = freezeMotion(sc, conditionIds, 1);
     const ballots = decideBoard(sc, motion, 'AGAINST').map((ballot) => ({ ...ballot }));
@@ -125,7 +125,7 @@ describe('반대 근거는 안건을 수정하지 않는다(T137)', () => {
       outcome,
       finalMotion: motion,
       opinions: [
-        { id: 'o', originalText: '반대합니다', selectedPhraseIds: [], confirmedConditionIds: conditionIds, stance: 'AGAINST', createdAt: 0 },
+        { id: 'o', originalText: '반대합니다', selectedPhraseIds: [], confirmedConditionIds: conditionIds, stance, createdAt: 0 },
       ],
       ballots: [
         ...ballots,
@@ -143,7 +143,9 @@ describe('반대 근거는 안건을 수정하지 않는다(T137)', () => {
   it('도장: 반대 근거만 있는 가결은 "조건부 가결"이 아니라 "가결"이다', () => {
     const session = resultSession(['AG_AUDIT'], 'PASS');
     expect(computeResultStamp(session, sc)?.text).toBe('가결');
-    const withCondition = resultSession(['AG_AUDIT', 'LOG'], 'PASS');
+    const withCondition = resultSession(['LOG'], 'PASS', 'FOR');
     expect(computeResultStamp(withCondition, sc)?.text).toBe('조건부 가결');
+    // 입장을 바꿔 남은 반대 쪽 조건은 새 입장(찬성)의 조건이 아니라 도장에 세지 않는다(T137 Codex P1).
+    expect(computeResultStamp(resultSession(['AG_AUDIT'], 'PASS', 'FOR'), sc)?.text).toBe('가결');
   });
 });

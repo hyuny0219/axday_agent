@@ -76,7 +76,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
-import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
+import { confirmConditions, filterConditionIdsForStance, findConflicts, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
@@ -216,9 +216,11 @@ export function ReactionsScreen({
   onRetryFailedRoles,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
+  // T137: 입장을 바꾸면(예: 반대로 시작해 2/2에서 찬성으로) 첫 의견의 반대 쪽 조건은 새 입장의 조건이 아니라서
+  // 이어받지 않는다 — 칩·제출·규칙표·live 요청이 모두 지금 입장 쪽 조건만 본다.
   const previousConfirmedIds = useMemo(
-    () => lastOpinion?.confirmedConditionIds ?? [],
-    [lastOpinion],
+    () => filterConditionIdsForStance(scenario, lastOpinion?.confirmedConditionIds ?? [], side ?? lastOpinion?.stance ?? null),
+    [scenario, lastOpinion, side],
   );
   // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): 결재권을 준다는
   // 전제의 질문이 반대 참가자에게 어색했다 — 참가자의 최근 입장(lastOpinion.stance)에 따라
