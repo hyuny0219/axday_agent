@@ -482,7 +482,8 @@ async function callRole(
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
     note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : undefined,
-    invalidIssues: outcome.status === 'failed' ? outcome.invalidIssues : undefined,
+    // 재시도로 결국 성공했어도 첫 시도의 형식 오류 원인은 남긴다 — 재시도가 왜 필요했는지가 원인 분석에 가장 쓸모 있다(PR #22 Codex P2).
+    invalidIssues: outcome.invalidIssues,
   });
   return {
     roleId,

@@ -90,6 +90,23 @@ describe('invalidIssues 로그 필드', () => {
     expect(logged[0]?.invalidIssues?.[0]).toMatch(/^motionHash:/);
   });
 
+  it('첫 시도가 형식 오류였다가 재시도로 성공해도 원인을 남긴다(PR #22 Codex P2)', async () => {
+    const first = providerReturning({ reason: '가'.repeat(200) });
+    const second = providerReturning({});
+    let calls = 0;
+    const flaky: ModelProvider = {
+      async complete(req) {
+        calls += 1;
+        return calls === 1 ? first.complete(req) : second.complete(req);
+      },
+    };
+    await handleVote(input(), { provider: flaky });
+    expect(logged).toHaveLength(1);
+    expect(logged[0]?.status).toBe('answered');
+    expect(logged[0]?.attempts).toBe(2);
+    expect(logged[0]?.invalidIssues).toEqual(['reason:too_big']);
+  });
+
   it('성공한 표에는 invalidIssues가 없다', async () => {
     await handleVote(input(), { provider: providerReturning({}) });
     expect(logged[0]?.status).toBe('answered');
