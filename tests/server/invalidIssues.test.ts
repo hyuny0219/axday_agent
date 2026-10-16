@@ -72,6 +72,19 @@ describe('invalidIssues 로그 필드', () => {
     expect(logged[0]?.invalidIssues).toEqual(['reason:custom:E4']);
   });
 
+  it('내부 식별자가 아닌 영문 단어(참가자 이름·프로젝트명 등)는 로그에 남기지 않고 other로만 적는다(PR #22 Codex P1)', async () => {
+    await handleVote(input(), { provider: providerReturning({ reason: 'Hyunwoo 이사님 말대로 Phoenix 사업은 찬성합니다.' }) });
+    expect(logged[0]?.invalidIssues).toEqual(['reason:custom:other']);
+    const line = JSON.stringify(logged[0]);
+    expect(line).not.toContain('Hyunwoo');
+    expect(line).not.toContain('Phoenix');
+  });
+
+  it('조건 ID 같은 내부 식별자는 그대로 남긴다', async () => {
+    await handleVote(input(), { provider: providerReturning({ reason: 'LIMIT 조건이 있어 찬성합니다.' }) });
+    expect(logged[0]?.invalidIssues).toEqual(['reason:custom:LIMIT']);
+  });
+
   it('motionHash가 다르면 motionHash:invalid_value 계열 코드가 남는다', async () => {
     await handleVote(input(), { provider: providerReturning({ motionHash: 'other' }) });
     expect(logged[0]?.invalidIssues?.[0]).toMatch(/^motionHash:/);

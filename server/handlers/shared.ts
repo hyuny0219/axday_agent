@@ -3,7 +3,11 @@
 // 본문은 다루지 않는다 — 오류 종류 판단에만 쓴다.
 
 import { z } from 'zod';
-import { EXEC_ROLE_IDS, findStrayLatinRun } from '../validate';
+import { CONDITION_IDS, EVIDENCE_IDS, EXEC_ROLE_IDS, findStrayLatinRun } from '../validate';
+
+/** 로그에 그대로 남겨도 되는 내부 식별자(자료 ID·조건 ID)만 허용한다. 그 밖의 영문 단어는 참가자가 쓴
+ * 이름·프로젝트명일 수 있어 `other`로만 남긴다(PR #22 Codex P1). */
+const LOGGABLE_TOKENS: ReadonlySet<string> = new Set<string>([...EVIDENCE_IDS, ...CONDITION_IDS]);
 import { ModelRefusalError, ProviderCallError } from '../providers/types';
 
 export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_error';
@@ -130,7 +134,7 @@ export const followUpQuestionSchema = z.object({
 /** 응답 형식 검사 실패의 원인을 짧은 코드 목록으로 줄인다(T136 `invalidIssues`). 항목은
  * `경로:zod코드`(예: `reason:too_big`, `motionHash:invalid_literal`)이고, 영문 검사에 걸린
  * 경우(`reason:custom`)만 걸린 토큰 하나를 붙인다(예: `reason:custom:E4`). 응답 본문·발언 원문은
- * 담지 않는다 — 토큰은 영문·숫자·밑줄 식별자이고 길이를 24자로 자른다. */
+ * 담지 않는다 — 토큰은 내부 식별자(자료·조건 ID)일 때만 그대로, 그 밖에는 `other`로 남긴다. */
 export function summarizeInvalidIssues(
   error: z.ZodError,
   json: unknown,
@@ -145,7 +149,7 @@ export function summarizeInvalidIssues(
       const text = record[field];
       const token = typeof text === 'string' ? findStrayLatinRun(text) : undefined;
       if (token) {
-        code += `:${token.slice(0, 24)}`;
+        code += `:${LOGGABLE_TOKENS.has(token) ? token : 'other'}`;
       }
     }
     return code;
