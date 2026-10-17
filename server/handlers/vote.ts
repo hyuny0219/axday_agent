@@ -373,13 +373,16 @@ async function callRoleVote(
       if (remainingMs >= MIN_RETRY_REMAINING_MS) {
         attempts += 1;
         const again = await attemptRoleVote(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock, expected.vote);
-        if (again.status === 'answered' && again.ballot) {
-          outcome = {
-            ...again,
-            cacheReadTokens: sumTokens(outcome.cacheReadTokens, again.cacheReadTokens),
-            cacheWriteTokens: sumTokens(outcome.cacheWriteTokens, again.cacheWriteTokens),
-          };
-        }
+        // 방향 재요청 결과가 성공이든 실패든 캐시 토큰과 형식 오류 원인은 로그에 합산한다(Codex P2). 표는 재요청이 맞게 왔을 때만 바꾼다.
+        const merged = {
+          cacheReadTokens: sumTokens(outcome.cacheReadTokens, again.cacheReadTokens),
+          cacheWriteTokens: sumTokens(outcome.cacheWriteTokens, again.cacheWriteTokens),
+          invalidIssues: mergeInvalidIssues(outcome.invalidIssues, again.invalidIssues),
+        };
+        outcome =
+          again.status === 'answered' && again.ballot
+            ? { ...again, ...merged }
+            : { ...outcome, ...merged };
       }
       if (outcome.ballot && outcome.ballot.vote !== expected.vote) {
         outcome = {
