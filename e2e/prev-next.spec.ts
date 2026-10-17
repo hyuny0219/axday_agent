@@ -136,6 +136,7 @@ test('live: 지난 화면을 보는 동안 /api 요청이 새로 나가지 않�
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();

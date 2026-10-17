@@ -30,6 +30,7 @@ test('추천 문구만으로 ATTRACT부터 RESULT까지 완주하고, 결과에 
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   // MOTION: 확정된 조건으로 표결을 건다.
   await expect(page.getByTestId('motion-card')).toBeVisible();
@@ -195,6 +196,7 @@ test('안건 ②(데이터보다 경험)도 추천 문구만으로 ATTRACT부터
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
@@ -250,6 +252,7 @@ test('반대 쪽 추천 문구만 골라도 완주하고, 조건이 없어 처�
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   // MOTION: N4는 조건과 연결되지 않아 반영된 조건이 없다 — 원안 그대로 표결한다.
   await expect(page.getByTestId('motion-card')).toBeVisible();

@@ -40,6 +40,7 @@ test('순수 반대(조건 없음, N4)는 반응 문구가 임원별로 다르�
 
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   // MOTION: 조건이 없으므로 원안 그대로 — "요구한 조건" 문구는 보이지 않는다.
   await expect(page.getByTestId('motion-card')).toContainText(aiApprovalScenario.motionBreakdown.proposal);
@@ -67,6 +68,7 @@ test('반대 근거(N1)는 안건 문구를 바꾸지 않고 "반대 사유"로 
 
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   await expect(page.getByTestId('motion-card')).not.toContainText('아래 조건');
   await expect(page.getByTestId('motion-card')).toContainText(aiApprovalScenario.motionBreakdown.proposal);

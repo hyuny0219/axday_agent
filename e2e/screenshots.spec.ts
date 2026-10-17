@@ -177,6 +177,18 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
 
+  // T142: '넘어가기'를 누르면 바로 넘어가지 않고 확인 팝업이 먼저 뜬다 — 체크리스트 3줄과 두 버튼.
+  await page.getByTestId('keep-previous-answer').click();
+  const skipCheck = page.getByTestId('skip-check');
+  await expect(skipCheck).toBeVisible();
+  await page
+    .getByTestId('skip-check-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await skipCheck.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'reactions-skip-check');
+  await page.keyboard.press('Escape');
+  await expect(skipCheck).toHaveCount(0);
+
   // 지난 화면 보기(T126): '◀ 이전'으로 내 의견 쓰기 화면을 읽기 전용으로 다시 본다(상단 띠 + 입력 잠금).
   await page.getByTestId('view-prev').click();
   await expect(page.getByTestId('view-banner')).toBeVisible();

@@ -132,6 +132,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
 
     // 추가 질문에 답하지 않고 넘어간다 — 기울었던 두 임원(CFO·CAIO)은 반대 쪽으로 확정된다.
     await page.getByTestId('keep-previous-answer').click();
+    await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
     await expect(page.getByTestId('motion-card')).toBeVisible();
     // T114: 답하지 않고 넘어간 뒤에도 방향은 봉인이다 — 표정은 모두 중립이다.
     for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
@@ -219,6 +220,7 @@ test('MOTION·VOTE에서도 임원 입장이 접근 가능한 텍스트로 남�
   await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('motion-card')).toBeVisible();
   // 무대는 aria-hidden이므로 본문에 같은 값을 텍스트로 둔다(PR #11 Codex 13차). T114: 답변 뒤에는 "입장 봉인".
   for (const id of ['CEO', 'CFO', 'CAIO', 'CISO']) {
@@ -316,6 +318,8 @@ test.describe('live mock: 무대 표정', () => {
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
     await page.getByTestId('keep-previous-answer').click();
+
+    await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
     await expect(page.getByTestId('motion-card')).toBeVisible();
     await page.getByTestId('freeze-motion').click();
     await expect(page.getByTestId('vote-motion-card')).toBeVisible();

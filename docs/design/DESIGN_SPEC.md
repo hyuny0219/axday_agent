@@ -1346,3 +1346,12 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 소개 상자(DISCUSS 첫 화면)에 한 줄: "추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다." 순서는 권유일 뿐이다 — 버튼을 비활성화하거나 순서를 강제하지 않고, T109대로 한 가지만 써도 열린다.
 - 다시 답하기(REACTIONS 2/2) 팝업은 같은 컴포넌트라 버튼 번호가 같다. 그 화면은 비서실장이 선택이라 소개 상자(필수·"하나만 써도" 문장)가 없다.
 - 테스트: `tests/components/AssistantPanel.test.tsx`, 스크린샷 `discuss-assistant-intro`.
+
+## T142 넘어가기 전 확인 체크리스트 (2026-10-18)
+
+- 사용자 지시(2026-10-17): "넘어가면 어떻게 될지 미리 결과를 알 수 있어 별로인 거 같다. 차라리 넘어가기 전에 체크리스트를 띄워 주는 게 좋겠다." REACTIONS 1/2·2/2의 "넘어가기"는 바로 넘기지 않고 DialogShell 팝업(role=dialog, `skip-check`)을 먼저 연다. **팝업·버튼 어디에도 넘어간 뒤 임원 입장이 어떻게 되는지는 쓰지 않는다**(INTRO 팁 문구는 그대로).
+- 제목 "넘어가기 전에 확인해 보세요". 체크 3줄(화면 상태로 자동 표시, 참가자가 누르는 체크박스 아님): ① "추가 질문을 읽었나요?" + 질문 원문 한 줄(질문은 1/2·2/2 모두 화면에 있어 늘 ✓) ② "추천 답변을 살펴봤나요?"(이번 REACTIONS에서 2/2에 들어간 적이 있으면 ✓) ③ "AI 비서실장에게 물어봤나요? (선택)"(이번 단계에서 결과·실패 안내를 받았으면 ✓). 판정은 `domain/skipCheck.ts` `skipChecklist`, 문구는 `content/skipCheck.ts`.
+- 버튼: 주 "답하러 가기 ▶"(1/2는 2/2로 이동, 2/2는 팝업만 닫음. live 반응 대기 중 1/2에서는 비활성), 보조 "그래도 넘어가기"(기존 `handleKeepPrevious` 그대로, T110 표결 효과 변경 없음). Esc·바깥 클릭·닫기는 팝업만 닫는다. RebuildConfirm이 떠 있는 동안 "넘어가기"가 막히는 규칙(PR #12 Codex 5차)은 그대로다.
+- 팝업이 열린 동안 코치·안내 아이콘·다음 할 일 점선은 `useDialogOpen`으로 숨는다.
+- 테스트: `tests/domain/skipCheck.test.ts`, `tests/components/ReactionsScreen.test.tsx`(T142), e2e `reactions`·`coach` + 넘어가기 경로를 쓰는 spec은 "넘어가기 → 그래도 넘어가기"로 갱신, 스크린샷 `reactions-skip-check`.
+

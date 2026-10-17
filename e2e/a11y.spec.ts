@@ -59,6 +59,7 @@ test('키보드만으로 추천 문구 경로를 완주해 결과 화면에 도�
   const keepPreviousButton = page.getByTestId('keep-previous-answer');
   await keepPreviousButton.focus();
   await page.keyboard.press('Enter');
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   // MOTION
   const freezeMotion = page.getByTestId('freeze-motion');
@@ -175,6 +176,7 @@ test('960×540 뷰포트(200% 확대 상당)에서 스크롤로 CTA에 도달할
 
   const keepPrevious = await wheelUntilVisible('keep-previous-answer');
   await keepPrevious.click();
+  await page.getByTestId('skip-check-skip').click(); // T142
 
   const freezeMotion = await wheelUntilVisible('freeze-motion');
   await freezeMotion.click();

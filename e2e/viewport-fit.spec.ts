@@ -102,6 +102,7 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   const keepPrevious = page.getByTestId('keep-previous-answer');
   await expect(keepPrevious).toBeInViewport();
   await keepPrevious.click();
+  await page.getByTestId('skip-check-skip').click(); // T142
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await expectNoPageScroll(page, 'MOTION');

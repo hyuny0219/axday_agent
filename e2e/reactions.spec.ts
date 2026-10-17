@@ -403,3 +403,36 @@ test('REACTIONS 반응 카드는 stance가 바뀐 임원만 "바뀜"으로, 같�
   // CFO는 두 단계 모두 찬성(stance 동일, 문장은 매번 다시 씀)이므로 "유지"다.
   await expect(page.getByTestId('live-role-CFO')).toHaveClass(/live-statement--maintained/);
 });
+
+// T142: '넘어가기'는 확인 팝업을 먼저 띄운다 — 질문 원문·체크 3줄, Esc는 닫기만, '답하러 가기'는 2/2로.
+test('넘어가기는 확인 팝업을 먼저 띄우고, Esc는 넘어가지 않으며, 답하러 가기는 2/2로 보낸다', async ({ page }) => {
+  await enterExperienceFirstReactions(page);
+  await page.getByTestId('phrase-card-P2').click();
+  await tryAllAssistantFeatures(page);
+  await page.getByTestId('submit-opinion').click();
+  await expect(page.getByTestId('reactions-advance')).toBeVisible();
+
+  await page.getByTestId('keep-previous-answer').click();
+  const dialog = page.getByTestId('skip-check');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('넘어가기 전에 확인해 보세요');
+  await expect(page.getByTestId('skip-check-list').locator('li')).toHaveCount(3);
+  await expect(page.getByTestId('skip-check-question-text')).not.toBeEmpty();
+  await expect(page.getByTestId('skip-check-options')).toHaveAttribute('data-state', 'todo');
+  await expect(page.getByTestId('skip-check-assistant')).toHaveAttribute('data-state', 'todo');
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId('reactions-advance')).toBeVisible();
+
+  await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-answer').click();
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
+
+  // 2/2에서는 추천 답변 줄이 완료로 보이고, '답하러 가기'는 팝업만 닫는다.
+  await page.getByTestId('keep-previous-answer').click();
+  await expect(page.getByTestId('skip-check-options')).toHaveAttribute('data-state', 'done');
+  await page.getByTestId('skip-check-answer').click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId('followup-textarea')).toBeVisible();
+});
