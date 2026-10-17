@@ -99,11 +99,11 @@ describe('표결 프롬프트(v19) — 반대 근거', () => {
     expect(systems.CAIO).toContain('적용 조건: 승인 사유 기록');
   });
 
-  it('처음 고민 중이던 CAIO·CISO에게만 "설득되지 않았다면 참가자 반대편" 지시가 붙는다', async () => {
+  it('처음 고민 중이던 CFO·CAIO에게만 "설득되지 않았다면 참가자 반대편" 지시가 붙는다', async () => {
     const { provider, systems } = capture();
     await handleVote(voteInput(), { provider });
-    for (const roleId of ['CAIO', 'CISO']) expect(systems[roleId]).toContain('처음에 고민 중이었습니다');
-    for (const roleId of ['CEO', 'CFO']) expect(systems[roleId]).not.toContain('처음에 고민 중이었습니다');
+    for (const roleId of ['CFO', 'CAIO']) expect(systems[roleId]).toContain('처음에 고민 중이었습니다');
+    for (const roleId of ['CEO', 'CISO']) expect(systems[roleId]).not.toContain('처음에 고민 중이었습니다');
   });
 });
 
@@ -147,22 +147,22 @@ describe('표결 방향 지시(v21)', () => {
     return systems;
   };
 
-  it('반대 조건이 겨눈 임원은 조건 때문에 반대, 겨누지 않은 CFO는 처음 우려로 반대, 나머지는 찬성', async () => {
+  it('조건이 겨눈 임원은 조건 때문에 반대, 처음부터 반대인 CISO는 처음 우려로 반대, 나머지는 찬성', async () => {
     const one = await run(['AG_AUDIT']);
     expect(one.CAIO).toContain('당신의 표는 반대(NO)입니다');
     expect(one.CAIO).toContain('우려와 맞닿은');
-    expect(one.CFO).toContain('처음 우려는 참가자의 말로 풀리지 않았습니다');
-    expect(one.CFO).not.toContain('우려와 맞닿은');
-    for (const roleId of ['CEO', 'CISO']) expect(one[roleId]).toContain('당신의 표는 안건대로 찬성(YES)입니다');
+    expect(one.CISO).toContain('처음 우려는 참가자의 말로 풀리지 않았습니다');
+    expect(one.CISO).not.toContain('우려와 맞닿은');
+    for (const roleId of ['CEO', 'CFO']) expect(one[roleId]).toContain('당신의 표는 안건대로 찬성(YES)입니다');
     expect(one.CAIO).toContain('원안에 조건이 하나도 없다');
     const all = await run(['AG_AUDIT', 'AG_TRUST', 'AG_SCALE']);
-    for (const roleId of ['CEO', 'CAIO', 'CISO']) expect(all[roleId]).toContain('당신의 표는 반대(NO)입니다');
+    for (const roleId of ['CEO', 'CFO', 'CAIO']) expect(all[roleId]).toContain('당신의 표는 반대(NO)입니다');
   });
 
   it('조건 없는 순수 반대: 조건을 지어내지 않는 문구가 붙는다', async () => {
     const none = await run([]);
-    expect(none.CFO).toContain('처음 우려는 참가자의 말로 풀리지 않았습니다');
-    for (const roleId of ['CEO', 'CAIO', 'CISO']) {
+    expect(none.CISO).toContain('처음 우려는 참가자의 말로 풀리지 않았습니다');
+    for (const roleId of ['CEO', 'CFO', 'CAIO']) {
       expect(none[roleId]).toContain('설득할 만한 조건을 내지 않았습니다');
       expect(none[roleId]).not.toContain('조건은 당신의 우려를 키우지 못했거나');
     }

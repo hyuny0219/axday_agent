@@ -36,16 +36,18 @@ const stanceOf = async (req: RoundRequest, message: string, returned: string, ro
 
 describe('OPINIONS — 처음 입장 교정', () => {
   const opinions = input({ stage: 'OPINIONS' });
-  it('처음 입장이 고민 중인 CISO가 AGAINST로 적어도 문장이 방향을 밝히지 않았으면 UNDECIDED로 교정한다', async () => {
-    expect(await stanceOf(opinions, '감사 메모를 보니 이유가 안 남습니다. 책임질 사람이 확인되면 따르겠습니다.', 'AGAINST', 'CISO')).toBe('UNDECIDED');
+  it('처음 입장이 고민 중인 CFO가 AGAINST로 적어도 문장이 방향을 밝히지 않았으면 UNDECIDED로 교정한다', async () => {
+    expect(await stanceOf(opinions, '규칙을 벗어난 승인이 4건 있었습니다. 금액 한도와 확인 절차가 있으면 따르겠습니다.', 'AGAINST', 'CFO')).toBe('UNDECIDED');
   });
   it('처음 입장과 같으면 그대로, 문장이 방향을 밝혔으면 교정하지 않는다', async () => {
-    expect(await stanceOf(opinions, '이유가 안 남아 걱정입니다.', 'UNDECIDED', 'CISO')).toBe('UNDECIDED');
-    expect(await stanceOf(opinions, '이대로는 반대합니다.', 'AGAINST', 'CISO')).toBe('AGAINST');
+    expect(await stanceOf(opinions, '이유가 안 남아 걱정입니다.', 'UNDECIDED', 'CAIO')).toBe('UNDECIDED');
+    expect(await stanceOf(opinions, '이대로는 반대합니다.', 'AGAINST', 'CAIO')).toBe('AGAINST');
+    // 처음부터 반대인 CISO는 반대 그대로다.
+    expect(await stanceOf(opinions, '기록과 책임질 사람이 먼저 필요합니다.', 'AGAINST', 'CISO')).toBe('AGAINST');
   });
   it('OPINIONS 프롬프트가 처음 입장을 stance 필드로 단정한다', async () => {
     const systems: string[] = [];
-    await handleRound({ ...opinions, roleIds: ['CISO'] }, { provider: provider('걱정입니다.', 'UNDECIDED', systems) });
+    await handleRound({ ...opinions, roleIds: ['CFO'] }, { provider: provider('걱정입니다.', 'UNDECIDED', systems) });
     expect(systems[0]).toContain('이번 첫 의견의 stance는 UNDECIDED로 적으십시오');
   });
 });
@@ -54,7 +56,7 @@ describe('REACTIONS 첫 반응 — 규칙표 분류대로 교정', () => {
   const againstAudit = input({
     participantStance: 'AGAINST',
     confirmedConditionIds: ['AG_AUDIT'],
-    priorStances: { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' },
+    priorStances: { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' },
   });
   it('KEEP(조건이 겨누지 않은 CEO): AGAINST로 바꿔 적어도 FOR로 되돌린다', async () => {
     expect(await stanceOf(againstAudit, '결재가 밀리는 문제는 그대로 큽니다. 지켜보겠습니다.', 'AGAINST', 'CEO')).toBe('FOR');
@@ -65,11 +67,11 @@ describe('REACTIONS 첫 반응 — 규칙표 분류대로 교정', () => {
   });
   it('참가자에게 상대적인 "동의합니다"는 방향 선언이 아니라서 교정을 막지 않는다', async () => {
     expect(
-      await stanceOf(againstAudit, '말씀하신 점에 동의합니다. 하지만 기록이 없다는 점이 더 큰 문제입니다.', 'AGAINST', 'CISO'),
+      await stanceOf(againstAudit, '말씀하신 점에 동의합니다. 하지만 기록이 없다는 점이 더 큰 문제입니다.', 'AGAINST', 'CFO'),
     ).toBe('UNDECIDED');
   });
-  it('SAME_SIDE(처음부터 같은 편 CFO)는 처음 입장 그대로', async () => {
-    expect(await stanceOf(againstAudit, '저도 비용이 걱정입니다.', 'UNDECIDED', 'CFO')).toBe('AGAINST');
+  it('SAME_SIDE(처음부터 같은 편 CISO)는 처음 입장 그대로', async () => {
+    expect(await stanceOf(againstAudit, '저도 기록이 걱정입니다.', 'UNDECIDED', 'CISO')).toBe('AGAINST');
   });
   it('문장이 방향을 밝혔으면 교정하지 않는다(T115 우선)', async () => {
     expect(await stanceOf(againstAudit, '이대로는 반대합니다.', 'AGAINST', 'CEO')).toBe('AGAINST');

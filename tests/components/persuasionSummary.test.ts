@@ -177,18 +177,18 @@ describe('computePersuasionTally(T101) — 현황판·결과 제목·도장이 �
     }
   });
 
-  it('안건①: 찬성이면 처음부터 찬성인 CEO를, 반대면 처음부터 반대인 CFO를 분모에서 빼 둘 다 "설득한 임원 0/3"이다(T137)', () => {
+  it('안건①: 찬성이면 처음부터 찬성인 CEO를, 반대면 처음부터 반대인 CISO를 분모에서 빼 둘 다 "설득한 임원 0/3"이다(T137)', () => {
     const none: Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance> = {
       CEO: 'FOR',
-      CFO: 'AGAINST',
+      CFO: 'UNDECIDED',
       CAIO: 'UNDECIDED',
-      CISO: 'UNDECIDED',
+      CISO: 'AGAINST',
     };
     const forTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'FOR', none);
     expect(forTally.alreadySame).toEqual(['CEO']);
     expect(persuadedCountLabel(forTally)).toBe('설득한 임원 0/3');
     const againstTally = computePersuasionTally(aiApprovalScenario, 'scripted', [], 'AGAINST', none);
-    expect(againstTally.alreadySame).toEqual(['CFO']);
+    expect(againstTally.alreadySame).toEqual(['CISO']);
     expect(persuadedCountLabel(againstTally)).toBe('설득한 임원 0/3');
   });
 
@@ -252,13 +252,13 @@ describe('buildPersuasionResult(T101 검토) — 제목의 M이 현황판·도�
     }
   });
 
-  it('참가자 반대·조건 없음(안건①): 현황판처럼 CAIO·CISO(고민 중→반대) 둘을 설득한 것으로 제목에도 나온다', () => {
+  it('참가자 반대·조건 없음(안건①): 현황판처럼 CFO·CAIO(고민 중→반대) 둘을 설득한 것으로 제목에도 나온다', () => {
     const stances = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } as Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', Stance>;
     const session = { ...createInitialSession(0, 's'), followUpAnswered: true, mode: 'scripted' as const };
     const result = buildPersuasionResult(aiApprovalScenario, session, stances, {
       participantVote: 'NO', participantStance: 'AGAINST', conditionCount: 0, finalConditionIds: [],
     });
-    expect(result.tally.persuaded).toEqual(['CAIO', 'CISO']);
+    expect(result.tally.persuaded).toEqual(['CFO', 'CAIO']);
     expect(result.headline).toBe('이사님의 발언으로 임원 2명이 이사님 편이 됐습니다');
   });
 

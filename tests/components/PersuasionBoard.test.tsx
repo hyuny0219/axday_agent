@@ -78,7 +78,7 @@ describe('PersuasionBoard(T96, 안건①)', () => {
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 1/3');
   });
 
-  it('참가자가 반대 쪽이면 처음부터 반대인 CFO 행은 "처음부터 같은 편"이고 조건이 빠지면 반대로 남는 임원은 문구가 뒤집혀 보인다', () => {
+  it('참가자가 반대 쪽이면 처음부터 반대인 CISO 행은 "처음부터 같은 편"이고 조건이 빠지면 반대로 남는 임원은 문구가 뒤집혀 보인다', () => {
     const opinions: Opinion[] = [];
     const stances = scriptedStances(aiApprovalScenario, { stage: 'OPINIONS', opinions });
     render(
@@ -91,11 +91,11 @@ describe('PersuasionBoard(T96, 안건①)', () => {
       />,
     );
     expand();
-    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('처음부터 같은 편');
-    // T137: CISO는 고민 중이라 설득 대상이고, 어떤 반대 근거가 움직이는지 안내한다.
-    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('움직일 조건 · 믿지 못해 책임이 흐려짐');
-    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('움직일 조건 · 넓히면 잘못 승인도 늘어남');
-    // CFO만 처음부터 반대라 분모에서 빠지고, CEO·CAIO·CISO 셋이 설득 대상이다(아직 0명).
+    expect(screen.getByTestId('persuasion-board-note-CISO')).toHaveTextContent('처음부터 같은 편');
+    // T138: CFO·CAIO는 고민 중이라 설득 대상이고, 어떤 조건이 움직이는지 안내한다(CEO는 추가 답변에서 고르는 조건).
+    expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('움직일 조건 · 넓히면 잘못 승인도 늘어남');
+    expect(screen.getByTestId('persuasion-board-note-CEO')).toHaveTextContent('움직일 조건 · 믿지 못해 결재가 빨라지지 않음');
+    // CISO만 처음부터 반대라 분모에서 빠지고, CEO·CFO·CAIO 셋이 설득 대상이다(아직 0명).
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('설득한 임원 0/3');
   });
 

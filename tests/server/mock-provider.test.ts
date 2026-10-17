@@ -240,13 +240,13 @@ describe('createMockProvider 안건별 역할 렌즈 자료(PR #13 Codex 2차 �
 describe('createMockProvider 안건별 OPINIONS 출발 성향(PR #13 Codex 3차 검토)', () => {
   const EXPECTED_OPENING: Record<string, 'FOR' | 'AGAINST' | 'UNDECIDED'> = {
     CEO: 'FOR',
-    CFO: 'AGAINST',
+    CFO: 'UNDECIDED',
     CAIO: 'UNDECIDED',
-    CISO: 'UNDECIDED',
+    CISO: 'AGAINST',
   };
 
   it.each(['ai-approval', 'experience-first'] as const)(
-    '%s의 OPINIONS stance는 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO UNDECIDED다(T137)',
+    '%s의 OPINIONS stance는 CEO FOR·CFO UNDECIDED·CAIO UNDECIDED·CISO AGAINST다(T138)',
     async (scenarioId) => {
       const provider = createMockProvider('mock-model');
       for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO'] as const) {

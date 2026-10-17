@@ -148,19 +148,19 @@ describe('buildConditionRecommendation(T96, live 모드, Codex 27차 검토 P2-4
 });
 
 describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2, T137 반대 근거)', () => {
-  it('AGAINST면 이미 반대인 CFO는 대상에서 빠지고 CEO·CAIO·CISO를 반대로 돌리는 반대 근거를 추천한다', () => {
+  it('AGAINST면 이미 반대인 CISO는 대상에서 빠지고 CEO·CFO·CAIO를 반대로 돌리는 조건을 추천한다', () => {
     const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
-    // 안건① 초기 상태(T137): CEO 찬성, CFO 반대, CAIO·CISO 고민 중.
-    expect(stances).toEqual({ CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' });
+    // 안건① 초기 상태(T138): CEO 찬성, CFO·CAIO 고민 중, CISO 반대.
+    expect(stances).toEqual({ CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' });
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'scripted', stances);
 
-    expect(result.openingLine).toContain('CEO·CAIO·CISO');
-    expect(result.openingLine).not.toContain('CFO');
+    expect(result.openingLine).toContain('CEO·CFO·CAIO');
+    expect(result.openingLine).not.toContain('CISO');
     expect(result.openingLine).toContain('반대로 돌리려면');
     const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
     expect(byId.get('AG_AUDIT')?.movedMemberIds).toEqual(['CAIO']);
-    expect(byId.get('AG_TRUST')?.movedMemberIds).toEqual(['CISO']);
-    expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CEO']);
+    expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CFO']);
+    expect(byId.get('AG_TRUST')?.movedMemberIds).toEqual(['CEO']);
     // 찬성 조건(LOG·FULL_AUTO 등)은 추천하지 않는다.
     expect(byId.has('LOG')).toBe(false);
     expect(byId.has('FULL_AUTO')).toBe(false);
@@ -206,7 +206,7 @@ describe('buildConditionRecommendation(반대 입장 보강)', () => {
     const result = buildConditionRecommendation(scenario, [], 'AGAINST', 'live', stances, { CEO: ['LOG'] });
     const byId = new Map(result.rows.map((row) => [row.conditionId, row]));
     expect(byId.has('LOG')).toBe(false);
-    expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CEO']);
+    expect(byId.get('AG_TRUST')?.movedMemberIds).toEqual(['CEO']);
     expect(result.usedRuleFallback).toBe(true);
   });
 });

@@ -89,10 +89,10 @@ describe('반대 근거는 안건을 수정하지 않는다(T137)', () => {
   });
 
   it('buildMotionDisplay: 문장은 원안 그대로이고 반대 사유가 따로 나온다', () => {
-    const display = buildMotionDisplay(sc, ['AG_AUDIT', 'AG_TRUST'], 'AGAINST');
+    const display = buildMotionDisplay(sc, ['AG_AUDIT', 'AG_SCALE'], 'AGAINST');
     expect(display.sentence).toBe(sc.motionBreakdown.proposal);
     expect(display.conditionLabels).toEqual([]);
-    expect(display.objectionLabels).toEqual(['승인 이유를 확인할 수 없음', '믿지 못해 책임이 흐려짐']);
+    expect(display.objectionLabels).toEqual(['승인 이유를 확인할 수 없음', '넓히면 잘못 승인도 늘어남']);
     // 미정 항목도 줄지 않는다.
     expect(display.undecidedLabels).toHaveLength(sc.motionBreakdown.undecidedItems.length);
   });

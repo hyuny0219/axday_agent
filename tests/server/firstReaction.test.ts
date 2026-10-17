@@ -55,26 +55,29 @@ describe('classifyFirstReaction', () => {
     ).toBe('KEEP');
   });
 
-  it('(d2) 반대 참가자의 찬성 쪽 조건(LIMIT+REVIEW)을 이어받은 반대 참가자는 CFO가 목표 반대편으로 가 REVERSED이고, 지시는 FOR 쪽이다(T137)', () => {
+  it('(d2) 찬성 쪽 조건(OWNER+LOG)을 이어받은 반대 참가자는 CISO가 목표 반대편으로 가 REVERSED이고, 지시는 FOR 쪽이다(T137)', () => {
     const kind = classifyFirstReaction({
       scenarioId: 'ai-approval',
-      roleId: 'CFO',
+      roleId: 'CISO',
       participantStance: 'AGAINST',
-      confirmedConditionIds: ['LIMIT', 'REVIEW'],
+      confirmedConditionIds: ['OWNER', 'LOG'],
       priorStance: 'AGAINST',
     });
     expect(kind).toBe('REVERSED');
     expect(buildFirstReactionRule(kind, 'AGAINST')).toContain('stance를 FOR로');
   });
 
-  it('(d3) 반대 근거가 겨눈 고민 중·찬성 임원은 MAY_CROSS, 겨누지 않은 임원은 KEEP이다(T137)', () => {
+  it('(d3) 조건이 겨눈 고민 중·찬성 임원은 MAY_CROSS, 겨누지 않은 임원은 KEEP이다(T137·T138)', () => {
     const base = { scenarioId: 'ai-approval', participantStance: 'AGAINST' as const, confirmedConditionIds: ['AG_AUDIT'] };
     expect(classifyFirstReaction({ ...base, roleId: 'CAIO', priorStance: 'UNDECIDED' })).toBe('MAY_CROSS');
-    expect(classifyFirstReaction({ ...base, roleId: 'CISO', priorStance: 'UNDECIDED' })).toBe('KEEP');
+    expect(classifyFirstReaction({ ...base, roleId: 'CFO', priorStance: 'UNDECIDED' })).toBe('KEEP');
     expect(classifyFirstReaction({ ...base, roleId: 'CEO', priorStance: 'FOR' })).toBe('KEEP');
-    expect(classifyFirstReaction({ ...base, roleId: 'CFO', priorStance: 'AGAINST' })).toBe('SAME_SIDE');
+    expect(classifyFirstReaction({ ...base, roleId: 'CISO', priorStance: 'AGAINST' })).toBe('SAME_SIDE');
     expect(
-      classifyFirstReaction({ ...base, roleId: 'CEO', priorStance: 'FOR', confirmedConditionIds: ['AG_SCALE'] }),
+      classifyFirstReaction({ ...base, roleId: 'CFO', priorStance: 'UNDECIDED', confirmedConditionIds: ['AG_SCALE'] }),
+    ).toBe('MAY_CROSS');
+    expect(
+      classifyFirstReaction({ ...base, roleId: 'CEO', priorStance: 'FOR', confirmedConditionIds: ['AG_TRUST'] }),
     ).toBe('MAY_CROSS');
   });
 

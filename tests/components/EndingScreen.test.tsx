@@ -288,9 +288,9 @@ describe('반대 목표 실패의 실마리 방향(T127 검토)', () => {
 
   it('반대 근거가 남아 있으면 그 근거로 돌릴 수 있고 첫 입장이 찬성이 아닌 임원의 근거 자료를 가리킨다', () => {
     expect(againstEnding(aiApprovalScenario, []).clue).toMatch(/^CFO/);
-    // 찬성 조건을 이미 쓴 CFO는 반대 근거로도 돌리지 못하지만(조건이 먼저 찬성으로 만든다) CAIO는 돌릴 수 있다.
-    expect(againstEnding(aiApprovalScenario, ['LIMIT', 'REVIEW', 'LOG', 'OWNER']).clue).toMatch(/^CAIO/);
-    expect(againstEnding(experienceFirstScenario, ['SCOPE', 'RECORD', 'REVIEW', 'DATA_VETO']).clue).toMatch(/^CAIO/);
+    // T138: 고민 중 CFO는 반대 쪽 조건(규칙표에서 찬성 조건보다 앞)으로 돌릴 수 있어 찬성 조건을 이미 써도 가리킨다.
+    expect(againstEnding(aiApprovalScenario, ['LIMIT', 'REVIEW', 'LOG', 'OWNER']).clue).toMatch(/^CFO/);
+    expect(againstEnding(experienceFirstScenario, ['SCOPE', 'RECORD', 'REVIEW', 'DATA_VETO']).clue).toMatch(/^CFO/);
   });
 
   it('반대 근거가 남지 않았으면 줄을 생략한다', () => {

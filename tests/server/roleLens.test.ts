@@ -187,8 +187,8 @@ describe('T79 안건별 임원 렌즈·첫 의견 출발 성향', () => {
     );
 
     expect(systems[0]).toContain('감사 메모의 기록 부재를 권한 위임의 책임 문제');
-    expect(systems[0]).toContain('미정 쪽으로 기운 채');
+    expect(systems[0]).toContain('반대 쪽으로 기운 채');
     expect(systems[1]).toContain('인터뷰 메모의 기록 부재를 사후 검증 불가 문제');
-    expect(systems[1]).toContain('미정 쪽으로 기운 채');
+    expect(systems[1]).toContain('반대 쪽으로 기운 채');
   });
 });

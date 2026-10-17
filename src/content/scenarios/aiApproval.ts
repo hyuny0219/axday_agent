@@ -103,10 +103,11 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       memberId: 'CFO',
-      text: '자동 승인을 해봤더니 규칙을 벗어난 승인이 4건 있었습니다. 적은 돈이어도 그냥 넘길 수 없습니다. 금액 한도와 다시 확인하는 절차가 없으면 반대합니다.',
-      bubble: '규칙 밖 승인 4건이 걱정입니다',
+      text: '자동 승인을 해봤더니 규칙을 벗어난 승인이 4건 있었습니다. 적은 돈이어도 걱정입니다. 금액 한도와 다시 확인하는 절차가 있으면 따를 수 있습니다.',
+      bubble: '한도와 확인 절차가 있다면',
       evidenceIds: ['E2'],
-      openingStance: 'AGAINST',
+      // T138: 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다.
+      openingStance: 'UNDECIDED',
     },
     {
       memberId: 'CAIO',
@@ -117,11 +118,10 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       memberId: 'CISO',
-      text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 누가 책임지는지, 무엇을 보고 승인했는지 확인되면 따를 수 있습니다.',
-      bubble: '확인되면 따를 수 있습니다',
+      text: '설문을 보면 AI 승인을 믿는 사람은 열에 넷뿐입니다. 이유도 안 남는다면 더 믿기 어렵습니다. 기록과 책임질 사람부터 정해야 합니다.',
+      bubble: '책임자부터 정해야',
       evidenceIds: ['E3', 'E4'],
-      // T137: 처음 입장을 1 찬성·1 반대·2 고민 중으로 맞췄다(반대였던 CISO를 고민 중으로).
-      openingStance: 'UNDECIDED',
+      openingStance: 'AGAINST',
     },
   ],
   phrases: [
@@ -142,7 +142,7 @@ export const aiApprovalScenario: Scenario = {
     },
     // 반대 쪽 추천 문구(T87 → T137 개편). 반대 쪽 카드는 찬성의 반대말이 아니라 근거 자료의 사실을 짚는
     // "반대 근거"다 — 고르면 그 근거(AG_*)가 내 의견에 빨간 칩으로 붙고, 안건은 바뀌지 않는다.
-    // SCALE(CEO를 겨눔)은 첫 단계에서 빼고 추가 답변에서만 고른다(T119와 같은 1~2개 규칙). N4는 근거 없이
+    // TRUST(CEO를 겨눔)는 첫 단계에서 빼고 추가 답변에서만 고른다(T119와 같은 1~2개 규칙). N4는 근거 없이
     // 안건 자체에 반대하는 말이라 조건과 연결하지 않는다. T138: 반대 쪽에는 함정 카드가 없다 — 붙는 조건은
     // 모두 임원을 반대로 설득하는 조건뿐이다(찬성 쪽 함정 FULL_AUTO는 그대로).
     {
@@ -153,8 +153,8 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'N2',
-      text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 보게 되고, 일은 줄지 않은 채 책임만 흐려집니다.',
-      conditionId: 'AG_TRUST',
+      text: '시범에서 310건 중 4건이 규칙을 벗어났습니다. 한 달 천 건 넘게 맡기면 매달 열 건 넘게 잘못 승인돼, 빨라진 시간보다 되돌리는 시간이 더 듭니다.',
+      conditionId: 'AG_SCALE',
       side: 'AGAINST',
     },
     {
@@ -217,7 +217,7 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       id: 'AG_TRUST',
-      label: '믿지 못해 책임이 흐려짐',
+      label: '믿지 못해 결재가 빨라지지 않음',
       source: '사용자 설문',
       side: 'AGAINST',
       keywords: ['믿는 직원은 열에 넷뿐'],
@@ -294,16 +294,16 @@ export const aiApprovalScenario: Scenario = {
     },
     {
       conditionId: 'AG_TRUST',
-      memberId: 'CISO',
-      text: '믿지 못하는 결재는 결국 사람이 다시 봅니다. 책임만 흐려진다는 말씀에 동의합니다. 저도 이대로는 반대합니다.',
-      bubble: '책임이 흐려진다는 말에 동의',
-      pendingText: '책임이 흐려진다는 점은 저도 걸립니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '걸리는 점입니다. 하나만 더',
+      memberId: 'CEO',
+      text: '믿지 못하는 결재는 결국 사람이 다시 봅니다. 그러면 결재가 빨라지지 않는다는 말씀은 맞습니다.',
+      bubble: '빨라지지 않는다는 말은 맞습니다',
+      pendingText: '결재가 빨라지지 않는다는 점은 알겠습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '알겠습니다. 하나만 더',
     },
     {
       conditionId: 'AG_SCALE',
-      memberId: 'CEO',
-      text: '한 달에 천 건 넘게 맡기면 잘못 승인도 늘어납니다. 되돌리는 시간이 더 든다면 저도 다시 생각해야 합니다.',
+      memberId: 'CFO',
+      text: '한 달에 천 건 넘게 맡기면 잘못 승인도 늘어납니다. 되돌리는 비용이 더 든다면 저도 다시 생각해야 합니다.',
       bubble: '잘못 승인도 늘어납니다',
       pendingText: '넓히면 잘못 승인도 늘어난다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
       pendingBubble: '알겠습니다. 하나만 더',
@@ -322,9 +322,9 @@ export const aiApprovalScenario: Scenario = {
   // 문장씩 직접 답한다.
   oppositionReactions: {
     CEO: '사람이 판단해야 한다는 말씀, 이해합니다. 다만 담당자가 없으면 일이 멈추니, 범위를 좁혀서라도 맡겨 보자는 제안입니다.',
-    CFO: '사람이 판단해야 한다는 말씀에는 저도 동의합니다. 금액 한도도, 다시 확인하는 절차도 없이 넘기는 건 저도 반대입니다.',
+    CFO: '사람이 판단해야 한다는 말씀에는 공감합니다. 다만 금액 한도와 다시 확인하는 절차가 있다면 맡겨 볼 수 있습니다. 근거를 더 들어 보겠습니다.',
     CAIO: '말씀하신 걱정에는 공감합니다. 다만 승인 이유를 남기는 장치가 있다면, 좁은 범위에서는 맡겨볼 수 있다고 봅니다.',
-    CISO: '사람이 판단해야 한다는 말씀, 감사 메모에서도 같은 걱정이 나왔습니다. 다만 근거를 더 들어 보고 정하겠습니다.',
+    CISO: '사람이 판단해야 한다는 말씀, 감사 메모에서도 같은 걱정이 나왔습니다. 책임질 사람부터 정하지 않으면 저도 반대합니다.',
   },
   // 유지 이유(T96, 2026-10-08 사용자 지시 "내 발언에 따라 임원 입장이 변하는 것이 잘
   // 보이게"): REACTIONS 반응 카드가 "유지"일 때 빈 대사("앞서 말씀드린 입장 그대로입니다")
@@ -434,14 +434,25 @@ export const aiApprovalScenario: Scenario = {
         side: 'AGAINST',
       },
       {
-        text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 보게 되고, 일은 줄지 않은 채 책임만 흐려집니다.',
+        text: '시범에서 310건 중 4건이 규칙을 벗어났습니다. 한 달 천 건 넘게 맡기면 매달 열 건 넘게 잘못 승인돼, 빨라진 시간보다 되돌리는 시간이 더 듭니다.',
+        proposeConditionId: 'AG_SCALE',
+        side: 'AGAINST',
+      },
+      {
+        // T119 규칙: 첫 단계 추천 문구에서 뺀 조건(CEO를 겨눔)은 추가 답변에서만 고른다.
+        text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 봐야 해서, 결재는 빨라지지 않고 일만 늘어납니다.',
         proposeConditionId: 'AG_TRUST',
         side: 'AGAINST',
       },
       {
-        // T119 규칙: 첫 단계 추천 문구에서 뺀 반대 근거(CEO를 겨눔)는 추가 답변에서 고른다.
-        text: '시범에서 310건 중 4건이 규칙을 벗어났습니다. 한 달 천 건 넘게 맡기면 매달 열 건 넘게 잘못 승인돼, 빨라진 시간보다 되돌리는 시간이 더 듭니다.',
-        proposeConditionId: 'AG_SCALE',
+        // T138: 찬성 쪽(5개)과 개수를 맞추려고 조건 없이 이유만 밝히는 반대 답변 2개를 둔다 — 함정·조건을 붙이지 않는다.
+        text: '결재는 책임이 따르는 일이라, 사람이 직접 판단해야 한다고 생각합니다.',
+        proposeConditionId: null,
+        side: 'AGAINST',
+      },
+      {
+        text: '밀리는 결재는 사람을 더 투입하거나 순서를 바꿔서 풀어야 한다고 생각합니다.',
+        proposeConditionId: null,
         side: 'AGAINST',
       },
       {
@@ -464,11 +475,11 @@ export const aiApprovalScenario: Scenario = {
   // 경로 회귀 테스트로 이 분포를 고정해 둔다).
   // T93: reason 전부를 같은 쉬운 말 기준으로 다시 썼다(판단 분기·조건 참조는 그대로).
   // (아래 T137에서 "별도 participantStance 분기를 두지 않았다"는 위 설명을 바꿨다.)
-  // T137(반대 입장 대칭 설계): 처음 입장은 1 찬성(CEO)·1 반대(CFO)·2 고민 중(CAIO·CISO)이다. 고민 중인
-  // 임원은 참가자가 설득하지 못하면 참가자 반대편에 표를 던진다(찬성 참가자 → 반대표, 반대 참가자 →
-  // 찬성표 "반대 근거가 약하면 원안대로"). 그래서 어느 입장이든 처음엔 같은 표 2석이다. 반대 쪽에서는
-  // 근거(AG_*)가 겨눈 임원이 그 근거를 받아들여 NO로 돌아선다(T138: 반대 쪽 함정은 없앴다).
-  // 반대 근거는 안건을 수정하지 않는다 — 표만 바꾼다.
+  // T138(처음 입장 교체): 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다. 고민 중인 임원은 참가자가
+  // 설득하지 못하면 참가자 반대편에 표를 던진다(찬성 참가자 → 반대표, 반대 참가자 → 찬성표 "내건 조건이 약하면
+  // 원안대로"). CISO는 반대 참가자에게도 계속 반대다(그래서 반대 참가자는 처음 표 2석 = 나 + CISO). 반대 쪽 조건(AG_*)은
+  // 겨눈 임원(CAIO·CFO, CEO는 추가 답변에서만)을 NO로 돌린다. 찬성 쪽 모양(2→3→4→5, 함정 1)은 그대로다.
+  // 반대 쪽 조건은 안건을 수정하지 않는다 — 표만 바꾼다.
   voteRules: {
     CEO: [
       {
@@ -477,11 +488,15 @@ export const aiApprovalScenario: Scenario = {
         reason: '사람 검토를 아예 없애면 사고가 나도 되돌릴 수 없어 반대합니다',
       },
       {
-        when: { has: 'AG_SCALE' },
+        when: { has: 'AG_TRUST' },
         vote: 'NO',
-        reason: '넓히면 잘못 승인도 늘어나 되돌리는 시간이 더 든다니 반대합니다',
+        reason: '믿지 못해 결재가 빨라지지 않는다니 반대합니다',
       },
-      { when: { always: true }, vote: 'YES', reason: '느린 결재를 풀어주는 방향이라 찬성합니다' },
+      {
+        when: { always: true },
+        vote: 'YES',
+        reason: '느린 결재를 풀어주는 방향이라 찬성합니다',
+      },
     ],
     CFO: [
       {
@@ -490,9 +505,19 @@ export const aiApprovalScenario: Scenario = {
         reason: '사람 검토를 아예 없애면 얼마나 잘못 승인됐는지 알 수 없어 반대합니다',
       },
       {
+        when: { has: 'AG_SCALE' },
+        vote: 'NO',
+        reason: '넓히면 잘못 승인도 늘어나 되돌리는 비용이 더 든다니 반대합니다',
+      },
+      {
         when: { all: [{ has: 'LIMIT' }, { has: 'REVIEW' }] },
         vote: 'YES',
         reason: '금액 한도를 정하고 일부도 다시 본다니 그러면 찬성합니다',
+      },
+      {
+        when: { participantStance: 'AGAINST' },
+        vote: 'YES',
+        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },
@@ -534,24 +559,14 @@ export const aiApprovalScenario: Scenario = {
         reason: '사람 검토를 아예 없애면 책임질 사람이 아무도 없어 반대합니다',
       },
       {
-        when: { has: 'AG_TRUST' },
-        vote: 'NO',
-        reason: '믿지 못하는 결재는 책임만 흐려져 반대합니다',
-      },
-      {
         when: { all: [{ has: 'OWNER' }, { has: 'LOG' }] },
         vote: 'YES',
         reason: '책임질 사람도 정하고 사유도 남긴다니 그러면 찬성합니다',
       },
       {
-        when: { all: [{ has: 'OWNER' }, { not: { participantStance: 'AGAINST' } }] },
+        when: { has: 'OWNER' },
         vote: 'NO',
         reason: '책임질 사람은 정했지만 사유 기록이 없어 반대합니다',
-      },
-      {
-        when: { participantStance: 'AGAINST' },
-        vote: 'YES',
-        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },

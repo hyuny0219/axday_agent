@@ -82,11 +82,11 @@ describe('aiApprovalScenario 기본 구조', () => {
     }
   });
 
-  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 3, CFO 3, CAIO 5, CISO 6, T137·T138)', () => {
+  it('임원별 규칙 행 수가 문서와 일치한다 (CEO 3, CFO 5, CAIO 5, CISO 4, T137·T138)', () => {
     expect(scenario.voteRules.CEO).toHaveLength(3);
-    expect(scenario.voteRules.CFO).toHaveLength(3);
+    expect(scenario.voteRules.CFO).toHaveLength(5);
     expect(scenario.voteRules.CAIO).toHaveLength(5);
-    expect(scenario.voteRules.CISO).toHaveLength(6);
+    expect(scenario.voteRules.CISO).toHaveLength(4);
   });
 
   it('17개 규칙 모두 판단 이유가 있고 수치 표현이 없다', () => {

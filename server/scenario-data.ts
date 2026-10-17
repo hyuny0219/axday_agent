@@ -95,7 +95,7 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     // T137: 반대 근거(src/content/scenarios/aiApproval.ts와 같은 라벨). FOR 조건 뒤에 둔다 — mock이 역할 순서로
     // 앞의 조건을 고른다.
     { id: 'AG_AUDIT', label: '승인 이유를 확인할 수 없음', side: 'AGAINST' },
-    { id: 'AG_TRUST', label: '믿지 못해 책임이 흐려짐', side: 'AGAINST' },
+    { id: 'AG_TRUST', label: '믿지 못해 결재가 빨라지지 않음', side: 'AGAINST' },
     { id: 'AG_SCALE', label: '넓히면 잘못 승인도 늘어남', side: 'AGAINST' },
   ],
   // T79(2026-10-02 사용자 결정): CEO 찬성 쪽·CFO 반대 쪽·CAIO 미정·CISO 반대 쪽으로 네 명이
@@ -109,18 +109,18 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     CFO: {
       lens: '시범 자동 승인 결과의 규칙 밖 승인을 회사 전체 규모의 비용 위험으로 봅니다.',
       evidenceIds: ['E2'],
-      opening: 'AGAINST',
+      opening: 'UNDECIDED',
     },
     CAIO: {
       lens: '승인 사유를 시스템이 남길 수 있는지를 판단 기준으로 봅니다.',
       evidenceIds: ['E3'],
       opening: 'UNDECIDED',
     },
-    // T137: 처음 입장을 1 찬성·1 반대·2 고민 중으로 맞췄다 — CISO는 책임과 기록이 확인되면 따를 수 있다.
+    // T138: 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다.
     CISO: {
       lens: '감사 메모의 기록 부재를 권한 위임의 책임 문제로 봅니다.',
       evidenceIds: ['E3'],
-      opening: 'UNDECIDED',
+      opening: 'AGAINST',
     },
   },
 };
@@ -184,7 +184,7 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     CFO: {
       lens: '실패 사례의 데이터 경고를 무시해 난 손실을 막지 못한 실패로 봅니다.',
       evidenceIds: ['E4'],
-      opening: 'AGAINST',
+      opening: 'UNDECIDED',
     },
     CAIO: {
       lens: '예측 보고의 처음 겪는 상황 오차를 모델이 약한 범위로 봅니다.',
@@ -194,7 +194,7 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     CISO: {
       lens: '인터뷰 메모의 기록 부재를 사후 검증 불가 문제로 봅니다.',
       evidenceIds: ['E3'],
-      opening: 'UNDECIDED',
+      opening: 'AGAINST',
     },
   },
 };

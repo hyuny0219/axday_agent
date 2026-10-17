@@ -516,15 +516,20 @@ describe('requiredConditionsFor(T96, 안건①②)', () => {
       persuaded: false,
       conditionIds: ['AG_AUDIT'],
     });
-    expect(requiredConditionsFor(aiApprovalScenario, 'CEO', [], 'AGAINST', 'NO')).toEqual({
+    // T138: 처음 입장 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO). 조건이 겨누는 임원: CAIO=AG_AUDIT, CFO=AG_SCALE, CEO=AG_TRUST.
+    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'AGAINST', 'NO')).toEqual({
       persuaded: false,
       conditionIds: ['AG_SCALE'],
     });
-    expect(requiredConditionsFor(aiApprovalScenario, 'CFO', [], 'AGAINST', 'NO')).toEqual({
+    expect(requiredConditionsFor(aiApprovalScenario, 'CEO', [], 'AGAINST', 'NO')).toEqual({
+      persuaded: false,
+      conditionIds: ['AG_TRUST'],
+    });
+    expect(requiredConditionsFor(aiApprovalScenario, 'CISO', [], 'AGAINST', 'NO')).toEqual({
       persuaded: true,
       conditionIds: [],
     });
-    expect(requiredConditionsFor(experienceFirstScenario, 'CISO', [], 'AGAINST', 'NO')).toEqual({
+    expect(requiredConditionsFor(experienceFirstScenario, 'CEO', [], 'AGAINST', 'NO')).toEqual({
       persuaded: false,
       conditionIds: ['AG_WHY'],
     });
@@ -580,11 +585,12 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
   it('반대 참가자(대칭, T137): 반대 근거로 돌아선 CEO·CAIO·CISO도 답하지 않으면 처음 표(찬성)로 돌아간다', () => {
     const all = ['AG_AUDIT', 'AG_TRUST', 'AG_SCALE'];
     expect(votesOf(decideBoard(ai, motionFor(all), 'AGAINST', true))).toEqual(['NO', 'NO', 'NO', 'NO']);
-    expect(votesOf(decideBoard(ai, motionFor(all), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'YES']);
+    // 답하지 않으면 CEO·CFO·CAIO는 처음 표(찬성)로, 처음부터 반대인 CISO만 반대다.
+    expect(votesOf(decideBoard(ai, motionFor(all), 'AGAINST', false))).toEqual(['YES', 'YES', 'YES', 'NO']);
   });
 
   it('반대 참가자: 찬성 쪽으로 움직이는 조건은 목표 반대 방향이라 게이트가 없다', () => {
-    expect(votesOf(decideBoard(ai, motionFor(['LOG']), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'YES']);
+    expect(votesOf(decideBoard(ai, motionFor(['LOG']), 'AGAINST', false))).toEqual(['YES', 'YES', 'YES', 'NO']);
   });
 
   it('반대 쪽에는 함정 조건이 없다(T138): 반대 쪽 조건은 어떤 조합도 반대표를 줄이지 않는다', () => {

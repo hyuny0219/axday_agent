@@ -102,10 +102,11 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       memberId: 'CFO',
-      text: '데이터가 위험하다고 알렸는데 무시해서 손해를 본 적이 있습니다. 경험을 중요하게 보더라도, 숫자가 경고할 때 멈추지 못하면 반대합니다.',
-      bubble: '숫자 경고에 멈춰야 합니다',
+      text: '데이터가 위험하다고 알렸는데 무시해서 손해를 본 적이 있습니다. 숫자가 경고할 때 멈출 수 있다면 따를 수 있습니다.',
+      bubble: '경고 때 멈출 수 있다면',
       evidenceIds: ['E4'],
-      openingStance: 'AGAINST',
+      // T138: 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다.
+      openingStance: 'UNDECIDED',
     },
     {
       memberId: 'CAIO',
@@ -116,11 +117,10 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       memberId: 'CISO',
-      text: '인터뷰 메모를 보니 판단은 빨랐지만 기록이 없었습니다. 나중에 무엇을 보고 결정했는지 확인할 수 있다면 따를 수 있습니다.',
-      bubble: '확인할 수 있으면 따릅니다',
+      text: '인터뷰 메모를 보니 판단은 빨랐지만 기록이 없었습니다. 나중에 무엇을 보고 결정했는지 어떻게 확인하나요? 근거를 남기지 않으면 반대합니다.',
+      bubble: '근거를 남겨야 합니다',
       evidenceIds: ['E3'],
-      // T137: 처음 입장을 1 찬성·1 반대·2 고민 중으로 맞췄다(반대였던 CISO를 고민 중으로).
-      openingStance: 'UNDECIDED',
+      openingStance: 'AGAINST',
     },
   ],
   phrases: [
@@ -150,7 +150,7 @@ export const experienceFirstScenario: Scenario = {
       side: 'BOTH',
     },
     // 반대 쪽 추천 문구(T87 → T137 개편, aiApproval.ts와 같은 근거). 반대 쪽 카드는 근거 자료의 사실을
-    // 짚는 "반대 근거"이고 안건은 바뀌지 않는다. SPLIT(CEO를 겨눔)은 추가 답변에서만 고른다.
+    // 짚는 "반대 근거"이고 안건은 바뀌지 않는다. WHY(CEO를 겨눔)은 추가 답변에서만 고른다.
     {
       id: 'N1',
       text: '데이터가 위험하다고 경고했는데 경험을 따라 손해를 본 일이 있습니다. 경험을 규칙으로 앞세우면 같은 경고를 넘길 핑계가 생깁니다.',
@@ -159,8 +159,8 @@ export const experienceFirstScenario: Scenario = {
     },
     {
       id: 'N2',
-      text: '베테랑 다섯 명 중 네 명이 판단 이유를 설명하기 어렵다고 했습니다. 이유를 설명할 수 없는 판단을 앞세우면, 틀려도 무엇을 고칠지 알 수 없습니다.',
-      conditionId: 'AG_WHY',
+      text: '생각이 갈린 일곱 번 중 경험이 네 번, 데이터가 세 번 맞았습니다. 거의 반반인데 한쪽을 늘 앞세우는 규칙은 근거가 약합니다.',
+      conditionId: 'AG_SPLIT',
       side: 'AGAINST',
     },
     {
@@ -291,23 +291,23 @@ export const experienceFirstScenario: Scenario = {
     // T137: 반대 근거에 대한 반응(aiApproval.ts와 같은 근거).
     {
       conditionId: 'AG_WARN',
-      memberId: 'CAIO',
-      text: '경고를 넘긴 일이 실제로 있었다는 점은 무겁습니다. 경험을 앞세우는 규칙이면 같은 일이 또 생길 수 있습니다.',
-      bubble: '같은 일이 또 생깁니다',
+      memberId: 'CFO',
+      text: '경고를 넘긴 일이 실제로 있었다는 점은 무겁습니다. 경험을 앞세우는 규칙이면 손해가 또 날 수 있습니다.',
+      bubble: '손해가 또 날 수 있습니다',
       pendingText: '경고를 넘긴 일이 있었다는 점은 맞습니다. 하나만 더 묻겠습니다.',
       pendingBubble: '맞는 지적입니다. 하나만 더',
     },
     {
       conditionId: 'AG_WHY',
-      memberId: 'CISO',
-      text: '이유를 설명할 수 없으면 틀려도 고칠 곳을 모릅니다. 저도 이대로는 반대합니다.',
-      bubble: '고칠 곳을 모릅니다',
-      pendingText: '이유를 설명하기 어렵다는 점은 걸립니다. 하나만 더 묻겠습니다.',
-      pendingBubble: '걸리는 점입니다. 하나만 더',
+      memberId: 'CEO',
+      text: '판단 이유를 설명하지 못한다는 말씀은 맞습니다. 틀려도 고칠 곳을 모르면 곤란합니다.',
+      bubble: '고칠 곳을 모르면 곤란합니다',
+      pendingText: '판단 이유를 설명하기 어렵다는 점은 알겠습니다. 하나만 더 묻겠습니다.',
+      pendingBubble: '알겠습니다. 하나만 더',
     },
     {
       conditionId: 'AG_SPLIT',
-      memberId: 'CEO',
+      memberId: 'CAIO',
       text: '거의 반반이라는 말씀은 맞습니다. 경험을 앞세우는 규칙은 근거가 약합니다.',
       bubble: '한쪽만 앞세우긴 약합니다',
       pendingText: '거의 반반이라는 점은 알겠습니다. 하나만 더 묻겠습니다.',
@@ -326,9 +326,9 @@ export const experienceFirstScenario: Scenario = {
   // 주장("숫자로 확인")에 한 문장씩 직접 답한다.
   oppositionReactions: {
     CEO: '숫자로 확인해야 한다는 말씀, 이해합니다. 다만 지난 2년을 보면 숫자도 늘 맞지는 않았으니, 사람이 방향을 잡는 몫도 필요합니다.',
-    CFO: '숫자로 확인해야 한다는 말씀에 저도 동의합니다. 데이터가 분명히 경고할 때 멈추는 절차가 없으면 저도 경험을 앞세울 수 없습니다.',
+    CFO: '숫자로 확인해야 한다는 말씀에 공감합니다. 다만 데이터가 경고할 때 멈출 수 있다면 경험을 앞세워도 되는지 더 들어 보겠습니다.',
     CAIO: '말씀하신 걱정에 공감합니다. 다만 데이터가 약해지는, 처음 겪는 상황으로 좁힌다면 경험을 앞세워볼 수 있다고 봅니다.',
-    CISO: '숫자로 확인해야 한다는 말씀, 인터뷰 메모에서도 같은 걱정이 나왔습니다. 다만 근거를 더 들어 보고 정하겠습니다.',
+    CISO: '숫자로 확인해야 한다는 말씀, 인터뷰 메모에서도 같은 걱정이 나왔습니다. 판단 이유를 남기지 않으면 저도 반대합니다.',
   },
   // BRIEFING 핵심 말(T99): 상황·제안·미정 줄에서 굵게 표시한다.
   highlightTerms: [
@@ -356,11 +356,11 @@ export const experienceFirstScenario: Scenario = {
     '경험을 따르시겠습니까',
     '방향은 사람이 잡아야',
     '경험을 앞세',
-    '숫자가 경고할 때 멈추지',
+    '숫자가 경고할 때 멈출',
     '처음 겪는 상황',
     '멈출 방법이 없습니다',
     '기록이 없었습니다',
-    '고칠 곳을 모릅니다',
+    '고칠 곳을 모르면',
     '판단 이유를',
     '데이터가 경고할 때 멈추는 절차',
   ],
@@ -428,14 +428,25 @@ export const experienceFirstScenario: Scenario = {
         side: 'AGAINST',
       },
       {
+        text: '생각이 갈린 일곱 번 중 경험이 네 번, 데이터가 세 번 맞았습니다. 거의 반반인데 한쪽을 늘 앞세우는 규칙은 근거가 약합니다.',
+        proposeConditionId: 'AG_SPLIT',
+        side: 'AGAINST',
+      },
+      {
+        // T119 규칙: 첫 단계 추천 문구에서 뺀 조건(CEO를 겨눔)은 추가 답변에서만 고른다.
         text: '베테랑 다섯 명 중 네 명이 판단 이유를 설명하기 어렵다고 했습니다. 이유를 설명할 수 없는 판단을 앞세우면, 틀려도 무엇을 고칠지 알 수 없습니다.',
         proposeConditionId: 'AG_WHY',
         side: 'AGAINST',
       },
       {
-        // T119 규칙: 첫 단계 추천 문구에서 뺀 반대 근거(CEO를 겨눔)는 추가 답변에서 고른다.
-        text: '생각이 갈린 일곱 번 중 경험이 네 번, 데이터가 세 번 맞았습니다. 거의 반반인데 한쪽을 늘 앞세우는 규칙은 근거가 약합니다.',
-        proposeConditionId: 'AG_SPLIT',
+        // T138: 찬성 쪽(5개)과 개수를 맞추려고 조건 없이 이유만 밝히는 반대 답변 2개를 둔다 — 함정·조건을 붙이지 않는다.
+        text: '중요한 결정은 숫자로 확인할 수 있어야 한다고 생각합니다.',
+        proposeConditionId: null,
+        side: 'AGAINST',
+      },
+      {
+        text: '경험이 필요하더라도, 먼저 데이터를 더 모아서 풀어야 한다고 생각합니다.',
+        proposeConditionId: null,
         side: 'AGAINST',
       },
       {
@@ -452,9 +463,11 @@ export const experienceFirstScenario: Scenario = {
   // CFO·CISO가 조건 유무만으로 찬성으로 넘어가지 않는다). 별도 participantStance 분기는
   // 두지 않았다(tests/domain/voting.test.ts 회귀 테스트로 분포를 고정).
   // T93: reason 전부를 같은 쉬운 말 기준으로 다시 썼다(판단 분기·조건 참조는 그대로).
-  // T137(반대 입장 대칭 설계): aiApproval.ts voteRules 주석과 같은 구조 — 처음 입장 1 찬성(CEO)·1 반대(CFO)·
-  // 2 고민 중(CAIO·CISO), 설득 안 된 고민 중 임원은 참가자 반대편에 표, 반대 근거(AG_*)는 겨눈 임원을 NO로,
-  // 반대 쪽 함정은 T138에서 없앴다(붙는 조건은 모두 임원을 설득하는 조건뿐). 반대 근거는 안건을 수정하지 않는다.
+  // T138(처음 입장 교체): 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다. 고민 중인 임원은 참가자가
+  // 설득하지 못하면 참가자 반대편에 표를 던진다(찬성 참가자 → 반대표, 반대 참가자 → 찬성표 "내건 조건이 약하면
+  // 원안대로"). CISO는 반대 참가자에게도 계속 반대다(그래서 반대 참가자는 처음 표 2석 = 나 + CISO). 반대 쪽 조건(AG_*)은
+  // 겨눈 임원(CAIO·CFO, CEO는 추가 답변에서만)을 NO로 돌린다. 찬성 쪽 모양(2→3→4→5, 함정 1)은 그대로다.
+  // 반대 쪽 조건은 안건을 수정하지 않는다 — 표만 바꾼다.
   voteRules: {
     CEO: [
       {
@@ -463,11 +476,15 @@ export const experienceFirstScenario: Scenario = {
         reason: '경험만 항상 앞세우면 데이터를 아예 버리는 셈이라 반대합니다',
       },
       {
-        when: { has: 'AG_SPLIT' },
+        when: { has: 'AG_WHY' },
         vote: 'NO',
-        reason: '거의 반반인데 한쪽만 늘 앞세우는 건 근거가 약해 반대합니다',
+        reason: '판단 이유를 설명할 수 없다는 지적이 맞아 반대합니다',
       },
-      { when: { always: true }, vote: 'YES', reason: '책임지는 사람이 판단을 앞세우는 방향이라 찬성합니다' },
+      {
+        when: { always: true },
+        vote: 'YES',
+        reason: '책임지는 사람이 판단을 앞세우는 방향이라 찬성합니다',
+      },
     ],
     CFO: [
       {
@@ -476,9 +493,19 @@ export const experienceFirstScenario: Scenario = {
         reason: '경험만 항상 앞세우면 숫자가 경고해도 무시하게 돼 반대합니다',
       },
       {
+        when: { has: 'AG_WARN' },
+        vote: 'NO',
+        reason: '경고를 넘길 핑계가 생겨 손해가 날 수 있다니 반대합니다',
+      },
+      {
         when: { has: 'DATA_VETO' },
         vote: 'YES',
         reason: '데이터가 경고하면 멈춘다니 그러면 찬성합니다',
+      },
+      {
+        when: { participantStance: 'AGAINST' },
+        vote: 'YES',
+        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },
@@ -493,9 +520,9 @@ export const experienceFirstScenario: Scenario = {
         reason: '경험만 항상 앞세우면 데이터가 쓰일 자리가 없어 반대합니다',
       },
       {
-        when: { has: 'AG_WARN' },
+        when: { has: 'AG_SPLIT' },
         vote: 'NO',
-        reason: '경고를 넘길 핑계가 생긴다는 지적이 맞아 반대합니다',
+        reason: '거의 반반인데 한쪽만 늘 앞세우는 건 근거가 약해 반대합니다',
       },
       {
         when: { has: 'SCOPE' },
@@ -520,24 +547,14 @@ export const experienceFirstScenario: Scenario = {
         reason: '경험만 항상 앞세우면 설명 없는 결정만 늘어 반대합니다',
       },
       {
-        when: { has: 'AG_WHY' },
-        vote: 'NO',
-        reason: '판단 이유를 설명할 수 없다는 지적이 맞아 반대합니다',
-      },
-      {
         when: { all: [{ has: 'RECORD' }, { has: 'REVIEW' }] },
         vote: 'YES',
         reason: '판단 이유를 남기고 나중에 다시 보기도 한다니 그러면 찬성합니다',
       },
       {
-        when: { all: [{ has: 'RECORD' }, { not: { participantStance: 'AGAINST' } }] },
+        when: { has: 'RECORD' },
         vote: 'NO',
         reason: '판단 이유는 남기지만 나중에 다시 보는 절차가 없어 반대합니다',
-      },
-      {
-        when: { participantStance: 'AGAINST' },
-        vote: 'YES',
-        reason: '내건 조건이 약해 안건대로 찬성합니다',
       },
       {
         when: { always: true },

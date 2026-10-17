@@ -109,6 +109,20 @@ describe.each(scenarios)('T119 조건 커버리지 — %s', (_name, scenario) =>
     }
   });
 
+  it('(g) T138: 추가 답변은 입장별 개수가 같고(각 5개 + 공통 1개), 반대 쪽은 조건 3개 + 조건 없는 반대 2개다', () => {
+    const count = (side: 'FOR' | 'AGAINST' | 'BOTH') => scenario.followUp.options.filter((o) => (o.side ?? 'FOR') === side);
+    expect(count('FOR')).toHaveLength(5);
+    expect(count('AGAINST')).toHaveLength(5);
+    expect(count('BOTH')).toHaveLength(1);
+    const against = count('AGAINST');
+    expect(against.filter((o) => o.proposeConditionId !== null)).toHaveLength(3);
+    expect(against.filter((o) => o.proposeConditionId === null)).toHaveLength(2);
+    // 반대 쪽 조건 3개는 서로 다른 조건이고 모두 반대 쪽 조건이다.
+    const ids = against.map((o) => o.proposeConditionId).filter((id): id is string => id !== null);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) expect(isAgainstCondition(scenario, id)).toBe(true);
+  });
+
   describe.each<Stance>(['FOR', 'AGAINST'])('입장 %s', (stance) => {
     const required = requiredFor(stance);
     const first = phraseConditionIds(scenario, stance);
