@@ -700,10 +700,10 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
 // 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
 const T119_CASES = [
   { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
-  // T137: 반대 쪽 추가 답변은 반대 쪽 조건 3개 + BOTH 1개이고(T138: 함정 카드 없음), 힌트는 첫 문구에서 빠진 반대 근거(CEO를 겨눔)다.
-  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 4, hinted: 'AG_SCALE' },
+  // T137: 반대 쪽 추가 답변은 반대 쪽 5개(조건 3 + 조건 없는 반대 2) + BOTH 1개이고(T138), 힌트는 첫 문구에서 빠진 CEO를 겨눈 조건이다.
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 6, hinted: 'AG_TRUST' },
   { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
-  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 4, hinted: 'AG_SPLIT' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 6, hinted: 'AG_WHY' },
 ] as const;
 
 for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
@@ -764,7 +764,7 @@ async function expectCardsInside(page: Page, label: string) {
 // 실측 화면(2026-10-15, 8787 live 1512×982)과 같은 입장 조합 — 반응에서 CFO가 "반대 → 찬성 · 답하면 확정"
 // 기울음 칩, CAIO가 "고민 중 → 반대" 칩을 받아 머리띠가 가장 길어진다.
 async function mockRealisticStances(page: Page) {
-  const OPENING: Record<string, string> = { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
+  const OPENING: Record<string, string> = { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'UNDECIDED', CISO: 'AGAINST' };
   const REACTION: Record<string, string> = { CEO: 'FOR', CFO: 'UNDECIDED', CAIO: 'AGAINST', CISO: 'AGAINST' };
   await page.route('**/api/board/round', async (route: Route) => {
     const body = route.request().postDataJSON() as { stage?: string };

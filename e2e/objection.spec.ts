@@ -74,9 +74,10 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await page.getByTestId('phrase-card-N1').click();
   await submitFirstOpinion(page);
 
-  // 반응 듣기: 근거가 겨눈 CAIO는 "고민 중 → 반대"로 기울고, 겨누지 않은 CISO는 그대로 고민 중이다.
+  // 반응 듣기: 조건이 겨눈 CAIO는 "고민 중 → 반대"로 기울고, 겨누지 않은 CFO는 그대로 고민 중, CISO는 처음부터 반대다.
   await expect(page.getByTestId('reaction-card-badge-CAIO')).toContainText('고민 중 → 반대 · 답하면 확정');
   await expect(page.getByTestId('reaction-card-CAIO')).toContainText('하나만 더 묻겠습니다');
+  await expect(page.getByTestId('reaction-card-badge-CFO')).not.toContainText('답하면 확정');
   await expect(page.getByTestId('reaction-card-badge-CISO')).not.toContainText('답하면 확정');
   await expectNoPageScroll(page, 'REACTIONS(듣기, 반대 입장)');
 
@@ -86,7 +87,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await expect(page.getByTestId('phrase-tag-6')).toHaveCount(0);
   await expectNoPageScroll(page, 'REACTIONS(답하기, 반대 근거 카드)');
   await page.getByTestId('followup-option-6').click();
-  await expect(page.getByTestId('condition-chip-AG_TRUST')).toHaveClass(/condition-chip--objection/);
+  await expect(page.getByTestId('condition-chip-AG_SCALE')).toHaveClass(/condition-chip--objection/);
   await expectNoPageScroll(page, 'REACTIONS(답하기, 칩 선택)');
   await page.getByTestId('submit-followup').click();
 
@@ -95,7 +96,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await expect(page.getByTestId('motion-card')).not.toContainText('아래 조건');
   await expect(page.getByTestId('motion-card')).toContainText('처음 안');
   await expect(page.getByTestId('motion-objections')).toContainText('승인 이유를 확인할 수 없음');
-  await expect(page.getByTestId('motion-objections')).toContainText('믿지 못해 책임이 흐려짐');
+  await expect(page.getByTestId('motion-objections')).toContainText('넓히면 잘못 승인도 늘어남');
   await expect(page.getByTestId('motion-conditions')).toHaveCount(0);
   await expectNoPageScroll(page, 'MOTION(반대 사유)');
   await page.getByTestId('freeze-motion').click();
@@ -106,7 +107,7 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();
 
-  // RESULT: CAIO·CISO가 반대로 돌아 CEO만 찬성이다(반대 4석 = 성공). 도장은 "조건부 가결"이 아니다.
+  // RESULT: CAIO·CFO가 반대로 돌아 CEO만 찬성이다(CISO는 처음부터 반대, 반대 4석 = 성공). 도장은 "조건부 가결"이 아니다.
   await expect(page.getByTestId('result-conclusion')).toBeVisible();
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 1 · 반대 4');
   await expect(page.getByTestId('result-summary-objections')).toContainText('이사님이 요구한 조건');
@@ -125,21 +126,22 @@ test('반대 근거를 하나도 고르지 않으면 고민 중 임원이 원안
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();
-  // CEO·CAIO·CISO가 찬성(근거가 약하면 원안대로), 반대는 CFO와 나뿐이다.
+  // CEO·CFO·CAIO가 찬성(내건 조건이 약하면 원안대로), 반대는 CISO와 나뿐이다.
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3 · 반대 2');
 });
 
 test('반대 첫 의견에서 조건을 모두 맞춰도 임원은 기울기만 하고, 넘어가면 처음 입장으로 돌아간다(T138)', async ({ page }) => {
   await reachDiscussAgainst(page, 'ai-approval');
-  // 반대 쪽에는 함정 카드가 없다: 조건 카드 둘(N1·N2) + 순수 반대(N4) + 요청(P6)만 있다.
+  // 반대 쪽에는 함정 카드가 없다: 조건 카드 둘(N1·N2, CEO를 겨눈 조건은 추가 답변에서만) + 순수 반대(N4) + 요청(P6)만 있다.
   await expect(page.locator('[data-testid^="phrase-card-"]')).toHaveCount(4);
   await expect(page.getByTestId('phrase-card-N3')).toHaveCount(0);
   await page.getByTestId('phrase-card-N1').click();
   await page.getByTestId('phrase-card-N2').click();
   await submitFirstOpinion(page);
-  // 겨눈 CAIO·CISO는 "반대 쪽?" 기울음까지만이고 확정이 아니다. 겨누지 않은 CEO는 찬성 그대로다.
+  // 겨눈 CAIO·CFO는 "반대 쪽?" 기울음까지만이고 확정이 아니다. 겨누지 않은 CEO는 찬성 그대로, CISO는 처음부터 반대다.
   await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('반대 쪽?');
-  await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대 쪽?');
+  await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대 쪽?');
+  await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대');
   await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
@@ -155,15 +157,15 @@ test('안건 ②도 같은 구조: 반대 근거 + 추가 답변으로 성공하
   await page.getByTestId('phrase-card-N1').click();
   await submitFirstOpinion(page);
   await page.getByTestId('reactions-advance').click();
-  // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_WHY, 7 AG_SPLIT, 8 BOTH
+  // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_SPLIT, 7 AG_WHY(CEO), 8·9 조건 없는 반대, 10 BOTH
   await page.getByTestId('followup-option-7').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-objections')).toContainText('경고를 넘길 핑계가 생김');
-  await expect(page.getByTestId('motion-objections')).toContainText('반반인데 한쪽만 앞세움');
+  await expect(page.getByTestId('motion-objections')).toContainText('판단 이유를 설명할 수 없음');
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();
-  // CEO·CFO·CAIO가 반대, CISO만 설득되지 않아 원안대로 찬성한다.
+  // CEO·CFO·CISO가 반대, 설득되지 않은 CAIO만 원안대로 찬성한다.
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 1 · 반대 4');
   await expectNoPageScroll(page, 'RESULT(안건 ②, 반대 근거)');
 });
