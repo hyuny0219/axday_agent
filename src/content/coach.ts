@@ -75,8 +75,6 @@ export const COACH_SCREENS: readonly CoachScreenCopy[] = [
 
 /** DISCUSS(안내 3/6)만 체크리스트로 그린다(T140) — 번호는 부스 안내판과 같은 3-1~3-4. */
 export const COACH_DISCUSS_CHECKLIST = {
-  title: '내 의견은 이렇게 씁니다',
-  keys: ['내 의견'],
   items: [
     { id: 'side', label: '3-1 찬성·반대 고르기' },
     { id: 'phrase', label: '3-2 추천 문구 담기(직접 써도 됩니다)' },

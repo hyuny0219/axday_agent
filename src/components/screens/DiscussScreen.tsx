@@ -15,7 +15,7 @@
 // initialOpinions)은 EvidenceDialog 팝업의 STATEMENTS 열로 옮겼다(BRIEFING과 같은
 // 컴포넌트를 함께 쓴다).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, SessionMode, Stance, Transcript } from '../../domain/types';
 import type { DraftState } from '../../domain/draft';
@@ -218,7 +218,8 @@ export function DiscussScreen({
     canSubmit,
   });
   // T140: 진행 도우미 체크리스트가 같은 입력으로 완료·지금 할 일을 그린다. 지난 화면 보기는 알리지 않는다.
-  useEffect(() => {
+  // 레이아웃 효과로 그린다 — 그리기 전에 저장소를 채워 복원된 초안이 있어도 빈 체크리스트가 한 프레임 보이지 않게 한다.
+  useLayoutEffect(() => {
     if (readOnly) {
       return;
     }

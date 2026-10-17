@@ -20,9 +20,10 @@ export interface CoachHostProps {
   dispatch: (action: SessionAction) => void;
 }
 
-/** 조작으로 치는 요소. 운영 메뉴와 말풍선 자신은 조작으로 세지 않는다. */
+/** DISCUSS 화면의 안내 번호 — 이 안내만 체크리스트로 그린다(T140). */
 const DISCUSS_STEP = 3;
 
+/** 조작으로 치는 요소. 운영 메뉴와 말풍선 자신은 조작으로 세지 않는다. */
 const OPERABLE = 'button, a, input, textarea, select, label, [role="button"]';
 const NOT_OPERATION = '[data-testid="coach"], .operator-menu__trigger, .operator-menu__panel';
 
