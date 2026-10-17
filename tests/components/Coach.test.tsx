@@ -86,11 +86,31 @@ describe('CoachHost', () => {
     render(
       <>
         <button type="button">아무 버튼</button>
-        <CoachHost session={sessionAt('DISCUSS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
+        <CoachHost session={sessionAt('OPINIONS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
       </>,
     );
     fireEvent.click(screen.getByRole('button', { name: '아무 버튼' }));
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 2 }));
+  });
+
+  it('DISCUSS 체크리스트는 첫 조작으로 닫히지 않고 접기로만 접힌다(T140)', async () => {
+    const dispatch = vi.fn();
+    render(
+      <>
+        <button type="button">아무 버튼</button>
+        <CoachHost session={sessionAt('DISCUSS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
+      </>,
+    );
+    expect(screen.getByTestId('coach-checklist').querySelectorAll('li')).toHaveLength(4);
+    expect(screen.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'current');
+    expect(screen.getByTestId('coach-check-side')).toHaveTextContent('3-1 찬성·반대 고르기');
+    expect(screen.getByTestId('coach-check-side')).toHaveTextContent('지금 할 일');
+    fireEvent.click(screen.getByRole('button', { name: '아무 버튼' }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('coach-ack')).toHaveTextContent('접기');
+    fireEvent.click(screen.getByTestId('coach-ack'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 });
   });
 
   it('말풍선 안 클릭·운영 메뉴·버튼이 아닌 곳 클릭은 조작으로 세지 않는다', async () => {

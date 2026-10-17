@@ -413,6 +413,26 @@
   }
 }
 
+/* T140: 잠긴 '의견 전달'의 이유 한 줄 — 버튼 줄 아래 전체 너비(열리면 사라진다). */
+.discuss-screen__cta-hint {
+  flex: 0 0 100%;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-muted, #c9c2b0);
+  word-break: keep-all;
+}
+
+@media (max-width: 1280px), (max-height: 900px) {
+  .discuss-screen__cta-hint {
+    /* 키 작은 화면: 입력 상자가 줄지 않도록 줄 높이·간격을 최소로(noscroll HUD 검사). */
+    margin-top: -4px;
+    font-size: 13px;
+    line-height: 1.05;
+  }
+}
+
 /* 오른쪽 종이(시안 — 왼쪽 열과 같은 "paper" 패널, opinions.css와 같은 그림자·배경). */
 .discuss-screen__paper {
   flex: 1;

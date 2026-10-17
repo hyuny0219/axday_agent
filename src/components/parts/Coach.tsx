@@ -18,8 +18,18 @@ export interface CoachProps {
   lines: readonly string[];
   /** 카드를 얹을 자리를 정하는 요소의 선택자(기본: 무대 사진). 없으면 왼쪽 위 고정 자리. */
   anchorSelector?: string;
+  /** 있으면 lines 대신 체크리스트(T140, DISCUSS)로 그린다. 상태는 기호와 숨김 글자로도 알린다. */
+  checklist?: readonly CoachChecklistItem[];
   onAck: () => void;
   ackLabel?: string;
+}
+
+export interface CoachChecklistItem {
+  id: string;
+  label: string;
+  state: 'done' | 'current' | 'todo';
+  mark: string;
+  stateText: string;
 }
 
 interface Box {
@@ -108,6 +118,7 @@ export function Coach({
   total,
   title,
   lines,
+  checklist,
   anchorSelector = '[data-testid="stage-band"]',
   onAck,
   ackLabel = COACH_ACK_LABEL,
@@ -142,7 +153,19 @@ export function Coach({
       <p className="coach__title" data-testid="coach-title">
         {title}
       </p>
-      {lines.length > 1 ? (
+      {checklist ? (
+        <ol className="coach__checklist" data-testid="coach-checklist">
+          {checklist.map((item) => (
+            <li key={item.id} className="coach__check" data-state={item.state} data-testid={`coach-check-${item.id}`}>
+              <span className="coach__check-mark" aria-hidden="true">
+                {item.mark}
+              </span>
+              <span className="coach__check-label">{item.label}</span>
+              <span className="sr-only"> — {item.stateText}</span>
+            </li>
+          ))}
+        </ol>
+      ) : lines.length > 1 ? (
         <ol className="coach__list" data-testid="coach-lines">
           {lines.map((line) => (
             <li key={line}>{line}</li>

@@ -136,6 +136,9 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 이 시점에는 전달 버튼이 아직 닫혀 있다.
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeDisabled();
+  // T140: 잠긴 '의견 전달' 아래에 이유 한 줄이 보인다.
+  await expect(page.getByTestId('discuss-cta-hint')).toBeVisible();
+  await capture(page, testInfo.project.name, 'discuss-locked');
   await page.getByTestId('assistant-toggle').click();
   const assistantDialog = page.getByTestId('assistant-panel');
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
@@ -294,7 +297,10 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await expect(page.getByTestId('coach-progress')).toHaveText('안내 3/6');
   await page.getByTestId('coach').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await capture(page, testInfo.project.name, 'coach-discuss');
-  // 닫으면 같은 자리에 "안내" 아이콘이 남는다(T106).
+  // 조작해도 닫히지 않는다 — 입장을 고른 모습(체크리스트 ✓·▶)도 남긴다(T140).
+  await page.getByTestId('discuss-side-for').click();
+  await expect(page.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'done');
+  // 접으면 같은 자리에 "안내" 아이콘이 남는다(T106).
   await page.getByTestId('coach-ack').click();
   await expect(page.getByTestId('coach-icon')).toBeVisible();
   await capture(page, testInfo.project.name, 'coach-icon-discuss');
