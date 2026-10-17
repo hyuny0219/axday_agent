@@ -92,9 +92,9 @@ describe.each(scenarios)('T119 조건 커버리지 — %s', (_name, scenario) =>
   const requiredFor = (stance: Stance) =>
     allRequired.filter((id) => isAgainstCondition(scenario, id) === (stance === 'AGAINST'));
 
-  it('(f) 양쪽에 함정이 하나씩 있고, 추천 문구·추가 답변은 자기 입장 쪽 조건만 제안한다(T133·T137)', () => {
+  it('(f) 함정은 찬성 쪽에만 있고(T138: 반대 쪽 함정 제거), 추천 문구·추가 답변은 자기 입장 쪽 조건만 제안한다(T133·T137)', () => {
     expect(trapConditionIds(scenario, 'NO').filter((id) => !isAgainstCondition(scenario, id))).toHaveLength(1);
-    expect(trapConditionIds(scenario, 'YES').filter((id) => isAgainstCondition(scenario, id))).toHaveLength(1);
+    expect(trapConditionIds(scenario, 'YES').filter((id) => isAgainstCondition(scenario, id))).toHaveLength(0);
     for (const option of scenario.followUp.options) {
       const side = option.side ?? 'FOR';
       if (side !== 'BOTH' && option.proposeConditionId) {

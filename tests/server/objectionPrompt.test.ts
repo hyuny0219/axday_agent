@@ -155,8 +155,8 @@ describe('표결 방향 지시(v21)', () => {
     expect(one.CFO).not.toContain('우려와 맞닿은');
     for (const roleId of ['CEO', 'CISO']) expect(one[roleId]).toContain('당신의 표는 안건대로 찬성(YES)입니다');
     expect(one.CAIO).toContain('원안에 조건이 하나도 없다');
-    const trap = await run(['AG_BAN']);
-    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) expect(trap[roleId]).toContain('안건대로 찬성(YES)입니다');
+    const all = await run(['AG_AUDIT', 'AG_TRUST', 'AG_SCALE']);
+    for (const roleId of ['CEO', 'CAIO', 'CISO']) expect(all[roleId]).toContain('당신의 표는 반대(NO)입니다');
   });
 
   it('조건 없는 순수 반대: 조건을 지어내지 않는 문구가 붙는다', async () => {

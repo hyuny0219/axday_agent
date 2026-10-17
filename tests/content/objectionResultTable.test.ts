@@ -38,8 +38,6 @@ const TABLES: Array<{ scenario: Scenario; against: Row[]; for: Row[] }> = [
       { name: '사용자 설문(CISO)', ids: ['AG_TRUST'], seats: 3 },
       { name: '둘', ids: ['AG_AUDIT', 'AG_TRUST'], seats: 4 },
       { name: '셋(CEO까지)', ids: ['AG_AUDIT', 'AG_TRUST', 'AG_SCALE'], seats: 5 },
-      { name: '함정', ids: ['AG_BAN'], seats: 1 },
-      { name: '함정 + 근거', ids: ['AG_BAN', 'AG_AUDIT', 'AG_TRUST', 'AG_SCALE'], seats: 1 },
     ],
     for: [
       { name: '조건 없음', ids: [], seats: 2 },
@@ -57,8 +55,6 @@ const TABLES: Array<{ scenario: Scenario; against: Row[]; for: Row[] }> = [
       { name: '베테랑 인터뷰(CISO)', ids: ['AG_WHY'], seats: 3 },
       { name: '둘', ids: ['AG_WARN', 'AG_WHY'], seats: 4 },
       { name: '셋(CEO까지)', ids: ['AG_WARN', 'AG_WHY', 'AG_SPLIT'], seats: 5 },
-      { name: '함정', ids: ['AG_NUMBERS'], seats: 1 },
-      { name: '함정 + 근거', ids: ['AG_NUMBERS', 'AG_WARN', 'AG_WHY', 'AG_SPLIT'], seats: 1 },
     ],
     for: [
       { name: '조건 없음', ids: [], seats: 2 },
@@ -85,46 +81,32 @@ describe.each(TABLES)('T137 결과표 — $scenario.id', ({ scenario, against, f
     expect(counts).toEqual({ FOR: 1, AGAINST: 1, UNDECIDED: 2 });
   });
 
-  it('추가 질문에 답하기 전에는 반대 근거로 돌린 임원도 처음 표(찬성)에 머문다', () => {
+  it('추가 질문에 답하기 전에는 반대 쪽 조건으로 돌린 임원도 처음 표(찬성)에 머문다', () => {
     const ctx = (ids: string[]) => ({
       conditionIds: ids,
       executionMode: 'DEFAULT',
       participantStance: 'AGAINST' as const,
       followUpAnswered: false,
     });
-    const objections = scenario.conditions.filter((c) => c.side === 'AGAINST' && c.id !== againstTrap(scenario));
-    const all = objections.map((c) => c.id);
+    const all = scenario.conditions.filter((c) => c.side === 'AGAINST').map((c) => c.id);
     const noCount = EXEC_MEMBER_ORDER.filter(
       (memberId) => decideMember(scenario.voteRules[memberId], ctx(all)) === 'NO',
     ).length;
     expect(noCount).toBe(1);
   });
 
+  it('반대 쪽에는 함정이 없다(T138): 어떤 반대 쪽 조건도 반대표 좌석을 줄이지 않는다', () => {
+    const against = scenario.conditions.filter((c) => c.side === 'AGAINST').map((c) => c.id);
+    for (const id of against) expect(seats(scenario, 'AGAINST', [id])).toBeGreaterThanOrEqual(seats(scenario, 'AGAINST', []));
+    expect(seats(scenario, 'AGAINST', against)).toBe(5);
+  });
+
   it('반대 근거는 모두 side가 AGAINST이고 라벨·키워드가 있다', () => {
     const objections = scenario.conditions.filter((c) => c.side === 'AGAINST');
-    expect(objections).toHaveLength(4);
+    expect(objections).toHaveLength(3);
     for (const condition of objections) {
       expect(condition.label.length).toBeGreaterThan(0);
       expect(condition.keywords.length).toBeGreaterThan(0);
     }
   });
 });
-
-/** 반대 쪽 함정(임원 넷이 모두 YES가 되는 반대 근거). */
-function againstTrap(scenario: Scenario): string {
-  const trap = scenario.conditions.find(
-    (c) =>
-      c.side === 'AGAINST' &&
-      EXEC_MEMBER_ORDER.every(
-        (memberId) =>
-          decideMember(scenario.voteRules[memberId], {
-            conditionIds: [c.id],
-            executionMode: 'DEFAULT',
-            participantStance: 'AGAINST',
-            followUpAnswered: true,
-          }) === 'YES',
-      ),
-  );
-  if (!trap) throw new Error('반대 쪽 함정이 없습니다.');
-  return trap.id;
-}

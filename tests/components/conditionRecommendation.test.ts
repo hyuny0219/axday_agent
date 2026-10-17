@@ -161,8 +161,7 @@ describe('buildConditionRecommendation(반대 입장, Codex 28차 P2-2, T137 반
     expect(byId.get('AG_AUDIT')?.movedMemberIds).toEqual(['CAIO']);
     expect(byId.get('AG_TRUST')?.movedMemberIds).toEqual(['CISO']);
     expect(byId.get('AG_SCALE')?.movedMemberIds).toEqual(['CEO']);
-    // 함정(AG_BAN)과 찬성 조건(LOG·FULL_AUTO 등)은 추천하지 않는다.
-    expect(byId.has('AG_BAN')).toBe(false);
+    // 찬성 조건(LOG·FULL_AUTO 등)은 추천하지 않는다.
     expect(byId.has('LOG')).toBe(false);
     expect(byId.has('FULL_AUTO')).toBe(false);
     expect(result.bundles).toEqual([]);

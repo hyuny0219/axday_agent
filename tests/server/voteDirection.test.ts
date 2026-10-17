@@ -37,11 +37,10 @@ describe('ruleVoteDirection(v21)', () => {
     expect(dir('CFO', [], ef)).toBe('NO_BASELINE');
   });
 
-  it('반대 쪽 함정은 네 임원 모두 YES(조건이 있으니 약한 조건 문구)', () => {
-    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) expect(dir(roleId, ['AG_BAN', 'AG_AUDIT'])).toBe('YES_WEAK_CONDITION');
-    for (const roleId of ['CEO', 'CFO', 'CAIO', 'CISO']) {
-      expect(dir(roleId, ['AG_NUMBERS'], { scenarioId: 'experience-first' })).toBe('YES_WEAK_CONDITION');
-    }
+  it('반대 쪽 조건을 모두 내면 네 임원 모두 조건 때문에(또는 처음 우려로) 반대 — 함정은 없다(T138)', () => {
+    const all = ['AG_AUDIT', 'AG_TRUST', 'AG_SCALE'];
+    for (const roleId of ['CEO', 'CAIO', 'CISO']) expect(dir(roleId, all)).toBe('NO_BY_CONDITION');
+    expect(dir('CFO', all)).toBe('NO_BASELINE');
   });
 
   it('추가 질문에 답하지 않았으면 조건으로 돌아선 임원도 처음 표(YES)로 돌아간다', () => {

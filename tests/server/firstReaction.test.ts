@@ -55,12 +55,12 @@ describe('classifyFirstReaction', () => {
     ).toBe('KEEP');
   });
 
-  it('(d2) 반대 참가자의 지나친 근거(모두 막기)는 CFO까지 안건을 받아들이게 해 REVERSED이고, 지시는 FOR 쪽이다(T137)', () => {
+  it('(d2) 반대 참가자의 찬성 쪽 조건(LIMIT+REVIEW)을 이어받은 반대 참가자는 CFO가 목표 반대편으로 가 REVERSED이고, 지시는 FOR 쪽이다(T137)', () => {
     const kind = classifyFirstReaction({
       scenarioId: 'ai-approval',
       roleId: 'CFO',
       participantStance: 'AGAINST',
-      confirmedConditionIds: ['AG_BAN'],
+      confirmedConditionIds: ['LIMIT', 'REVIEW'],
       priorStance: 'AGAINST',
     });
     expect(kind).toBe('REVERSED');

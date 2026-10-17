@@ -142,8 +142,9 @@ export const aiApprovalScenario: Scenario = {
     },
     // 반대 쪽 추천 문구(T87 → T137 개편). 반대 쪽 카드는 찬성의 반대말이 아니라 근거 자료의 사실을 짚는
     // "반대 근거"다 — 고르면 그 근거(AG_*)가 내 의견에 빨간 칩으로 붙고, 안건은 바뀌지 않는다.
-    // SCALE(CEO를 겨눔)은 첫 단계에서 빼고 추가 답변에서만 고른다(T119와 같은 1~2개 규칙). N3은 지나친
-    // 함정(모두 막기)이고, N4는 근거 없이 안건 자체에 반대하는 말이라 조건과 연결하지 않는다.
+    // SCALE(CEO를 겨눔)은 첫 단계에서 빼고 추가 답변에서만 고른다(T119와 같은 1~2개 규칙). N4는 근거 없이
+    // 안건 자체에 반대하는 말이라 조건과 연결하지 않는다. T138: 반대 쪽에는 함정 카드가 없다 — 붙는 조건은
+    // 모두 임원을 반대로 설득하는 조건뿐이다(찬성 쪽 함정 FULL_AUTO는 그대로).
     {
       id: 'N1',
       text: '자동 승인한 건은 승인 이유가 남지 않았습니다. 이유를 확인할 수 없으면 잘못된 승인을 찾아도 무엇을 고칠지 알 수 없습니다.',
@@ -154,12 +155,6 @@ export const aiApprovalScenario: Scenario = {
       id: 'N2',
       text: 'AI 승인을 믿는 직원은 열에 넷뿐입니다. 믿지 않는 결재는 결국 사람이 다시 보게 되고, 일은 줄지 않은 채 책임만 흐려집니다.',
       conditionId: 'AG_TRUST',
-      side: 'AGAINST',
-    },
-    {
-      id: 'N3',
-      text: 'AI는 결재에 아예 쓰지 말고 모두 막읍시다.',
-      conditionId: 'AG_BAN',
       side: 'AGAINST',
     },
     {
@@ -234,12 +229,6 @@ export const aiApprovalScenario: Scenario = {
       side: 'AGAINST',
       keywords: ['매달 열 건 넘게 잘못 승인'],
     },
-    {
-      id: 'AG_BAN',
-      label: 'AI 결재 아예 막기',
-      side: 'AGAINST',
-      keywords: ['모두 막읍시다'],
-    },
   ],
   conflicts: [['REVIEW', 'FULL_AUTO']],
   // T93: 같은 쉬운 말 기준으로 다시 썼다.
@@ -294,8 +283,7 @@ export const aiApprovalScenario: Scenario = {
       pendingText: '사람 검토를 없애면 위험하다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
       pendingBubble: '알겠습니다. 하나만 더',
     },
-    // T137: 반대 근거에 대한 반응. 겨눈 임원은 근거를 인정하며 반대 쪽으로 기울고(pendingText), 지나친
-    // 근거(AG_BAN)에는 네 임원이 모두 "지나치다"며 안건대로 찬성한다.
+    // T137: 반대 근거에 대한 반응. 겨눈 임원은 근거를 인정하며 반대 쪽으로 기울고(pendingText).
     {
       conditionId: 'AG_AUDIT',
       memberId: 'CAIO',
@@ -319,30 +307,6 @@ export const aiApprovalScenario: Scenario = {
       bubble: '잘못 승인도 늘어납니다',
       pendingText: '넓히면 잘못 승인도 늘어난다는 말씀은 알겠습니다. 하나만 더 묻겠습니다.',
       pendingBubble: '알겠습니다. 하나만 더',
-    },
-    {
-      conditionId: 'AG_BAN',
-      memberId: 'CEO',
-      text: '아예 쓰지 말자는 말씀은 지나칩니다. 막으면 느린 결재를 풀 길이 없습니다. 저는 안건대로 찬성합니다.',
-      bubble: '아예 막는 건 지나칩니다',
-    },
-    {
-      conditionId: 'AG_BAN',
-      memberId: 'CFO',
-      text: '아예 막자는 말씀은 지나칩니다. 한도를 두고 맡기는 길도 있습니다. 그래서 안건대로 찬성합니다.',
-      bubble: '한도를 두면 됩니다',
-    },
-    {
-      conditionId: 'AG_BAN',
-      memberId: 'CAIO',
-      text: '모두 막기보다 승인 이유를 남기는 장치로 풀 수 있습니다. 그래서 안건대로 찬성합니다.',
-      bubble: '막기보다 장치로 풉니다',
-    },
-    {
-      conditionId: 'AG_BAN',
-      memberId: 'CISO',
-      text: '아예 막는 것은 책임 문제의 답이 아닙니다. 말씀이 지나칩니다. 안건대로 찬성합니다.',
-      bubble: '아예 막는 건 답이 아닙니다',
     },
     {
       conditionId: 'none',
@@ -395,7 +359,6 @@ export const aiApprovalScenario: Scenario = {
     '이유를 남기는',
     '열에 넷',
     '책임질 사람',
-    '지나칩니다',
     '잘못된 승인',
   ],
   holdReasons: {
@@ -482,12 +445,6 @@ export const aiApprovalScenario: Scenario = {
         side: 'AGAINST',
       },
       {
-        // T137: 반대 쪽 함정. 지나친 주장이라 임원 넷이 모두 안건대로 찬성한다.
-        text: 'AI는 결재에 아예 쓰지 말고 모두 막읍시다.',
-        proposeConditionId: 'AG_BAN',
-        side: 'AGAINST',
-      },
-      {
         text: '책임을 어떻게 나눌지는 더 논의가 필요하다고 생각합니다.',
         proposeConditionId: null,
         side: 'BOTH',
@@ -510,7 +467,7 @@ export const aiApprovalScenario: Scenario = {
   // T137(반대 입장 대칭 설계): 처음 입장은 1 찬성(CEO)·1 반대(CFO)·2 고민 중(CAIO·CISO)이다. 고민 중인
   // 임원은 참가자가 설득하지 못하면 참가자 반대편에 표를 던진다(찬성 참가자 → 반대표, 반대 참가자 →
   // 찬성표 "반대 근거가 약하면 원안대로"). 그래서 어느 입장이든 처음엔 같은 표 2석이다. 반대 쪽에서는
-  // 근거(AG_*)가 겨눈 임원이 그 근거를 받아들여 NO로 돌아선다. AG_BAN은 지나친 주장이라 넷 모두 YES.
+  // 근거(AG_*)가 겨눈 임원이 그 근거를 받아들여 NO로 돌아선다(T138: 반대 쪽 함정은 없앴다).
   // 반대 근거는 안건을 수정하지 않는다 — 표만 바꾼다.
   voteRules: {
     CEO: [
@@ -518,11 +475,6 @@ export const aiApprovalScenario: Scenario = {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 사고가 나도 되돌릴 수 없어 반대합니다',
-      },
-      {
-        when: { has: 'AG_BAN' },
-        vote: 'YES',
-        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_SCALE' },
@@ -536,11 +488,6 @@ export const aiApprovalScenario: Scenario = {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 얼마나 잘못 승인됐는지 알 수 없어 반대합니다',
-      },
-      {
-        when: { has: 'AG_BAN' },
-        vote: 'YES',
-        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { all: [{ has: 'LIMIT' }, { has: 'REVIEW' }] },
@@ -558,11 +505,6 @@ export const aiApprovalScenario: Scenario = {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 기록 없는 승인만 늘어 반대합니다',
-      },
-      {
-        when: { has: 'AG_BAN' },
-        vote: 'YES',
-        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_AUDIT' },
@@ -590,11 +532,6 @@ export const aiApprovalScenario: Scenario = {
         when: { has: 'FULL_AUTO' },
         vote: 'NO',
         reason: '사람 검토를 아예 없애면 책임질 사람이 아무도 없어 반대합니다',
-      },
-      {
-        when: { has: 'AG_BAN' },
-        vote: 'YES',
-        reason: '아예 막자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_TRUST' },

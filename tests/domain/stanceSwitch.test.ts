@@ -13,10 +13,10 @@ const opinion = (ids: string[], stance: 'FOR' | 'AGAINST' | null): Opinion => ({
 
 describe('filterConditionIdsForStance', () => {
   it('찬성·미선택은 찬성 조건만, 반대는 반대 쪽 조건만 남긴다', () => {
-    const ids = ['LOG', 'AG_AUDIT', 'OWNER', 'AG_BAN'];
+    const ids = ['LOG', 'AG_AUDIT', 'OWNER', 'AG_SCALE'];
     expect(filterConditionIdsForStance(sc, ids, 'FOR')).toEqual(['LOG', 'OWNER']);
     expect(filterConditionIdsForStance(sc, ids, null)).toEqual(['LOG', 'OWNER']);
-    expect(filterConditionIdsForStance(sc, ids, 'AGAINST')).toEqual(['AG_AUDIT', 'AG_BAN']);
+    expect(filterConditionIdsForStance(sc, ids, 'AGAINST')).toEqual(['AG_AUDIT', 'AG_SCALE']);
   });
 });
 

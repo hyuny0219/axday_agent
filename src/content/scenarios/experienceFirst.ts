@@ -164,12 +164,6 @@ export const experienceFirstScenario: Scenario = {
       side: 'AGAINST',
     },
     {
-      id: 'N3',
-      text: '경험은 빼고 숫자만으로 결정합시다.',
-      conditionId: 'AG_NUMBERS',
-      side: 'AGAINST',
-    },
-    {
       id: 'N4',
       text: '중요한 결정은 숫자로 확인해야 한다고 생각해 경험을 우선하는 것 자체에 반대합니다.',
       conditionId: null,
@@ -239,12 +233,6 @@ export const experienceFirstScenario: Scenario = {
       source: '지난 2년 주요 결정',
       side: 'AGAINST',
       keywords: ['거의 반반인데 한쪽을 늘 앞세우는'],
-    },
-    {
-      id: 'AG_NUMBERS',
-      label: '숫자만으로 결정',
-      side: 'AGAINST',
-      keywords: ['숫자만으로 결정합시다'],
     },
   ],
   conflicts: [['DATA_VETO', 'EXP_ONLY']],
@@ -326,30 +314,6 @@ export const experienceFirstScenario: Scenario = {
       pendingBubble: '알겠습니다. 하나만 더',
     },
     {
-      conditionId: 'AG_NUMBERS',
-      memberId: 'CEO',
-      text: '숫자만으로 정하자는 말씀은 지나칩니다. 방향은 사람이 잡아야 합니다. 저는 안건대로 찬성합니다.',
-      bubble: '숫자만으론 안 됩니다',
-    },
-    {
-      conditionId: 'AG_NUMBERS',
-      memberId: 'CFO',
-      text: '숫자만으로 정하자는 건 지나칩니다. 경고 때 멈추는 절차면 충분합니다. 그래서 안건대로 찬성합니다.',
-      bubble: '멈추는 절차면 충분합니다',
-    },
-    {
-      conditionId: 'AG_NUMBERS',
-      memberId: 'CAIO',
-      text: '경험을 아예 빼면 처음 겪는 상황에 약해집니다. 그래서 안건대로 찬성합니다.',
-      bubble: '경험을 빼면 약해집니다',
-    },
-    {
-      conditionId: 'AG_NUMBERS',
-      memberId: 'CISO',
-      text: '경험을 빼도 이유를 남기는 문제는 풀리지 않습니다. 말씀이 지나칩니다. 안건대로 찬성합니다.',
-      bubble: '지나친 말씀입니다',
-    },
-    {
       conditionId: 'none',
       memberId: 'CEO',
       text: '말씀은 잘 들었습니다. 더 확인할 게 없으면 지금 안건대로 판단하겠습니다.',
@@ -396,8 +360,8 @@ export const experienceFirstScenario: Scenario = {
     '처음 겪는 상황',
     '멈출 방법이 없습니다',
     '기록이 없었습니다',
-    '지나칩니다',
     '고칠 곳을 모릅니다',
+    '판단 이유를',
     '데이터가 경고할 때 멈추는 절차',
   ],
   holdReasons: {
@@ -475,12 +439,6 @@ export const experienceFirstScenario: Scenario = {
         side: 'AGAINST',
       },
       {
-        // T137: 반대 쪽 함정. 지나친 주장이라 임원 넷이 모두 안건대로 찬성한다.
-        text: '경험은 빼고 숫자만으로 결정합시다.',
-        proposeConditionId: 'AG_NUMBERS',
-        side: 'AGAINST',
-      },
-      {
         text: '데이터와 경험을 어떻게 같이 쓸지는 더 논의가 필요하다고 생각합니다.',
         proposeConditionId: null,
         side: 'BOTH',
@@ -496,18 +454,13 @@ export const experienceFirstScenario: Scenario = {
   // T93: reason 전부를 같은 쉬운 말 기준으로 다시 썼다(판단 분기·조건 참조는 그대로).
   // T137(반대 입장 대칭 설계): aiApproval.ts voteRules 주석과 같은 구조 — 처음 입장 1 찬성(CEO)·1 반대(CFO)·
   // 2 고민 중(CAIO·CISO), 설득 안 된 고민 중 임원은 참가자 반대편에 표, 반대 근거(AG_*)는 겨눈 임원을 NO로,
-  // AG_NUMBERS는 지나친 주장이라 넷 모두 YES. 반대 근거는 안건을 수정하지 않는다.
+  // 반대 쪽 함정은 T138에서 없앴다(붙는 조건은 모두 임원을 설득하는 조건뿐). 반대 근거는 안건을 수정하지 않는다.
   voteRules: {
     CEO: [
       {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
         reason: '경험만 항상 앞세우면 데이터를 아예 버리는 셈이라 반대합니다',
-      },
-      {
-        when: { has: 'AG_NUMBERS' },
-        vote: 'YES',
-        reason: '숫자만으로 정하자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_SPLIT' },
@@ -521,11 +474,6 @@ export const experienceFirstScenario: Scenario = {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
         reason: '경험만 항상 앞세우면 숫자가 경고해도 무시하게 돼 반대합니다',
-      },
-      {
-        when: { has: 'AG_NUMBERS' },
-        vote: 'YES',
-        reason: '숫자만으로 정하자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'DATA_VETO' },
@@ -543,11 +491,6 @@ export const experienceFirstScenario: Scenario = {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
         reason: '경험만 항상 앞세우면 데이터가 쓰일 자리가 없어 반대합니다',
-      },
-      {
-        when: { has: 'AG_NUMBERS' },
-        vote: 'YES',
-        reason: '숫자만으로 정하자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_WARN' },
@@ -575,11 +518,6 @@ export const experienceFirstScenario: Scenario = {
         when: { has: 'EXP_ONLY' },
         vote: 'NO',
         reason: '경험만 항상 앞세우면 설명 없는 결정만 늘어 반대합니다',
-      },
-      {
-        when: { has: 'AG_NUMBERS' },
-        vote: 'YES',
-        reason: '숫자만으로 정하자는 말씀은 지나쳐서 안건대로 찬성합니다',
       },
       {
         when: { has: 'AG_WHY' },

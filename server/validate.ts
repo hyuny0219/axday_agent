@@ -33,11 +33,9 @@ export const CONDITION_IDS = [
   'AG_AUDIT',
   'AG_TRUST',
   'AG_SCALE',
-  'AG_BAN',
   'AG_WARN',
   'AG_WHY',
   'AG_SPLIT',
-  'AG_NUMBERS',
 ] as const;
 
 export const STATEMENT_STAGES = ['OPINIONS', 'REACTIONS', 'FOLLOWUP'] as const;

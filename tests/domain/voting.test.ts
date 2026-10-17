@@ -587,9 +587,13 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
     expect(votesOf(decideBoard(ai, motionFor(['LOG']), 'AGAINST', false))).toEqual(['YES', 'NO', 'YES', 'YES']);
   });
 
-  it('반대 쪽 함정(AG_BAN)은 네 임원 모두 찬성이고 답 여부와 상관없다', () => {
-    expect(votesOf(decideBoard(ai, motionFor(['AG_BAN']), 'AGAINST', true))).toEqual(['YES', 'YES', 'YES', 'YES']);
-    expect(votesOf(decideBoard(ai, motionFor(['AG_BAN']), 'AGAINST', false))).toEqual(['YES', 'YES', 'YES', 'YES']);
+  it('반대 쪽에는 함정 조건이 없다(T138): 반대 쪽 조건은 어떤 조합도 반대표를 줄이지 않는다', () => {
+    const against = ai.conditions.filter((c) => c.side === 'AGAINST').map((c) => c.id);
+    const noCount = (ids: string[]) =>
+      votesOf(decideBoard(ai, motionFor(ids), 'AGAINST', true)).filter((v) => v === 'NO').length;
+    const base = noCount([]);
+    for (const id of against) expect(noCount([id])).toBeGreaterThanOrEqual(base);
+    expect(noCount(against)).toBe(4);
   });
 
   it('decideMember: 컨텍스트에 followUpAnswered:false를 넣으면 같은 게이트를 적용한다', () => {
@@ -608,7 +612,7 @@ describe('추가 질문 답변 게이트(T110, 안건①)', () => {
     const rows = explainBoard(ai, motionFor(ALL_FOR_CONDITIONS), { participantStance: 'FOR', followUpAnswered: false });
     expect(rows.map((r) => r.vote)).toEqual(['YES', 'NO', 'NO', 'NO']);
     expect(rows[1]?.reason).toContain('추가 질문');
-    expect(rows[0]?.reason).toBe(ai.voteRules.CEO[3]?.reason);
+    expect(rows[0]?.reason).toBe(ai.voteRules.CEO[2]?.reason);
     const answered = explainBoard(ai, motionFor(ALL_FOR_CONDITIONS), { participantStance: 'FOR', followUpAnswered: true });
     expect(answered.map((r) => r.vote)).toEqual(['YES', 'YES', 'YES', 'YES']);
   });

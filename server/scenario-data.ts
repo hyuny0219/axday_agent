@@ -97,7 +97,6 @@ const AI_APPROVAL_MATERIALS: ScenarioMaterials = {
     { id: 'AG_AUDIT', label: '승인 이유를 확인할 수 없음', side: 'AGAINST' },
     { id: 'AG_TRUST', label: '믿지 못해 책임이 흐려짐', side: 'AGAINST' },
     { id: 'AG_SCALE', label: '넓히면 잘못 승인도 늘어남', side: 'AGAINST' },
-    { id: 'AG_BAN', label: 'AI 결재 아예 막기', side: 'AGAINST' },
   ],
   // T79(2026-10-02 사용자 결정): CEO 찬성 쪽·CFO 반대 쪽·CAIO 미정·CISO 반대 쪽으로 네 명이
   // 갈리게 한다. 문구는 docs/TASKS.md T79 카드에 적힌 그대로 옮긴다.
@@ -174,7 +173,6 @@ const EXPERIENCE_FIRST_MATERIALS: ScenarioMaterials = {
     { id: 'AG_WARN', label: '경고를 넘길 핑계가 생김', side: 'AGAINST' },
     { id: 'AG_WHY', label: '판단 이유를 설명할 수 없음', side: 'AGAINST' },
     { id: 'AG_SPLIT', label: '반반인데 한쪽만 앞세움', side: 'AGAINST' },
-    { id: 'AG_NUMBERS', label: '숫자만으로 결정', side: 'AGAINST' },
   ],
   // T79(2026-10-02 사용자 결정): 안건①과 같은 배치(CEO 찬성·CFO 반대·CAIO 미정·CISO 반대).
   roleLenses: {
