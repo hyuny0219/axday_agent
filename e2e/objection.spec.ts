@@ -112,7 +112,8 @@ test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 1 · 반대 4');
   await expect(page.getByTestId('result-summary-objections')).toContainText('이사님이 요구한 조건');
   await expect(page.getByTestId('result-summary-objections')).toContainText('승인 이유를 확인할 수 없음');
-  await expect(page.getByTestId('result-summary-conditions')).toContainText('조건 없이 처음 안 그대로 표결');
+  await expect(page.getByTestId('result-summary-conditions')).toHaveText('안건 문구는 처음 안 그대로 표결');
+  await expect(page.getByTestId('result-summary-conditions')).not.toContainText('조건 없이');
   await expect(page.getByTestId('result-stamp')).not.toContainText('조건부');
   await expectNoPageScroll(page, 'RESULT(반대 근거)');
 });

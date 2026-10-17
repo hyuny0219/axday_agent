@@ -438,7 +438,10 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   <p className="result-your-card__value" data-testid="result-summary-conditions">
                     {resultSummary.conditionLabels.length > 0
                       ? resultSummary.conditionLabels.join(', ')
-                      : '조건 없이 처음 안 그대로 표결'}
+                      : resultSummary.objectionLabels.length > 0
+                        ? // 반대 쪽 조건은 안건 문구를 바꾸지 않는다 — "조건 없이"라고 쓰면 바로 아래 조건 목록과 어긋난다(2026-10-17 사용자 지시).
+                          '안건 문구는 처음 안 그대로 표결'
+                        : '조건 없이 처음 안 그대로 표결'}
                   </p>
                   {/* T137: 반대 근거는 안건을 수정하지 않고 */}
                   {resultSummary.objectionLabels.length > 0 && (
