@@ -49,8 +49,8 @@
 | T103 | 완료 | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
 | T102 | 완료 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS·DISCUSS에서 숨기고 MOTION·VOTE에서만, 제목 "지금까지 발언")(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
 | T100 | 완료 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
-| T101 | 완료(Codex 35차 수정 반영 중) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
-| T98 | 진행 중 | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
+| T101 | 완료 | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
+| T98 | 완료(T103에서 대체) | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
 | T99 | 완료 | BRIEFING 가독성 — 상황·제안·미정 글자 키우고 핵심 단어 강조, 근거 자료 4장을 쉬운 문장 톤으로 통일·축약(2026-10-08 사용자 지시 "근거자료 글씨가 너무 많아서 쉬운 문장톤으로"). 상세는 아래 T99 카드 |
 | T97 | 완료 | DISCUSS에서 AI 비서실장 필수 사용(2026-10-08 사용자 지시 "추천문구 선택 → AI 비서실장 기능 활용 → 의견 전달"). 추천 문구를 고른 뒤 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 한 번씩 써야 "의견 전달"이 열린다. 팝업 첫 화면에 기능 소개+체크리스트. 다시 답하기(REACTIONS)는 선택 사항 유지. 상세는 아래 T97 카드 |
 | T96 | 완료 | 설득 가시화·AI 비서실장 조건 추천(2026-10-08 사용자 지시 "내 의견과 조건으로 임원을 설득하는 것임을 참가자가 느끼게"). `domain/voting.ts`에 `requiredConditionsFor`(scripted voteRules에서 YES로 가는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) 신설. 공용 `PersuasionBoard`(임원 4명의 "첫 의견 → 지금" 입장 + 움직일 조건 + "설득한 임원 N/4")를 DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열에 표시. REACTIONS 반응 카드 "바뀜" 배지를 "반대 → 찬성"(전후 입장)으로 바꾸고 원인 조건 한 줄(`changeCauseLabel`)을 더함, "유지" 카드의 빈 대사는 시나리오 `holdReasons` 한 문장으로 대체. RESULT 상단에 "이사님의 조건 N개가 임원 M명의 표를 바꿨습니다"(`components/persuasionSummary.ts`), 부결한 임원 행에 조건 1~2개 "한 끗 차이" 안내. AI 비서실장 "조건 비교하기"를 "조건 추천"으로 강화(`components/conditionRecommendation.ts`, 규칙 기반·즉시) — 추천 행 "적용"으로 해당 추천 문구를 체크, 사용 기록에 "조건 추천 N회"·"추천 조건 N개 반영" 집계(`domain/assistantLog.ts`). 1라운드 PASS. `npm run check`(단위 631)·e2e 로컬 전체(mock 8790·preview 4174) 통과. 상세는 아래 T96 카드와 `docs/design/DESIGN_SPEC.md` T96 단락 |
@@ -679,6 +679,8 @@
 ---
 
 ## T98 DISCUSS·REACTIONS 진행 단계 안내판과 전달 버튼 가시성
+
+> 완료(T103에서 대체): 이 카드의 진행 단계 안내판(StepGuide)은 T103·T104 진행 도우미(코치)로 통합·제거됐다. 아래는 당시 기록이다.
 
 - 목표(2026-10-08 사용자 지시): "반응에 답하기에 의견 전달하는 버튼이 없어"(실제로는 비활성 점선 버튼이라 없어 보임). "화면 안에서 추천 문구 선택 → AI 비서실장 → 비서실장 기능 1,2,3 수행 → 의견 전달이 자연스럽게 이루어질 수 있도록 좀 더 명확한 가이드. 문장 한 줄보다는 포커싱해서 눈에 확 들어오게, 어떤 순서로 하면 좋은지 권고안."
 - 읽을 것: `src/components/screens/DiscussScreen.tsx`(head·guide·GuideHint·`discuss-assistant-tip`·`cta-disabled-hint`·`data-guide`), `src/components/screens/ReactionsScreen.tsx`(`reactions-screen__submit-row`·`submit-followup`·`reactions-cta-hint`·`keep-previous-answer`), `src/components/parts/{GuideHint,AssistantPanel}.tsx`(T97 `assistant-intro` 체크), `src/domain/assistantLog.ts`(`assistantFeaturesUsed`), `src/styles/screens/{shell.css(.cta:disabled·.cta-disabled-hint·[data-guide]),discuss.css,reactions.css}`, `docs/design/DESIGN_SPEC.md` T95·T97 단락, `e2e/{assistant-gate,discuss,reactions,noscroll,screenshots}.spec.ts`, `docs/screenshots/desktop-{1080,720}/{discuss,reactions-answer}.png`.

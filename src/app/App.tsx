@@ -96,7 +96,7 @@ interface SessionContextValue {
   modeCheckPending: boolean;
   /** 실패한 역할만 같은 stage로 다시 부른다("응답 없는 임원 다시 요청", T65). */
   retryRound: (stage: StatementStage, roleIds: ExecMemberId[]) => Promise<void>;
-  /** 미표결(실패) 역할만 최종표를 다시 요청한다("미표결 임원 다시 요청", T65). */
+  /** 실패한 역할만 최종표를 다시 요청한다(T65). T136부터 runner가 자동으로 1회 호출하며 화면 버튼은 없다. */
   retryFinalVotes: (roleIds: ExecMemberId[]) => Promise<void>;
   /** REACTIONS 단계를 "반응 듣기"·"다시 답하기" 두 화면으로 나눈 서브스텝(T89, 사용자
    * 지시 "임원들의 의견을 듣고 다시 답하는 화면을 만들어서"). 도메인 session.stage는
