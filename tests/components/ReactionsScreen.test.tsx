@@ -1165,7 +1165,7 @@ describe('ReactionsScreen 입장 전환과 조건(T137)', () => {
 
 // T142: "넘어가기"는 바로 넘기지 않고 확인 팝업을 먼저 띄운다.
 describe('ReactionsScreen 넘어가기 확인 팝업(T142)', () => {
-  function renderSkip(step: 'listen' | 'answer', extra: { onKeepPrevious?: () => void; onAdvanceStep?: () => void } = {}) {
+  function renderSkip(step: 'listen' | 'answer', extra: { onKeepPrevious?: () => void; onAdvanceStep?: () => void; readOnly?: boolean } = {}) {
     return render(
       <ReactionsScreen
         {...baseProps()}
@@ -1188,6 +1188,7 @@ describe('ReactionsScreen 넘어가기 확인 팝업(T142)', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('넘어가기 전에 확인해 보세요');
     expect(screen.getByTestId('skip-check-list').querySelectorAll('li')).toHaveLength(3);
     expect(screen.getByTestId('skip-check-question-text').textContent).toBeTruthy();
+    expect(screen.getByTestId('skip-check-question')).toHaveAttribute('data-state', 'neutral');
     expect(screen.getByTestId('skip-check-options')).toHaveAttribute('data-state', 'todo');
     expect(screen.getByTestId('skip-check-assistant')).toHaveAttribute('data-state', 'todo');
   });
@@ -1219,6 +1220,14 @@ describe('ReactionsScreen 넘어가기 확인 팝업(T142)', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('skip-check')).not.toBeInTheDocument();
     expect(kept).toBe(0);
+  });
+
+  it('지난 화면(readOnly)에서는 넘어가기 버튼이 없다 — 답을 바꿀 수 없다', () => {
+    renderSkip('listen', { readOnly: true });
+    expect(screen.queryByTestId('keep-previous-answer')).not.toBeInTheDocument();
+    cleanup();
+    renderSkip('answer', { readOnly: true });
+    expect(screen.queryByTestId('keep-previous-answer')).not.toBeInTheDocument();
   });
 
   it('팝업 어디에도 넘어간 뒤의 결과를 말하지 않는다', () => {

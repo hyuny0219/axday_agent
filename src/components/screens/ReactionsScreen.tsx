@@ -828,15 +828,17 @@ export function ReactionsScreen({
               임원 반응이 다 나오면 열립니다
             </span>
           )}
-          <button
-            type="button"
-            className="cta cta--secondary"
-            onClick={handleSkipClick}
-            data-testid="keep-previous-answer"
-            aria-label="답하지 않고 넘어가기"
-          >
-            넘어가기
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="cta cta--secondary"
+              onClick={handleSkipClick}
+              data-testid="keep-previous-answer"
+              aria-label="답하지 않고 넘어가기"
+            >
+              넘어가기
+            </button>
+          )}
         </div>
         <div className="app-body__content screen reactions-screen__info" data-testid="reactions-info">
           <div className="reactions-screen__paper">
@@ -1028,16 +1030,18 @@ export function ReactionsScreen({
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
-          <button
-            type="button"
-            className="cta cta--secondary reactions-screen__keep-previous"
-            disabled={pendingOptionIndex !== null}
-            onClick={handleSkipClick}
-            data-testid="keep-previous-answer"
-            aria-label="답하지 않고 넘어가기"
-          >
-            넘어가기
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="cta cta--secondary reactions-screen__keep-previous"
+              disabled={pendingOptionIndex !== null}
+              onClick={handleSkipClick}
+              data-testid="keep-previous-answer"
+              aria-label="답하지 않고 넘어가기"
+            >
+              넘어가기
+            </button>
+          )}
           <button
             type="button"
             className={canSubmit ? 'cta' : 'cta cta--outline'}

@@ -35,6 +35,7 @@ export function SkipCheckDialog({
       onClose={onClose}
       closeTestId="skip-check-close"
       footerHint={copy.footerHint}
+      fit
     >
       <ol className="skip-check__list" data-testid="skip-check-list">
         {skipChecklist({ answerVisited, assistantUsed }).map(({ id, state }) => (
@@ -60,10 +61,16 @@ export function SkipCheckDialog({
           className="cta"
           onClick={onAnswer}
           disabled={answerDisabled}
+          aria-describedby={answerDisabled ? 'skip-check-answer-why' : undefined}
           data-testid="skip-check-answer"
         >
           {copy.answerLabel}
         </button>
+        {answerDisabled && (
+          <span id="skip-check-answer-why" className="sr-only">
+            {copy.advanceWhy}
+          </span>
+        )}
         <button type="button" className="cta cta--secondary" onClick={onSkip} data-testid="skip-check-skip">
           {copy.skipLabel}
         </button>

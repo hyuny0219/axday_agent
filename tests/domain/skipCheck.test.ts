@@ -13,8 +13,15 @@ describe('skipChecklist(T142)', () => {
   });
 
   it('2/2에 들어간 적이 있어야 추천 답변이 완료다', () => {
-    expect(states({ answerVisited: false, assistantUsed: false })).toEqual({ question: 'done', options: 'todo', assistant: 'todo' });
+    expect(states({ answerVisited: false, assistantUsed: false })).toEqual({ question: 'neutral', options: 'todo', assistant: 'todo' });
     expect(states({ answerVisited: true, assistantUsed: false }).options).toBe('done');
+  });
+
+  it('① 질문은 어떤 입력에서도 ✓/○ 없는 중립 표식이다', () => {
+    for (const answerVisited of [false, true]) {
+      expect(states({ answerVisited, assistantUsed: answerVisited }).question).toBe('neutral');
+    }
+    expect(SKIP_CHECK_COPY.stateMark.neutral).toBe('?');
   });
 
   it('비서실장을 썼으면 완료다', () => {

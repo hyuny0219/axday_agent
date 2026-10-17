@@ -8,9 +8,10 @@ export const SKIP_CHECK_COPY = {
     options: '추천 답변을 살펴봤나요?',
     assistant: 'AI 비서실장에게 물어봤나요? (선택)',
   },
-  stateMark: { done: '✓', todo: '○' },
-  stateText: { done: '완료', todo: '아직' },
+  stateMark: { neutral: '?', done: '✓', todo: '○' },
+  stateText: { neutral: '', done: '완료', todo: '아직' },
   answerLabel: '답하러 가기 ▶',
   skipLabel: '그래도 넘어가기',
+  advanceWhy: '임원 반응이 다 나오면 열립니다',
   footerHint: ['바깥을 누르거나 닫기를 누르면 닫힙니다', '지금 화면에서 계속합니다'],
 } as const;

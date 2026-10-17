@@ -398,10 +398,15 @@
 .skip-check__actions {
   display: flex;
   gap: 14px;
+  align-items: center;
   justify-content: flex-end;
   margin-top: 18px;
-  /* 버튼 그림자·이중 테두리가 본문 영역 가장자리에서 잘리지 않게 여백을 둔다. */
-  padding: 6px 10px 8px;
+}
+
+/* 두 버튼은 크기·글자 크기가 같고 색으로만 주(主)를 구분한다. */
+.skip-check__actions .cta {
+  min-height: 52px;
+  font-size: 20px;
 }
 
 @media (max-width: 1280px), (max-height: 900px) {
@@ -416,5 +421,10 @@
 
   .skip-check__actions {
     margin-top: 10px;
+  }
+
+  .skip-check__actions .cta {
+    min-height: 44px;
+    font-size: 17px;
   }
 }
