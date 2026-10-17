@@ -472,4 +472,24 @@ describe('live 요청의 확정 조건(T137, Codex P1)', () => {
     expect(body.participantStance).toBe('FOR');
     expect(body.confirmedConditionIds).toEqual(['LOG']);
   });
+
+  it('FOLLOWUP 요청에도 확정 조건을 싣는다 — 후속 질문에서만 나오는 AG_TRUST까지, priorStances는 싣지 않는다(Codex P2)', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ results: [] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const clock = fakeClock(0);
+    const session: Session = {
+      ...toOpinionsStage(clock),
+      opinions: [
+        { id: 'o1', originalText: '반대', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT'], stance: 'AGAINST', createdAt: 0 },
+        { id: 'o2', originalText: '믿지 못합니다', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT', 'AG_TRUST'], stance: 'AGAINST', createdAt: 1 },
+      ],
+    };
+    const adapter = createLiveBoardAgentsAdapter();
+    await adapter.followUp({ ...makeCtx(session), scenario: aiApprovalScenario });
+    const calls = fetchMock.mock.calls as unknown as Array<[string, { body: string }]>;
+    const body = JSON.parse(calls[0]![1].body) as { stage?: string; confirmedConditionIds?: string[]; priorStances?: unknown };
+    expect(body.stage).toBe('FOLLOWUP');
+    expect(body.confirmedConditionIds).toEqual(['AG_AUDIT', 'AG_TRUST']);
+    expect(body.priorStances).toBeUndefined();
+  });
 });

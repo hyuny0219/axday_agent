@@ -183,6 +183,9 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     ...(stage === 'REACTIONS'
       ? { confirmedConditionIds: latestConfirmedConditionIds(ctx), priorStances: openingStances(ctx) }
       : {}),
+    // T137(Codex P2): 후속 보완 프롬프트의 "이사님이 요구한 조건" 블록도 확정 조건이 필요하다 — participantOpinion은 마지막
+    // 답변만 담아 앞서 확정한 반대 조건과 후속 질문에서만 나오는 조건(AG_TRUST 등)을 잃는다. priorStances는 첫 반응 전용이라 뺀다.
+    ...(stage === 'FOLLOWUP' ? { confirmedConditionIds: latestConfirmedConditionIds(ctx) } : {}),
     ...(stage === 'FOLLOWUP' ? { followUpAnswerText: followUpAnswerText(ctx) } : {}),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,

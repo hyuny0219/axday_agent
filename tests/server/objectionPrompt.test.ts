@@ -133,6 +133,25 @@ describe('라운드 프롬프트(v19) — 반대 근거', () => {
     expect(system).not.toContain('AG_WHY');
   });
 
+  it('FOLLOWUP 프롬프트에도 확정한 반대 근거 블록이 실린다(Codex P2)', async () => {
+    const { provider, systems } = capture();
+    await handleRound(
+      roundInput({
+        stage: 'FOLLOWUP',
+        scenarioId: 'ai-approval',
+        confirmedConditionIds: ['AG_AUDIT', 'AG_TRUST'],
+        followUpAnswerText: '믿지 못해서 결재가 빨라지지 않습니다.',
+        followUpAnswered: true,
+      }),
+      { provider },
+    );
+    const system = systems.CISO ?? '';
+    expect(system).toContain('참가자가 내건 조건');
+    expect(system).toContain('- 믿지 못해 결재가 빨라지지 않음');
+    expect(system).toContain('- 승인 이유를 확인할 수 없음');
+    expect(system).not.toContain('AG_TRUST');
+  });
+
   it('반대 근거를 확정하지 않았으면 블록이 없다', async () => {
     const { provider, systems } = capture();
     await handleRound(roundInput({ confirmedConditionIds: [] }), { provider });
