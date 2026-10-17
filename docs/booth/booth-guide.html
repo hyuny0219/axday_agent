@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>BECOME A BOARD 부스 안내판</title>
+<!-- 부스 앞에 세우는 인쇄용 진행 순서(A3 세로). 번호(1-1 … 5-2, 3-3 ①②③)는 앱의 진행 도우미·
+     AI 비서실장 번호(T140·T141)와 진행 요원 가이드가 같이 쓴다. 화면은 docs/screenshots를 그대로 참조하므로
+     스크린샷을 갱신한 뒤 scripts/booth-guide-pdf.mjs로 PDF를 다시 뽑는다. 핀 좌표는 1920×1080 기준 %. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@600&display=swap">
+<style>
+@page { size: A3 portrait; margin: 0; }
+:root {
+  --paper: #fbf8f2; --ink: #1d1b17; --muted: #625b4f; --line: #d6cdbb;
+  --accent: #b46f12; --pin: #f0a93a; --warn: #b5402f;
+  --display: "Black Han Sans", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --body: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+  --mono: "IBM Plex Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #ddd5c5; }
+body { font-family: var(--body); color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet { width: 297mm; height: 420mm; margin: 0 auto; background: var(--paper); padding: 14mm 14mm 12mm; display: grid; grid-template-rows: auto auto 1fr auto; gap: 7mm; overflow: hidden; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; margin: 0; }
+p { margin: 0; }
+.top { display: flex; justify-content: space-between; align-items: end; gap: 10mm; border-bottom: 1.2mm solid var(--ink); padding-bottom: 4mm; }
+.eyebrow { font: 600 3.2mm/1 var(--mono); letter-spacing: .12em; color: var(--accent); }
+.top h1 { font-size: 15mm; line-height: 1.05; margin-top: 2mm; }
+.top p { font-size: 4.1mm; line-height: 1.55; color: var(--muted); max-width: 120mm; }
+.top p b { color: var(--ink); }
+.flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5mm; padding: 0; margin: 0; }
+.flow li { list-style: none; background: var(--ink); color: var(--paper); font-weight: 700; font-size: 4.4mm; padding: 2.6mm 3mm; }
+.flow li b { font-family: var(--mono); color: var(--pin); margin-right: 1.5mm; }
+.flow li.big { background: var(--accent); }
+.body { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; align-content: space-between; gap: 6mm 7mm; min-height: 0; }
+.step { display: grid; gap: 2.5mm; align-content: start; min-width: 0; }
+.step.span { grid-column: 1 / -1; background: #f3ebdc; margin-inline: -4mm; padding: 4mm; border-top: .6mm solid var(--accent); border-bottom: .6mm solid var(--accent); }
+.step-h { display: flex; gap: 3mm; align-items: baseline; }
+.step-h .n { font: 400 10mm/1 var(--display); color: var(--accent); }
+.step-h h2 { font-size: 7mm; }
+.step-h .tag { font-size: 3.6mm; font-weight: 700; color: var(--warn); }
+.row { display: grid; grid-template-columns: 58% 1fr;  gap: 4mm; align-items: start; }
+.shot { position: relative; container-type: inline-size; border: .3mm solid var(--line); background: #0b0d12; }
+.shot img { display: block; width: 100%; height: auto; }
+.pin { position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%); min-width: 6.4mm; height: 6.4mm; padding: 0 1.4mm; border-radius: 3.2mm; background: var(--pin); color: var(--ink); border: .5mm solid var(--ink); display: grid; place-items: center; font: 600 3.1mm/1 var(--mono); box-shadow: 0 0 0 .9mm rgba(240,169,58,.4); white-space: nowrap; }
+.sub { margin: 0; padding: 0; display: grid; gap: 2mm; }
+.sub li { list-style: none; display: grid; grid-template-columns: 12mm 1fr; gap: 2mm; font-size: 3.9mm; line-height: 1.5; }
+.sub .k { justify-self: start; align-self: start; font: 600 3mm/1 var(--mono); background: var(--pin); border: .4mm solid var(--ink); border-radius: 3mm; padding: 1mm 1.6mm; margin-top: .5mm; white-space: nowrap; }
+.sub .k.ghost { background: transparent; }
+.row .sub li { grid-template-columns: 15mm 1fr; }
+.pair .col:last-child .sub li { grid-template-columns: 17mm 1fr; }
+.warn { color: var(--warn); font-weight: 700; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+.pair .col { display: grid; gap: 3mm; align-content: start; }
+.staff { border-top: .4mm dashed #b9ae98; padding-top: 3.5mm; display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 1.6mm 4mm; font-size: 3.7mm; line-height: 1.45; }
+.staff dt { font: 600 3mm/1.6 var(--mono); color: var(--accent); white-space: nowrap; }
+.staff dd { margin: 0; }
+@media screen { .sheet { margin-block: 8mm; box-shadow: 0 2mm 8mm rgba(0,0,0,.18); } }
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header class="top">
+    <div>
+      <span class="eyebrow">BECOME A BOARD · 부스 안내</span>
+      <h1>이렇게 진행합니다</h1>
+    </div>
+    <p>오늘 이사님은 <b>특별 이사</b>입니다. AI 임원 네 명과 토론하고 마지막에 한 표를 던집니다. 이사님을 포함해 <b>같은 표가 3석 이상</b>이면 성공 도장을 받습니다.</p>
+  </header>
+
+  <ol class="flow">
+    <li><b>01</b>상황 파악</li>
+    <li><b>02</b>임원 의견 듣기</li>
+    <li class="big"><b>03</b>내 의견 쓰기</li>
+    <li><b>04</b>반응에 답하기</li>
+    <li><b>05</b>표결</li>
+  </ol>
+
+  <div class="body">
+    <section class="step">
+      <div class="step-h"><span class="n">01</span><h2>상황 파악</h2></div>
+      <div class="row">
+        <div class="shot">
+          <img src="../screenshots/desktop-1080/briefing.png" alt="">
+          <span class="pin" style="--x:50.7%;--y:39.5%">1-1</span>
+          <span class="pin" style="--x:9.5%;--y:53%">1-2</span>
+        </div>
+        <ul class="sub">
+          <li><span class="k">1-1</span><span>상황·제안·미정 세 줄을 읽고 <b>근거 자료 보기</b>로 자료 4장을 봅니다.</span></li>
+          <li><span class="k">1-2</span><span><b>의견 듣기 ▶</b>. 자료를 열어 봐야 켜집니다.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-h"><span class="n">02</span><h2>임원 의견 듣기</h2></div>
+      <div class="row">
+        <div class="shot">
+          <img src="../screenshots/desktop-1080/opinions.png" alt="">
+          <span class="pin" style="--x:70.6%;--y:50%">2-1</span>
+          <span class="pin" style="--x:7.8%;--y:52.6%">2-2</span>
+        </div>
+        <ul class="sub">
+          <li><span class="k">2-1</span><span>네 임원이 각각 무엇을 걱정하는지 봅니다. 노란 밑줄이 실마리입니다.</span></li>
+          <li><span class="k">2-2</span><span><b>내 의견 쓰러 가기 ▶</b></span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step span">
+      <div class="step-h"><span class="n">03</span><h2>내 의견 쓰기</h2><span class="tag">여기서 가장 많이 막힙니다</span></div>
+      <div class="pair">
+        <div class="col">
+          <div class="shot">
+            <img src="../screenshots/desktop-1080/coach-discuss.png" alt="">
+            <span class="pin" style="--x:27.5%;--y:12.5%">안내</span>
+            <span class="pin" style="--x:53.6%;--y:21.3%">3-1</span>
+            <span class="pin" style="--x:70.6%;--y:50%">3-2</span>
+            <span class="pin" style="--x:3%;--y:80.6%">3-3</span>
+            <span class="pin" style="--x:28.5%;--y:80.6%">3-4</span>
+          </div>
+          <ul class="sub">
+            <li><span class="k ghost">안내</span><span>왼쪽 위 체크리스트가 지금 할 일을 <b>▶</b>로 알려 줍니다. 끝낸 일에는 ✓가 붙습니다.</span></li>
+            <li><span class="k">3-1</span><span><b>찬성 쪽 / 반대 쪽에서 말하기</b> 중 하나를 고릅니다. 표결은 마지막에 따로 합니다.</span></li>
+            <li><span class="k">3-2</span><span>추천 문구를 <b>여러 개</b> 담습니다. 왼쪽 "내 발언"에 이어 붙고, 직접 고쳐도 됩니다.</span></li>
+            <li><span class="k">3-3</span><span><b>AI 비서실장에게 맡기기</b>를 열어 오른쪽 ①②③ 중 한 가지 이상 써 봅니다.</span></li>
+            <li><span class="k">3-4</span><span><b>의견 전달 ▶</b> <span class="warn">3-3을 하지 않으면 눌리지 않습니다.</span> 버튼 아래에 이유가 나옵니다.</span></li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="shot">
+            <img src="../screenshots/desktop-1080/discuss-assistant-intro.png" alt="">
+            <span class="pin" style="--x:22.9%;--y:48.5%">①</span>
+            <span class="pin" style="--x:32.3%;--y:48.5%">②</span>
+            <span class="pin" style="--x:40.9%;--y:48.5%">③</span>
+          </div>
+          <ul class="sub">
+            <li><span class="k">3-3 ①</span><span><b>의견 한눈에 보기</b>: 임원 네 명의 말을 한 줄씩 정리해 줍니다.</span></li>
+            <li><span class="k">3-3 ②</span><span><b>조건 추천</b>: 아직 설득 안 된 임원과 그 임원을 움직일 조건이 보입니다. <b>적용</b>을 누르면 그 문구가 담깁니다.</span></li>
+            <li><span class="k">3-3 ③</span><span><b>내 발언 정리</b>: 담은 문구를 다듬어 줍니다. <b>내 발언에 적용</b> 또는 <b>원문 유지</b>를 고릅니다.</span></li>
+            <li><span class="k ghost">닫기</span><span>오른쪽 위 <b>닫기</b>로 돌아와 3-4로 갑니다.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-h"><span class="n">04</span><h2>반응에 답하기</h2></div>
+      <div class="row">
+        <div class="shot">
+          <img src="../screenshots/desktop-1080/reactions.png" alt="">
+          <span class="pin" style="--x:66%;--y:17%">4-1</span>
+          <span class="pin" style="--x:46%;--y:91.7%">4-2</span>
+          <span class="pin" style="--x:13.5%;--y:64.4%">4-3</span>
+        </div>
+        <ul class="sub">
+          <li><span class="k">4-1</span><span><b>?</b>가 붙은 임원은 아직 마음을 정하지 않았습니다.</span></li>
+          <li><span class="k">4-2</span><span>아래 <b>추가 질문</b>을 읽습니다.</span></li>
+          <li><span class="k">4-3</span><span><b>답하러 가기 ▶</b> → 추천 답변 고르기 → <b>답변 전달 ▶</b></span></li>
+          <li><span class="k ghost">넘어가기</span><span>누르면 확인 창이 먼저 뜹니다.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step-h"><span class="n">05</span><h2>표결</h2></div>
+      <div class="row">
+        <div class="shot">
+          <img src="../screenshots/desktop-1080/vote.png" alt="">
+          <span class="pin" style="--x:57.3%;--y:44%">5-1</span>
+          <span class="pin" style="--x:43%;--y:92.2%">5-2</span>
+        </div>
+        <ul class="sub">
+          <li><span class="k">5-1</span><span>찬성 또는 반대 도장을 고릅니다.</span></li>
+          <li><span class="k">5-2</span><span><b>표결 확정 ▶</b>. 임원 표가 공개되고 결과가 나옵니다.</span></li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <dl class="staff">
+    <dt>막히면</dt><dd>무대 사진 위 둥근 <b>안내</b> 버튼을 누르거나 손을 들어 주세요.</dd>
+    <dt>3-4가 안 눌림</dt><dd>AI 비서실장에서 ①②③ 중 아무거나 하나 눌러 보세요.</dd>
+    <dt>4-3에서 망설임</dt><dd>추천 답변을 한번 훑어보세요. 마음에 드는 답이 있으면 골라 전달하면 됩니다.</dd>
+    <dt>결과 뒤</dt><dd><b>마무리 ▶</b>를 누르면 엔딩 화면이 나오고 처음으로 돌아갑니다.</dd>
+  </dl>
+</main>
+</body>
+</html>
