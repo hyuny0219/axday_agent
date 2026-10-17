@@ -111,4 +111,9 @@
 // v21(2026-10-16, T137 Codex P2): v20 방향 지시가 조건 없는 순수 반대에서도 "참가자가 낸 조건이 우려를 키운다/약하다"고
 // 말해 임원이 없는 조건을 지어냈다. 조건이 표를 바꿨는지(조건 있을 때와 없을 때의 규칙표 표 비교)로 네 가지 문구
 // (조건 때문에 반대·처음 우려 그대로 반대·약한 조건이라 찬성·조건이 없어 찬성)로 나눴다. 그 밖은 v20 그대로다.
-export const PROMPT_VERSION = 'v21';
+// v22(2026-10-17, T138): 반대 경로 live 재현에서 OPINIONS의 CISO가 "반대"(처음 입장은 고민 중)로, 첫 반응에서
+// CEO가 자기를 겨눈 조건 없이 "찬성→반대"로 나왔다. OPINIONS에 처음 입장을 stance 필드로 단정하는 지시(roles/index.ts
+// buildOpeningStanceBlock)를, 첫 반응 MAY_CROSS·KEEP 지시를 단정형으로 바꿨다(MAY_CROSS는 UNDECIDED, KEEP은 처음 입장
+// 그대로, prompts/firstReaction.ts). 모델이 어겨도 문장이 방향을 밝히지 않았다면 서버가 stance만 규칙표 분류대로 교정한다
+// (round.ts clampStance, 로그 note stance_clamped). 반대 쪽 함정 조건 8개 중 2개(AG_BAN·AG_NUMBERS)를 없앴다.
+export const PROMPT_VERSION = 'v22';

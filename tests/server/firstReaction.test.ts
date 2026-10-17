@@ -122,7 +122,9 @@ describe('classifyFirstReaction', () => {
 describe('buildFirstReactionRule', () => {
   it('유형마다 다른 지시를 만들고 null과 MAY_CROSS는 기존 공통 규칙이다', () => {
     expect(buildFirstReactionRule(null)).toBe(REACTIONS_FIRST_PASS_RULE);
-    expect(buildFirstReactionRule('MAY_CROSS')).toBe(REACTIONS_FIRST_PASS_RULE);
+    // T138: MAY_CROSS는 공통 규칙 위에 "UNDECIDED로 적으십시오" 단정 지시를 더한다.
+    expect(buildFirstReactionRule('MAY_CROSS')).toContain(REACTIONS_FIRST_PASS_RULE);
+    expect(buildFirstReactionRule('MAY_CROSS')).toContain('반드시 UNDECIDED로 적고');
     expect(buildFirstReactionRule('SAME_SIDE')).toContain('UNDECIDED(고민 중)로 바꾸지 마십시오');
     expect(buildFirstReactionRule('KEEP')).toContain('처음 입장 그대로 유지');
     expect(buildFirstReactionRule('REVERSED')).toContain('받아들이기 어렵다는 쪽');
@@ -197,7 +199,7 @@ describe('REACTIONS 시스템 프롬프트의 임원별 첫 반응 지시', () =
       input({ confirmedConditionIds: [], priorStances: { CEO: 'FOR', CFO: 'AGAINST', CAIO: 'AGAINST', CISO: 'AGAINST' } }),
       { provider },
     );
-    expect(systems.CFO).toContain('아직 풀리지 않았습니다');
+    expect(systems.CFO).toContain('처음 입장 AGAINST(반대 쪽) 그대로입니다');
     expect(systems.CFO).not.toContain('UNDECIDED(고민 중)까지만');
   });
 
@@ -222,7 +224,7 @@ describe('REACTIONS 시스템 프롬프트의 임원별 첫 반응 지시', () =
       { provider },
     );
     expect(systems.CEO).toContain('바꾸지 마십시오');
-    expect(systems.CFO).toContain('아직 풀리지 않았습니다');
+    expect(systems.CFO).toContain('처음 입장 AGAINST(반대 쪽) 그대로입니다');
     expect(systems.CAIO).toContain(REACTIONS_FIRST_PASS_RULE);
     expect(systems.CISO).toContain(REACTIONS_FIRST_PASS_RULE);
   });

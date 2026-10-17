@@ -1322,3 +1322,14 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 표결 방향 지시(프롬프트 v20): 반대 참가자일 때 VOTE 프롬프트가 규칙표(`decideMember`)로 계산한 임원별 표 방향(찬성/반대)을 단정 지시로 싣는다(`server/prompts/voteDirection.ts`). 반대 쪽 조건은 안건을 바꾸지 않으므로 "원안에 조건이 없다"는 반대 이유가 아니라고 함께 알린다. 대표 3케이스 live 12표가 모두 규칙표와 같다(docs/eval/tuning-v19.md).
 - 입장 전환(Codex P1): 반대로 시작해 추가 답변에서 찬성으로(또는 반대 방향) 바꾸면 첫 의견의 반대 쪽 조건은 새 입장의 조건이 아니라서 버린다 — `filterConditionIdsForStance`(domain/conditions.ts). ReactionsScreen의 이어받는 칩·제출 조건, `collectConfirmedConditionIds(opinions, scenario)`(안건·결과·도장·공개 payload), 규칙표(stance.ts), live 요청(`confirmedConditionIds`)이 모두 같은 집합을 본다.
 - 표결 방향 지시 문구(프롬프트 v21, Codex P2): 조건이 표를 바꿨는지(조건 있을 때·없을 때 규칙표 표 비교)로 네 문구를 가른다 — 조건 때문에 반대 / 처음 우려 그대로 반대 / 약하거나 지나친 조건이라 찬성 / 조건을 내지 않아 찬성. 조건이 없는 순수 반대에서 임원이 없는 조건을 지어내지 않게 한다.
+
+## T138 반대 입장 첫 의견 균형 + 반대 쪽 함정 조건 제거 (프롬프트 v22, 2026-10-17)
+
+- 사용자 지시: 반대로 조건을 잘 맞추면 첫 의견 한 번에 임원이 설득되는 경우가 있다 — 찬성처럼 밸런스를 맞추고, 반대 추천 의견에 붙는 조건은 임원을 설득하는 조건만 되게.
+- 근거(8787 live 재현): OPINIONS에서 CISO가 "반대"(설계는 고민 중), 첫 반응에서 CEO가 자기를 겨눈 조건 없이 "찬성 → 반대", 현황판이 첫 의견만으로 "설득한 임원 1/2". scripted는 첫 반응이 기울음까지만이라 문제가 없었다.
+- **함정 제거**: 반대 쪽 함정 조건(안건 ① AG_BAN "모두 막읍시다", 안건 ② AG_NUMBERS "숫자만으로 결정")과 추천 문구 N3·추가 답변 카드·반응·규칙표 줄을 없앴다. 반대 쪽에 붙는 조건은 모두 임원을 반대로 설득하는 조건뿐이다(찬성 쪽 함정 FULL_AUTO·EXP_ONLY는 그대로). 반대 추천 문구는 N1·N2(조건)·N4(조건 없는 순수 반대)+요청형 P6, 첫 단계에서 빠지는 조건은 CEO를 겨눈 1개(추가 답변에서만). 규칙표 줄 수는 CEO 3·CFO 3·CAIO 5·CISO 6(17행). 평가 세트의 반대(함정)는 반대(CEO를 겨눈 조건, `opposition_ceo`)로 바꿨다.
+- **목표 결과표**(규칙표, 테스트 고정 `tests/content/objectionResultTable.test.ts`): 반대 — 조건 없음 2석 실패, 1개 3석, 2개 4석, 3개 5석(CEO 조건은 추가 답변에서만). 첫 반응(답하기 전)에는 겨눈 임원이 "반대 쪽?" 기울음까지만이고, 추가 질문을 넘어가면 처음 입장으로 돌아간다(T110 그대로).
+- **live 처음 의견**: `<opening_stance>`가 처음 입장을 stance 필드 값으로 단정한다("이번 첫 의견의 stance는 UNDECIDED로 적으십시오", 위 stance 지침보다 우선, 고민 중이면 발언에서도 찬반을 밝히지 않음).
+- **live 첫 반응**: MAY_CROSS는 "stance는 UNDECIDED, 반드시 UNDECIDED로 적고 확정하지 마십시오", KEEP은 "처음 입장 {값} 그대로, 반드시 {값}으로 적고 바꾸지 마십시오", SAME_SIDE는 기존 유지, REVERSED는 규칙표 방향(`prompts/firstReaction.ts`).
+- **서버 교정(`round.ts` clampStance, 로그 note `stance_clamped`)**: 모델이 단정 지시를 어기고 stance를 다른 쪽으로 적으면 stance만 교정한다 — OPINIONS는 처음 입장(roleLenses.opening), 첫 반응은 규칙표 분류(KEEP·SAME_SIDE는 처음 입장, MAY_CROSS는 목표 방향 확정을 UNDECIDED로). 문장이 "찬성합니다·반대합니다" 같은 **절대 방향**을 밝혔으면 교정하지 않고 T115(문장 우선)를 따른다. "동의합니다·같은 편입니다"처럼 참가자에게 상대적인 말은 방향 선언으로 보지 않는다(live에서 CISO가 "동의합니다"로 반대를 확정한 사례). REVERSED·판정 불가는 교정하지 않는다.
+- **설득 현황판**: 첫 반응의 UNDECIDED(기울음)는 "설득한 임원" 수에 세지 않는다(`computePersuasionTally`는 현재 입장이 목표와 같을 때만 센다) — 교정 덕에 live도 같은 기준이다.

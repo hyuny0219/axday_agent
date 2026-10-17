@@ -1,5 +1,5 @@
 // T137(반대 입장 대칭 설계): 반대 참가자가 근거 자료를 짚는 "반대 근거"(빨강)로 임원을 반대로 설득한다.
-// 반대 근거는 안건을 수정하지 않고 "반대 사유"로 나란히 적힌다. 지나친 반대 근거(함정)는 네 임원이 모두 찬성한다.
+// 반대 근거는 안건을 수정하지 않고 "반대 사유"로 나란히 적힌다. T138: 반대 쪽에는 함정 카드가 없고, 첫 의견만으로는 임원이 확정되지 않는다(추가 답변 뒤 확정).
 // 1080·720 두 프로젝트 모두에서 페이지 스크롤이 없어야 한다.
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -129,17 +129,25 @@ test('반대 근거를 하나도 고르지 않으면 고민 중 임원이 원안
   await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3 · 반대 2');
 });
 
-test('반대 쪽 함정(모두 막기)은 네 임원이 모두 찬성해 실패한다(안건 ①)', async ({ page }) => {
+test('반대 첫 의견에서 조건을 모두 맞춰도 임원은 기울기만 하고, 넘어가면 처음 입장으로 돌아간다(T138)', async ({ page }) => {
   await reachDiscussAgainst(page, 'ai-approval');
-  await page.getByTestId('phrase-card-N3').click();
+  // 반대 쪽에는 함정 카드가 없다: 조건 카드 둘(N1·N2) + 순수 반대(N4) + 요청(P6)만 있다.
+  await expect(page.locator('[data-testid^="phrase-card-"]')).toHaveCount(4);
+  await expect(page.getByTestId('phrase-card-N3')).toHaveCount(0);
   await page.getByTestId('phrase-card-N1').click();
+  await page.getByTestId('phrase-card-N2').click();
   await submitFirstOpinion(page);
+  // 겨눈 CAIO·CISO는 "반대 쪽?" 기울음까지만이고 확정이 아니다. 겨누지 않은 CEO는 찬성 그대로다.
+  await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('반대 쪽?');
+  await expect(page.getByTestId('exec-mood-label-CISO')).toHaveText('반대 쪽?');
+  await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();
-  await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 4 · 반대 1');
+  // 답하지 않고 넘어가면 처음 입장으로 돌아가 찬성 3 · 반대 2다(조건을 잘 맞춰도 첫 의견만으로는 성공하지 않는다).
+  await expect(page.getByTestId('result-summary-tally')).toContainText('찬성 3 · 반대 2');
 });
 
 test('안건 ②도 같은 구조: 반대 근거 + 추가 답변으로 성공하고 안건은 원안 그대로다', async ({ page }) => {
@@ -147,7 +155,7 @@ test('안건 ②도 같은 구조: 반대 근거 + 추가 답변으로 성공하
   await page.getByTestId('phrase-card-N1').click();
   await submitFirstOpinion(page);
   await page.getByTestId('reactions-advance').click();
-  // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_WHY, 7 AG_SPLIT, 8 AG_NUMBERS, 9 BOTH
+  // options: 0~4 FOR, 5 AG_WARN(첫 의견과 같아 숨김), 6 AG_WHY, 7 AG_SPLIT, 8 BOTH
   await page.getByTestId('followup-option-7').click();
   await page.getByTestId('submit-followup').click();
   await expect(page.getByTestId('motion-objections')).toContainText('경고를 넘길 핑계가 생김');

@@ -700,10 +700,10 @@ async function runHudCheck(page: Page, viewport: [number, number]) {
 // 후속 질문 조건, 반대는 첫 문구에서 빠진 조건이다.
 const T119_CASES = [
   { scenarioId: 'ai-approval', side: 'for', phraseId: 'P6', cards: 6, hinted: 'OWNER' },
-  // T137: 반대 쪽 추가 답변은 반대 근거 4개 + BOTH 1개이고, 힌트는 첫 문구에서 빠진 반대 근거(CEO를 겨눔)다.
-  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 5, hinted: 'AG_SCALE' },
+  // T137: 반대 쪽 추가 답변은 반대 쪽 조건 3개 + BOTH 1개이고(T138: 함정 카드 없음), 힌트는 첫 문구에서 빠진 반대 근거(CEO를 겨눔)다.
+  { scenarioId: 'ai-approval', side: 'against', phraseId: 'N4', cards: 4, hinted: 'AG_SCALE' },
   { scenarioId: 'experience-first', side: 'for', phraseId: 'P6', cards: 6, hinted: 'DATA_VETO' },
-  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 5, hinted: 'AG_SPLIT' },
+  { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 4, hinted: 'AG_SPLIT' },
 ] as const;
 
 for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {

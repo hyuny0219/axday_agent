@@ -8,6 +8,28 @@ import type { ExecMemberId, Scenario } from '../../src/content/types';
 import { decideMember } from '../../src/domain/voting';
 import { REACTIONS_FIRST_PASS_RULE } from './common';
 
+/**
+ * T138: 모델이 단정 지시를 어기고 stance를 다른 쪽으로 적었을 때의 서버 교정값. 문장이 방향을 밝히지 않았을
+ * 때만(declaredDirection이 null) 호출부가 쓴다 — 문장이 방향을 밝혔으면 참가자가 읽는 것은 문장이라 T115 규칙
+ * (문장 방향에 stance를 맞춤)을 따른다. SAME_SIDE·KEEP은 처음 입장 그대로, MAY_CROSS는 목표 방향 확정을
+ * UNDECIDED로 낮춘다. REVERSED·판정 불가는 교정하지 않는다(null).
+ */
+export function clampFirstReactionStance(
+  kind: FirstReactionKind | null,
+  priorStance: 'FOR' | 'AGAINST' | 'UNDECIDED' | undefined,
+  participantStance: 'FOR' | 'AGAINST' | undefined,
+  returned: 'FOR' | 'AGAINST' | 'UNDECIDED',
+): 'FOR' | 'AGAINST' | 'UNDECIDED' | null {
+  if (kind === 'SAME_SIDE' || kind === 'KEEP') {
+    return priorStance && returned !== priorStance ? priorStance : null;
+  }
+  if (kind === 'MAY_CROSS') {
+    const direction = participantStance === 'AGAINST' ? 'AGAINST' : 'FOR';
+    return returned === direction ? 'UNDECIDED' : null;
+  }
+  return null;
+}
+
 export type FirstReactionKind = 'SAME_SIDE' | 'MAY_CROSS' | 'KEEP' | 'REVERSED';
 
 const SCENARIOS: Record<string, Scenario> = {
@@ -59,9 +81,16 @@ const KEEP_PRIOR_TAIL =
 /** 임원별 첫 반응 지시. 판정 불가(null)면 기존 공통 규칙(v12~v15)을 그대로 쓴다.
  * REVERSED는 참가자 방향에 따라 뜻이 반대다(PR #21 Codex P2): 찬성 참가자의 조건(함정 조건 등)은
  * 임원의 우려를 키워 AGAINST로, 반대 참가자의 지나친 근거(T137: 모두 막기 등)는 오히려 안건을 받아들이게 해 FOR로 간다. */
+const STANCE_WORD: Record<'FOR' | 'AGAINST' | 'UNDECIDED', string> = {
+  FOR: 'FOR(찬성 쪽)',
+  AGAINST: 'AGAINST(반대 쪽)',
+  UNDECIDED: 'UNDECIDED(고민 중)',
+};
+
 export function buildFirstReactionRule(
   kind: FirstReactionKind | null,
   participantStance?: 'FOR' | 'AGAINST',
+  priorStance?: 'FOR' | 'AGAINST' | 'UNDECIDED',
 ): string {
   switch (kind) {
     case 'SAME_SIDE':
@@ -87,12 +116,20 @@ export function buildFirstReactionRule(
         KEEP_PRIOR_TAIL
       );
     case 'MAY_CROSS':
-      return REACTIONS_FIRST_PASS_RULE;
+      // T138(v22): "UNDECIDED까지만"을 단정형으로 — 첫 반응에서 참가자 쪽으로 확정하지 않는다(확정은 추가 답변 뒤).
+      return (
+        REACTIONS_FIRST_PASS_RULE +
+        ' 이번에 참가자가 낸 조건은 당신의 우려와 맞닿아 있습니다. 당신의 stance는 UNDECIDED(고민 중)입니다.' +
+        ' 반드시 UNDECIDED로 적고, FOR나 AGAINST로 확정하지 마십시오. 발언은 "하나만 더 묻겠습니다"에 해당하는 뜻으로 끝내십시오.'
+      );
     case 'KEEP':
       return (
-        '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자가 낸 조건이나 근거로는 당신의 우려가' +
-        ' 아직 풀리지 않았습니다. stance를 처음 입장 그대로 유지하십시오(반대였으면 AGAINST,' +
-        ' 고민 중이었으면 UNDECIDED). 발언에는 아직 남은 우려를 평서문으로 이유와 함께 말하십시오.' +
+        '이 반응은 참가자의 첫 의견에 대한 첫 반응입니다. 참가자가 낸 조건이나 근거는 당신을 겨누지 않았거나' +
+        ' 당신의 우려를 아직 풀어 주지 못했습니다. ' +
+        (priorStance
+          ? `당신의 stance는 처음 입장 ${STANCE_WORD[priorStance]} 그대로입니다. 반드시 ${priorStance}로 적고 다른 쪽으로 바꾸지 마십시오.`
+          : 'stance를 처음 입장 그대로 유지하십시오(찬성이었으면 FOR, 반대였으면 AGAINST, 고민 중이었으면 UNDECIDED).') +
+        ' 발언에는 아직 남은 우려를 평서문으로 이유와 함께 말하십시오.' +
         KEEP_PRIOR_TAIL
       );
     case null:
