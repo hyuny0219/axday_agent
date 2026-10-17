@@ -206,7 +206,7 @@ test('live에서 후속 제출 직후 표결 CTA가 잠기고 FOLLOWUP 라운드
   await expect(page.locator('[data-testid^="result-seat-reason-"]')).toHaveCount(4);
 });
 
-test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 보인다', async ({ page }) => {
+test('한 임원이 표결에 계속 응답하지 않아도 미표결 없이 기준표 표와 안내가 보인다(T136)', async ({ page }) => {
   await mockRoleFailure(page, 'CAIO');
 
   await page.goto('/?coach=off');
@@ -239,10 +239,12 @@ test('한 임원이 응답하지 않으면 결과에 UNCAST와 제한 안내가 
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
 
-  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByTestId('result-seat-CAIO')).toContainText('미표결');
-  await expect(page.getByTestId('result-seat-unavailable-CAIO')).toBeVisible();
-  await expect(page.getByTestId('result-limited-notice')).toBeVisible();
+  // T136: 자동 재요청도 실패하면 UNCAST 대신 규칙표로 정한 표를 기록한다(최대 약 2회 대기).
+  await expect(page.getByTestId('result-conclusion')).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByTestId('result-seat-CAIO')).not.toContainText('미표결');
+  await expect(page.getByTestId('result-seat-unavailable-CAIO')).toHaveCount(0);
+  await expect(page.getByTestId('result-seat-fallback-CAIO')).toBeVisible();
+  await expect(page.getByTestId('result-limited-notice')).toHaveCount(0);
 });
 
 test('서버 상태 확인이 실패하면 scripted로 기존 흐름을 그대로 쓴다', async ({ page }) => {

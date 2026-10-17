@@ -3,7 +3,7 @@
 // 조건 키워드는 시나리오 데이터(Condition.keywords)에 명시된 것만 쓰고,
 // 라벨·문구 텍스트에서 토큰을 파생하지 않는다.
 
-import type { ConflictPair, Scenario } from '../content/types';
+import type { Condition, ConflictPair, Scenario } from '../content/types';
 
 // 키워드 뒤쪽, 같은 절 안(문장 부호·쉼표 전, 최대 NEGATION_WINDOW자)에 부정 표지가 나오면
 // 그 언급은 제안하지 않는다(4장 명시 예 "없이·생략·말고"). 후속 직접 답변 "작성자를
@@ -400,4 +400,49 @@ export function confirmConditions(
     id,
     status: acceptedSet.has(id) && !blockedByConflict.has(id) ? 'confirmed' : 'proposed',
   }));
+}
+
+/** 조건이 반대 근거(T137)인지. side가 없으면 찬성 조건이다. */
+export function isObjectionCondition(scenario: Scenario, conditionId: string): boolean {
+  return scenario.conditions.find((condition) => condition.id === conditionId)?.side === 'AGAINST';
+}
+
+/**
+ * 확정 조건 ID 중 참가자의 지금 입장 쪽 카드만 남긴다(T137). 입장을 바꾸면(예: 반대로 시작해 추가 답변 화면에서
+ * 찬성으로 바꿈) 첫 의견에서 붙인 반대 쪽 조건(빨강)은 새 입장의 조건이 아니므로 버린다 — 규칙표·표시·안건·live
+ * 요청이 모두 같은 집합을 보게 하는 기준이다. 반대 쪽 조건이 없는 과거 시나리오는 그대로 둔다.
+ */
+export function filterConditionIdsForStance(
+  scenario: Scenario,
+  conditionIds: readonly string[],
+  participantStance: 'FOR' | 'AGAINST' | null | undefined,
+): string[] {
+  if (!scenario.conditions.some((condition) => condition.side === 'AGAINST')) {
+    return [...conditionIds];
+  }
+  const against = participantStance === 'AGAINST';
+  return conditionIds.filter((id) => isObjectionCondition(scenario, id) === against);
+}
+
+/** 확정 ID를 안건에 붙는 조건과 반대 근거(T137)로 나눈다. 순서는 그대로 유지한다. */
+export function splitConditionIds(
+  scenario: Scenario,
+  conditionIds: readonly string[],
+): { conditionIds: string[]; objectionIds: string[] } {
+  const objectionIds = conditionIds.filter((id) => isObjectionCondition(scenario, id));
+  return { conditionIds: conditionIds.filter((id) => !objectionIds.includes(id)), objectionIds };
+}
+
+/**
+ * 참가자 입장에서 고를 수 있는 조건 목록(T137). 반대 참가자는 "반대 근거"(side 'AGAINST')를, 그 외(찬성·
+ * 입장 미선택)는 안건에 붙는 조건(side 없음)을 쓴다 — 설득 현황판·조건 추천·"다음엔" 안내가 입장과 맞지
+ * 않는 카드를 제안하지 않게 하는 기준이다. 반대 근거가 하나도 없는 과거 시나리오는 입장과 상관없이
+ * 모든 조건을 돌려준다.
+ */
+export function conditionsForStance(scenario: Scenario, participantStance: 'FOR' | 'AGAINST' | null): Condition[] {
+  if (!scenario.conditions.some((condition) => condition.side === 'AGAINST')) {
+    return scenario.conditions;
+  }
+  const against = participantStance === 'AGAINST';
+  return scenario.conditions.filter((condition) => (condition.side === 'AGAINST') === against);
 }

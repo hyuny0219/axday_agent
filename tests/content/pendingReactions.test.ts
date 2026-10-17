@@ -33,7 +33,9 @@ describe.each([
   it('답을 기다리는 임원마다 pendingText·pendingBubble이 있는 반응이 있다(찬성·반대 입장, 모든 허용 조건 조합)', () => {
     let checked = 0;
     for (const stance of ['FOR', 'AGAINST'] as const) {
-      for (const ids of subsets(scenario.conditions.map((c) => c.id))) {
+      // T137: 찬성 참가자는 찬성 조건만, 반대 참가자는 반대 근거만 붙인다(추천 문구·추가 답변이 그렇게만 제안한다).
+      const usable = scenario.conditions.filter((c) => (c.side === 'AGAINST') === (stance === 'AGAINST'));
+      for (const ids of subsets(usable.map((c) => c.id))) {
         if (findConflicts(scenario, ids).length > 0) continue;
         const awaiting = membersAwaitingAnswer(scenario, {
           stage: 'REACTIONS',

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { computeMotionHash } from '../../src/domain/motion';
 import { createInitialSession } from '../../src/domain/session';
-import { decideBoard } from '../../src/domain/voting';
+import { decideBoard, rulesFallbackBallot } from '../../src/domain/voting';
 import { buildResultSummary } from '../../src/components/resultSummary';
 import type { Ballot, Motion, Session } from '../../src/domain/types';
 
@@ -184,5 +184,41 @@ describe('buildResultSummary — live', () => {
     expect(summary.execRows.find((r) => r.memberId === 'CISO')?.reason).toBe('판단 근거 없음');
     expect(summary.conditionLabels).toEqual(['게시 전 검수']);
     expect(summary.quote).toEqual(['출처와 기준일을 표시하고 검토 후 공유합시다.']);
+  });
+
+  it('규칙표로 정한 표(source rules)는 fallback 표시와 규칙표 reason을 담고, 표는 실제 표와 같이 집계된다(T136)', () => {
+    const motion = buildMotion([]);
+    const base = { motionId: motion.id, motionHash: motion.hash, confirmedAt: 1 } as const;
+    const ballots: Ballot[] = [
+      { ...base, memberId: 'CEO', source: 'live', vote: 'YES', reason: '찬성합니다.' },
+      { ...rulesFallbackBallot(scenario, motion, 'CFO', 'FOR', true, 1) },
+      { ...base, memberId: 'CAIO', source: 'live', vote: 'YES', reason: '찬성합니다.' },
+      { ...base, memberId: 'CISO', source: 'live', vote: 'YES', reason: '찬성합니다.' },
+      { ...base, memberId: 'PARTICIPANT', source: 'live', vote: 'YES' },
+    ];
+    const session: Session = {
+      ...createInitialSession(0, 's4'),
+      followUpAnswered: true,
+      stage: 'RESULT',
+      mode: 'live',
+      scenarioId: scenario.id,
+      finalMotion: motion,
+      ballots,
+      outcome: 'PASS',
+    };
+
+    const summary = buildResultSummary(scenario, session);
+
+    expect(summary.execRows.filter((r) => r.fallback).map((r) => r.memberId)).toEqual(['CFO']);
+    expect(summary.execRows.find((r) => r.memberId === 'CFO')?.reason).not.toBe('판단 근거 없음');
+    // T138: 이유가 없으면(기본) 늦은 응답, direction이면 방향 불일치로 규칙표 표로 바꾼 것이다.
+    expect(summary.execRows.find((r) => r.memberId === 'CFO')?.fallbackCause).toBe('late');
+    const directionSession: Session = {
+      ...session,
+      ballots: ballots.map((b) => (b.memberId === 'CFO' ? { ...b, rulesCause: 'direction' as const } : b)),
+    };
+    expect(buildResultSummary(scenario, directionSession).execRows.find((r) => r.memberId === 'CFO')?.fallbackCause).toBe('direction');
+    expect(summary.tally.counts.UNCAST).toBe(0);
+    expect(summary.tally.counts.YES + summary.tally.counts.NO).toBe(5);
   });
 });

@@ -349,6 +349,17 @@
   color: var(--paper-vote-yes);
 }
 
+/* T137: 반대 사유(반대 근거) — 반영 조건 칩과 같은 모양, 색만 빨강. */
+.vote-screen__motion-conditions--objection .vote-screen__motion-conditions-list li {
+  border-color: var(--paper-vote-no);
+  color: var(--paper-vote-no);
+  background-color: rgba(184, 58, 50, 0.08);
+}
+
+.vote-screen__motion-conditions--objection .vote-screen__motion-conditions-label {
+  color: var(--paper-vote-no);
+}
+
 @media (max-width: 1280px) {
   .vote-screen__motion-conditions-list li {
     padding: 3px 9px;

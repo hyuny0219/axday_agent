@@ -69,12 +69,12 @@ describe('live 첫 의견 입장(P2-4)', () => {
   });
 
   it('openingStanceOf: live는 발언 기준(없으면 미정), scripted는 시나리오 각본 값이다', () => {
-    const scripted = openingStanceOf(aiApprovalScenario, 'CFO');
+    const scripted = openingStanceOf(aiApprovalScenario, 'CISO');
     expect(scripted).toBe('AGAINST');
-    const statements = [statement('a', 'CFO', 'OPINIONS', 'FOR')];
-    expect(openingStanceOf(aiApprovalScenario, 'CFO', 'live', statements)).toBe('FOR');
-    expect(openingStanceOf(aiApprovalScenario, 'CFO', 'live', [])).toBe('UNDECIDED');
-    expect(openingStanceOf(aiApprovalScenario, 'CFO', 'scripted', statements)).toBe('AGAINST');
+    const statements = [statement('a', 'CISO', 'OPINIONS', 'FOR')];
+    expect(openingStanceOf(aiApprovalScenario, 'CISO', 'live', statements)).toBe('FOR');
+    expect(openingStanceOf(aiApprovalScenario, 'CISO', 'live', [])).toBe('UNDECIDED');
+    expect(openingStanceOf(aiApprovalScenario, 'CISO', 'scripted', statements)).toBe('AGAINST');
   });
 
   it('PersuasionBoard live: 모델이 처음부터 찬성이던 CFO는 "반대 → 찬성"으로 표시되지 않는다', () => {

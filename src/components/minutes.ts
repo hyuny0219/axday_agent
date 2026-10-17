@@ -299,7 +299,7 @@ export function buildMinutes(
       // 무대 의장 말풍선과 같은 문장(PR #20 Codex 3차 검토 P2).
       text: chairMotionLine(
         scenario,
-        collectConfirmedConditionIds(session.opinions),
+        collectConfirmedConditionIds(session.opinions, scenario),
         collectParticipantStance(session.opinions),
       ),
       kind: 'speech',

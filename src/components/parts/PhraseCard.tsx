@@ -29,14 +29,23 @@ export interface PhraseCardProps {
   disabled?: boolean;
   /** T113: 지금 눌러야 할 다음 할 일이면 점선 테두리(`data-next-step`)를 붙인다. */
   nextStep?: boolean;
+  objection?: boolean;
 }
 
-export function PhraseCard({ phrase, selected, onToggle, testId, disabled = false, nextStep = false }: PhraseCardProps) {
+export function PhraseCard({
+  phrase,
+  selected,
+  onToggle,
+  testId,
+  disabled = false,
+  nextStep = false,
+  objection = false,
+}: PhraseCardProps) {
   return (
     <label
       className={`phrase-card${selected ? ' phrase-card--selected' : ''}${
         disabled ? ' phrase-card--disabled' : ''
-      }`}
+      }${objection ? ' phrase-card--objection' : ''}`}
       data-testid={testId ?? `phrase-card-${phrase.id}`}
       {...nextStepAttr(nextStep)}
     >

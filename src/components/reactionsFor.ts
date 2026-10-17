@@ -68,8 +68,8 @@ export function changeCauseLabel(scenario: Scenario, reactions: Reaction[]): str
   const labels: string[] = [];
   for (const reaction of reactions) {
     if (reaction.conditionId === 'none') continue;
-    const label = scenario.conditions.find((condition) => condition.id === reaction.conditionId)?.label;
-    const text = label ?? reaction.conditionId;
+    const condition = scenario.conditions.find((candidate) => candidate.id === reaction.conditionId);
+    const text = condition?.label ?? reaction.conditionId;
     if (!labels.includes(text)) labels.push(text);
   }
   if (labels.length === 0) {

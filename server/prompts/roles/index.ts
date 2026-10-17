@@ -70,6 +70,12 @@ const OPENING_LABEL: Record<ScenarioRoleLens['opening'], string> = {
   UNDECIDED: '미정',
 };
 
+const OPENING_STANCE_FIELD: Record<ScenarioRoleLens['opening'], string> = {
+  FOR: 'FOR',
+  AGAINST: 'AGAINST',
+  UNDECIDED: 'UNDECIDED',
+};
+
 function evidenceTitles(materials: ScenarioMaterials, ids: string[]): string {
   const byId = new Map(materials.evidence.map((item) => [item.id, item.title] as const));
   return ids.map((id) => byId.get(id) ?? id).join(', ');
@@ -100,6 +106,12 @@ function buildOpeningStanceBlock(opening: ScenarioRoleLens['opening']): string {
     '<opening_stance>',
     `당신은 이 안건에 ${OPENING_LABEL[opening]} 쪽으로 기운 채 회의에 들어옵니다. 출발점이지` +
       ' 결론이 아니며 자료·참가자 조건·논의에 따라 바꿀 수 있습니다.',
+    // T138(v22): 처음 입장을 stance 필드로 단정한다. 위 "첫 의견부터 방향을 밝히라"·"UNDECIDED는 쓰지 말라"보다 우선한다.
+    `이번 첫 의견의 stance는 ${OPENING_STANCE_FIELD[opening]}로 적으십시오.` +
+      (opening === 'UNDECIDED'
+        ? ' 아직 어느 쪽도 정하지 않았으므로 발언에서도 찬성·반대를 밝히지 말고, 무엇이 확인되면 따를 수 있는지를 평서문으로 말하십시오.'
+        : ' 발언도 그 쪽 입장에서 하십시오.') +
+      ' 이 지침은 위의 stance 지침보다 우선합니다.',
     '</opening_stance>',
   ].join('\n');
 }

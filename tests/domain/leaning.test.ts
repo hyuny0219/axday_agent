@@ -30,7 +30,7 @@ describe('leaningStances', () => {
   });
 
   it('반대 참가자(대칭): 조건으로 돌아설 CEO가 반대 쪽으로 기운다', () => {
-    expect(leaningStances(ai, reactions([op(['FULL_AUTO'], 'AGAINST')])).CEO).toBe('AGAINST');
+    expect(leaningStances(ai, reactions([op(['AG_TRUST'], 'AGAINST')])).CEO).toBe('AGAINST');
   });
 
   it('조건이 미충족이면 기울음이 없다', () => {

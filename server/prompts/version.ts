@@ -94,4 +94,30 @@
 // v17(2026-10-16, T132 보강, PR #21 Codex P2): 첫 반응 REVERSED 지시를 참가자 방향으로 나눴다 — 찬성 참가자의
 // 조건(함정 조건 등)은 임원의 우려를 키워 AGAINST, 반대 참가자의 조건(예: 승인 사유 기록)은 우려를 풀어 FOR.
 // 그 외 지시는 v16 그대로다.
-export const PROMPT_VERSION = 'v17';
+// v18(2026-10-16, T136): 표결 형식 검사 실패(invalid_response, 10월 10~16일 live 73건 중 4건)를 줄이려고 VOTE
+// 단계 지시에 형식 규칙을 모아 분명히 했다 — reason은 한국어 160자 이내(공백 포함, 길면 줄여 쓰기)·자료 ID/조건 ID/영문
+// 약어 금지(역할 이름·AI만 예외, 걸리면 응답 전체가 거절됨), motionId·motionHash는 meeting_record 값을 한 글자도
+// 바꾸지 말고 그대로 복사. 판단 기준·응답 스키마·표결 규칙은 그대로다.
+// v19(2026-10-16, T137): 반대 입장 대칭 설계. 반대 근거(Condition.side 'AGAINST', 8개)를 조건과 따로 싣는다 —
+// meeting_record의 허용 조건 목록·ID 대응표에서 빼고, 반대 참가자가 확정한 근거는 "참가자가 든 반대 근거"(한국어
+// 라벨만, ID 노출 금지)로 안건을 수정하지 않는다는 설명과 함께 싣는다(common.ts participantObjections). CAIO·CISO가
+// 처음 입장 고민 중으로 바뀌어(roleLenses.opening) 표결 지시에 VOTE_UNDECIDED_START_RULE("설득되지 않았다면 참가자
+// 입장의 반대편에 표")를 더했고, 첫 반응 REVERSED(반대 참가자) 지시를 "지나치거나 우려를 풀어 주는 내용"으로 바꿨다.
+// 응답 스키마·검증은 그대로다(조건 ID enum만 반대 근거 ID가 늘었다).
+// v20(2026-10-16, T137 보강): v19 live 실측에서 반대 참가자 경로의 최종표가 규칙표와 무관하게 "원안에 조건이
+// 없다"며 전원 반대였다. 반대 참가자일 때 VOTE 지시에 임원별 표 방향(prompts/voteDirection.ts, 규칙표 decideMember로
+// 계산한 방향 지시만 싣고 규칙표 값·조건별 매핑은 싣지 않는다)과 "참가자가 내건 조건은 안건을 바꾸지 않는다"를 더했다.
+// 찬성 참가자·응답 스키마는 그대로다.
+// v21(2026-10-16, T137 Codex P2): v20 방향 지시가 조건 없는 순수 반대에서도 "참가자가 낸 조건이 우려를 키운다/약하다"고
+// 말해 임원이 없는 조건을 지어냈다. 조건이 표를 바꿨는지(조건 있을 때와 없을 때의 규칙표 표 비교)로 네 가지 문구
+// (조건 때문에 반대·처음 우려 그대로 반대·약한 조건이라 찬성·조건이 없어 찬성)로 나눴다. 그 밖은 v20 그대로다.
+// v22(2026-10-17, T138): 반대 경로 live 재현에서 OPINIONS의 CISO가 "반대"(처음 입장은 고민 중)로, 첫 반응에서
+// CEO가 자기를 겨눈 조건 없이 "찬성→반대"로 나왔다. OPINIONS에 처음 입장을 stance 필드로 단정하는 지시(roles/index.ts
+// buildOpeningStanceBlock)를, 첫 반응 MAY_CROSS·KEEP 지시를 단정형으로 바꿨다(MAY_CROSS는 UNDECIDED, KEEP은 처음 입장
+// 그대로, prompts/firstReaction.ts). 모델이 어겨도 문장이 방향을 밝히지 않았다면 서버가 stance만 규칙표 분류대로 교정한다
+// (round.ts clampStance, 로그 note stance_clamped). 반대 쪽 함정 조건 8개 중 2개(AG_BAN·AG_NUMBERS)를 없앴다.
+// v23(2026-10-17, T138 보강): v22 live 실측에서 반대 참가자 경로의 최종표가 규칙표와 다른 경우(CAIO)가 남았다. 반대 참가자일
+// 때 live 표가 규칙표 방향과 다르면 방향 재확인 문구(voteDirection.ts buildVoteDirectionReminder)를 붙여 한 번 더 요청하고,
+// 그래도 다르면 서버가 규칙표 표·이유(source 'rules', rulesCause 'direction', 로그 note vote_direction_clamped)로 바꾼다.
+// 첫 표결 요청의 프롬프트는 v22와 같고 재요청 때만 문구가 더해진다. 찬성 참가자·응답 스키마는 그대로다.
+export const PROMPT_VERSION = 'v23';

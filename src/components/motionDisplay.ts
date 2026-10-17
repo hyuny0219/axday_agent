@@ -7,6 +7,7 @@
 // 나열하지도 않는다.
 
 import type { Scenario, UndecidedItem } from '../content/types';
+import { splitConditionIds } from '../domain/conditions';
 import type { SessionOutcome } from '../domain/types';
 
 export interface MotionDisplay {
@@ -16,6 +17,10 @@ export interface MotionDisplay {
   /** 확정 조건에 대응하는 항목(resolvedBy)을 뺀 "아직 정하지 않은 것" 텍스트만.
    * 모두 해소됐으면 빈 배열. */
   undecidedLabels: string[];
+  /** 안건에 붙는 조건의 라벨(반대 근거는 뺀다, T137). */
+  conditionLabels: string[];
+  /** 반대 사유(T137): 반대 참가자가 든 반대 근거의 라벨. 안건을 수정하지 않고 나란히 적는다. */
+  objectionLabels: string[];
 }
 
 function filterUnresolved(
@@ -39,7 +44,10 @@ export function buildMotionDisplay(
   confirmedConditionIds: readonly string[],
   participantStance: 'FOR' | 'AGAINST' | null = null,
 ): MotionDisplay {
-  const hasConditions = confirmedConditionIds.length > 0;
+  // T137: 반대 근거는 안건을 수정하지 않는다 — 문장·미정 항목은 안건에 붙는 조건만으로 만든다.
+  const { conditionIds, objectionIds } = splitConditionIds(scenario, confirmedConditionIds);
+  const labelOf = (id: string) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
+  const hasConditions = conditionIds.length > 0;
   const sentence = hasConditions
     ? participantStance === 'AGAINST'
       ? `${scenario.motionBreakdown.proposal} 이사님은 처음 안에 반대하며, 아래 조건을 요구합니다.`
@@ -47,7 +55,9 @@ export function buildMotionDisplay(
     : scenario.motionBreakdown.proposal;
   return {
     sentence,
-    undecidedLabels: filterUnresolved(scenario.motionBreakdown.undecidedItems, confirmedConditionIds),
+    undecidedLabels: filterUnresolved(scenario.motionBreakdown.undecidedItems, conditionIds),
+    conditionLabels: conditionIds.map(labelOf),
+    objectionLabels: objectionIds.map(labelOf),
   };
 }
 

@@ -21,6 +21,7 @@ import { motionNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { Scenario } from '../../content/types';
 import type { Opinion } from '../../domain/types';
+import { conditionsForStance, splitConditionIds } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildMotionDisplay } from '../motionDisplay';
@@ -60,7 +61,7 @@ export function MotionScreen({
   onFreeze,
   statements,
 }: MotionScreenProps) {
-  const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions), [opinions]);
+  const confirmedConditionIds = useMemo(() => collectConfirmedConditionIds(opinions, scenario), [opinions, scenario]);
   const participantStance = useMemo(() => collectParticipantStance(opinions), [opinions]);
   // 라운드당 1회(T65) — 세션 호출 상한(server/sessionLimit.ts)이 최종 방어선이다. 세션
   // 전체에서 라운드 재요청은 1회뿐이라(OPINIONS·REACTIONS·FOLLOWUP 중 먼저 쓴 곳에서
@@ -84,15 +85,12 @@ export function MotionScreen({
     onRetryFailedRoles(failedRoleIds);
   }
 
-  function conditionLabel(id: string): string {
-    return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
-  }
-
   // "MOTION ON THE TABLE · 원안/수정안"(시안): 확정 조건이 하나도 없으면 원안, 하나라도
   // 있으면 수정안이다 — domain/motion.ts freezeMotion의 kind 판정(baseConditionIds는
   // 모든 시나리오에서 항상 [])과 같은 결과를 내는 표시용 계산일 뿐, 문안 생성 규칙 자체는
   // 건드리지 않는다(문구는 항상 scenario.originalMotion.text 그대로).
-  const motionKindLabel = confirmedConditionIds.length === 0 ? '처음 안' : '조건을 붙인 안';
+  // T137: 반대 근거는 안건을 수정하지 않으므로 안건에 붙는 조건이 있을 때만 "조건을 붙인 안"이다.
+  const motionKindLabel = splitConditionIds(scenario, confirmedConditionIds).conditionIds.length === 0 ? '처음 안' : '조건을 붙인 안';
 
   // 표결 안건 문장(T84, Opus UX 검토 #3+my#2): scenario.originalMotion.text를 그대로
   // 보여주면 조건을 붙여도 "…절차는 미정이다."로 끝나 모순돼 보인다. 표시만 동적으로
@@ -101,9 +99,11 @@ export function MotionScreen({
 
   // "NOT INCLUDED · 빠진 것"(시안): 이번에 확정되지 않은 조건들을 그대로 나열한다 — 새
   // 사실을 만들지 않고 scenario.conditions·확정 목록만으로 계산한다.
-  const notIncludedLabels = scenario.conditions
+  const notIncludedLabels = conditionsForStance(scenario, participantStance)
     .filter((condition) => !confirmedConditionIds.includes(condition.id))
     .map((condition) => condition.label);
+  const hasConditionLabels = motionDisplay.conditionLabels.length > 0;
+  const hasObjections = motionDisplay.objectionLabels.length > 0;
 
   return (
     <>
@@ -157,25 +157,46 @@ export function MotionScreen({
           </div>
           <div className="motion-screen__cols">
             <div className="motion-screen__cols-box">
-              <span className="motion-screen__box-label">
-                {participantStance === 'AGAINST' && confirmedConditionIds.length > 0
-                  ? `이사님이 요구한 조건 ${confirmedConditionIds.length}`
-                  : `반영된 조건 ${confirmedConditionIds.length}`}
-              </span>
-              {confirmedConditionIds.length > 0 ? (
-                <ul className="motion-screen__conditions" data-testid="motion-conditions">
-                  {confirmedConditionIds.map((id) => (
-                    <li key={id}>{conditionLabel(id)}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="motion-screen__no-conditions">
-                  확정한 조건이 없어 처음 안 그대로 표결합니다.
-                </p>
+              {(hasConditionLabels || !hasObjections) && (
+                <>
+                  <span className="motion-screen__box-label">
+                    {participantStance === 'AGAINST' && hasConditionLabels
+                      ? `이사님이 요구한 조건 ${motionDisplay.conditionLabels.length}`
+                      : `반영된 조건 ${motionDisplay.conditionLabels.length}`}
+                  </span>
+                  {hasConditionLabels ? (
+                    <ul className="motion-screen__conditions" data-testid="motion-conditions">
+                      {motionDisplay.conditionLabels.map((label) => (
+                        <li key={label}>{label}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="motion-screen__no-conditions">
+                      확정한 조건이 없어 처음 안 그대로 표결합니다.
+                    </p>
+                  )}
+                </>
+              )}
+              {hasObjections && (
+                <>
+                  <span className="motion-screen__box-label motion-screen__box-label--objection">
+                    이사님이 요구한 조건 {motionDisplay.objectionLabels.length}
+                  </span>
+                  <ul
+                    className="motion-screen__conditions motion-screen__conditions--objection"
+                    data-testid="motion-objections"
+                  >
+                    {motionDisplay.objectionLabels.map((label) => (
+                      <li key={label}>{label}</li>
+                    ))}
+                  </ul>
+                </>
               )}
             </div>
             <div className="motion-screen__cols-box">
-              <span className="motion-screen__box-label">이번에 넣지 않은 조건</span>
+              <span className="motion-screen__box-label">
+                이번에 넣지 않은 조건
+              </span>
               <p className="motion-screen__not-included-text">
                 {notIncludedLabels.length > 0 ? (
                   <>{notIncludedLabels.join(', ')}</>

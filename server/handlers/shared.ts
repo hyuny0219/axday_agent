@@ -3,7 +3,11 @@
 // 본문은 다루지 않는다 — 오류 종류 판단에만 쓴다.
 
 import { z } from 'zod';
-import { EXEC_ROLE_IDS } from '../validate';
+import { CONDITION_IDS, EVIDENCE_IDS, EXEC_ROLE_IDS, findStrayLatinRun } from '../validate';
+
+/** 로그에 그대로 남겨도 되는 내부 식별자(자료 ID·조건 ID)만 허용한다. 그 밖의 영문 단어는 참가자가 쓴
+ * 이름·프로젝트명일 수 있어 `other`로만 남긴다(PR #22 Codex P1). */
+const LOGGABLE_TOKENS: ReadonlySet<string> = new Set<string>([...EVIDENCE_IDS, ...CONDITION_IDS]);
 import { ModelRefusalError, ProviderCallError } from '../providers/types';
 
 export type FailReason = 'timeout' | 'refusal' | 'invalid_response' | 'provider_error';
@@ -126,3 +130,35 @@ export const followUpQuestionSchema = z.object({
   askedBy: z.enum(EXEC_ROLE_IDS),
   question: z.string().min(1).max(300),
 });
+
+/** 응답 형식 검사 실패의 원인을 짧은 코드 목록으로 줄인다(T136 `invalidIssues`). 항목은
+ * `경로:zod코드`(예: `reason:too_big`, `motionHash:invalid_literal`)이고, 영문 검사에 걸린
+ * 경우(`reason:custom`)만 걸린 토큰 하나를 붙인다(예: `reason:custom:E4`). 응답 본문·발언 원문은
+ * 담지 않는다 — 토큰은 내부 식별자(자료·조건 ID)일 때만 그대로, 그 밖에는 `other`로 남긴다. */
+export function summarizeInvalidIssues(
+  error: z.ZodError,
+  json: unknown,
+  textFields: readonly string[],
+): string[] {
+  const record = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {};
+  const codes = error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join('.') : '(root)';
+    let code = `${path}:${issue.code}`;
+    const field = issue.path[0];
+    if (issue.code === 'custom' && typeof field === 'string' && textFields.includes(field)) {
+      const text = record[field];
+      const token = typeof text === 'string' ? findStrayLatinRun(text) : undefined;
+      if (token) {
+        code += `:${LOGGABLE_TOKENS.has(token) ? token : 'other'}`;
+      }
+    }
+    return code;
+  });
+  return [...new Set(codes)].slice(0, 8);
+}
+
+/** 재시도한 두 시도의 invalidIssues를 합쳐 중복 없이 돌려준다(없으면 undefined). */
+export function mergeInvalidIssues(...lists: Array<string[] | undefined>): string[] | undefined {
+  const merged = [...new Set(lists.flatMap((list) => list ?? []))].slice(0, 8);
+  return merged.length > 0 ? merged : undefined;
+}

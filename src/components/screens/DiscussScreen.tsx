@@ -29,7 +29,9 @@ import {
 } from '../../domain/draft';
 import {
   confirmConditions,
+  filterConditionIdsForStance,
   findConflicts,
+  isObjectionCondition,
   proposeFromPhrases,
   proposeFromText,
 } from '../../domain/conditions';
@@ -48,7 +50,12 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
+import {
+  conditionSourceHint,
+  isConditionOffered,
+  isLaterStageOnly,
+  releasedHint,
+} from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
@@ -144,14 +151,16 @@ export function DiscussScreen({
   // 바뀌면 이전 초안을 폐기한다"를 판단하는 기준으로 쓴다.
   const [draftRevision, setDraftRevision] = useState(0);
 
-  const phraseConditionIds = useMemo(
-    () => proposeFromPhrases(scenario, draft.selectedPhraseIds),
-    [scenario, draft.selectedPhraseIds],
-  );
-  const textConditionIds = useMemo(
-    () => proposeFromText(scenario, draft.draftText),
-    [scenario, draft.draftText],
-  );
+  // T137(Codex P2): 새로 뽑은 조건도 지금 입장 쪽 카드만 남긴다 — 칩이 확정으로 보였다가 나중에 입장 필터로 조용히
+  // 버려지는 일이 없게 한다. 입장을 아직 고르지 않았으면(side null) 그대로 둔다(입장 선택이 전달을 막는다).
+  const phraseConditionIds = useMemo(() => {
+    const ids = proposeFromPhrases(scenario, draft.selectedPhraseIds);
+    return side === null ? ids : filterConditionIdsForStance(scenario, ids, side);
+  }, [scenario, draft.selectedPhraseIds, side]);
+  const textConditionIds = useMemo(() => {
+    const ids = proposeFromText(scenario, draft.draftText);
+    return side === null ? ids : filterConditionIdsForStance(scenario, ids, side);
+  }, [scenario, draft.draftText, side]);
   const proposedConditionIds = useMemo(
     () => uniqueInOrder([...phraseConditionIds, ...textConditionIds]),
     [phraseConditionIds, textConditionIds],
@@ -557,6 +566,7 @@ export function DiscussScreen({
                       key={phrase.id}
                       nextStep={gate.visible && nextStep === 'phrase' && phraseIndex === 0}
                       phrase={phrase}
+                      objection={phrase.conditionId !== null && isObjectionCondition(scenario, phrase.conditionId)}
                       selected={draft.selectedPhraseIds.includes(phrase.id)}
                       disabled={pendingPhraseId !== null}
                       onToggle={() => handleTogglePhrase(phrase.id)}

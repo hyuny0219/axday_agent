@@ -99,9 +99,17 @@ export interface Phrase {
   side?: PhraseSide;
 }
 
+/** 조건이 어느 입장의 카드인지(T137, 반대 입장 대칭 설계). 'FOR'(기본)는 안건에 붙는 조건,
+ * 'AGAINST'는 근거 자료를 짚는 "반대 근거"다 — 안건을 수정하지 않고, 그 근거가 겨눈 임원을
+ * 반대로 돌린다. 값이 없는 과거 시나리오는 모두 'FOR'로 본다. */
+export type ConditionSide = 'FOR' | 'AGAINST';
+
 export interface Condition {
   id: string;
   label: string;
+  /** 반대 근거(side 'AGAINST')가 짚는 근거 자료 이름(카드 위 작은 글씨 "반대 근거 · 감사 메모"). */
+  source?: string;
+  side?: ConditionSide;
   /** 자유 입력 텍스트에서 이 조건을 제안할 때 찾는 명시 키워드. 라벨·문구 텍스트에서
    * 자동 파생하지 않고 시나리오 데이터에 직접 적는다(CLAUDE_IMPLEMENTATION.md 4장). */
   keywords: string[];

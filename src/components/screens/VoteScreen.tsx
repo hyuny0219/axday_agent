@@ -197,16 +197,28 @@ export function VoteScreen({
                 pill)으로 실제로 보이게 둔다 — 조건이 없으면(원안 그대로) 아무것도
                 더하지 않는다. 이 줄이 이미 눈에 보이는 실제 텍스트라 스크린리더도
                 그대로 읽으므로, 옛 sr-only 문단은 완전히 대체돼 뺐다. */}
-            {motion.effectiveConditionIds.length > 0 && (
+            {motionDisplay.conditionLabels.length > 0 && (
               <div className="vote-screen__motion-conditions" data-testid="vote-motion-conditions">
                 <span className="vote-screen__motion-conditions-label">
                   {participantStance === 'AGAINST' ? '이사님이 요구한 조건' : '반영 조건'}
                 </span>
                 <ul className="vote-screen__motion-conditions-list">
-                  {motion.effectiveConditionIds.map((id) => (
-                    <li key={id}>
-                      {scenario.conditions.find((condition) => condition.id === id)?.label ?? id}
-                    </li>
+                  {motionDisplay.conditionLabels.map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* T137: 반대 근거는 안건을 바꾸지 않고 나란히 보인다(빨강, 라벨은 찬성 조건과 같다). */}
+            {motionDisplay.objectionLabels.length > 0 && (
+              <div
+                className="vote-screen__motion-conditions vote-screen__motion-conditions--objection"
+                data-testid="vote-motion-objections"
+              >
+                <span className="vote-screen__motion-conditions-label">이사님이 요구한 조건</span>
+                <ul className="vote-screen__motion-conditions-list">
+                  {motionDisplay.objectionLabels.map((label) => (
+                    <li key={label}>{label}</li>
                   ))}
                 </ul>
               </div>

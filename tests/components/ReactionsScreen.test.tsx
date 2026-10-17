@@ -189,7 +189,7 @@ describe('ReactionsScreen', () => {
     );
   });
 
-  it('T96: 조건이 아직 없어 입장이 "유지"면 holdReasons 문구를 보여준다(빈 대사 대신, 안건① CFO)', () => {
+  it('T96: 조건이 아직 없어 입장이 "유지"면 holdReasons 문구를 보여준다(빈 대사 대신, 안건① CISO)', () => {
     const opinions: Opinion[] = [
       {
         id: 'op1',
@@ -214,9 +214,9 @@ describe('ReactionsScreen', () => {
       />,
     );
 
-    const card = screen.getByTestId('reaction-card-CFO');
+    const card = screen.getByTestId('reaction-card-CISO');
     expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent('유지');
-    expect(card).toHaveTextContent('금액 한도와 다시 확인하는 절차가 아직 둘 다 갖춰지지 않아');
+    expect(card).toHaveTextContent('책임질 사람과 기록, 둘 다 아직 확인되지 않아');
     expect(card.querySelector('.reaction-card__cause')).toBeNull();
   });
 
@@ -328,7 +328,7 @@ describe('ReactionsScreen', () => {
         />,
       );
       fireEvent.click(screen.getByTestId('reactions-side-for'));
-      // aiApprovalScenario.followUp.options: 0~4=FOR, 5~9=AGAINST(T133: 함정 조건 문구 제거), 10=BOTH.
+      // aiApprovalScenario.followUp.options: 0~4=FOR, 5~9=AGAINST(T138: 조건 3개 + 조건 없는 반대 2개), 10=BOTH.
       expect(screen.getByTestId('followup-option-0')).toBeInTheDocument();
       expect(screen.queryByTestId('followup-option-5')).not.toBeInTheDocument();
       expect(screen.getByTestId('followup-option-10')).toBeInTheDocument();
@@ -628,14 +628,14 @@ describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
     expect(where).not.toHaveTextContent('이미 쓴 내용');
   });
 
-  it('첫 의견(찬성)의 문구 번호는 2/2에서 반대로 바꿔도 첫 의견 당시 입장 기준으로 안내한다(T119)', async () => {
-    renderWithFirstOpinion(['P2'], 'AGAINST');
+  it('첫 의견(찬성)의 문구 번호는 칩을 해제해도 첫 의견에서 고른 문구 번호로 안내한다(T119)', async () => {
+    // T137: 두 입장의 조건이 달라 입장을 바꾸면 찬성 조건은 "남은 확인 사항"에서 빠지므로 같은 입장에서 확인한다.
+    renderWithFirstOpinion(['P2']);
     const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
     fireEvent.click(screen.getByTestId(`followup-option-${both}`));
     fireEvent.click(screen.getByTestId('condition-chip-LOG'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    // 반대 목표의 조건 추천 행에는 LOG가 없을 수 있어 "남은 확인 사항"의 안내로 확인한다.
     const remaining = await screen.findByTestId('assistant-remaining-LOG', {}, { timeout: 2000 });
     expect(remaining).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다');
     expect(remaining).not.toHaveTextContent('이미 쓴 내용');
@@ -715,9 +715,9 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     renderListen();
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       const card = screen.getByTestId(`reaction-card-${memberId}`);
-      // CAIO는 처음부터 미정이라 입장은 그대로(고민 중 유지), CFO·CISO는 반대에서 고민 중으로 움직인다.
+      // CFO·CAIO는 처음부터 고민 중(T138)이라 "고민 중 → 찬성", 처음부터 반대인 CISO는 "반대 → 찬성"이다.
       expect(card.querySelector('[data-testid^="reaction-card-badge-"]')).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 → 찬성 · 답하면 확정' : '반대 → 찬성 · 답하면 확정',
+        memberId === 'CISO' ? '반대 → 찬성 · 답하면 확정' : '고민 중 → 찬성 · 답하면 확정',
       );
       expect(card).toHaveTextContent('하나만 더 묻겠습니다');
       expect(screen.getByTestId(`exec-mood-label-${memberId}`)).toHaveTextContent('찬성 쪽?');
@@ -732,7 +732,7 @@ describe('ReactionsScreen 1차 반응의 두 단계 설득(T110, 안건①)', ()
     for (const memberId of ['CFO', 'CAIO', 'CISO'] as const) {
       expect(screen.getByTestId(`persuasion-board-note-${memberId}`)).toHaveTextContent('답변하면 확정');
       expect(screen.getByTestId(`persuasion-board-stance-${memberId}`)).toHaveTextContent(
-        memberId === 'CAIO' ? '고민 중 → 찬성 쪽' : '반대 → 찬성 쪽',
+        memberId === 'CISO' ? '반대 → 찬성 쪽' : '고민 중 → 찬성 쪽',
       );
     }
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('(기울음 3)');
@@ -879,7 +879,7 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
     const onViewChange = (value: { leaning: Partial<Record<ExecMemberId, 'FOR' | 'AGAINST'>>; stances: Record<ExecMemberId, Stance> } | null) => {
       calls.push(value);
     };
-    const opinions = mk(['FULL_AUTO'], 'FOR');
+    const opinions = mk(['AG_TRUST'], 'FOR');
     const props = {
       ...baseProps(),
       scenario: ai,
@@ -899,7 +899,7 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   });
 
   it('반대 참가자 카드: 배지는 "찬성 → 반대 쪽", 무드 라벨은 "반대 쪽"이다', () => {
-    const opinions = mk(['FULL_AUTO'], 'AGAINST');
+    const opinions = mk(['AG_TRUST'], 'AGAINST');
     render(
       <ReactionsScreen
         {...baseProps()}
@@ -1039,13 +1039,14 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
       expect(texts.length).toBe(withoutPick.length - limitOptions.length);
     });
 
-    it('입장을 바꾸면 조건이 같다는 이유로는 숨기지 않는다', () => {
+    it('입장을 바꾸면 첫 의견 문구 때문에 숨기는 카드가 없다(T137: 두 입장의 조건이 서로 다르다)', () => {
       renderAi('AGAINST', 'FOR', ['P1']);
-      const againstLimit = ai.followUp.options.filter(
-        (o) => o.proposeConditionId === 'LIMIT' && (o.side ?? 'FOR') === 'AGAINST',
+      const againstOptions = ai.followUp.options.filter(
+        (o) => !o.keepPrevious && ((o.side ?? 'FOR') === 'AGAINST' || o.side === 'BOTH'),
       );
-      expect(againstLimit.length).toBeGreaterThan(0);
-      for (const option of againstLimit) {
+      expect(againstOptions.length).toBeGreaterThan(0);
+      expect(visibleOptionTexts().length).toBe(againstOptions.length);
+      for (const option of againstOptions) {
         expect(visibleOptionTexts()).toContain(option.text);
       }
     });
@@ -1102,3 +1103,61 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
   });
 });
 
+
+// T137(Codex P1): 입장을 바꾸면 첫 의견의 반대 쪽 조건(빨강)을 이어받지 않는다 — 화면 칩·제출 조건이 새 입장 쪽만 본다.
+describe('ReactionsScreen 입장 전환과 조건(T137)', () => {
+  function renderSwitch(first: { stance: 'FOR' | 'AGAINST'; ids: string[] }, now: 'FOR' | 'AGAINST') {
+    const submitted: string[][] = [];
+    const opinions: Opinion[] = [
+      { id: 'o1', originalText: '첫 의견', selectedPhraseIds: [], confirmedConditionIds: first.ids, stance: first.stance, createdAt: 0 },
+    ];
+    render(
+      <ReactionsScreen
+        {...baseProps()}
+        scenario={aiApprovalScenario}
+        opinions={opinions}
+        side={now}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={scriptedStances(aiApprovalScenario, { stage: 'DISCUSS', opinions: [] })}
+        step="answer"
+        onSubmitFollowup={(payload) => submitted.push(payload.confirmedConditionIds)}
+      />,
+    );
+    // 답을 시작해야 조건 칩이 보인다 — 입장과 무관한 BOTH 답변 하나를 고른다.
+    const both = aiApprovalScenario.followUp.options.findIndex((option) => option.side === 'BOTH');
+    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
+    return submitted;
+  }
+
+  it('반대 → 찬성: 첫 의견의 반대 쪽 조건 칩은 사라지고 찬성 쪽 조건만 남는다', () => {
+    renderSwitch({ stance: 'AGAINST', ids: ['AG_AUDIT', 'LOG'] }, 'FOR');
+    expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--accepted');
+  });
+
+  it('찬성 → 반대: 첫 의견의 찬성 쪽 조건 칩은 사라지고 반대 쪽 조건만 남는다', () => {
+    renderSwitch({ stance: 'FOR', ids: ['LOG', 'AG_AUDIT'] }, 'AGAINST');
+    expect(screen.queryByTestId('condition-chip-LOG')).not.toBeInTheDocument();
+    expect(screen.getByTestId('condition-chip-AG_AUDIT')).toHaveClass('condition-chip--objection');
+  });
+
+  it('입장을 바꾸지 않으면 그대로 이어받는다', () => {
+    renderSwitch({ stance: 'AGAINST', ids: ['AG_AUDIT'] }, 'AGAINST');
+    expect(screen.getByTestId('condition-chip-AG_AUDIT')).toBeInTheDocument();
+  });
+
+  it('새로 쓴 답변: 반대 입장에서 찬성 조건 키워드는 칩이 되지 않는다(Codex P2)', () => {
+    renderSwitch({ stance: 'AGAINST', ids: [] }, 'AGAINST');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '금액 한도를 정해 두면 좋겠습니다.' } });
+    expect(screen.queryByTestId('condition-chip-LIMIT')).not.toBeInTheDocument();
+  });
+
+  it('새로 쓴 답변: 찬성 입장에서 반대 조건 키워드는 칩이 되지 않는다(Codex P2)', () => {
+    renderSwitch({ stance: 'FOR', ids: [] }, 'FOR');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '승인 이유가 남지 않았습니다.' } });
+    expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+  });
+});

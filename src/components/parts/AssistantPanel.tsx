@@ -390,7 +390,10 @@ export function AssistantPanel({
   // (PR #20 Codex 28차 P2-3).
   // T115: "처음 안과의 차이"·"남은 확인 사항"은 요청 시점의 스냅샷이 아니라 지금 확정한 조건으로 그린다
   // ("적용"으로 조건이 바뀐 뒤에도 옛 목록이 남아 추천과 어긋나지 않게).
-  const compareView = useMemo(() => buildCompare(scenario, selectedConditionIds), [scenario, selectedConditionIds]);
+  const compareView = useMemo(
+    () => buildCompare(scenario, selectedConditionIds, participantStance),
+    [scenario, selectedConditionIds, participantStance],
+  );
   // T119: 추천 문구·추가 답변 어디에도 없는 조건은 "남은 확인 사항"에서도 안내하지 않는다.
   const remainingShown = useMemo(
     () => compareView.remainingConditionIds.filter((id) => conditionGuide?.offered(id) !== false),
@@ -790,7 +793,21 @@ export function AssistantPanel({
                       ))}
                     </ul>
                   ) : (
-                    <p>지금까지 확정한 조건이 없습니다.</p>
+                    <p>
+                      {(compareView.objectionConditionIds?.length ?? 0) > 0
+                        ? '안건 문장은 바뀌지 않았습니다.'
+                        : '지금까지 확정한 조건이 없습니다.'}
+                    </p>
+                  )}
+                  {(compareView.objectionConditionIds?.length ?? 0) > 0 && (
+                    <>
+                      <h4>지금까지 붙인 조건</h4>
+                      <ul data-testid="assistant-objections">
+                        {compareView.objectionConditionIds?.map((id) => (
+                          <li key={id}>{conditionLabel(scenario, id)}</li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                   <h4>남은 확인 사항</h4>
                   {remainingShown.length > 0 ? (

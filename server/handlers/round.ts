@@ -15,7 +15,7 @@ import {
 } from '../validate';
 import type { ModelProvider } from '../providers/types';
 import { parseMockFault } from '../providers/mock';
-import { getScenarioMaterials } from '../scenario-data';
+import { getScenarioMaterials, splitConditionLabels } from '../scenario-data';
 import {
   ANSWER_JUDGMENT_RULE,
   FOLLOWUP_ANSWERED_RULE,
@@ -31,9 +31,9 @@ import { systemClock, type Clock } from '../clock';
 import { DEFAULT_REACTION_TIMEOUT_MS, DEFAULT_ROUND_TIMEOUT_MS } from '../config';
 import { logCall } from '../log';
 import { declaredDirection, findVerdictWords, maskedFollowUpMessage } from '../../src/domain/verdictWords';
-import { buildFirstReactionRule, classifyFirstReaction } from '../prompts/firstReaction';
+import { buildFirstReactionRule, clampFirstReactionStance, classifyFirstReaction } from '../prompts/firstReaction';
 import { withTimeout } from './timeout';
-import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens } from './shared';
+import { classifyFailure, isRetryableFailure, MIN_RETRY_REMAINING_MS, followUpQuestionSchema, roleIdsSchema, type ProviderErrorClass, sumTokens, summarizeInvalidIssues, mergeInvalidIssues } from './shared';
 
 const transcriptStatementSchema = z.object({
   id: z.string().min(1),
@@ -190,6 +190,8 @@ function buildRoundSystemPrompt(
     statements: input.transcript.statements,
     participantOpinion: input.participantOpinion,
     participantStance: input.participantStance ?? null,
+    // T137: 확정한 반대 근거는 한국어 라벨로만 싣는다(ID 노출 금지).
+    participantObjections: splitConditionLabels(materials, input.confirmedConditionIds ?? []).objections,
     followUpAnswered: input.followUpAnswered,
     followUpQuestion: input.followUpQuestion,
     followUpAnswerText: input.followUpAnswerText,
@@ -210,6 +212,7 @@ function buildRoundSystemPrompt(
               priorStance: input.priorStances?.[roleId],
             }),
             input.participantStance,
+            input.priorStances?.[roleId],
           )
         : undefined,
     ),
@@ -219,6 +222,31 @@ function buildRoundSystemPrompt(
     '응답은 message 120자 이내로 요약하고, roleId 필드에는 당신의 역할 ID를 그대로 넣으십시오.',
     meetingRecord,
   ].join('\n\n');
+}
+
+/** T138: OPINIONS(처음 입장 openingStance)·REACTIONS 첫 반응(firstReaction 분류)에서 모델 stance를 교정할 값. 없으면 null. */
+function clampStance(
+  roleId: ExecRoleId,
+  input: RoundRequest,
+  materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
+  statement: StatementResponse,
+): StatementResponse['stance'] | null {
+  if (input.stage !== 'OPINIONS' && input.stage !== 'REACTIONS') return null;
+  // 참가자 입장을 모르는 채로 읽어 "찬성합니다·반대합니다" 같은 절대 선언만 본다 — "동의합니다·같은 편입니다"처럼 참가자에게
+  // 상대적인 말(첫 반응에서 흔하다)은 방향 선언이 아니라서 교정을 막지 않는다(T138 live: CISO가 "동의합니다"로 반대 확정).
+  if (declaredDirection(statement.message, null) !== null) return null;
+  if (input.stage === 'OPINIONS') {
+    const opening = materials.roleLenses?.[roleId]?.opening;
+    return opening && statement.stance !== opening ? opening : null;
+  }
+  const kind = classifyFirstReaction({
+    scenarioId: input.scenarioId,
+    roleId,
+    participantStance: input.participantStance,
+    confirmedConditionIds: input.confirmedConditionIds,
+    priorStance: input.priorStances?.[roleId],
+  });
+  return clampFirstReactionStance(kind, input.priorStances?.[roleId], input.participantStance, statement.stance);
 }
 
 /** callRole 내부에서만 쓰는 시도 1회 결과 — 로그 전용 providerErrorClass·httpStatus·캐시
@@ -233,6 +261,10 @@ interface RoleAttemptResult extends RoundRoleResult {
   verdictStatement?: StatementResponse;
   /** T115: OPINIONS·REACTIONS 응답의 문장 방향이 구조화된 stance와 명백히 어긋나 거절된 시도의 원본과 문장 방향. */
   directionMismatch?: { statement: StatementResponse; direction: 'FOR' | 'AGAINST' };
+  /** T138: 서버가 stance를 규칙표 분류대로 교정했는지(로그 전용). */
+  stanceClamped?: boolean;
+  /** invalid_response일 때 원인 코드(T136, 로그 전용). */
+  invalidIssues?: string[];
 }
 
 /** T115: 문장이 선언한 방향과 stance가 명백히 반대(또는 고민 중인데 방향 선언)이면 그 방향을 돌려준다. */
@@ -313,6 +345,9 @@ async function attemptRole(
         status: 'failed',
         failReason: 'invalid_response',
         providerErrorClass: 'invalid_response',
+        invalidIssues: !parsed.success
+          ? summarizeInvalidIssues(parsed.error, result.json, ['message'])
+          : [parsed.data.roleId !== roleId ? 'roleId:mismatch' : 'suggestedConditionIds:foreign'],
         latencyMs,
         modelId: result.modelId,
         // 응답까지는 받았으므로 캐시 토큰은 실제로 쓰였다 — 재시도 합산에 넣는다(Codex 36차 P2).
@@ -352,15 +387,20 @@ async function attemptRole(
         directionMismatch: { statement: parsed.data, direction: mismatch },
       };
     }
+    // T138(v22): 첫 의견·첫 반응은 단정 지시(처음 입장 그대로 / 기울음까지만)를 어기고 stance를 다른 쪽으로 적었어도,
+    // 문장이 절대 방향(찬성합니다·반대합니다)을 밝히지 않았다면 서버가 stance만 규칙표 분류대로 교정한다(밝혔으면 T115 규칙).
+    const clamped = clampStance(roleId, input, materials, parsed.data);
+    const statement = clamped ? { ...parsed.data, stance: clamped } : parsed.data;
     return {
       roleId,
       status: 'answered',
-      statement: parsed.data,
+      statement,
       latencyMs,
       modelId: result.modelId,
       promptVersion: PROMPT_VERSION,
       cacheReadTokens: result.usage?.cacheReadInputTokens,
       cacheWriteTokens: result.usage?.cacheCreationInputTokens,
+      stanceClamped: clamped !== null,
     };
   } catch (err) {
     const latencyMs = clock.now() - start;
@@ -423,6 +463,7 @@ async function callRole(
         ...second,
         cacheReadTokens: sumTokens(first.cacheReadTokens, second.cacheReadTokens),
         cacheWriteTokens: sumTokens(first.cacheWriteTokens, second.cacheWriteTokens),
+        invalidIssues: mergeInvalidIssues(first.invalidIssues, second.invalidIssues),
       };
     }
   }
@@ -475,7 +516,9 @@ async function callRole(
     cacheWriteTokens: outcome.cacheWriteTokens,
     promptVersion: PROMPT_VERSION,
     modelId: outcome.modelId,
-    note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : undefined,
+    note: masked ? 'followup_verdict_masked' : corrected ? 'stance_text_mismatch_corrected' : outcome.stanceClamped ? 'stance_clamped' : undefined,
+    // 재시도로 결국 성공했어도 첫 시도의 형식 오류 원인은 남긴다 — 재시도가 왜 필요했는지가 원인 분석에 가장 쓸모 있다(PR #22 Codex P2).
+    invalidIssues: outcome.invalidIssues,
   });
   return {
     roleId,

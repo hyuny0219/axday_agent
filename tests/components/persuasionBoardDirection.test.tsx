@@ -20,7 +20,7 @@ function subsets<T>(items: readonly T[]): T[][] {
 }
 
 const scenarios: Scenario[] = [aiApprovalScenario, experienceFirstScenario];
-const sawKeepAgainst = { value: false };
+const sawObjectionNote = { value: false };
 
 describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
   for (const scenario of scenarios) {
@@ -65,32 +65,26 @@ describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
                 continue;
               }
               if (note.startsWith('움직일 조건 · ')) {
-                // 움직일 조건은 찬성 목표에서만, 아직 목표 쪽이 아닌 임원에게만 나오고 적용하면 목표 표가 된다.
-                expect(side, ctx).toBe('FOR');
+                // 아직 목표 쪽이 아닌 임원에게만 나오고, 적용하면 목표 표가 된다. 후보는 그 입장의 카드뿐이다(T137).
                 expect(stances[m], ctx).not.toBe(targetStance);
                 const labels = note.replace('움직일 조건 · ', '');
                 const ids = scenario.conditions.filter((c) => labels.includes(c.label)).map((c) => c.id);
+                expect(ids.length, ctx).toBeGreaterThan(0);
+                expect(ids.every((id) => (scenario.conditions.find((c) => c.id === id)?.side === 'AGAINST') === (side === 'AGAINST')), ctx).toBe(true);
                 expect(voteWith([...confirmed, ...ids]), ctx).toBe(target);
+                if (side === 'AGAINST') sawObjectionNote.value = true;
               }
               if (note === '설득 완료') {
                 expect(side, ctx).toBe('FOR');
                 expect(stances[m], ctx).toBe('FOR');
               }
-              if (note === '이미 찬성 쪽입니다') {
-                expect(side, ctx).toBe('AGAINST');
-                expect(stances[m], ctx).toBe('FOR');
-              }
-              if (note.includes('반대로 남습니다') || note.includes('반대를 유지')) {
+              if (note === '반대 쪽입니다') {
                 expect(side, ctx).toBe('AGAINST');
                 expect(stances[m], ctx).toBe('AGAINST');
               }
-              if (note.includes('반대로 남습니다')) {
-                expect(note, ctx).toMatch(/조건을 넣지 않아야 반대로 남습니다$/);
-                sawKeepAgainst.value = true;
-              }
               // 찬성 목표에서 반대 방향 안내가, 반대 목표에서 찬성 방향 안내가 나오면 안 된다.
-              if (side === 'FOR') expect(note, ctx).not.toMatch(/반대로 남|반대를 유지|이미 찬성/);
-              if (side === 'AGAINST') expect(note, ctx).not.toMatch(/움직일 조건|설득 완료/);
+              if (side === 'FOR') expect(note, ctx).not.toMatch(/반대 쪽|반대를 유지|이미 찬성/);
+              if (side === 'AGAINST') expect(note, ctx).not.toMatch(/설득 완료/);
             }
             cleanup();
           }
@@ -101,8 +95,8 @@ describe('T115 설득 현황판 비고 방향(scripted 전수)', () => {
 });
 
 describe('T115 반대 목표 문구', () => {
-  it('"조건을 넣지 않아야 반대로 남습니다" 문구가 실제로 나온다', () => {
-    expect(sawKeepAgainst.value).toBe(true);
+  it('반대 목표에서도 "움직일 조건" 문구가 나온다(T137)', () => {
+    expect(sawObjectionNote.value).toBe(true);
   });
 });
 
@@ -138,7 +132,7 @@ describe('T115 live 현황판 비고 — 빈 조건·방향 확인', () => {
     expect(screen.getByTestId('persuasion-board-note-CISO').textContent).not.toContain('승인 사유');
     expect(screen.getByTestId('persuasion-board-note-CISO').textContent).toContain('움직일 조건');
   });
-  it('live 반대 목표에서 규칙표상 이미 YES인 임원이 반대여도 빈 따옴표 조건을 적지 않는다', () => {
+  it('live 반대 목표에서 이미 반대인 임원은 조건 대신 "반대 쪽입니다"만 적는다', () => {
     render(
       <PersuasionBoard
         scenario={aiApprovalScenario}
@@ -151,7 +145,7 @@ describe('T115 live 현황판 비고 — 빈 조건·방향 확인', () => {
     );
     fireEvent.click(screen.getByTestId('persuasion-board-toggle'));
     const note = screen.getByTestId('persuasion-board-note-CAIO').textContent ?? '';
-    expect(note).toBe('조건과 무관하게 반대를 유지합니다');
+    expect(note).toBe('반대 쪽입니다');
   });
 });
 
@@ -185,12 +179,11 @@ describe('T115 live 현황판 전수(발언 입장 × 제안 조건 × 확정 �
                 const ctx = `${scenario.id}/${side}/[${confirmed}]/${a}${b}${c}${d}/${m}: ${note}`;
                 expect(note, ctx).not.toMatch(/·\s*$|''|undefined/);
                 if (note.startsWith('움직일 조건')) {
-                  expect(side, ctx).toBe('FOR');
-                  expect(stances[m], ctx).not.toBe('FOR');
+                  expect(stances[m], ctx).not.toBe(side === 'FOR' ? 'FOR' : 'AGAINST');
                   for (const id of confirmed) expect(note.replace('움직일 조건 · ', ''), ctx).not.toContain(labelOf(id));
                 }
                 if (side === 'FOR') expect(note, ctx).not.toMatch(/반대로 남|반대를 유지|이미 찬성/);
-                if (side === 'AGAINST') expect(note, ctx).not.toMatch(/움직일 조건|설득 완료/);
+                if (side === 'AGAINST') expect(note, ctx).not.toMatch(/설득 완료/);
               }
               cleanup();
             }

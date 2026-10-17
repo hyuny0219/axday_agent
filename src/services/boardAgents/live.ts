@@ -13,6 +13,7 @@
 // ctx.roleIds가 있으면("다시 요청"/"미표결 임원 다시 요청", T65) 그 역할만 요청하고 응답도
 // 그 역할만큼만 만든다 — 이미 성공한 역할의 발언·표를 건드리지 않는다(runner.ts가 병합한다).
 
+import { collectConfirmedConditionIds } from '../../components/opinionConditions';
 import type { ExecMemberId, Vote } from '../../content/types';
 import type { Stance, StatementStage } from '../../domain/types';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
@@ -127,8 +128,8 @@ function latestParticipantStance(ctx: BoardAgentsContext): 'FOR' | 'AGAINST' | u
 
 /** 참가자의 가장 최근 의견에 확정된 조건 ID(T132). 의견이 없으면 빈 배열. */
 function latestConfirmedConditionIds(ctx: BoardAgentsContext): string[] {
-  const opinions = ctx.session.opinions;
-  return [...(opinions[opinions.length - 1]?.confirmedConditionIds ?? [])];
+  // T137: 마지막 의견의 입장과 다른 쪽 조건(입장 전환 뒤 남은 것)은 요청에 싣지 않는다 — 규칙표·화면과 같은 집합.
+  return collectConfirmedConditionIds(ctx.session.opinions, ctx.scenario);
 }
 
 /** 임원별 첫 의견(OPINIONS) stance(T132). 그 단계 발언이 없거나 stance가 없는 임원(응답 실패 등)은 넣지 않아
@@ -182,6 +183,9 @@ function buildRoundBody(ctx: BoardAgentsContext, stage: StatementStage, timeoutM
     ...(stage === 'REACTIONS'
       ? { confirmedConditionIds: latestConfirmedConditionIds(ctx), priorStances: openingStances(ctx) }
       : {}),
+    // T137(Codex P2): 후속 보완 프롬프트의 "이사님이 요구한 조건" 블록도 확정 조건이 필요하다 — participantOpinion은 마지막
+    // 답변만 담아 앞서 확정한 반대 조건과 후속 질문에서만 나오는 조건(AG_TRUST 등)을 잃는다. priorStances는 첫 반응 전용이라 뺀다.
+    ...(stage === 'FOLLOWUP' ? { confirmedConditionIds: latestConfirmedConditionIds(ctx) } : {}),
     ...(stage === 'FOLLOWUP' ? { followUpAnswerText: followUpAnswerText(ctx) } : {}),
     scenarioId: ctx.scenario.id,
     budgetMs: timeoutMs,
@@ -301,6 +305,8 @@ function toBallotOutcome(
   const ballot = entry.ballot;
   if (entry.status === 'answered' && isRecord(ballot)) {
     const { vote, reason, evidenceIds, remainingConcerns, motionId, motionHash } = ballot;
+    // T138: 서버가 live 표를 규칙표 표로 바꿨으면(반대 참가자 경로, 방향 불일치) 출처를 'rules'로 남긴다.
+    const rulesDirection = ballot.source === 'rules' && ballot.rulesCause === 'direction';
     if (
       isVote(vote) &&
       typeof reason === 'string' &&
@@ -318,7 +324,8 @@ function toBallotOutcome(
           motionHash,
           vote,
           confirmedAt: 0,
-          source: 'live',
+          source: rulesDirection ? 'rules' : 'live',
+          ...(rulesDirection ? { rulesCause: 'direction' as const } : {}),
           reason,
           remainingConcerns,
           modelId: typeof entry.modelId === 'string' ? entry.modelId : undefined,

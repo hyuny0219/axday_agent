@@ -4,11 +4,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequestRegistry } from '../../src/app/requests';
+import type { ExecMemberId } from '../../src/content/types';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce, type SessionAction } from '../../src/domain/session';
 import type { Session, SessionMode, Statement } from '../../src/domain/types';
-import { EXEC_MEMBER_ORDER } from '../../src/domain/voting';
+import { EXEC_MEMBER_ORDER, rulesFallbackBallot } from '../../src/domain/voting';
 import { createScriptedBoardAgentsAdapter } from '../../src/services/boardAgents/scripted';
 import type {
   BallotOutcome,
@@ -83,6 +84,27 @@ function createStore(
     dispatch: (action: SessionAction) => {
       dispatched.push(action);
       current = reduce(current, action, clock.now());
+    },
+  };
+}
+
+function liveBallotOutcome(
+  roleId: ExecMemberId,
+  motion: { id: string; hash: string },
+  vote: 'YES' | 'NO',
+): BallotOutcome {
+  return {
+    roleId,
+    status: 'answered',
+    ballot: {
+      memberId: roleId,
+      motionId: motion.id,
+      motionHash: motion.hash,
+      vote,
+      confirmedAt: 0,
+      source: 'live',
+      reason: '판단입니다.',
+      remainingConcerns: [],
     },
   };
 }
@@ -649,7 +671,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
   });
 
-  it('표 호출 자체가 끝내 응답하지 않아도(REACTIONS 지연 뒤) 정해진 상한 안에서 UNCAST로 확정된다', async () => {
+  it('표 호출 자체가 끝내 응답하지 않아도(REACTIONS 지연 뒤) 정해진 상한 안에서 규칙표 표로 확정된다(T136)', async () => {
     const clock = fakeClock(0);
     let session = toOpinionsStage(clock);
     session = reduce(session, { type: 'NEXT_STAGE' }, clock.now()); // OPINIONS -> DISCUSS
@@ -705,17 +727,18 @@ describe('runner.startFinalVotes / awaitResult', () => {
     // 대기가 아니라 예측 가능한 상한 안에서 끝난다.
     await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS);
     expect(store.getSession().stage).toBe('VOTE');
-    await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS);
+    await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS + DEFAULT_FIRST_VOTE_WAIT_MS);
     await resultPromise;
 
     const finalSession = store.getSession();
     expect(finalSession.stage).toBe('RESULT');
     const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
     expect(execBallots).toHaveLength(4);
-    expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
+    expect(execBallots.some((b) => b.vote === 'UNCAST')).toBe(false);
+    expect(execBallots.every((b) => b.source === 'rules')).toBe(true);
   });
 
-  it('임원 표가 도착하지 않으면 최초 대기+재요청 유예 뒤 UNCAST로 채워 FINALIZE_RESULT를 반영한다', async () => {
+  it('임원 표가 도착하지 않으면 최초 대기+늦은 응답 유예+자동 재요청 대기 뒤 규칙표 표로 채워 FINALIZE_RESULT를 반영한다(T136)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
     const store = createStore(session, clock);
@@ -736,14 +759,15 @@ describe('runner.startFinalVotes / awaitResult', () => {
     // 재요청을 안 쓰면 그대로 UNCAST).
     await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS);
     expect(store.getSession().stage).toBe('VOTE');
-    await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS);
+    await vi.advanceTimersByTimeAsync(VOTE_RETRY_GRACE_MS + DEFAULT_FIRST_VOTE_WAIT_MS);
     await resultPromise;
 
     const finalSession = store.getSession();
     expect(finalSession.stage).toBe('RESULT');
     const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
     expect(execBallots).toHaveLength(4);
-    expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
+    expect(execBallots.some((b) => b.vote === 'UNCAST')).toBe(false);
+    expect(execBallots.every((b) => b.source === 'rules')).toBe(true);
   });
 
   it('표 응답이 t=9.2초에(전송 여유 안) 모두 도착하면 13초까지 기다리지 않고 그 즉시 확정한다(PR #11 Codex 24차 P1)', async () => {
@@ -796,7 +820,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
   });
 
-  it('표 응답이 t=9.2초에 일부만(1명 실패) 도착하면 그 시점부터 재요청 유예가 새로 열리고, 그 안의 재요청이 반영된다(PR #11 Codex 24차 P1)', async () => {
+  it('표 응답이 t=9.2초에 일부만(1명 실패) 도착하면 그 즉시 자동 재요청하고 그 표가 반영된다(PR #11 Codex 24차 P1, T136)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
     const motion = session.finalMotion;
@@ -811,7 +835,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
           await new Promise<void>((resolve) => setTimeout(resolve, 9200));
         }
         return targets.map((roleId): BallotOutcome => {
-          if (roleId === 'CAIO' && !caioAnswers) {
+          if (roleId === 'CAIO' && !caioAnswers && !ctx.roleIds) {
             return { roleId, status: 'failed', failReason: 'timeout' };
           }
           return {
@@ -842,14 +866,10 @@ describe('runner.startFinalVotes / awaitResult', () => {
     void orchestrator.startFinalVotes();
     const resultPromise = orchestrator.awaitResult();
 
+    // CAIO만 실패로 도착한다 — 사람이 누르지 않아도 그 즉시 자동 재요청하고, 이번엔 답한다.
     await vi.advanceTimersByTimeAsync(9200);
-    // CAIO만 실패로 도착했다 — 아직 확정하지 않고 그 시점부터 재요청 유예가 새로 열려 있어야
-    // 한다(13초까지 기다리지 않고 9.2초부터 VOTE_RETRY_GRACE_MS를 다시 준다).
-    expect(store.getSession().stage).toBe('VOTE');
-    expect(store.getSession().roleStatus.CAIO).toBe('failed');
-
     caioAnswers = true;
-    await orchestrator.retryFinalVotes(['CAIO']);
+    await vi.advanceTimersByTimeAsync(0);
     await resultPromise;
 
     const finalSession = store.getSession();
@@ -914,7 +934,7 @@ describe('runner.startFinalVotes / awaitResult', () => {
     expect(execBallots.every((b) => b.vote === 'YES')).toBe(true);
   });
 
-  it('기본값에서 표 호출이 끝내 응답하지 않으면 roundTimeoutMs+전송 여유+재요청 유예 안에서 UNCAST로 확정된다(PR #11 Codex 25차 P2)', async () => {
+  it('기본값에서 표 호출이 끝내 응답하지 않으면 상한(최초 대기+유예+자동 재요청 대기) 안에서 규칙표 표로 확정된다(PR #11 Codex 25차 P2, T136)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
     const store = createStore(session, clock);
@@ -933,45 +953,117 @@ describe('runner.startFinalVotes / awaitResult', () => {
 
     // roundTimeoutMs(기본 8000) + TRANSPORT_MARGIN_MS(1500) + VOTE_RETRY_GRACE_MS(5000) =
     // 14500ms를 넘기지 않고 확정돼야 한다(무한 대기 없음).
-    await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS + VOTE_RETRY_GRACE_MS);
+    await vi.advanceTimersByTimeAsync(DEFAULT_FIRST_VOTE_WAIT_MS * 2 + VOTE_RETRY_GRACE_MS);
     await resultPromise;
 
     const finalSession = store.getSession();
     expect(finalSession.stage).toBe('RESULT');
     const execBallots = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
     expect(execBallots).toHaveLength(4);
-    expect(execBallots.every((b) => b.vote === 'UNCAST')).toBe(true);
+    expect(execBallots.some((b) => b.vote === 'UNCAST')).toBe(false);
+    expect(execBallots.every((b) => b.source === 'rules')).toBe(true);
   });
 
-  it('실패 후 "미표결 임원 다시 요청"이 성공하면 확정 전에 실제 표로 반영된다(T65)', async () => {
+  it('표 응답이 실패한 임원은 사람이 누르지 않아도 자동으로 1회 다시 요청해 실제 표를 반영한다(T136)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
     const motion = session.finalMotion;
     if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
     const store = createStore(session, clock);
-    let caioAnswers = false;
+    const calls: Array<ExecMemberId[] | undefined> = [];
     const adapter = fakeAdapter({
       finalVotes: async (ctx) => {
+        calls.push(ctx.roleIds);
         const targets = ctx.roleIds ?? EXEC_MEMBER_ORDER;
-        return targets.map((roleId): BallotOutcome => {
-          if (roleId === 'CAIO' && !caioAnswers) {
-            return { roleId, status: 'failed', failReason: 'timeout' };
-          }
-          return {
-            roleId,
-            status: 'answered',
-            ballot: {
-              memberId: roleId,
-              motionId: motion.id,
-              motionHash: motion.hash,
-              vote: 'YES',
-              confirmedAt: 0,
-              source: 'live',
-              reason: '판단입니다.',
-              remainingConcerns: [],
-            },
-          };
-        });
+        return targets.map((roleId): BallotOutcome =>
+          roleId === 'CAIO' && !ctx.roleIds
+            ? { roleId, status: 'failed', failReason: 'invalid_response' }
+            : liveBallotOutcome(roleId, motion, 'YES'),
+        );
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    await orchestrator.awaitResult();
+
+    expect(calls).toEqual([undefined, ['CAIO']]);
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const caioBallot = finalSession.ballots.find((b) => b.memberId === 'CAIO');
+    expect(caioBallot?.vote).toBe('YES');
+    expect(caioBallot?.source).toBe('live');
+  });
+
+  it('자동 재요청도 실패한 임원은 UNCAST 대신 규칙표로 정한 표(source rules, 규칙표 근거)로 기록한다(T136)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const store = createStore(session, clock);
+    const calls: Array<ExecMemberId[] | undefined> = [];
+    const adapter = fakeAdapter({
+      finalVotes: async (ctx) => {
+        calls.push(ctx.roleIds);
+        const targets = ctx.roleIds ?? EXEC_MEMBER_ORDER;
+        return targets.map((roleId): BallotOutcome =>
+          roleId === 'CFO' || roleId === 'CISO'
+            ? { roleId, status: 'failed', failReason: 'invalid_response' }
+            : liveBallotOutcome(roleId, motion, 'YES'),
+        );
+      },
+    });
+    const orchestrator = createOrchestrator({
+      adapter,
+      clock,
+      requests: createRequestRegistry(),
+      store,
+      getScenario,
+    });
+
+    void orchestrator.startFinalVotes();
+    await orchestrator.awaitResult();
+
+    expect(calls).toEqual([undefined, ['CFO', 'CISO']]);
+    const finalSession = store.getSession();
+    expect(finalSession.stage).toBe('RESULT');
+    const exec = finalSession.ballots.filter((b) => b.memberId !== 'PARTICIPANT');
+    expect(exec).toHaveLength(4);
+    expect(exec.some((b) => b.vote === 'UNCAST')).toBe(false);
+    for (const roleId of ['CFO', 'CISO'] as const) {
+      const ballot = exec.find((b) => b.memberId === roleId);
+      const expected = rulesFallbackBallot(anonBoardScenario, motion, roleId, null, finalSession.followUpAnswered, 0);
+      expect(ballot?.source).toBe('rules');
+      expect(ballot?.vote).toBe(expected.vote);
+      expect(ballot?.reason).toBe(expected.reason);
+      expect(ballot?.motionHash).toBe(motion.hash);
+    }
+    expect(exec.find((b) => b.memberId === 'CEO')?.source).toBe('live');
+    expect(finalSession.outcome).not.toBeNull();
+  });
+
+  it('이미 수동 재요청이 시작됐으면 자동 재요청은 건너뛰고(임원당 1회) 그 완료를 기다린다(T136)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion;
+    if (!motion) throw new Error('테스트 전제: finalMotion이 있어야 합니다.');
+    const store = createStore(session, clock);
+    let retryCalls = 0;
+    const adapter = fakeAdapter({
+      finalVotes: async (ctx) => {
+        if (ctx.roleIds) retryCalls += 1;
+        const targets = ctx.roleIds ?? EXEC_MEMBER_ORDER;
+        return targets.map((roleId): BallotOutcome =>
+          roleId === 'CAIO' && !ctx.roleIds
+            ? { roleId, status: 'failed', failReason: 'timeout' }
+            : liveBallotOutcome(roleId, motion, 'YES'),
+        );
       },
     });
     const orchestrator = createOrchestrator({
@@ -983,20 +1075,11 @@ describe('runner.startFinalVotes / awaitResult', () => {
     });
 
     await orchestrator.startFinalVotes();
-    expect(store.getSession().roleStatus.CAIO).toBe('failed');
-    expect(store.getSession().ballots.some((b) => b.memberId === 'CAIO')).toBe(false);
+    const manual = orchestrator.retryFinalVotes(['CAIO']);
+    await orchestrator.awaitResult();
+    await manual;
 
-    const resultPromise = orchestrator.awaitResult();
-    // 재요청부터는 CAIO도 answered로 돌아오게 한 뒤 같은 orchestrator에서 재요청한다
-    // (retryFinalVotes가 awaitResult의 재요청 유예 대기를 그 완료까지로 바꿔 준다).
-    caioAnswers = true;
-    await orchestrator.retryFinalVotes(['CAIO']);
-    await resultPromise;
-
-    const finalSession = store.getSession();
-    expect(finalSession.stage).toBe('RESULT');
-    const caioBallot = finalSession.ballots.find((b) => b.memberId === 'CAIO');
-    expect(caioBallot?.vote).toBe('YES');
-    expect(caioBallot?.source).toBe('live');
+    expect(retryCalls).toBe(1);
+    expect(store.getSession().ballots.find((b) => b.memberId === 'CAIO')?.source).toBe('live');
   });
 });

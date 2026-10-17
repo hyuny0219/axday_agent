@@ -314,6 +314,20 @@
   color: var(--hud-warn);
 }
 
+/* T137: 반대 근거 칩은 빨강(찬성 조건은 시안색·앰버 그대로). 확정 여부와 상관없이 빨강 테두리·글자,
+   확정되면 연한 빨강 바탕을 더해 "붙었다"가 보인다. 색만이 아니라 줄 라벨("반대 근거")도 함께 바뀐다. */
+.condition-chip--objection {
+  border-color: var(--dark-vote-no);
+  color: var(--vote-no);
+}
+
+.condition-chip--objection.condition-chip--accepted,
+.condition-chip--objection.condition-chip--new {
+  border-color: var(--dark-vote-no);
+  color: var(--vote-no);
+  background-color: rgba(224, 107, 107, 0.16);
+}
+
 /* 충돌 안내는 칩 줄 아래 한 줄 고정(길면 말줄임, 전체 문장은 title). */
 .condition-chips__conflicts {
   flex: 0 0 auto;
@@ -598,6 +612,18 @@
 .phrase-card__text {
   color: var(--ink);
 }
+
+/* T137: 반대 쪽 조건 카드 — 라벨 없이 번호+문장만 보이고, 선택하면 연한 빨강 바탕·빨간 체크로 물든다(찬성 쪽은 기존 색). */
+.phrase-card--objection.phrase-card--selected {
+  background-color: #f6e3e0;
+  border-color: var(--paper-vote-no);
+}
+
+.phrase-card--objection.phrase-card--selected .phrase-card__checkbox {
+  border-color: var(--paper-vote-no);
+  background-color: var(--paper-vote-no);
+}
+
 
 /* T119: 추천 문구 카드 앞 번호. 비서실장이 "추천 문구 N번"이라고 안내하므로 DISCUSS
    목록(--numbered, REACTIONS는 제외)의 보이는 순서(1부터)를 CSS counter로 붙인다(::before 내용이라 접근성 이름에는 "1. "처럼 번호가 앞에 붙어 읽힌다). */

@@ -7,17 +7,20 @@
 // 아니라 마지막 의견의 확정 목록을 그대로 쓴다. 합집합을 쓰면 후속에서 해제한 조건이
 // 최종 안건에 되살아난다.
 
+import type { Scenario } from '../content/types';
+import { filterConditionIdsForStance } from '../domain/conditions';
 import type { Opinion } from '../domain/types';
 
 /** 가장 최근 의견의 확정 조건 ID를 순서대로 돌려준다. 의견이 없으면 빈 배열. */
-export function collectConfirmedConditionIds(opinions: readonly Opinion[]): string[] {
+export function collectConfirmedConditionIds(opinions: readonly Opinion[], scenario?: Scenario | null): string[] {
   const latest = opinions[opinions.length - 1];
   if (!latest) return [];
   const result: string[] = [];
   for (const id of latest.confirmedConditionIds) {
     if (!result.includes(id)) result.push(id);
   }
-  return result;
+  // T137: 시나리오를 알면 마지막 의견의 입장과 다른 쪽 조건은 버린다(입장 전환 뒤 남은 조건).
+  return scenario ? filterConditionIdsForStance(scenario, result, latest.stance ?? null) : result;
 }
 
 /** 가장 최근 의견에 실린 참가자 입장(T92, 사용자 지적 "AI 임원들이 찬성 쪽으로 몰고 가는

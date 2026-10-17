@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
+import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { fakeClock, type FakeClock } from '../../src/domain/clock';
 import { createInitialSession, reduce } from '../../src/domain/session';
 import type { Session } from '../../src/domain/types';
@@ -371,6 +372,31 @@ describe('live board agents adapter', () => {
     expect(outcomes.every((o) => o.ballot?.source === 'live')).toBe(true);
   });
 
+  it('서버가 방향 불일치로 규칙표 표로 바꾼 표(source rules, rulesCause direction)는 출처를 rules로 남긴다(T138)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion!;
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () =>
+        EXEC_MEMBER_ORDER.map((roleId) => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            motionId: motion.id, motionHash: motion.hash, vote: 'NO', reason: '기준표 이유',
+            evidenceIds: [], remainingConcerns: [], ...(roleId === 'CFO' ? { source: 'rules', rulesCause: 'direction' } : {}),
+          },
+          modelId: 'm', promptVersion: 'v23',
+        })),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const outcomes = await createLiveBoardAgentsAdapter().finalVotes(makeCtx(session));
+    const cfo = outcomes.find((o) => o.roleId === 'CFO')?.ballot;
+    expect(cfo?.source).toBe('rules');
+    expect(cfo?.rulesCause).toBe('direction');
+    expect(outcomes.filter((o) => o.ballot?.source === 'live')).toHaveLength(3);
+  });
+
   it('표 요청도 서버 예산 직후(여유 안)에 일부만 응답하면 그 역할만 failed로 남긴다(PR #11 Codex 24차 P1)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);
@@ -424,5 +450,46 @@ describe('live board agents adapter', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(outcomes).toHaveLength(4);
     expect(outcomes.every((o) => o.status === 'failed' && o.failReason === 'no_final_motion')).toBe(true);
+  });
+});
+
+describe('live 요청의 확정 조건(T137, Codex P1)', () => {
+  it('입장을 바꾼 마지막 의견에 남은 반대 쪽 조건은 요청에 싣지 않는다(반대 → 찬성)', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ results: [] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const clock = fakeClock(0);
+    const session: Session = {
+      ...toOpinionsStage(clock),
+      opinions: [
+        { id: 'o1', originalText: '반대', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT'], stance: 'AGAINST', createdAt: 0 },
+        { id: 'o2', originalText: '찬성으로 바꿉니다', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT', 'LOG'], stance: 'FOR', createdAt: 1 },
+      ],
+    };
+    const adapter = createLiveBoardAgentsAdapter();
+    await adapter.reactions({ ...makeCtx(session), scenario: aiApprovalScenario });
+    const calls = fetchMock.mock.calls as unknown as Array<[string, { body: string }]>;
+    const body = JSON.parse(calls[0]![1].body) as { confirmedConditionIds?: string[]; participantStance?: string };
+    expect(body.participantStance).toBe('FOR');
+    expect(body.confirmedConditionIds).toEqual(['LOG']);
+  });
+
+  it('FOLLOWUP 요청에도 확정 조건을 싣는다 — 후속 질문에서만 나오는 AG_TRUST까지, priorStances는 싣지 않는다(Codex P2)', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ results: [] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const clock = fakeClock(0);
+    const session: Session = {
+      ...toOpinionsStage(clock),
+      opinions: [
+        { id: 'o1', originalText: '반대', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT'], stance: 'AGAINST', createdAt: 0 },
+        { id: 'o2', originalText: '믿지 못합니다', selectedPhraseIds: [], confirmedConditionIds: ['AG_AUDIT', 'AG_TRUST'], stance: 'AGAINST', createdAt: 1 },
+      ],
+    };
+    const adapter = createLiveBoardAgentsAdapter();
+    await adapter.followUp({ ...makeCtx(session), scenario: aiApprovalScenario });
+    const calls = fetchMock.mock.calls as unknown as Array<[string, { body: string }]>;
+    const body = JSON.parse(calls[0]![1].body) as { stage?: string; confirmedConditionIds?: string[]; priorStances?: unknown };
+    expect(body.stage).toBe('FOLLOWUP');
+    expect(body.confirmedConditionIds).toEqual(['AG_AUDIT', 'AG_TRUST']);
+    expect(body.priorStances).toBeUndefined();
   });
 });

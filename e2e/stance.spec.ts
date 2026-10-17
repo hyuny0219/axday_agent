@@ -34,12 +34,13 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     // OPINIONS 진입 즉시 넷 다 표정이 채워진다(안건 문서의 첫 stance,
     // initialOpinions[].openingStance — PR #13 Codex 3차 검토. CAIO는 "미정"이다).
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
+    // T138: 처음 입장은 1 찬성(CEO)·1 반대(CISO)·2 고민 중(CFO·CAIO)이다.
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     // 본문 카드(임원 카드의 상태 칩 옆)에도 같은 문구가 접근 가능한 텍스트로 있다.
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
-    await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('반대');
+    await expect(page.getByTestId('exec-mood-label-CFO')).toHaveText('고민 중');
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');
 
     await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
@@ -68,7 +69,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
       await expect(page.getByTestId(`exec-mood-label-${id}`)).toHaveText('찬성 쪽?');
     }
     await expect(page.getByTestId('reaction-card-CEO')).not.toContainText('하나만 더 묻겠습니다');
-    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('반대 → 찬성 · 답하면 확정');
+    await expect(page.getByTestId('reaction-card-badge-CFO')).toHaveText('고민 중 → 찬성 · 답하면 확정');
     await expect(page.getByTestId('reaction-card-badge-CAIO')).toHaveText('고민 중 → 찬성 · 답하면 확정');
 
     // 현황판: 기울어진 방향('반대 → 찬성 쪽')과 답변하면 확정된다는 안내를 보인다.
@@ -77,7 +78,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     if ((await boardToggle.getAttribute('aria-expanded')) !== 'true') {
       await boardToggle.click();
     }
-    await expect(page.getByTestId('persuasion-board-stance-CFO')).toContainText('반대 → 찬성 쪽');
+    await expect(page.getByTestId('persuasion-board-stance-CFO')).toContainText('고민 중 → 찬성 쪽');
     await expect(page.getByTestId('persuasion-board-note-CFO')).toContainText('답변하면 확정');
     await expect(page.getByTestId('persuasion-board-count')).toContainText('(기울음 2)');
 
@@ -156,7 +157,7 @@ test.describe('scripted: 무대 표정과 설득 도장', () => {
     page,
   }) => {
     await enterOpinions(page);
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
     // CAIO의 첫 stance는 "미정"이다(openingStance) — 참가자가 조건 없이 말한 뒤
     // REACTIONS에서는 voteRules의 always 분기(AGAINST)로 넘어간다(아래).
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
@@ -246,11 +247,11 @@ test.describe('live mock: 무대 표정', () => {
 
     // OPINIONS의 stance는 mock 제공자가 안건의 roleLenses.opening을 쓴다(PR #13 Codex
     // 3차 검토, server/providers/mock.ts scenarioAwareOpeningStance) — 안건①(ai-approval)
-    // 문서 기준 CEO FOR·CFO AGAINST·CAIO UNDECIDED·CISO AGAINST.
+    // 문서 기준(T138) CEO FOR·CFO UNDECIDED·CAIO UNDECIDED·CISO AGAINST.
     await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(moodBadge(page, 'CEO')).toHaveClass(/stage-band__mood--for/);
     await expect(moodBadge(page, 'CAIO')).toHaveClass(/stage-band__mood--undecided/);
-    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--against/);
+    await expect(moodBadge(page, 'CFO')).toHaveClass(/stage-band__mood--undecided/);
     await expect(moodBadge(page, 'CISO')).toHaveClass(/stage-band__mood--against/);
     await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
     await expect(page.getByTestId('exec-mood-label-CAIO')).toHaveText('고민 중');

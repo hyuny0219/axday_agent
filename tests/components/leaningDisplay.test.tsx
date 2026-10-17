@@ -37,7 +37,7 @@ function board(extra: object = {}) {
 describe('PersuasionBoard 기울음', () => {
   it('기울음 임원은 "반대 → 찬성 쪽 · 답변하면 확정"이고 집계에 (기울음 1)이 붙는다', () => {
     board();
-    expect(screen.getByTestId('persuasion-board-stance-CFO')).toHaveTextContent('반대 → 찬성 쪽');
+    expect(screen.getByTestId('persuasion-board-stance-CFO')).toHaveTextContent('고민 중 → 찬성 쪽');
     expect(screen.getByTestId('persuasion-board-stance-CFO')).toHaveClass('persuasion-board__stance--leaning');
     expect(screen.getByTestId('persuasion-board-note-CFO')).toHaveTextContent('답변하면 확정');
     expect(screen.getByTestId('persuasion-board-count')).toHaveTextContent('(기울음 1)');

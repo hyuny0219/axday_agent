@@ -5,8 +5,11 @@
 //  (c) 추가 답변은 그 입장에서 규칙표가 쓰는 모든 조건을 제안한다(첫 단계에서 빠진 것만이
 //      아니라 전부 — 첫 의견에서 안 고른 조건도 직접 쓰지 않고 붙일 수 있어야 한다).
 //  (d) 추가 답변 문구는 proposeFromText가 선언한 조건과 정확히 같은 값을 돌려준다.
-// T133: 반대 입장에서는 함정 조건(그 조건 하나로 임원 넷이 모두 반대가 되는 조건)을 빼고 따진다 —
-//  반대 쪽 추천 답변은 함정 조건을 제안하지 않는다(f).
+// T137: 반대 입장의 조건은 "반대 근거"(Condition.side 'AGAINST')다. 입장마다 자기 쪽 조건만 따진다 —
+//  찬성은 side가 없는(FOR) 조건 전부, 반대는 반대 근거 전부. 반대 쪽 추천 문구·답변은 찬성 조건을
+//  제안하지 않고(찬성 쪽도 반대 근거를 제안하지 않는다), 양쪽 모두 함정이 하나씩 있다(f).
+// T133: 함정은 그 조건 하나로 임원 넷이 모두 상대편 표가 되는 조건이다. 반대 쪽 함정(지나친 주장)은
+//  반대 근거의 하나로 추천 문구·추가 답변에 들어 있다.
 import { describe, expect, it } from 'vitest';
 import { aiApprovalScenario } from '../../src/content/scenarios/aiApproval';
 import { experienceFirstScenario } from '../../src/content/scenarios/experienceFirst';
@@ -61,21 +64,22 @@ const ASKED_CONDITION: Record<string, Partial<Record<Stance, string>>> = {
   'experience-first': { FOR: 'DATA_VETO' },
 };
 
-/** 함정 조건(T133): 임원 넷 모두 "그 조건이 있으면 반대"라는 규칙이 어떤 찬성 규칙보다 앞에 있는
- * 조건 — 다른 조건을 무엇을 붙여도 그 조건 하나로 넷이 전부 반대가 된다. */
-function trapConditionIds(scenario: Scenario): string[] {
+/** 함정 조건(T133, T137): 임원 넷 모두 "그 조건이 있으면 같은 표(찬성 쪽 함정은 NO, 반대 쪽 함정은 YES)"라는
+ * 단독 규칙을 가진 조건. 다른 쪽 함정과 겹칠 때의 우선순위는 결과표 테스트(objectionResultTable)가 고정한다. */
+function trapConditionIds(scenario: Scenario, vote: 'YES' | 'NO'): string[] {
   return scenario.conditions
     .map((c) => c.id)
     .filter((id) =>
-      (Object.keys(scenario.voteRules) as ExecMemberId[]).every((memberId) => {
-        const rules = scenario.voteRules[memberId];
-        const trapIndex = rules.findIndex(
-          (rule) => rule.vote === 'NO' && 'has' in rule.when && rule.when.has === id,
-        );
-        const firstYes = rules.findIndex((rule) => rule.vote === 'YES');
-        return trapIndex >= 0 && (firstYes < 0 || trapIndex < firstYes);
-      }),
+      (Object.keys(scenario.voteRules) as ExecMemberId[]).every((memberId) =>
+        scenario.voteRules[memberId].some(
+          (rule) => rule.vote === vote && 'has' in rule.when && rule.when.has === id,
+        ),
+      ),
     );
+}
+
+function isAgainstCondition(scenario: Scenario, id: string): boolean {
+  return scenario.conditions.find((c) => c.id === id)?.side === 'AGAINST';
 }
 
 const scenarios: Array<[string, Scenario]> = [
@@ -85,21 +89,38 @@ const scenarios: Array<[string, Scenario]> = [
 
 describe.each(scenarios)('T119 조건 커버리지 — %s', (_name, scenario) => {
   const allRequired = voteRuleConditionIds(scenario);
-  const traps = trapConditionIds(scenario);
-  const requiredFor = (stance: Stance) => (stance === 'AGAINST' ? allRequired.filter((id) => !traps.includes(id)) : allRequired);
+  const requiredFor = (stance: Stance) =>
+    allRequired.filter((id) => isAgainstCondition(scenario, id) === (stance === 'AGAINST'));
 
-  it('(f) 함정 조건이 하나 이상 있고, 반대 쪽 추천 문구·추가 답변은 함정 조건을 제안하지 않는다(T133)', () => {
-    expect(traps.length).toBeGreaterThanOrEqual(1);
+  it('(f) 함정은 찬성 쪽에만 있고(T138: 반대 쪽 함정 제거), 추천 문구·추가 답변은 자기 입장 쪽 조건만 제안한다(T133·T137)', () => {
+    expect(trapConditionIds(scenario, 'NO').filter((id) => !isAgainstCondition(scenario, id))).toHaveLength(1);
+    expect(trapConditionIds(scenario, 'YES').filter((id) => isAgainstCondition(scenario, id))).toHaveLength(0);
     for (const option of scenario.followUp.options) {
-      if ((option.side ?? 'FOR') === 'AGAINST' && option.proposeConditionId) {
-        expect(traps, option.text).not.toContain(option.proposeConditionId);
+      const side = option.side ?? 'FOR';
+      if (side !== 'BOTH' && option.proposeConditionId) {
+        expect(isAgainstCondition(scenario, option.proposeConditionId), option.text).toBe(side === 'AGAINST');
       }
     }
     for (const phrase of scenario.phrases) {
-      if ((phrase.side ?? 'FOR') === 'AGAINST' && phrase.conditionId) {
-        expect(traps, phrase.text).not.toContain(phrase.conditionId);
+      const side = phrase.side ?? 'FOR';
+      if (side !== 'BOTH' && phrase.conditionId) {
+        expect(isAgainstCondition(scenario, phrase.conditionId), phrase.text).toBe(side === 'AGAINST');
       }
     }
+  });
+
+  it('(g) T138: 추가 답변은 입장별 개수가 같고(각 5개 + 공통 1개), 반대 쪽은 조건 3개 + 조건 없는 반대 2개다', () => {
+    const count = (side: 'FOR' | 'AGAINST' | 'BOTH') => scenario.followUp.options.filter((o) => (o.side ?? 'FOR') === side);
+    expect(count('FOR')).toHaveLength(5);
+    expect(count('AGAINST')).toHaveLength(5);
+    expect(count('BOTH')).toHaveLength(1);
+    const against = count('AGAINST');
+    expect(against.filter((o) => o.proposeConditionId !== null)).toHaveLength(3);
+    expect(against.filter((o) => o.proposeConditionId === null)).toHaveLength(2);
+    // 반대 쪽 조건 3개는 서로 다른 조건이고 모두 반대 쪽 조건이다.
+    const ids = against.map((o) => o.proposeConditionId).filter((id): id is string => id !== null);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) expect(isAgainstCondition(scenario, id)).toBe(true);
   });
 
   describe.each<Stance>(['FOR', 'AGAINST'])('입장 %s', (stance) => {

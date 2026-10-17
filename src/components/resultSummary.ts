@@ -9,6 +9,7 @@
 import type { ExecMemberId, Scenario, Vote } from '../content/types';
 import type { Session } from '../domain/types';
 import { EXEC_MEMBER_ORDER, explainBoard, participantDecisive, tally, type TallyResult } from '../domain/voting';
+import { splitConditionIds } from '../domain/conditions';
 import { collectConfirmedConditionIds, collectParticipantStance } from './opinionConditions';
 
 const NO_REASON_TEXT = '판단 근거 없음';
@@ -19,6 +20,10 @@ export interface ResultSummaryExecRow {
   reason: string;
   /** scripted에서만 true일 수 있다(조건 없는 안건의 표와 실제 표가 다를 때). */
   changed: boolean;
+  /** live에서 응답을 못 받아 규칙표로 정한 표인지(T136, ballot.source === 'rules'). */
+  fallback: boolean;
+  /** fallback일 때 이유(T138): 'direction'이면 live 표가 규칙표 방향과 달라 규칙표 표로 바꾼 것. */
+  fallbackCause?: 'late' | 'direction';
 }
 
 export interface ResultSummaryParticipant {
@@ -32,6 +37,8 @@ export interface ResultSummary {
   /** 참가자가 확정하고 최종 안건에 반영된 조건의 라벨(순서 유지). 비어 있으면 "조건 없이
    * 원안 그대로 상정"을 화면이 표시한다. */
   conditionLabels: string[];
+  /** 반대 사유(T137): 참가자가 든 반대 근거의 라벨. 안건을 수정하지 않으므로 conditionLabels와 따로 둔다. */
+  objectionLabels: string[];
   execRows: ResultSummaryExecRow[];
   participant: ResultSummaryParticipant;
   /** 내 의견 원문(제출 순서, DISCUSS + REACTIONS 후속 보완 포함). */
@@ -49,13 +56,14 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
 
   const tallyResult = tally(session.ballots);
 
-  const allConfirmedIds = collectConfirmedConditionIds(session.opinions);
+  const allConfirmedIds = collectConfirmedConditionIds(session.opinions, scenario);
   const includedIds = allConfirmedIds.filter((id) =>
     finalMotion.effectiveConditionIds.includes(id),
   );
-  const conditionLabels = includedIds.map(
-    (id) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id,
-  );
+  const labelOf = (id: string) => scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
+  const split = splitConditionIds(scenario, includedIds);
+  const conditionLabels = split.conditionIds.map(labelOf);
+  const objectionLabels = split.objectionIds.map(labelOf);
 
   const execRows: ResultSummaryExecRow[] =
     session.mode === 'scripted'
@@ -67,6 +75,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
           vote: row.vote,
           reason: row.reason ?? NO_REASON_TEXT,
           changed: row.changed,
+          fallback: false,
         }))
       : EXEC_MEMBER_ORDER.map((memberId) => {
           const ballot = session.ballots.find((b) => b.memberId === memberId);
@@ -75,6 +84,8 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
             vote: ballot?.vote ?? 'UNCAST',
             reason: ballot?.reason ?? ballot?.unavailableReason ?? NO_REASON_TEXT,
             changed: false,
+            fallback: ballot?.source === 'rules',
+            fallbackCause: ballot?.source === 'rules' ? (ballot.rulesCause ?? 'late') : undefined,
           };
         });
 
@@ -83,6 +94,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
   return {
     tally: tallyResult,
     conditionLabels,
+    objectionLabels,
     execRows,
     participant: {
       vote: participantBallot?.vote ?? 'UNCAST',

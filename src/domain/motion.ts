@@ -6,6 +6,7 @@
 // 해시와 일치해야만 반영한다(session.ts RECORD_EXEC_BALLOT).
 
 import type { Scenario } from '../content/types';
+import { splitConditionIds } from './conditions';
 import type { Motion } from './types';
 
 /** 순서 무관하게 같은 조건 ID 집합인지 비교한다. */
@@ -47,10 +48,14 @@ export function computeMotionHash(
 /**
  * 참가자가 확정한 조건으로 최종 안건을 고정한다. 확정 조건이 원안의 기본 조건과
  * 의미 있는 차이가 없으면(집합이 같으면) original, 그렇지 않으면 amended다.
+ * 반대 근거(T137)는 안건을 수정하지 않으므로 original/amended 판정에서 뺀다 — 표결에는 쓰이도록
+ * conditionIds·effectiveConditionIds에는 그대로 담는다.
  */
 export function freezeMotion(scenario: Scenario, confirmedIds: string[], now: number): Motion {
   const conditionIds = [...confirmedIds];
-  const kind = sameConditionSet(conditionIds, scenario.baseConditionIds) ? 'original' : 'amended';
+  const kind = sameConditionSet(splitConditionIds(scenario, conditionIds).conditionIds, scenario.baseConditionIds)
+    ? 'original'
+    : 'amended';
   const id = `${scenario.id}-motion-${now}`;
   const text = scenario.originalMotion.text;
   const effectiveConditionIds = [...conditionIds];

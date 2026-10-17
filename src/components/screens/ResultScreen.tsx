@@ -17,6 +17,7 @@ import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Ballot, MemberId, Session, Stance } from '../../domain/types';
 import { EXEC_MEMBER_ORDER, tally } from '../../domain/voting';
 import { describeAdditionalHelp } from '../../domain/assistantLog';
+import { splitConditionIds } from '../../domain/conditions';
 import { MEMBER_LABELS } from '../memberLabels';
 import { collectConfirmedConditionIds, collectParticipantStance } from '../opinionConditions';
 import { buildRemainingTaskLabels } from '../motionDisplay';
@@ -96,16 +97,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
 
   // 결론 도장(T44/T64): PASS·REJECT일 때만 문구가 있다(finalMotion 없으면 null이지만
   // RESULT는 항상 finalMotion이 있다, 아래 이른 반환 참고).
-  const resultStamp = useMemo(() => computeResultStamp(session), [session]);
+  const resultStamp = useMemo(() => computeResultStamp(session, scenario), [session, scenario]);
 
   // "설득 도장" 근거 한 줄(T63, v1.0 9절). 참가자 좌석이 UNCAST면(가능한 경우) 계산하지
   // 않는다(computePersuasion이 null을 돌려준다).
   const persuasion = useMemo(() => computePersuasion(session), [session]);
 
-  const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions), [session.opinions]);
+  const allConfirmedIds = useMemo(() => collectConfirmedConditionIds(session.opinions, scenario), [session.opinions, scenario]);
+  // T137: 안건에 반영된 조건만 센다 — 반대 근거는 안건을 수정하지 않으므로 "조건부 가결"·남은 과제 계산에서 뺀다.
   const includedIds = useMemo(
-    () => allConfirmedIds.filter((id) => finalMotion?.effectiveConditionIds.includes(id) ?? false),
-    [allConfirmedIds, finalMotion],
+    () =>
+      splitConditionIds(
+        scenario,
+        allConfirmedIds.filter((id) => finalMotion?.effectiveConditionIds.includes(id) ?? false),
+      ).conditionIds,
+    [allConfirmedIds, finalMotion, scenario],
   );
 
   // "이사회 한 장 요약"(v1.0 9절, T48) → VERDICTS 패널(T66): finalMotion이 있을 때만
@@ -130,7 +136,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
         ? buildPersuasionResult(scenario, session, finalStances, {
             participantVote: persuasion?.participantVote ?? null,
             participantStance: collectParticipantStance(session.opinions),
-            conditionCount: resultSummary?.conditionLabels.length ?? 0,
+            conditionCount: (resultSummary?.conditionLabels.length ?? 0) + (resultSummary?.objectionLabels.length ?? 0),
             finalConditionIds: finalMotion.effectiveConditionIds,
             finalMotion,
           })
@@ -272,7 +278,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
           persuasionTally,
           resultStampText: resultStamp.text,
           epilogue,
-          conditionLabels: resultSummary.conditionLabels,
+          conditionLabels: [...resultSummary.conditionLabels, ...resultSummary.objectionLabels],
           finalConditionIds: finalMotion.effectiveConditionIds,
           participantStance,
         })
@@ -432,8 +438,21 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                   <p className="result-your-card__value" data-testid="result-summary-conditions">
                     {resultSummary.conditionLabels.length > 0
                       ? resultSummary.conditionLabels.join(', ')
-                      : '조건 없이 처음 안 그대로 표결'}
+                      : resultSummary.objectionLabels.length > 0
+                        ? // 반대 쪽 조건은 안건 문구를 바꾸지 않는다 — "조건 없이"라고 쓰면 바로 아래 조건 목록과 어긋난다(2026-10-17 사용자 지시).
+                          '안건 문구는 처음 안 그대로 표결'
+                        : '조건 없이 처음 안 그대로 표결'}
                   </p>
+                  {/* T137: 반대 근거는 안건을 수정하지 않고 */}
+                  {resultSummary.objectionLabels.length > 0 && (
+                    <p
+                      className="result-your-card__value result-your-card__value--objection"
+                      data-testid="result-summary-objections"
+                    >
+                      <span className="result-your-card__objection-label">이사님이 요구한 조건</span>{' '}
+                      {resultSummary.objectionLabels.join(', ')}
+                    </p>
+                  )}
                 </div>
                 <div className="result-your-card">
                   <span className="result-your-card__label">내 원문</span>
@@ -558,6 +577,14 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           row.reason
                         )}
                       </span>
+                      {row.fallback && (
+                        <span
+                          className="result-seat__fallback"
+                          data-testid={`result-seat-fallback-${row.memberId}`}
+                        >
+                          {row.fallbackCause === 'direction' ? '기준표로 정했습니다' : '응답이 늦어 기준표로 정했습니다'}
+                        </span>
+                      )}
                       {row.changed && (
                         <span
                           className="result-summary__changed"
@@ -656,11 +683,18 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             </div>
             <p className="result-epilogue-card__text">{epilogue}</p>
             <div className="result-epilogue-card__conditions">
-              <span className="result-epilogue-card__conditions-label">이사님이 붙인 조건</span>
-              {resultSummary.conditionLabels.length > 0 ? (
+              <span className="result-epilogue-card__conditions-label">
+                이사님이 붙인 조건
+              </span>
+              {resultSummary.conditionLabels.length + resultSummary.objectionLabels.length > 0 ? (
                 <ul className="result-epilogue-card__chips">
                   {resultSummary.conditionLabels.map((label) => (
                     <li key={label}>{label}</li>
+                  ))}
+                  {resultSummary.objectionLabels.map((label) => (
+                    <li key={label} className="result-epilogue-card__chip--objection">
+                      {label}
+                    </li>
                   ))}
                 </ul>
               ) : (

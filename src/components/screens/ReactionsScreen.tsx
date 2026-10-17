@@ -76,13 +76,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../domain/types';
 import { DRAFT_MAX_LENGTH } from '../../domain/draft';
-import { confirmConditions, findConflicts, proposeFromText } from '../../domain/conditions';
+import { confirmConditions, filterConditionIdsForStance, findConflicts, isObjectionCondition, proposeFromText } from '../../domain/conditions';
 import { EXEC_MEMBER_ORDER } from '../../domain/voting';
 import type { AssistantActionEvent } from '../../domain/assistantLog';
 import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
-import { conditionSourceHint, isConditionOffered, isLaterStageOnly, releasedHint } from '../conditionSource';
+import {
+  conditionSourceHint,
+  isConditionOffered,
+  isLaterStageOnly,
+  releasedHint,
+} from '../conditionSource';
 import { findFollowUpIndexForCondition } from '../recommendMatch';
 import {
   changeCauseLabel,
@@ -210,9 +215,11 @@ export function ReactionsScreen({
   onRetryFailedRoles,
 }: ReactionsScreenProps) {
   const lastOpinion = opinions[opinions.length - 1] ?? null;
+  // T137: 입장을 바꾸면(예: 반대로 시작해 2/2에서 찬성으로) 첫 의견의 반대 쪽 조건은 새 입장의 조건이 아니라서
+  // 이어받지 않는다 — 칩·제출·규칙표·live 요청이 모두 지금 입장 쪽 조건만 본다.
   const previousConfirmedIds = useMemo(
-    () => lastOpinion?.confirmedConditionIds ?? [],
-    [lastOpinion],
+    () => filterConditionIdsForStance(scenario, lastOpinion?.confirmedConditionIds ?? [], side ?? lastOpinion?.stance ?? null),
+    [scenario, lastOpinion, side],
   );
   // T93(2026-10-07 사용자 지시 "추가 질문도 찬성을 고려해서 질문한다"): 결재권을 준다는
   // 전제의 질문이 반대 참가자에게 어색했다 — 참가자의 최근 입장(lastOpinion.stance)에 따라
@@ -351,8 +358,12 @@ export function ReactionsScreen({
           .map((idStr) => scenario.followUp.options[Number(idStr)]?.proposeConditionId ?? null)
           .filter((id): id is string => id !== null);
     const fromText = proposeFromText(scenario, textValue);
-    return uniqueInOrder([...fromOptions, ...fromText]);
-  }, [scenario, selectedOptionIds, textValue, dirty]);
+    const all = uniqueInOrder([...fromOptions, ...fromText]);
+    // T137(Codex P2): 새로 뽑은 조건도 지금 입장 쪽 카드만 남긴다(칩이 확정으로 보였다가 나중에 버려지지 않게).
+    // 입장을 알 수 없으면(side·첫 의견 입장 모두 없음) 그대로 둔다.
+    const stanceNow = side ?? lastOpinion?.stance ?? null;
+    return stanceNow === null ? all : filterConditionIdsForStance(scenario, all, stanceNow);
+  }, [scenario, selectedOptionIds, textValue, dirty, side, lastOpinion]);
 
   const proposedConditionIds = useMemo(
     () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds, ...restorableConditionIds]),
@@ -565,7 +576,8 @@ export function ReactionsScreen({
           : isHiddenOnlyCondition(id)
             ? releasedSourceText(id)
             : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
-      offered: (id: string) => isConditionOffered(scenario, id, guideSide),
+      // 칩만 해제한 조건은 입장이 바뀌어 추천 답변에 없어도 칩을 다시 눌러 붙일 수 있다(T137: 두 입장의 조건이 다르다).
+      offered: (id: string) => isReleasedCondition(id) || isConditionOffered(scenario, id, guideSide),
       later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1061,6 +1073,7 @@ export function ReactionsScreen({
                   <PhraseCard
                     key={index}
                     phrase={{ id: String(index), text: option.text }}
+                    objection={option.proposeConditionId !== null && isObjectionCondition(scenario, option.proposeConditionId)}
                     selected={selectedOptionIds.includes(String(index))}
                     onToggle={() => handleToggleOption(index)}
                     testId={`followup-option-${index}`}
