@@ -211,6 +211,13 @@ describe('buildResultSummary — live', () => {
 
     expect(summary.execRows.filter((r) => r.fallback).map((r) => r.memberId)).toEqual(['CFO']);
     expect(summary.execRows.find((r) => r.memberId === 'CFO')?.reason).not.toBe('판단 근거 없음');
+    // T138: 이유가 없으면(기본) 늦은 응답, direction이면 방향 불일치로 규칙표 표로 바꾼 것이다.
+    expect(summary.execRows.find((r) => r.memberId === 'CFO')?.fallbackCause).toBe('late');
+    const directionSession: Session = {
+      ...session,
+      ballots: ballots.map((b) => (b.memberId === 'CFO' ? { ...b, rulesCause: 'direction' as const } : b)),
+    };
+    expect(buildResultSummary(scenario, directionSession).execRows.find((r) => r.memberId === 'CFO')?.fallbackCause).toBe('direction');
     expect(summary.tally.counts.UNCAST).toBe(0);
     expect(summary.tally.counts.YES + summary.tally.counts.NO).toBe(5);
   });

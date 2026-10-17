@@ -579,7 +579,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
                           className="result-seat__fallback"
                           data-testid={`result-seat-fallback-${row.memberId}`}
                         >
-                          응답이 늦어 기준표로 정했습니다
+                          {row.fallbackCause === 'direction' ? '기준표로 정했습니다' : '응답이 늦어 기준표로 정했습니다'}
                         </span>
                       )}
                       {row.changed && (

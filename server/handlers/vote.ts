@@ -24,7 +24,12 @@ import {
   buildMeetingRecordBlock,
 } from '../prompts/common';
 import { ROLE_PROMPT_BUILDERS } from '../prompts/roles';
-import { buildVoteDirectionRule, ruleVoteDirection } from '../prompts/voteDirection';
+import {
+  buildVoteDirectionReminder,
+  buildVoteDirectionRule,
+  ruleVoteBallot,
+  ruleVoteDirection,
+} from '../prompts/voteDirection';
 import { PROMPT_VERSION } from '../prompts/version';
 import { systemClock, type Clock } from '../clock';
 import { DEFAULT_ROUND_TIMEOUT_MS } from '../config';
@@ -103,6 +108,9 @@ export interface Ballot {
   remainingConcerns: string[];
   motionId: string;
   motionHash: string;
+  /** 'rules'면 live 표가 방향 지시와 달라 규칙표 표로 바꿨다는 뜻이다(T138). */
+  source?: 'rules';
+  rulesCause?: 'direction';
 }
 
 export interface VoteRoleResult {
@@ -151,6 +159,7 @@ function buildVoteSystemPrompt(
   roleId: ExecRoleId,
   materials: NonNullable<ReturnType<typeof getScenarioMaterials>>,
   input: VoteRequest,
+  reminderVote?: 'YES' | 'NO',
 ): string {
   const rolePrompt = ROLE_PROMPT_BUILDERS[roleId](materials, 'VOTE');
   // T137: 반대 근거는 안건을 수정하지 않으므로 "적용 조건"이 아니라 "참가자가 든 반대 근거"로 따로 싣는다.
@@ -201,6 +210,7 @@ function buildVoteSystemPrompt(
       );
       return rule ? [rule] : [];
     })(),
+    ...(reminderVote ? [buildVoteDirectionReminder(reminderVote)] : []),
     ...(input.followUpAnswered === false ? [VOTE_UNANSWERED_RULE] : []),
     ...(input.followUpAnswered !== false && input.followUpAnswerText !== undefined ? [ANSWER_JUDGMENT_RULE] : []),
     meetingRecord,
@@ -228,12 +238,13 @@ async function attemptRoleVote(
   timeoutMs: number,
   provider: ModelProvider,
   clock: Clock,
+  reminderVote?: 'YES' | 'NO',
 ): Promise<VoteAttemptResult> {
   const start = clock.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const system = buildVoteSystemPrompt(roleId, materials, input);
+    const system = buildVoteSystemPrompt(roleId, materials, input, reminderVote);
     const user = JSON.stringify({
       kind: 'vote',
       roleId,
@@ -343,6 +354,52 @@ async function callRoleVote(
       };
     }
   }
+  // T138: 반대 참가자 경로에서 live 표가 규칙표 방향과 다르면 방향을 다시 알려 한 번 더 요청하고, 그래도 다르면 규칙표
+  // 표(규칙표 이유, source 'rules')로 기록한다. 규칙표와 live가 갈라지면 같은 선택이 다른 결과를 내 체험의 설득 규칙이
+  // 깨지기 때문이다. 첫 응답이 틀렸는데 재요청이 실패해도 첫 응답을 교정한다.
+  let clamped = false;
+  const directionInput = {
+    scenarioId: input.scenarioId,
+    roleId,
+    participantStance: input.participantStance,
+    effectiveConditionIds: input.motion.effectiveConditionIds,
+    followUpAnswered: input.followUpAnswered,
+  };
+  const expected = ruleVoteBallot(directionInput);
+  if (expected) {
+    const wrongFirst = outcome.status === 'answered' && outcome.ballot !== undefined && outcome.ballot.vote !== expected.vote;
+    if (wrongFirst) {
+      const remainingMs = timeoutMs - (clock.now() - overallStart);
+      if (remainingMs >= MIN_RETRY_REMAINING_MS) {
+        attempts += 1;
+        const again = await attemptRoleVote(roleId, input, materials, Math.min(timeoutMs, remainingMs), provider, clock, expected.vote);
+        if (again.status === 'answered' && again.ballot) {
+          outcome = {
+            ...again,
+            cacheReadTokens: sumTokens(outcome.cacheReadTokens, again.cacheReadTokens),
+            cacheWriteTokens: sumTokens(outcome.cacheWriteTokens, again.cacheWriteTokens),
+          };
+        }
+      }
+      if (outcome.ballot && outcome.ballot.vote !== expected.vote) {
+        outcome = {
+          ...outcome,
+          status: 'answered',
+          failReason: undefined,
+          ballot: {
+            ...outcome.ballot,
+            vote: expected.vote,
+            reason: expected.reason,
+            evidenceIds: [],
+            remainingConcerns: [],
+            source: 'rules',
+            rulesCause: 'direction',
+          },
+        };
+        clamped = true;
+      }
+    }
+  }
   const latencyMs = clock.now() - overallStart;
   logCall({
     ts: new Date(clock.now()).toISOString(),
@@ -363,6 +420,7 @@ async function callRoleVote(
     modelId: outcome.modelId,
     // 재시도로 결국 성공했어도 첫 시도의 형식 오류 원인은 남긴다 — 재시도가 왜 필요했는지가 원인 분석에 가장 쓸모 있다(PR #22 Codex P2).
     invalidIssues: outcome.invalidIssues,
+    note: clamped ? 'vote_direction_clamped' : undefined,
   });
   return {
     roleId,

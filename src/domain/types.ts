@@ -49,6 +49,9 @@ export interface Ballot {
   requestId?: string;
   /** source가 'unavailable'일 때 UNCAST 사유(예: 응답 지연·오류). */
   unavailableReason?: string;
+  /** source가 'rules'일 때 규칙표로 정한 이유(T138): 'late'(기본) 응답이 늦거나 끝내 실패, 'direction' 반대 참가자 경로에서
+   * live 표가 규칙표 방향과 달라 서버가 규칙표 표로 바꿨다. */
+  rulesCause?: 'late' | 'direction';
 }
 
 export type StatementStage = 'OPINIONS' | 'REACTIONS' | 'FOLLOWUP';

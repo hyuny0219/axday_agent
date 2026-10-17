@@ -302,6 +302,8 @@ function toBallotOutcome(
   const ballot = entry.ballot;
   if (entry.status === 'answered' && isRecord(ballot)) {
     const { vote, reason, evidenceIds, remainingConcerns, motionId, motionHash } = ballot;
+    // T138: 서버가 live 표를 규칙표 표로 바꿨으면(반대 참가자 경로, 방향 불일치) 출처를 'rules'로 남긴다.
+    const rulesDirection = ballot.source === 'rules' && ballot.rulesCause === 'direction';
     if (
       isVote(vote) &&
       typeof reason === 'string' &&
@@ -319,7 +321,8 @@ function toBallotOutcome(
           motionHash,
           vote,
           confirmedAt: 0,
-          source: 'live',
+          source: rulesDirection ? 'rules' : 'live',
+          ...(rulesDirection ? { rulesCause: 'direction' as const } : {}),
           reason,
           remainingConcerns,
           modelId: typeof entry.modelId === 'string' ? entry.modelId : undefined,

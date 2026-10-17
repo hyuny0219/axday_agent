@@ -372,6 +372,31 @@ describe('live board agents adapter', () => {
     expect(outcomes.every((o) => o.ballot?.source === 'live')).toBe(true);
   });
 
+  it('서버가 방향 불일치로 규칙표 표로 바꾼 표(source rules, rulesCause direction)는 출처를 rules로 남긴다(T138)', async () => {
+    const clock = fakeClock(0);
+    const session = toVoteStage(clock);
+    const motion = session.finalMotion!;
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () =>
+        EXEC_MEMBER_ORDER.map((roleId) => ({
+          roleId,
+          status: 'answered',
+          ballot: {
+            motionId: motion.id, motionHash: motion.hash, vote: 'NO', reason: '기준표 이유',
+            evidenceIds: [], remainingConcerns: [], ...(roleId === 'CFO' ? { source: 'rules', rulesCause: 'direction' } : {}),
+          },
+          modelId: 'm', promptVersion: 'v23',
+        })),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const outcomes = await createLiveBoardAgentsAdapter().finalVotes(makeCtx(session));
+    const cfo = outcomes.find((o) => o.roleId === 'CFO')?.ballot;
+    expect(cfo?.source).toBe('rules');
+    expect(cfo?.rulesCause).toBe('direction');
+    expect(outcomes.filter((o) => o.ballot?.source === 'live')).toHaveLength(3);
+  });
+
   it('표 요청도 서버 예산 직후(여유 안)에 일부만 응답하면 그 역할만 failed로 남긴다(PR #11 Codex 24차 P1)', async () => {
     const clock = fakeClock(0);
     const session = toVoteStage(clock);

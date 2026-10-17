@@ -22,6 +22,8 @@ export interface ResultSummaryExecRow {
   changed: boolean;
   /** live에서 응답을 못 받아 규칙표로 정한 표인지(T136, ballot.source === 'rules'). */
   fallback: boolean;
+  /** fallback일 때 이유(T138): 'direction'이면 live 표가 규칙표 방향과 달라 규칙표 표로 바꾼 것. */
+  fallbackCause?: 'late' | 'direction';
 }
 
 export interface ResultSummaryParticipant {
@@ -83,6 +85,7 @@ export function buildResultSummary(scenario: Scenario, session: Session): Result
             reason: ballot?.reason ?? ballot?.unavailableReason ?? NO_REASON_TEXT,
             changed: false,
             fallback: ballot?.source === 'rules',
+            fallbackCause: ballot?.source === 'rules' ? (ballot.rulesCause ?? 'late') : undefined,
           };
         });
 

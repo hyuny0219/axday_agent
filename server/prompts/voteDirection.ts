@@ -4,7 +4,7 @@
 
 import { aiApprovalScenario, experienceFirstScenario } from '../../src/content/scenarios';
 import type { ExecMemberId, Scenario } from '../../src/content/types';
-import { decideMember } from '../../src/domain/voting';
+import { decideMember, explainMember } from '../../src/domain/voting';
 
 const SCENARIOS: Record<string, Scenario> = {
   [aiApprovalScenario.id]: aiApprovalScenario,
@@ -81,4 +81,28 @@ export function buildVoteDirectionRule(direction: VoteDirection | null): string 
         ' 있었다고 지어내지 마십시오.'
       );
   }
+}
+
+/** 반대 참가자 경로에서 이 임원의 규칙표 표와 판단 이유(T138). live 표가 방향 지시와 달라 교정할 때 쓴다. 그 밖은 null. */
+export function ruleVoteBallot(input: VoteDirectionInput): { vote: 'YES' | 'NO'; reason: string } | null {
+  if (input.participantStance !== 'AGAINST') return null;
+  const rules = SCENARIOS[input.scenarioId]?.voteRules[input.roleId as ExecMemberId];
+  if (!rules) return null;
+  const { vote, reason } = explainMember(rules, {
+    conditionIds: [...input.effectiveConditionIds],
+    executionMode: 'DEFAULT',
+    participantStance: 'AGAINST',
+    followUpAnswered: input.followUpAnswered !== false,
+  });
+  if (vote === 'UNCAST') return null;
+  return { vote, reason: reason ?? '기준표에 따라 정했습니다' };
+}
+
+/** 다시 요청할 때 덧붙이는 방향 재확인 문구(T138). 첫 응답의 표가 방향 지시와 달랐다는 점을 알린다. */
+export function buildVoteDirectionReminder(vote: 'YES' | 'NO'): string {
+  return (
+    '직전 응답의 표가 위 방향 지시와 달랐습니다. 이번에는 지시대로 ' +
+    (vote === 'NO' ? '반대(NO)' : '찬성(YES)') +
+    '표를 던지십시오. 이유도 그 표에 맞게 쓰십시오.'
+  );
 }

@@ -116,4 +116,8 @@
 // buildOpeningStanceBlock)를, 첫 반응 MAY_CROSS·KEEP 지시를 단정형으로 바꿨다(MAY_CROSS는 UNDECIDED, KEEP은 처음 입장
 // 그대로, prompts/firstReaction.ts). 모델이 어겨도 문장이 방향을 밝히지 않았다면 서버가 stance만 규칙표 분류대로 교정한다
 // (round.ts clampStance, 로그 note stance_clamped). 반대 쪽 함정 조건 8개 중 2개(AG_BAN·AG_NUMBERS)를 없앴다.
-export const PROMPT_VERSION = 'v22';
+// v23(2026-10-17, T138 보강): v22 live 실측에서 반대 참가자 경로의 최종표가 규칙표와 다른 경우(CAIO)가 남았다. 반대 참가자일
+// 때 live 표가 규칙표 방향과 다르면 방향 재확인 문구(voteDirection.ts buildVoteDirectionReminder)를 붙여 한 번 더 요청하고,
+// 그래도 다르면 서버가 규칙표 표·이유(source 'rules', rulesCause 'direction', 로그 note vote_direction_clamped)로 바꾼다.
+// 첫 표결 요청의 프롬프트는 v22와 같고 재요청 때만 문구가 더해진다. 찬성 참가자·응답 스키마는 그대로다.
+export const PROMPT_VERSION = 'v23';
