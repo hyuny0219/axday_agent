@@ -183,6 +183,13 @@
   line-height: 1.35;
 }
 
+.assistant-intro__order {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-meta);
+  line-height: 1.4;
+  color: var(--ink);
+}
+
 .assistant-intro__list {
   margin: 0;
   padding: 0;

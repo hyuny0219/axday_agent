@@ -153,6 +153,17 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
   });
 
+  it('버튼 이름에 ①②③이 들어가고 추천 순서 한 줄이 있으며 버튼은 모두 눌린다(T141)', () => {
+    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(screen.getByRole('button', { name: /^① 의견 한눈에 보기/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^② 조건 추천/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^③ 내 발언 정리/ })).toBeEnabled();
+    const order = screen.getByTestId('assistant-intro-order');
+    expect(order).toHaveTextContent('추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기');
+    expect(order).toHaveTextContent('하나만 써도 의견 전달이 열립니다');
+  });
+
   it('한 기능만 써도 완료 문구가 뜨고, 하나도 안 쓰면 안 뜬다(T109)', () => {
     const { unmount } = render(
       <AssistantPanel {...base()} requiredFeatures={{ used: new Set(['compare']) }} />,

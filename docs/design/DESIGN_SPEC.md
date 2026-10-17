@@ -1339,3 +1339,10 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - **잠긴 '의견 전달' 이유**: sr-only였던 `discuss-cta-hint`("먼저 입장을 골라 주세요" / "추천 문구를 고르거나 직접 써 주세요" / "AI 비서실장을 한 번 써 보세요")를 버튼 줄 아래 한 줄(`.discuss-screen__cta-hint`, 전체 너비)로 보이게 했다. 버튼이 열리면 사라진다. 키 작은 화면(≤1280 또는 ≤900px 높이)은 13px·줄 높이 1.05·위 간격 -4px로 입력 상자(HUD)가 줄지 않게 했다(noscroll HUD 검사 1536×864 기준).
 - **그대로 둔 것**: 의견 전달 활성 규칙(T109), 다른 화면 코치, 다음 할 일 점선(T113) 규칙.
 - 테스트: `tests/domain/coach.test.ts discussChecklist`, `tests/components/Coach.test.tsx`(접기로만 닫힘), e2e `coach.spec.ts`(✓·▶ 이동·접기·아이콘 재열기), 스크린샷 `coach-discuss`·`discuss-locked`·`discuss`.
+
+## T141 AI 비서실장 기능 번호와 추천 순서 (2026-10-18)
+
+- 세 기능 버튼·소개 목록·압축 줄이 모두 `① 의견 한눈에 보기` `② 조건 추천` `③ 내 발언 정리`로 같은 번호를 쓴다(부스 안내판 3-3의 ①②③과 같음). 번호는 글자로 라벨 앞에 붙어 접근 가능한 이름에 들어간다. 내부 feature key·`FEATURE_LABELS`·로그 문구는 그대로다.
+- 소개 상자(DISCUSS 첫 화면)에 한 줄: "추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다." 순서는 권유일 뿐이다 — 버튼을 비활성화하거나 순서를 강제하지 않고, T109대로 한 가지만 써도 열린다.
+- 다시 답하기(REACTIONS 2/2) 팝업은 같은 컴포넌트라 버튼 번호가 같다. 그 화면은 비서실장이 선택이라 소개 상자(필수·"하나만 써도" 문장)가 없다.
+- 테스트: `tests/components/AssistantPanel.test.tsx`, 스크린샷 `discuss-assistant-intro`.
