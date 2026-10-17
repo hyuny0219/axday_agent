@@ -559,3 +559,38 @@ describe('조건 추천 적용 가능 여부와 확인 뒤 묶음 적용(Codex 3
     expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
   });
 });
+
+describe('새로 뽑은 조건의 입장 필터(T137 Codex P2)', () => {
+  function renderSide(side: 'FOR' | 'AGAINST') {
+    render(
+      <ControlledDiscuss
+        scenario={aiApprovalScenario}
+        sessionId="s1"
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        stances={stances}
+        initialSide={side}
+        onSubmit={noop}
+        onAssistantAction={noop}
+      />,
+    );
+  }
+
+  it('반대 입장에서 찬성 조건 키워드를 쓰면 초록 칩이 생기지 않는다', () => {
+    renderSide('AGAINST');
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '금액 한도를 정해 두면 좋겠습니다.' } });
+    expect(screen.queryByTestId('condition-chip-LIMIT')).not.toBeInTheDocument();
+  });
+
+  it('찬성 입장에서 반대 조건 키워드를 쓰면 빨간 칩이 생기지 않는다', () => {
+    renderSide('FOR');
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '승인 이유가 남지 않았습니다.' } });
+    expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+  });
+
+  it('같은 입장 키워드는 칩이 생긴다(대조)', () => {
+    renderSide('FOR');
+    fireEvent.change(screen.getByTestId('draft-editor-textarea'), { target: { value: '금액 한도를 정해 두면 좋겠습니다.' } });
+    expect(screen.getByTestId('condition-chip-LIMIT')).toBeInTheDocument();
+  });
+});

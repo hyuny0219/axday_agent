@@ -1148,4 +1148,16 @@ describe('ReactionsScreen 입장 전환과 조건(T137)', () => {
     renderSwitch({ stance: 'AGAINST', ids: ['AG_AUDIT'] }, 'AGAINST');
     expect(screen.getByTestId('condition-chip-AG_AUDIT')).toBeInTheDocument();
   });
+
+  it('새로 쓴 답변: 반대 입장에서 찬성 조건 키워드는 칩이 되지 않는다(Codex P2)', () => {
+    renderSwitch({ stance: 'AGAINST', ids: [] }, 'AGAINST');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '금액 한도를 정해 두면 좋겠습니다.' } });
+    expect(screen.queryByTestId('condition-chip-LIMIT')).not.toBeInTheDocument();
+  });
+
+  it('새로 쓴 답변: 찬성 입장에서 반대 조건 키워드는 칩이 되지 않는다(Codex P2)', () => {
+    renderSwitch({ stance: 'FOR', ids: [] }, 'FOR');
+    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '승인 이유가 남지 않았습니다.' } });
+    expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+  });
 });

@@ -358,8 +358,12 @@ export function ReactionsScreen({
           .map((idStr) => scenario.followUp.options[Number(idStr)]?.proposeConditionId ?? null)
           .filter((id): id is string => id !== null);
     const fromText = proposeFromText(scenario, textValue);
-    return uniqueInOrder([...fromOptions, ...fromText]);
-  }, [scenario, selectedOptionIds, textValue, dirty]);
+    const all = uniqueInOrder([...fromOptions, ...fromText]);
+    // T137(Codex P2): 새로 뽑은 조건도 지금 입장 쪽 카드만 남긴다(칩이 확정으로 보였다가 나중에 버려지지 않게).
+    // 입장을 알 수 없으면(side·첫 의견 입장 모두 없음) 그대로 둔다.
+    const stanceNow = side ?? lastOpinion?.stance ?? null;
+    return stanceNow === null ? all : filterConditionIdsForStance(scenario, all, stanceNow);
+  }, [scenario, selectedOptionIds, textValue, dirty, side, lastOpinion]);
 
   const proposedConditionIds = useMemo(
     () => uniqueInOrder([...previousConfirmedIds, ...newProposedIds, ...restorableConditionIds]),
