@@ -53,13 +53,18 @@ test('6개 화면에서 한 번씩 뜨고, 알겠어요나 첫 조작으로 사�
   await expect(page.getByTestId('coach')).toHaveCount(0);
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
 
-  // 3. DISCUSS — 입장 버튼을 바로 눌러도 된다(첫 조작 = 닫힘). 다시 들어와도 한 번뿐이다.
+  // 3. DISCUSS — 체크리스트(T140): 첫 조작으로 닫히지 않고 진행에 따라 ✓·▶가 옮겨 간다.
   await expectCoach(page, 3);
-  await expect(page.getByTestId('coach-lines').locator('li')).toHaveCount(4);
+  const check = (id: string) => page.getByTestId(`coach-check-${id}`);
+  await expect(page.getByTestId('coach-checklist').locator('li')).toHaveCount(4);
+  await expect(check('side')).toHaveAttribute('data-state', 'current');
+  await expect(page.getByTestId('discuss-cta-hint')).toBeVisible();
   await page.getByTestId('discuss-side-for').click();
-  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(check('side')).toHaveAttribute('data-state', 'done');
+  await expect(check('phrase')).toHaveAttribute('data-state', 'current');
   await page.getByTestId('phrase-card-P1').click();
-  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(check('phrase')).toHaveAttribute('data-state', 'done');
+  await expect(check('assistant')).toHaveAttribute('data-state', 'current');
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
   await expect(page.getByTestId('coach')).toHaveCount(0); // 팝업 안에는 코치가 없다
@@ -70,16 +75,36 @@ test('6개 화면에서 한 번씩 뜨고, 알겠어요나 첫 조작으로 사�
   await page.getByTestId('assistant-close').click();
   await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
   await expect(page.getByTestId('submit-opinion')).toBeEnabled();
+  await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
+  await expect(check('assistant')).toHaveAttribute('data-state', 'done');
+  await expect(check('submit')).toHaveAttribute('data-state', 'current');
+  // 접기 → 안내 아이콘, 다시 열면 체크리스트가 지금 상태로 나온다.
+  await page.getByTestId('coach-ack').click();
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await page.getByTestId('coach-icon').click();
+  await expect(check('submit')).toHaveAttribute('data-state', 'current');
+  await page.getByTestId('coach-ack').click();
   await page.getByTestId('submit-opinion').click();
 
   // 4. REACTIONS 1/2
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expectCoach(page, 4);
   await page.getByTestId('coach-ack').click();
+  // T142: 넘어가기 확인 팝업이 뜬 동안에는 말풍선·안내 아이콘이 팝업 위에 겹치지 않는다.
+  await expect(page.getByTestId('coach-icon')).toBeVisible();
+  await page.getByTestId('keep-previous-answer').click();
+  await expect(page.getByTestId('skip-check')).toBeVisible();
+  await expect(page.getByTestId('coach')).toHaveCount(0);
+  await expect(page.getByTestId('coach-icon')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('skip-check')).toHaveCount(0);
+  await expect(page.getByTestId('coach-icon')).toBeVisible();
+  await expect(page.getByTestId('reactions-advance')).toBeVisible();
   await page.getByTestId('reactions-advance').click();
   await expect(page.getByTestId('followup-textarea')).toBeVisible();
   await expect(page.getByTestId('coach')).toHaveCount(0); // 2/2 다시 답하기에는 코치가 없다
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   // MOTION에는 코치가 없다.
   await expect(page.getByTestId('motion-card')).toBeVisible();

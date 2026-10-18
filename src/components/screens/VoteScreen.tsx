@@ -6,7 +6,7 @@
 // App.tsx가 그린다) 아래 "BALLOTS · 임원 표" HUD 패널(임원 4명 모두 항상 봉인된 "?"
 // 배지 — 임원 표는 이 화면에서 절대 공개하지 않는다는 기존 규칙을 그대로 지킨다)과
 // 그 아래 안내 한 줄(live에서 임원 응답이 아직 도착하지 않았을 때만, 실패한 역할이
-// 있으면 그 자리가 "미표결 임원 다시 요청" 버튼으로 바뀐다) → TRANSCRIPT(App.tsx의
+// 있어도 버튼은 없다 — 화면이 자동으로 1회 다시 요청하고 끝내 실패하면 규칙표 표로 정한다, T136) → TRANSCRIPT(App.tsx의
 // MinutesPanel)이다. 오른쪽 종이 한 장에 STEP 05·2/2 + 제목 + CONFIDENTIAL 도장,
 // MOTION 한 줄 상자, 찬성/반대 큰 원형 도장 라디오 2칸, 바닥 CTA를 담는다. CTA·라디오는
 // 시안처럼 오른쪽 종이 안에 둔다(원래 "CTA는 항상 왼쪽 열" 원칙의 예외 — 이 화면은
@@ -41,11 +41,11 @@ export interface VoteScreenProps {
   /** 참가자가 가장 최근 의견에서 밝힌 입장(T92). MOTION 상자 문구를 반대 입장에 맞게
    * 바꾼다(buildMotionDisplay). */
   participantStance?: 'FOR' | 'AGAINST' | null;
-  /** 실패한 역할을 가려내 "미표결 임원 다시 요청" 버튼을 보여줄 때만 쓴다(T65). */
+  /** 실패한 역할을 가려낼 때만 쓴다(T65). T136부터 표결 재요청은 자동이라 버튼은 없다. */
   roleStatus?: Record<ExecMemberId, RoleStatus>;
   onSelectVote: (vote: PendingVote) => void;
   onConfirmVote: () => void;
-  /** 있으면 실패한 역할만 최종표를 다시 요청한다(T65 "미표결 임원 다시 요청", 1회). */
+  /** 있으면 실패한 역할만 최종표를 다시 요청한다(T65 수동 재요청 버튼, T136 이후 App은 넘기지 않는다). */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
   /** live 회의 기록의 발언들 — 설득 현황판의 첫 의견 입장·제안 조건에 쓴다. */
   statements?: Statement[];

@@ -41,6 +41,15 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   refine: '내 발언 정리',
 };
 
+// T141: 부스 안내판 3-3의 ①②③과 같은 번호. 추천 순서일 뿐 실행 순서를 강제하지 않는다.
+const FEATURE_NUMBERS: Record<FeatureKey, string> = {
+  summary: '①',
+  compare: '②',
+  refine: '③',
+};
+const numberedLabel = (feature: FeatureKey): string =>
+  `${FEATURE_NUMBERS[feature]} ${FEATURE_LABELS[feature]}`;
+
 // T97: 팝업 첫 화면 소개(DISCUSS만). 기능마다 쉬운 말 한 문장.
 const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   summary: '임원 네 명 말을 한 줄씩 정리합니다',
@@ -546,6 +555,9 @@ export function AssistantPanel({
                     <h3 className="assistant-intro__title">
                       AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)
                     </h3>
+                    <p className="assistant-intro__order" data-testid="assistant-intro-order">
+                      추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다.
+                    </p>
                     <ul className="assistant-intro__list">
                       {ASSISTANT_FEATURE_ORDER.map((feature) => {
                         const used = requiredFeatures.used.has(feature);
@@ -560,7 +572,7 @@ export function AssistantPanel({
                             >
                               {used ? '☑' : '☐'}
                             </span>
-                            <strong>{FEATURE_LABELS[feature]}</strong>
+                            <strong>{numberedLabel(feature)}</strong>
                             <span className="assistant-intro__desc">
                               {' '}
                               — {FEATURE_DESCRIPTIONS[feature]}
@@ -586,7 +598,7 @@ export function AssistantPanel({
                         >
                           {requiredFeatures.used.has(feature) ? '☑' : '☐'}
                         </span>{' '}
-                        {FEATURE_LABELS[feature]}
+                        {numberedLabel(feature)}
                       </span>
                     ))}
                   </p>
@@ -612,7 +624,7 @@ export function AssistantPanel({
                     data-testid={`assistant-action-${feature}`}
                     {...nextStepAttr(focusNext && status !== 'loading' && feature === firstUnusedFeature)}
                   >
-                    {status === 'loading' && activeFeature === feature ? `${FEATURE_LABELS[feature]} · 정리 중…` : FEATURE_LABELS[feature]}
+                    {status === 'loading' && activeFeature === feature ? `${numberedLabel(feature)} · 정리 중…` : numberedLabel(feature)}
                     {used && (
                       <span
                         className="assistant-panel__done-mark"

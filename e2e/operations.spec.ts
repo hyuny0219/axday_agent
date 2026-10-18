@@ -91,6 +91,8 @@ test('표결 확정을 빠르게 두 번 눌러도 표는 한 번만 반영된�
   await page.getByTestId('submit-opinion').click();
 
   await page.getByTestId('keep-previous-answer').click();
+
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await page.getByTestId('freeze-motion').click();
 
   await page.getByTestId('vote-radio-YES').check();

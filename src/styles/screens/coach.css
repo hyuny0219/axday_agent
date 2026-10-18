@@ -77,6 +77,44 @@
   padding-left: 22px;
 }
 
+/* T140: DISCUSS 체크리스트 — 상태는 기호(✓ ▶ ○)와 숨김 글자로도 알려 색만으로 구분하지 않는다. */
+.coach__checklist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 16px;
+  line-height: 1.35;
+  color: #3d3a31;
+  word-break: keep-all;
+}
+
+.coach__check {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 6px;
+}
+
+.coach__check-mark {
+  flex: none;
+  width: 1.2em;
+  text-align: center;
+  font-weight: 800;
+}
+
+.coach__check[data-state='done'] {
+  opacity: 0.55;
+}
+
+.coach__check[data-state='current'] {
+  background: #f1e0b4;
+  border-left: 4px solid #8a5a12;
+  font-weight: 800;
+  color: #1b1a17;
+}
+
 .coach__ack {
   display: block;
   min-height: 44px;
@@ -122,6 +160,17 @@
     margin-top: 4px;
     font-size: 13px;
     line-height: 1.4;
+  }
+
+  .coach__checklist {
+    margin-top: 4px;
+    gap: 2px;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .coach__check {
+    padding: 2px 6px;
   }
 
   .coach__ack {

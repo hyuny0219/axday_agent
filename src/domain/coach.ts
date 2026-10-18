@@ -3,6 +3,7 @@
 // 말풍선을 보여 줄지"만 순수 함수로 정한다. 문구는 content/coach.ts, 그리기는
 // components/parts/Coach.tsx가 맡는다.
 
+import { discussNextStep } from './nextStep';
 import type { Session } from './types';
 
 /** 안내가 있는 화면 수(BRIEFING·OPINIONS·DISCUSS·REACTIONS 1/2·VOTE·RESULT). */
@@ -49,4 +50,42 @@ export function coachStep(session: Session, ui: CoachUi): CoachScreenNumber | nu
     return null;
   }
   return screen;
+}
+
+/** DISCUSS 체크리스트(T140)의 항목. 번호는 부스 안내판(docs/booth/)의 3-1~3-4와 같다. */
+export type DiscussChecklistId = 'side' | 'phrase' | 'assistant' | 'submit';
+export type DiscussChecklistState = 'done' | 'current' | 'todo';
+
+/** discussNextStep과 같은 입력 — DiscussScreen이 이 값으로 다음 할 일 점선도 정한다. */
+export interface DiscussProgress {
+  sideChosen: boolean;
+  hasDraft: boolean;
+  assistantUsed: boolean;
+  canSubmit: boolean;
+}
+
+export const EMPTY_DISCUSS_PROGRESS: DiscussProgress = {
+  sideChosen: false,
+  hasDraft: false,
+  assistantUsed: false,
+  canSubmit: false,
+};
+
+export const DISCUSS_CHECKLIST_IDS: readonly DiscussChecklistId[] = ['side', 'phrase', 'assistant', 'submit'];
+
+/** 끝난 항목은 done, discussNextStep이 가리키는 항목은 current, 나머지는 todo. 의견 전달은 화면을 떠날 때까지 done이 되지 않는다. */
+export function discussChecklist(
+  progress: DiscussProgress,
+): { id: DiscussChecklistId; state: DiscussChecklistState }[] {
+  const next = discussNextStep(progress);
+  const done: Record<DiscussChecklistId, boolean> = {
+    side: progress.sideChosen,
+    phrase: progress.hasDraft,
+    assistant: progress.assistantUsed,
+    submit: false,
+  };
+  return DISCUSS_CHECKLIST_IDS.map((id) => ({
+    id,
+    state: done[id] ? 'done' : next === id ? 'current' : 'todo',
+  }));
 }

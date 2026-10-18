@@ -350,3 +350,81 @@
 .reaction-card--leaning {
   border-left-style: dashed;
 }
+
+/* T142: 넘어가기 앞 확인 팝업(DialogShell 본문) */
+.skip-check__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 4px 0;
+  list-style: none;
+}
+
+.skip-check__item {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid rgba(27, 26, 23, 0.25);
+  background: #fbf6e8;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.skip-check__mark {
+  flex: none;
+  width: 1.3em;
+  text-align: center;
+  font-weight: 800;
+}
+
+.skip-check__item[data-state='todo'] .skip-check__mark {
+  opacity: 0.55;
+}
+
+.skip-check__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skip-check__question {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.skip-check__actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+/* 두 버튼은 크기·글자 크기가 같고 색으로만 주(主)를 구분한다. */
+.skip-check__actions .cta {
+  min-height: 52px;
+  font-size: 20px;
+}
+
+@media (max-width: 1280px), (max-height: 900px) {
+  .skip-check__item {
+    padding: 6px 10px;
+    font-size: 17px;
+  }
+
+  .skip-check__question {
+    font-size: 15px;
+  }
+
+  .skip-check__actions {
+    margin-top: 10px;
+  }
+
+  .skip-check__actions .cta {
+    min-height: 44px;
+    font-size: 17px;
+  }
+}

@@ -25,6 +25,8 @@ export interface DialogShellProps {
   closeTestId: string;
   /** 하단 안내 두 줄. 기본값은 EvidenceDialog와 같다. */
   footerHint?: readonly [string, string];
+  /** 내용 높이에 맞추는 작은 팝업(고정 높이 대신 height:auto). 기본은 끔 — 다른 팝업은 그대로. */
+  fit?: boolean;
   children: ReactNode;
 }
 
@@ -37,6 +39,7 @@ export function DialogShell({
   onClose,
   closeTestId,
   footerHint = ['바깥을 누르거나 닫기를 누르면 닫힙니다', '열린 동안 뒤 화면은 멈춤'],
+  fit = false,
   children,
 }: DialogShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -103,7 +106,7 @@ export function DialogShell({
   return (
     <div className="dialog-shell__backdrop" data-testid={`${testId}-backdrop`} onClick={handleBackdropClick}>
       <div
-        className="dialog-shell"
+        className={fit ? 'dialog-shell dialog-shell--fit' : 'dialog-shell'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

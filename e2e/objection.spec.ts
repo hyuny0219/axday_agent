@@ -124,6 +124,7 @@ test('반대 근거를 하나도 고르지 않으면 고민 중 임원이 원안
   await submitFirstOpinion(page);
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();
@@ -146,6 +147,7 @@ test('반대 첫 의견에서 조건을 모두 맞춰도 임원은 기울기만 
   await expect(page.getByTestId('exec-mood-label-CEO')).toHaveText('찬성');
   await page.getByTestId('reactions-advance').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-NO').check();
   await page.getByTestId('confirm-vote').click();

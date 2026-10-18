@@ -15,7 +15,7 @@
 // initialOpinions)은 EvidenceDialog 팝업의 STATEMENTS 열로 옮겼다(BRIEFING과 같은
 // 컴포넌트를 함께 쓴다).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
 import type { Opinion, SessionMode, Stance, Transcript } from '../../domain/types';
 import type { DraftState } from '../../domain/draft';
@@ -44,6 +44,7 @@ import type { AssistantAdapter } from '../../services/assistant/types';
 import { PhraseCard } from '../parts/PhraseCard';
 import { discussNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
+import { resetDiscussProgress, setDiscussProgress } from '../parts/discussProgressStore';
 import { DraftEditor } from '../parts/DraftEditor';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
 import { ConditionChips } from '../parts/ConditionChips';
@@ -208,12 +209,28 @@ export function DiscussScreen({
   const canSubmit = !readOnly && draftReady && assistantDone;
   // T113: 다음 할 일 점선 — 입장 → 추천 문구(글이 아직 없을 때) → 비서실장 → 의견 전달.
   const gate = useFocusGate('discuss');
+  const sideChosen = side !== null;
+  const hasDraft = isSubmittable(draft);
   const nextStep = discussNextStep({
-    sideChosen: side !== null,
-    hasDraft: isSubmittable(draft),
+    sideChosen,
+    hasDraft,
     assistantUsed: assistantDone,
     canSubmit,
   });
+  // T140: 진행 도우미 체크리스트가 같은 입력으로 완료·지금 할 일을 그린다. 지난 화면 보기는 알리지 않는다.
+  // 레이아웃 효과로 그린다 — 그리기 전에 저장소를 채워 복원된 초안이 있어도 빈 체크리스트가 한 프레임 보이지 않게 한다.
+  useLayoutEffect(() => {
+    if (readOnly) {
+      return;
+    }
+    setDiscussProgress({ sideChosen, hasDraft, assistantUsed: assistantDone, canSubmit });
+  }, [readOnly, sideChosen, hasDraft, assistantDone, canSubmit]);
+  useEffect(() => {
+    if (readOnly) {
+      return;
+    }
+    return resetDiscussProgress;
+  }, [readOnly]);
 
   // 사건 칩(시안 "CASE 02", T83에서 한국어화): scenario.incident.caseLabel이 이미
   // "사건 02" 형식이라 그대로 쓴다(ResultScreen·BriefingScreen도 같다).
@@ -495,7 +512,7 @@ export function DiscussScreen({
             의견 전달 ▶
           </button>
           {!canSubmit && (
-            <span id="discuss-submit-why" className="sr-only" data-testid="discuss-cta-hint">
+            <span id="discuss-submit-why" className="discuss-screen__cta-hint" data-testid="discuss-cta-hint">
               {side === null
                 ? '먼저 입장을 골라 주세요'
                 : draftReady

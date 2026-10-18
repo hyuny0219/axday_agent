@@ -266,6 +266,7 @@ test('VOTE에서 CAIO가 실패해도 자동으로 다시 요청해 결과에 �
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();
 
@@ -297,6 +298,7 @@ test('VOTE에서 CAIO가 재요청에도 계속 실패하면 미표결 없이 �
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();
 

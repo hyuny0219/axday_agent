@@ -114,6 +114,7 @@ test('ATTRACT~RESULT 모든 화면에 역할 약자·브랜드명·AI 외의 영
   // 버튼 "답하지 않고 넘어가기"로 옮겼다 — 조건을 더 붙이지 않는 경로(부결로
   // 이어진다, aiApproval.ts voteRules의 조건 없는 always 분기)는 이 버튼으로 탄다.
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await checkScreen('MOTION');
 
   await page.getByTestId('freeze-motion').click();

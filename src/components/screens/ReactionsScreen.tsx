@@ -104,6 +104,7 @@ import { PhraseCard } from '../parts/PhraseCard';
 import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
+import { SkipCheckDialog } from '../parts/SkipCheckDialog';
 import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
@@ -237,6 +238,18 @@ export function ReactionsScreen({
   // 유료 재요청이 나가지 않게 한다.
   const [assistantOpen, setAssistantOpen] = useState(false);
   const infoRef = useRef<HTMLDivElement>(null);
+  const handleAssistantAction = useCallback(
+    (event: AssistantActionEvent) => {
+      setAssistantUsedHere(true);
+      onAssistantAction(event);
+    },
+    [onAssistantAction],
+  );
+  useEffect(() => {
+    if (step === 'answer') {
+      setAnswerVisited(true);
+    }
+  }, [step]);
   const handleAssistantOpenChange = useCallback((open: boolean) => setAssistantOpen(open), []);
   useEffect(() => {
     infoRef.current?.toggleAttribute('inert', assistantOpen);
@@ -286,6 +299,10 @@ export function ReactionsScreen({
     readOnly && pastOpinion ? pastOpinion.confirmedConditionIds : previousConfirmedIds,
   );
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  // T142: 넘어가기 확인 팝업과 그 체크리스트 상태(이번 REACTIONS 안에서만 센다).
+  const [skipCheckOpen, setSkipCheckOpen] = useState(false);
+  const [answerVisited, setAnswerVisited] = useState(false);
+  const [assistantUsedHere, setAssistantUsedHere] = useState(false);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
   const [draftRevision, setDraftRevision] = useState(0);
   const transcript = useMemo(
@@ -483,7 +500,7 @@ export function ReactionsScreen({
     // Codex 31차 P2-2). 다시 구성했을 때만 실제 반영분을 기록한다.
     for (const item of batch) {
       if (choice === 'rebuild' && item.conditionId !== null) {
-        onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
+        handleAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
       }
     }
   }
@@ -513,6 +530,41 @@ export function ReactionsScreen({
     }
     onKeepPrevious();
   }
+
+  // T142: "넘어가기" 버튼은 바로 넘기지 않고 확인 팝업을 먼저 띄운다. "그래도 넘어가기"가
+  // 위 handleKeepPrevious를 그대로 실행한다. 팝업이 말하는 것은 답하기 전에 해 볼 일뿐이다.
+  function handleSkipClick() {
+    if (pendingOptionIndex !== null) {
+      return;
+    }
+    setSkipCheckOpen(true);
+  }
+
+  function handleSkipCheckAnswer() {
+    setSkipCheckOpen(false);
+    if (step === 'listen') {
+      onAdvanceStep();
+    }
+  }
+
+  function handleSkipCheckSkip() {
+    setSkipCheckOpen(false);
+    handleKeepPrevious();
+  }
+
+  const handleSkipCheckClose = useCallback(() => setSkipCheckOpen(false), []);
+
+  const skipCheckDialog = skipCheckOpen ? (
+    <SkipCheckDialog
+      question={followUpPrompt.question}
+      answerVisited={answerVisited || step === 'answer'}
+      assistantUsed={assistantUsedHere}
+      answerDisabled={step === 'listen' && listenLocked}
+      onAnswer={handleSkipCheckAnswer}
+      onSkip={handleSkipCheckSkip}
+      onClose={handleSkipCheckClose}
+    />
+  ) : null;
 
   function handleToggleCondition(conditionId: string) {
     setAcceptedConditionIds((previous) =>
@@ -776,15 +828,17 @@ export function ReactionsScreen({
               임원 반응이 다 나오면 열립니다
             </span>
           )}
-          <button
-            type="button"
-            className="cta cta--secondary"
-            onClick={handleKeepPrevious}
-            data-testid="keep-previous-answer"
-            aria-label="답하지 않고 넘어가기"
-          >
-            넘어가기
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="cta cta--secondary"
+              onClick={handleSkipClick}
+              data-testid="keep-previous-answer"
+              aria-label="답하지 않고 넘어가기"
+            >
+              넘어가기
+            </button>
+          )}
         </div>
         <div className="app-body__content screen reactions-screen__info" data-testid="reactions-info">
           <div className="reactions-screen__paper">
@@ -893,6 +947,7 @@ export function ReactionsScreen({
             </div>
           </div>
         </div>
+        {skipCheckDialog}
       </>
     );
   }
@@ -971,20 +1026,22 @@ export function ReactionsScreen({
             draftRevision={draftRevision}
             transcript={transcript}
             onApplyDraft={handleTextChange}
-            onAssistantAction={onAssistantAction}
+            onAssistantAction={handleAssistantAction}
             onOpenChange={handleAssistantOpenChange}
             adapter={assistantAdapter}
           />
-          <button
-            type="button"
-            className="cta cta--secondary reactions-screen__keep-previous"
-            disabled={pendingOptionIndex !== null}
-            onClick={handleKeepPrevious}
-            data-testid="keep-previous-answer"
-            aria-label="답하지 않고 넘어가기"
-          >
-            넘어가기
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="cta cta--secondary reactions-screen__keep-previous"
+              disabled={pendingOptionIndex !== null}
+              onClick={handleSkipClick}
+              data-testid="keep-previous-answer"
+              aria-label="답하지 않고 넘어가기"
+            >
+              넘어가기
+            </button>
+          )}
           <button
             type="button"
             className={canSubmit ? 'cta' : 'cta cta--outline'}
@@ -1111,6 +1168,7 @@ export function ReactionsScreen({
           onClose={() => setEvidenceOpen(false)}
         />
       )}
+      {skipCheckDialog}
     </>
   );
 }

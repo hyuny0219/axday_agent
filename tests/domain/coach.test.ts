@@ -4,6 +4,7 @@ import {
   EMPTY_COACH_UI,
   coachStep,
   coachScreenOf,
+  discussChecklist,
   type CoachUi,
 } from '../../src/domain/coach';
 import { createInitialSession, reduce } from '../../src/domain/session';
@@ -70,3 +71,27 @@ describe('coachStep — dismissed·enabled', () => {
   });
 });
 
+
+describe('discussChecklist(T140)', () => {
+  const states = (p: Parameters<typeof discussChecklist>[0]) => discussChecklist(p).map((i) => i.state);
+  const none = { sideChosen: false, hasDraft: false, assistantUsed: false, canSubmit: false };
+
+  it('처음에는 입장이 지금 할 일이고 나머지는 남은 항목이다', () => {
+    expect(states(none)).toEqual(['current', 'todo', 'todo', 'todo']);
+  });
+
+  it('끝난 항목은 done, 다음 항목이 current로 옮겨 간다', () => {
+    expect(states({ ...none, sideChosen: true })).toEqual(['done', 'current', 'todo', 'todo']);
+    expect(states({ ...none, sideChosen: true, hasDraft: true })).toEqual(['done', 'done', 'current', 'todo']);
+    expect(states({ sideChosen: true, hasDraft: true, assistantUsed: true, canSubmit: true })).toEqual([
+      'done',
+      'done',
+      'done',
+      'current',
+    ]);
+  });
+
+  it('항목 순서는 3-1~3-4(입장·문구·비서실장·전달)다', () => {
+    expect(discussChecklist(none).map((i) => i.id)).toEqual(['side', 'phrase', 'assistant', 'submit']);
+  });
+});

@@ -7,6 +7,8 @@ import { CoachHost } from '../../src/components/parts/CoachHost';
 import { EMPTY_COACH_UI } from '../../src/domain/coach';
 import { createInitialSession } from '../../src/domain/session';
 import { COACH_SCREENS, coachCopy } from '../../src/content/coach';
+import { DiscussScreen } from '../../src/components/screens/DiscussScreen';
+import { anonBoardScenario } from '../../src/content/scenarios';
 import { findForbiddenWords } from '../../server/prompts/plainLanguage';
 
 afterEach(() => {
@@ -86,11 +88,31 @@ describe('CoachHost', () => {
     render(
       <>
         <button type="button">아무 버튼</button>
-        <CoachHost session={sessionAt('DISCUSS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
+        <CoachHost session={sessionAt('OPINIONS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
       </>,
     );
     fireEvent.click(screen.getByRole('button', { name: '아무 버튼' }));
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 2 }));
+  });
+
+  it('DISCUSS 체크리스트는 첫 조작으로 닫히지 않고 접기로만 접힌다(T140)', async () => {
+    const dispatch = vi.fn();
+    render(
+      <>
+        <button type="button">아무 버튼</button>
+        <CoachHost session={sessionAt('DISCUSS')} ui={EMPTY_COACH_UI} dispatch={dispatch} />
+      </>,
+    );
+    expect(screen.getByTestId('coach-checklist').querySelectorAll('li')).toHaveLength(4);
+    expect(screen.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'current');
+    expect(screen.getByTestId('coach-check-side')).toHaveTextContent('3-1 찬성·반대 고르기');
+    expect(screen.getByTestId('coach-check-side')).toHaveTextContent('지금 할 일');
+    fireEvent.click(screen.getByRole('button', { name: '아무 버튼' }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('coach-ack')).toHaveTextContent('접기');
+    fireEvent.click(screen.getByTestId('coach-ack'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'COACH_DISMISS', step: 3 });
   });
 
   it('말풍선 안 클릭·운영 메뉴·버튼이 아닌 곳 클릭은 조작으로 세지 않는다', async () => {
@@ -346,5 +368,55 @@ describe('코치 끌어서 옮기기(T112)', () => {
     window.sessionStorage.setItem('coach-pos', JSON.stringify({ x: 0.3, y: 0.3 }));
     rerender(<CoachHost session={{ ...session, sessionId: 'next' }} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
     expect(window.sessionStorage.getItem('coach-pos')).toBeNull();
+  });
+});
+
+describe('DISCUSS 체크리스트 진행 저장소(T140)', () => {
+  function discuss(sessionId: string) {
+    return (
+      <DiscussScreen
+        scenario={anonBoardScenario}
+        sessionId={sessionId}
+        transcript={{ revision: 0, statements: [] }}
+        mode="scripted"
+        stances={{ CEO: 'FOR', CFO: 'AGAINST', CAIO: 'UNDECIDED', CISO: 'UNDECIDED' }}
+        side="FOR"
+        onChooseSide={() => {}}
+        onSubmit={() => {}}
+        onAssistantAction={() => {}}
+      />
+    );
+  }
+
+  it('화면이 그려지면 고른 입장이 바로 완료로 보이고, 화면을 떠나면 비워진다', () => {
+    const session = sessionAt('DISCUSS');
+    const host = <CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />;
+    const view = render(
+      <>
+        {discuss('s')}
+        {host}
+      </>,
+    );
+    expect(screen.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'done');
+    view.rerender(host);
+    expect(screen.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'current');
+  });
+
+  it('새 체험(화면 다시 마운트)은 앞 체험의 진행을 이어받지 않는다', () => {
+    const session = sessionAt('DISCUSS');
+    const host = <CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />;
+    const first = render(discuss('s1'));
+    first.unmount();
+    render(host);
+    expect(screen.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'current');
+  });
+
+  it('접기 뒤 안내 아이콘으로 다시 열면 체크리스트가 다시 보인다', () => {
+    const session = sessionAt('DISCUSS', { coachDismissed: [1, 2, 3] });
+    render(<CoachHost session={session} ui={EMPTY_COACH_UI} dispatch={vi.fn()} />);
+    expect(screen.queryByTestId('coach-checklist')).toBeNull();
+    fireEvent.click(screen.getByTestId('coach-icon'));
+    expect(screen.getByTestId('coach-checklist').querySelectorAll('li')).toHaveLength(4);
+    expect(screen.getByTestId('coach-ack')).toHaveTextContent('접기');
   });
 });

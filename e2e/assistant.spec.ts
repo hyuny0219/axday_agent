@@ -22,6 +22,7 @@ async function finishToResult(page: Page) {
 
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
@@ -142,6 +143,7 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
   await expect(page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' })).toBeVisible();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
 
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();

@@ -136,6 +136,9 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // 이 시점에는 전달 버튼이 아직 닫혀 있다.
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeDisabled();
+  // T140: 잠긴 '의견 전달' 아래에 이유 한 줄이 보인다.
+  await expect(page.getByTestId('discuss-cta-hint')).toBeVisible();
+  await capture(page, testInfo.project.name, 'discuss-locked');
   await page.getByTestId('assistant-toggle').click();
   const assistantDialog = page.getByTestId('assistant-panel');
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
@@ -173,6 +176,18 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   // T45부터는 페이지 자체가 스크롤되지 않아(무스크롤, DESIGN_SPEC.md v1.0 6절) 더는
   // 스크롤을 되돌릴 필요가 없다.
   await capture(page, testInfo.project.name, 'reactions');
+
+  // T142: '넘어가기'를 누르면 바로 넘어가지 않고 확인 팝업이 먼저 뜬다 — 체크리스트 3줄과 두 버튼.
+  await page.getByTestId('keep-previous-answer').click();
+  const skipCheck = page.getByTestId('skip-check');
+  await expect(skipCheck).toBeVisible();
+  await page
+    .getByTestId('skip-check-backdrop')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await skipCheck.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await capture(page, testInfo.project.name, 'reactions-skip-check');
+  await page.keyboard.press('Escape');
+  await expect(skipCheck).toHaveCount(0);
 
   // 지난 화면 보기(T126): '◀ 이전'으로 내 의견 쓰기 화면을 읽기 전용으로 다시 본다(상단 띠 + 입력 잠금).
   await page.getByTestId('view-prev').click();
@@ -294,7 +309,10 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await expect(page.getByTestId('coach-progress')).toHaveText('안내 3/6');
   await page.getByTestId('coach').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await capture(page, testInfo.project.name, 'coach-discuss');
-  // 닫으면 같은 자리에 "안내" 아이콘이 남는다(T106).
+  // 조작해도 닫히지 않는다 — 입장을 고른 모습(체크리스트 ✓·▶)도 남긴다(T140).
+  await page.getByTestId('discuss-side-for').click();
+  await expect(page.getByTestId('coach-check-side')).toHaveAttribute('data-state', 'done');
+  // 접으면 같은 자리에 "안내" 아이콘이 남는다(T106).
   await page.getByTestId('coach-ack').click();
   await expect(page.getByTestId('coach-icon')).toBeVisible();
   await capture(page, testInfo.project.name, 'coach-icon-discuss');

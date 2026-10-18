@@ -107,6 +107,8 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
 
   await page.getByTestId('keep-previous-answer').click(); // 이 의견으로 마무리(KEEP_PREVIOUS)
+
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('motion-card')).toBeVisible();
   // 후속 라운드가 없는 경로(T46)이므로 후속 대기 게이트 없이 곧바로 활성이다.
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
@@ -143,6 +145,7 @@ test('mock 서버가 떠 있으면 live로 완주하고 발언 카드·판단 �
   await page.getByTestId('submit-opinion').click();
   await expect(page.locator('[data-testid^="statement-card-"]')).toHaveCount(4, { timeout: 10_000 });
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('freeze-motion')).toBeEnabled();
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-YES').check();
@@ -229,6 +232,8 @@ test('한 임원이 표결에 계속 응답하지 않아도 미표결 없이 기
   await expect(page.getByTestId('statement-failed-CAIO')).toBeVisible({ timeout: 10_000 });
 
   await page.getByTestId('keep-previous-answer').click(); // 후속 라운드 없이 MOTION으로
+
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('motion-card')).toBeVisible();
   // 회의록 패널(v1.0 7절, T41): OPINIONS 라운드에서 실패한 CAIO 항목이 뒤 라운드
   // (REACTIONS)가 roleStatus를 덮어써도 실패 문구로 남는다(roundLog 기준).
@@ -300,6 +305,8 @@ test('안건②(experience-first)도 live mock에서 임원 4명 모두 정상 �
   await expect(page.locator('[data-testid^="statement-failed-"]')).toHaveCount(0);
 
   await page.getByTestId('keep-previous-answer').click(); // 앞선 의견 유지(KEEP_PREVIOUS)
+
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await expect(page.getByTestId('motion-card')).toBeVisible();
   await page.getByTestId('freeze-motion').click();
 

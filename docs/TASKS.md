@@ -11,6 +11,9 @@
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
+| T142 | 완료 | 반응에 답하기의 '넘어가기'를 누르면 바로 넘어가지 않고 확인 체크리스트(추가 질문·추천 답변·AI 비서실장)를 먼저 띄움. 넘어간 뒤 결과는 미리 말하지 않음(2026-10-17 사용자 지시). 상세는 아래 T142 카드. 완료: 넘어가기 → 확인 팝업(질문 원문·체크 3줄, 답하러 가기 ▶ / 그래도 넘어가기, Esc는 닫기), 결과 예고 문구 없음(domain/skipCheck.ts) |
+| T141 | 완료 | AI 비서실장 세 기능 버튼에 ①②③ 번호와 추천 순서 한 줄(순서 강제 없음)(2026-10-17 사용자 지시, 시안 https://claude.ai/artifact/MP4hQmQi79FUtwdq9fXnRp B3). 상세는 아래 T141 카드. 완료: 버튼·목록·압축 줄에 ①②③ + 소개 상자 추천 순서 한 줄, 강제 없음 |
+| T140 | 완료 | 내 의견 화면 진행 도우미를 체크리스트(3-1~3-4)로 남기고, 잠긴 '의견 전달' 옆에 이유를 보이게(2026-10-17 사용자 지시, 시안 https://claude.ai/artifact/MP4hQmQi79FUtwdq9fXnRp B1·B2). 상세는 아래 T140 카드 결과: DISCUSS 코치만 체크리스트(domain/coach.ts discussChecklist·discussProgressStore)로 첫 조작에 안 닫히고 '접기'로만 접힘, 잠긴 전달 이유(discuss-cta-hint) 한 줄 표시, e2e coach·discuss·noscroll·flow-full 1080·720 통과 |
 | T139 | 완료 | 결과 보고서 "반영 조건" 칸: 반대 쪽 조건만 있을 때 "조건 없이 처음 안 그대로 표결" 대신 "안건 문구는 처음 안 그대로 표결"(아래 이사님이 요구한 조건 목록과 어긋나지 않게)(2026-10-17 사용자 지시) |
 | T138 | 완료 | 반대 입장 첫 의견 균형(첫 의견에서 한 번에 설득되지 않게 — 기울음까지만, 답해야 확정) + 반대 쪽은 설득하는 조건만 붙음(함정 조건 제거)(2026-10-17 사용자 지시). 상세는 아래 T138 카드 |
 | T137 | 완료 | 반대 입장 대칭 설계(A안): 처음 입장 1 찬성·1 반대·2 고민 중(CISO 고민 중), 설득 안 된 고민 중 임원은 참가자 반대편 표, 반대 쪽 조건 카드(빨강, 자료 기반 문구, 이름은 찬성과 같은 "조건", 안건 미수정)로 임원을 반대로 설득, 반대 쪽 함정("모두 막읍시다"·"숫자만으로 결정"), live 프롬프트 v19(2026-10-16 사용자 지시, 시안 https://claude.ai/artifact/49xr5jA9JyTx2HyyMc6MmG). 결과표: 반대 참가자 없음 2석 실패 → 근거 1개 3석 → 2개 4석 → 3개 5석, 함정 1석(찬성 쪽도 같은 모양). 상세는 아래 T137 카드, DESIGN_SPEC "T137" |
@@ -49,8 +52,8 @@
 | T103 | 완료 | 게임 튜토리얼식 코치(A안 스포트라이트) — 화면마다 다음에 할 일 하나를 말풍선+스포트라이트로 안내하는 9단계 코치, 기존 안내(한 줄 GuideHint·단계 칩·비활성 힌트·맥동 테두리·INTRO 진행 5단계/팁)를 코치로 통합·제거, INTRO '안내 받으며 시작/안내 없이 시작', 운영 메뉴 '안내 끄기'(2026-10-09 사용자 승인 시안 https://claude.ai/artifact/WpuLojQag8PeMpDsch5GQ4). 상세는 아래 T103 카드 |
 | T102 | 완료 | INTRO(체험 전 안내) 핵심 말 강조(브리핑과 같은 HighlightText) + 발언 3중 중복 해소(무대 말풍선은 핵심 한 구절만, 발언 흐름 패널은 OPINIONS·REACTIONS·DISCUSS에서 숨기고 MOTION·VOTE에서만, 제목 "지금까지 발언")(2026-10-08 사용자 지시). 상세는 아래 T102 카드 |
 | T100 | 완료 | 규칙 점검(2026-10-08 Opus 전수 점검) 문구·용어 통일 — 금지어(표본·전면·집계·복기 등) 제거, 안내 문구 쉬운 말, 용어 통일(안건/이사님/표결/추천 문구/고민 중/설득 도장/근거 자료 버튼), 중복 안내 제거, 진행 가이드 옛 내용 정리. 상세는 아래 T100 카드 |
-| T101 | 완료(Codex 35차 수정 반영 중) | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
-| T98 | 진행 중 | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
+| T101 | 완료 | 규칙 점검 스타일·집계 일관성 — 비서실장 팝업 버튼 크기 CSS 누수, 720 넘어가기 글자·부결 도장 겹침, 입장 선택 전 현황판 찬성 기본값, 설득 집계 숫자 통일, 발언 흐름 유지 문구. 상세는 아래 T101 카드 |
+| T98 | 완료(T103에서 대체) | DISCUSS·REACTIONS 진행 단계 안내판(①입장 ②추천 문구 ③AI 비서실장 세 기능 ④의견 전달)과 전달 버튼 가시성(2026-10-08 사용자 지시 "반응에 답하기에 의견 전달 버튼이 없어", "한 줄보다 포커싱해서 눈에 확 들어오게, 순서 권고안"). 상세는 아래 T98 카드 |
 | T99 | 완료 | BRIEFING 가독성 — 상황·제안·미정 글자 키우고 핵심 단어 강조, 근거 자료 4장을 쉬운 문장 톤으로 통일·축약(2026-10-08 사용자 지시 "근거자료 글씨가 너무 많아서 쉬운 문장톤으로"). 상세는 아래 T99 카드 |
 | T97 | 완료 | DISCUSS에서 AI 비서실장 필수 사용(2026-10-08 사용자 지시 "추천문구 선택 → AI 비서실장 기능 활용 → 의견 전달"). 추천 문구를 고른 뒤 비서실장 세 기능(의견 한눈에 보기·조건 추천·내 발언 정리)을 한 번씩 써야 "의견 전달"이 열린다. 팝업 첫 화면에 기능 소개+체크리스트. 다시 답하기(REACTIONS)는 선택 사항 유지. 상세는 아래 T97 카드 |
 | T96 | 완료 | 설득 가시화·AI 비서실장 조건 추천(2026-10-08 사용자 지시 "내 의견과 조건으로 임원을 설득하는 것임을 참가자가 느끼게"). `domain/voting.ts`에 `requiredConditionsFor`(scripted voteRules에서 YES로 가는 가장 작은 조건 조합을 결정적으로 찾는 순수 함수) 신설. 공용 `PersuasionBoard`(임원 4명의 "첫 의견 → 지금" 입장 + 움직일 조건 + "설득한 임원 N/4")를 DISCUSS·REACTIONS(1/2·2/2)·MOTION·VOTE 왼쪽 열에 표시. REACTIONS 반응 카드 "바뀜" 배지를 "반대 → 찬성"(전후 입장)으로 바꾸고 원인 조건 한 줄(`changeCauseLabel`)을 더함, "유지" 카드의 빈 대사는 시나리오 `holdReasons` 한 문장으로 대체. RESULT 상단에 "이사님의 조건 N개가 임원 M명의 표를 바꿨습니다"(`components/persuasionSummary.ts`), 부결한 임원 행에 조건 1~2개 "한 끗 차이" 안내. AI 비서실장 "조건 비교하기"를 "조건 추천"으로 강화(`components/conditionRecommendation.ts`, 규칙 기반·즉시) — 추천 행 "적용"으로 해당 추천 문구를 체크, 사용 기록에 "조건 추천 N회"·"추천 조건 N개 반영" 집계(`domain/assistantLog.ts`). 1라운드 PASS. `npm run check`(단위 631)·e2e 로컬 전체(mock 8790·preview 4174) 통과. 상세는 아래 T96 카드와 `docs/design/DESIGN_SPEC.md` T96 단락 |
@@ -122,6 +125,49 @@
 | T23~T24 | 선반영 | P2 카드였으나 P0 live 구현(M-L1·M-L2)에서 범위가 이미 충족됨. T23(서버 어댑터) → `server/index.ts`의 `GET /api/health`·`POST /api/ops/probe`·`/api/board/round`·`/api/board/vote`·`/api/assistant/refine`·`/api/assistant/summarize`(스키마 검증·timeout·본문 상한 포함). T24(클라이언트 live 연결·플래그) → `src/services/assistant/live.ts`(실패 시 원문 유지·`mode:'live'` 기록)와 `src/app/mode.ts`(서버·키 없으면 scripted로 강등, `?mode=scripted` 강제). 카드 본문은 이력으로 남긴다 |
 
 ---
+
+## T140 내 의견 화면 안내 체크리스트 + 잠긴 전달 버튼 이유 표시
+
+- 목표(2026-10-17 사용자 지시, 시안 https://claude.ai/artifact/MP4hQmQi79FUtwdq9fXnRp B1·B2): 지금 DISCUSS 진행 도우미(안내 3/6)는 화면에서 처음 버튼을 누르면 닫혀서(CoachHost의 첫 조작 기록), 2~4번째 할 일을 볼 수 없다. 이 화면만 **체크리스트형**으로 바꿔 화면을 떠날 때까지 남긴다. 번호는 부스 안내판(docs/booth/)과 같은 3-1~3-4.
+- 읽을 것: `src/content/coach.ts`, `src/domain/coach.ts`, `src/domain/nextStep.ts`(discussNextStep), `src/components/parts/{CoachHost,Coach}.tsx`, `src/components/screens/DiscussScreen.tsx`(assistantUsed·draftReady·canSubmit·`discuss-cta-hint`), `tests/components/Coach.test.tsx`, `e2e/` 중 coach·discuss·noscroll spec, DESIGN_SPEC T103·T104·T106·T113 단락.
+- 만들 것:
+  1. **체크리스트 안내(DISCUSS만)**: 제목 "내 의견은 이렇게 씁니다", 항목 `3-1 찬성·반대 고르기` / `3-2 추천 문구 담기(직접 써도 됩니다)` / `3-3 AI 비서실장 한 가지 이상` / `3-4 의견 전달`. 각 항목의 완료 여부는 discussNextStep과 같은 입력(sideChosen·hasDraft·assistantUsed)으로 정한다 — 끝난 항목 ✓(흐리게), 지금 할 항목 ▶ 강조, 남은 항목 ○. 규칙은 domain(순수 함수 + 단위 테스트), 문구는 content/coach.ts. 상태를 색만으로 구분하지 않는다(기호와 aria 텍스트).
+  2. **닫히는 조건**: DISCUSS에서는 첫 조작으로 닫지 않는다. "접기" 버튼(기존 '알겠어요 ▶' 자리)으로 접으면 기존 "안내" 아이콘으로 다시 열 수 있다(T106 그대로). 다른 화면 안내(1·2·4·5·6)의 동작은 바꾸지 않는다. 팝업(role=dialog) 열림 중 숨김(현재 규칙) 유지.
+  3. **잠긴 '의견 전달' 이유를 눈에 보이게**: 지금 sr-only인 `discuss-cta-hint` 문구를 버튼 아래 한 줄로 보이게(입장 전 / 문구 전 / 비서실장 전 세 경우 기존 문구 그대로). 버튼이 열리면 사라짐. 720·1366×768에서 버튼 줄이 밀리거나 넘치지 않게.
+  4. 문서: DESIGN_SPEC "## T140", FACILITATOR_GUIDE v1.5 단락의 3/6 설명 갱신, TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 의견 전달 활성 규칙(T109) 변경, 다른 화면 코치 동작 변경, 다음 할 일 점선(T113) 규칙 변경, 영문 UI, 결과를 미리 알려 주는 문구.
+- 완료 확인: `npm run check`, e2e coach·discuss·noscroll·flow-full 1080·720(워크트리 전용 포트 — 8787 사용 금지), 스크린샷 `coach-discuss.png`·`discuss.png` 두 해상도 갱신 뒤 Read.
+- 크기: M.
+
+## T141 AI 비서실장 기능 번호와 추천 순서
+
+- 목표(2026-10-17 사용자 지시, 시안 B3): 비서실장 팝업의 세 기능 버튼에 ①②③을 붙이고 "추천 순서" 한 줄을 둔다. 순서는 권할 뿐 강제하지 않는다(T109: 한 가지만 써도 의견 전달 열림). 부스 안내판의 3-3 ①②③과 같은 번호.
+- 읽을 것: `src/components/parts/AssistantPanel.tsx`(FEATURE 라벨·설명, 안내 상자 "하나 이상 써 보세요", requiredFeatures 체크), 관련 css(`src/styles/`에서 assistant), `tests/components/AssistantPanel*.test.tsx`, e2e assistant·noscroll spec, DESIGN_SPEC T96·T109 단락.
+- 만들 것:
+  1. 버튼 라벨 앞 번호: `① 의견 한눈에 보기` `② 조건 추천` `③ 내 발언 정리`(안내 상자 목록에도 같은 번호). 번호는 시각 배지로 그려도 되지만 접근 가능한 이름에 번호가 들어가게.
+  2. 안내 상자에 한 줄 추가: "추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다." (쉬운 말 규칙 준수, 문구는 조정 가능하나 뜻 유지).
+  3. 다시 답하기(REACTIONS 2/2) 화면의 비서실장 팝업도 같은 번호를 쓰되 "하나만 써도 …" 문장은 그 화면 규칙(선택)에 맞게 바꾼다.
+  4. 문서: DESIGN_SPEC "## T141", FACILITATOR_GUIDE 비서실장 행, TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 기능 실행 순서 강제·버튼 비활성화, 비서실장 동작·live 요청 변경, 영문 UI.
+- 완료 확인: `npm run check`, e2e 비서실장·noscroll 1080·720(워크트리 전용 포트), 스크린샷 `discuss-assistant-intro.png` 두 해상도 갱신 뒤 Read.
+- 크기: S.
+
+## T142 넘어가기 전 확인 체크리스트
+
+- 목표(2026-10-17 사용자 지시): "넘어가면 어떻게 될지 미리 결과를 알 수 있어 별로인 거 같아. 차라리 넘어가기 전에 체크리스트를 띄워 주는 게 좋을 것 같아." REACTIONS(1/2 반응 듣기, 2/2 다시 답하기)의 '넘어가기'를 누르면 바로 넘어가지 않고, 답하기 전에 해 볼 일을 체크리스트로 보여 주는 팝업을 먼저 띄운다. **넘어간 뒤 임원 입장이 어떻게 되는지는 말하지 않는다.**
+- 읽을 것: `src/components/screens/ReactionsScreen.tsx`(handleKeepPrevious·onAdvanceStep·두 '넘어가기' 버튼·비서실장 사용 기록), `src/components/parts/{DialogShell,EndSessionConfirm,RebuildConfirm}.tsx`(기존 확인 팝업 패턴), `src/components/parts/useDialogOpen.ts`, 관련 테스트·e2e(reactions·flow-full·noscroll·skip 경로를 쓰는 spec 전부), DESIGN_SPEC T84 #1·T110 단락.
+- 만들 것:
+  1. **팝업**: 제목 "넘어가기 전에 확인해 보세요". 체크리스트 3줄 — ① "추가 질문을 읽었나요?" 아래에 그 질문 원문 한 줄 ② "추천 답변을 살펴봤나요?"(2/2 화면에 들어간 적이 있으면 ✓) ③ "AI 비서실장에게 물어봤나요? (선택)"(이번 단계에서 썼으면 ✓). 체크는 화면 상태로 자동 표시(참가자가 누르는 체크박스가 아님). 상태 판정은 domain 순수 함수 + 단위 테스트.
+  2. **버튼 둘**: 주 버튼 "답하러 가기 ▶"(1/2에서는 2/2로 이동, 2/2에서는 팝업만 닫음), 보조 버튼 "그래도 넘어가기"(기존 handleKeepPrevious 그대로 실행). Esc·바깥 클릭은 팝업 닫기(넘어가지 않음).
+  3. 결과 예고 금지: 팝업·버튼 주변 어디에도 "원래 입장으로 돌아갑니다" 같은 결과 문구를 넣지 않는다(INTRO 팁 문구는 그대로 둠).
+  4. 넘어가기 경로를 쓰는 기존 e2e·단위 테스트를 "넘어가기 → 그래도 넘어가기"로 갱신. 코치(안내 4/6)·다음 할 일 점선이 팝업 위에 겹치지 않는지 확인(useDialogOpen).
+  5. 문서: DESIGN_SPEC "## T142", FACILITATOR_GUIDE 후속 행, TASKS 행.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`.
+- 하지 말 것: 넘어가기의 표결 효과(T110) 변경, live 요청 변경, 영문 UI, 결과 예고 문구.
+- 완료 확인: `npm run check`, e2e reactions·flow-full·noscroll·stance 1080·720(워크트리 전용 포트), 팝업 스크린샷(`reactions-skip-check.png`) 두 해상도 새로 만든 뒤 Read.
+- 크기: M.
 
 ## T138 반대 입장 첫 의견 균형 + 반대 쪽 함정 조건 제거
 
@@ -679,6 +725,8 @@
 ---
 
 ## T98 DISCUSS·REACTIONS 진행 단계 안내판과 전달 버튼 가시성
+
+> 완료(T103에서 대체): 이 카드의 진행 단계 안내판(StepGuide)은 T103·T104 진행 도우미(코치)로 통합·제거됐다. 아래는 당시 기록이다.
 
 - 목표(2026-10-08 사용자 지시): "반응에 답하기에 의견 전달하는 버튼이 없어"(실제로는 비활성 점선 버튼이라 없어 보임). "화면 안에서 추천 문구 선택 → AI 비서실장 → 비서실장 기능 1,2,3 수행 → 의견 전달이 자연스럽게 이루어질 수 있도록 좀 더 명확한 가이드. 문장 한 줄보다는 포커싱해서 눈에 확 들어오게, 어떤 순서로 하면 좋은지 권고안."
 - 읽을 것: `src/components/screens/DiscussScreen.tsx`(head·guide·GuideHint·`discuss-assistant-tip`·`cta-disabled-hint`·`data-guide`), `src/components/screens/ReactionsScreen.tsx`(`reactions-screen__submit-row`·`submit-followup`·`reactions-cta-hint`·`keep-previous-answer`), `src/components/parts/{GuideHint,AssistantPanel}.tsx`(T97 `assistant-intro` 체크), `src/domain/assistantLog.ts`(`assistantFeaturesUsed`), `src/styles/screens/{shell.css(.cta:disabled·.cta-disabled-hint·[data-guide]),discuss.css,reactions.css}`, `docs/design/DESIGN_SPEC.md` T95·T97 단락, `e2e/{assistant-gate,discuss,reactions,noscroll,screenshots}.spec.ts`, `docs/screenshots/desktop-{1080,720}/{discuss,reactions-answer}.png`.

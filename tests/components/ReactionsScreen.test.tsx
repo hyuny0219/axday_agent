@@ -248,6 +248,7 @@ describe('ReactionsScreen', () => {
     expect(screen.queryByTestId('followup-option-2')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('keep-previous-answer'));
     expect(keepPreviousCalls).toBe(0);
+    expect(screen.queryByTestId('skip-check')).not.toBeInTheDocument();
     expect(screen.getByTestId('rebuild-confirm')).toBeInTheDocument();
     // 직접 쓴 텍스트도 그대로 남아 있다(건너뛰고 버려지지 않았다).
     expect(screen.getByTestId('followup-textarea')).toHaveValue('제 나름대로 정리한 답변입니다.');
@@ -1159,5 +1160,80 @@ describe('ReactionsScreen 입장 전환과 조건(T137)', () => {
     renderSwitch({ stance: 'FOR', ids: [] }, 'FOR');
     fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '승인 이유가 남지 않았습니다.' } });
     expect(screen.queryByTestId('condition-chip-AG_AUDIT')).not.toBeInTheDocument();
+  });
+});
+
+// T142: "넘어가기"는 바로 넘기지 않고 확인 팝업을 먼저 띄운다.
+describe('ReactionsScreen 넘어가기 확인 팝업(T142)', () => {
+  function renderSkip(step: 'listen' | 'answer', extra: { onKeepPrevious?: () => void; onAdvanceStep?: () => void; readOnly?: boolean } = {}) {
+    return render(
+      <ReactionsScreen
+        {...baseProps()}
+        {...extra}
+        step={step}
+        mode="scripted"
+        roleStatus={idleRoleStatus}
+        statements={[]}
+        roundLog={[]}
+        stances={stances}
+      />,
+    );
+  }
+
+  it('넘어가기를 누르면 팝업만 뜨고 아직 넘어가지 않는다 — 질문 원문과 체크 3줄이 있다', () => {
+    let kept = 0;
+    renderSkip('listen', { onKeepPrevious: () => (kept += 1) });
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    expect(kept).toBe(0);
+    expect(screen.getByRole('dialog')).toHaveTextContent('넘어가기 전에 확인해 보세요');
+    expect(screen.getByTestId('skip-check-list').querySelectorAll('li')).toHaveLength(3);
+    expect(screen.getByTestId('skip-check-question-text').textContent).toBeTruthy();
+    expect(screen.getByTestId('skip-check-question')).toHaveAttribute('data-state', 'neutral');
+    expect(screen.getByTestId('skip-check-options')).toHaveAttribute('data-state', 'todo');
+    expect(screen.getByTestId('skip-check-assistant')).toHaveAttribute('data-state', 'todo');
+  });
+
+  it('1/2에서 "답하러 가기"는 2/2로 이동하고 "그래도 넘어가기"만 넘어간다', () => {
+    let kept = 0;
+    let advanced = 0;
+    renderSkip('listen', { onKeepPrevious: () => (kept += 1), onAdvanceStep: () => (advanced += 1) });
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    fireEvent.click(screen.getByTestId('skip-check-answer'));
+    expect(advanced).toBe(1);
+    expect(kept).toBe(0);
+    expect(screen.queryByTestId('skip-check')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    fireEvent.click(screen.getByTestId('skip-check-skip'));
+    expect(kept).toBe(1);
+  });
+
+  it('2/2에서는 추천 답변이 완료로 보이고, "답하러 가기"는 팝업만 닫으며, Esc는 넘어가지 않고 닫는다', () => {
+    let kept = 0;
+    let advanced = 0;
+    renderSkip('answer', { onKeepPrevious: () => (kept += 1), onAdvanceStep: () => (advanced += 1) });
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    expect(screen.getByTestId('skip-check-options')).toHaveAttribute('data-state', 'done');
+    fireEvent.click(screen.getByTestId('skip-check-answer'));
+    expect(screen.queryByTestId('skip-check')).not.toBeInTheDocument();
+    expect(advanced + kept).toBe(0);
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('skip-check')).not.toBeInTheDocument();
+    expect(kept).toBe(0);
+  });
+
+  it('지난 화면(readOnly)에서는 넘어가기 버튼이 없다 — 답을 바꿀 수 없다', () => {
+    renderSkip('listen', { readOnly: true });
+    expect(screen.queryByTestId('keep-previous-answer')).not.toBeInTheDocument();
+    cleanup();
+    renderSkip('answer', { readOnly: true });
+    expect(screen.queryByTestId('keep-previous-answer')).not.toBeInTheDocument();
+  });
+
+  it('팝업 어디에도 넘어간 뒤의 결과를 말하지 않는다', () => {
+    renderSkip('listen');
+    fireEvent.click(screen.getByTestId('keep-previous-answer'));
+    const text = screen.getByRole('dialog').textContent ?? '';
+    expect(text).not.toMatch(/돌아갑니다|유지됩니다|그대로 됩니다|바뀌지|바뀝니다|확정됩니다/);
   });
 });

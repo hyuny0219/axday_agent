@@ -18,7 +18,7 @@
 ## 2. 방법 A — 본인 PC에서 실행 (권장)
 
 ```bash
-git clone -b claude/ax-day-2026-samsung-booth-syt4do https://github.com/hyuny0219/axday_agent.git
+git clone https://github.com/hyuny0219/axday_agent.git   # 기본 브랜치 main
 cd axday_agent
 npm ci
 export ANTHROPIC_API_KEY=sk-ant-...   # 현재 셸에만. 파일에 저장하지 않는다.
@@ -78,11 +78,11 @@ MODEL_PROVIDER=anthropic npm run server   # 8787. 키는 같은 셸의 환경변
 npm run dev                                # /api 요청은 8787로 프록시
 ```
 
-헤더 배지가 `live`면 실제 모델이 응답하는 상태다. 서버가 없거나 키가 없으면 자동으로 `scripted`로 내려간다. `?mode=scripted`를 붙이면 강제로 시연 모드가 된다.
+참가자 화면에는 모드를 표시하지 않는다(T86) — 운영 → 모델 연결 확인에서 "연결됨"이면 실제 모델이 응답하는 상태다. 서버가 없거나 키가 없으면 자동으로 `scripted`로 내려간다. `?mode=scripted`를 붙이면 강제로 시연 모드가 된다.
 
 ## 5. 결과를 어떻게 쓰는가
 
-- 타임아웃 초과 비율이 높으면: 프롬프트 길이·`max_tokens`를 줄이거나 모델을 바꾼다. 핸들러는 이미 `ROUND_TIMEOUT_MS`에서 절단하고(timeout이 아닌 빠른 실패는 1회 재시도한다, T91) 체험은 깨지지 않고 그래도 실패하면 해당 임원이 UNCAST가 된다.
+- 타임아웃 초과 비율이 높으면: 프롬프트 길이·`max_tokens`를 줄이거나 모델을 바꾼다. 핸들러는 이미 `ROUND_TIMEOUT_MS`에서 절단하고(timeout이 아닌 빠른 실패는 1회 재시도한다, T91) 체험은 깨지지 않고 화면이 최종표를 자동으로 1회 더 요청하고, 그래도 실패하면 해당 임원의 표는 기준표(규칙표)로 대체된다(T136, "응답이 늦어 기준표로 정했습니다").
 - 검증 실패율이 높으면: 스키마와 프롬프트의 형식 지시가 어긋난 것이다. `server/prompts/common.ts`를 먼저 본다.
 - 주입 저항이 100% 미만이면: `<meeting_record>` 격리 지시를 강화한다. 이것은 출시 차단 조건이다.
 - 표가 네 경로 모두 같은 분포면: 역할 프롬프트가 조건을 읽지 않는 것이다. T34에서 다룬다.
@@ -91,6 +91,6 @@ T34(고도화 1차)는 이 파일의 `--runs 3` 결과가 있어야 시작한다
 
 ## 6. 하지 말 것
 
-- 키를 채팅·저장소·`.env`·스크립트에 넣지 않는다. `.gitignore`가 `.env*`를 무시하지만 그래도 넣지 않는다.
+- 키를 채팅·저장소·스크립트에 넣지 않는다. 부스 PC의 `.env`(`ANTHROPIC_API_KEY` 한 줄)는 허용한다 — `.gitignore`가 `.env*`를 무시하므로 커밋되지 않는다.
 - `docs/eval/`의 jsonl에 참가자 실명이나 행사 외부 정보를 넣지 않는다. 하네스는 고정 문장만 쓴다.
 - CI에 실측을 넣지 않는다. 키 없이 돌아가는 `MODEL_PROVIDER=mock` 스모크만 로컬에서 쓴다.

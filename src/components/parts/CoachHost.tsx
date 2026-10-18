@@ -4,14 +4,15 @@
 // 한 번만 보이게 한다. 규칙은 도메인에 있고 여기서는 연결만 한다.
 
 import { useEffect, useRef, useState } from 'react';
-import { COACH_TOTAL, coachScreenOf, coachStep, type CoachUi } from '../../domain/coach';
+import { COACH_TOTAL, coachScreenOf, coachStep, discussChecklist, type CoachUi } from '../../domain/coach';
 import type { SessionAction } from '../../domain/session';
 import type { Session } from '../../domain/types';
-import { COACH_CLOSE_LABEL, coachCopy } from '../../content/coach';
+import { COACH_CLOSE_LABEL, COACH_DISCUSS_CHECKLIST, coachCopy } from '../../content/coach';
 import { Coach, CoachIcon } from './Coach';
 import { clearCoachPos } from './coachPosition';
 import { HighlightText } from './HighlightText';
 import { useDialogOpen } from './useDialogOpen';
+import { useDiscussProgress } from './discussProgressStore';
 
 export interface CoachHostProps {
   session: Session;
@@ -19,11 +20,26 @@ export interface CoachHostProps {
   dispatch: (action: SessionAction) => void;
 }
 
+/** DISCUSS 화면의 안내 번호 — 이 안내만 체크리스트로 그린다(T140). */
+const DISCUSS_STEP = 3;
+
 /** 조작으로 치는 요소. 운영 메뉴와 말풍선 자신은 조작으로 세지 않는다. */
 const OPERABLE = 'button, a, input, textarea, select, label, [role="button"]';
 const NOT_OPERATION = '[data-testid="coach"], .operator-menu__trigger, .operator-menu__panel';
 
+function discussChecklistItems(progress: Parameters<typeof discussChecklist>[0]) {
+  const copy = COACH_DISCUSS_CHECKLIST;
+  return discussChecklist(progress).map(({ id, state }) => ({
+    id,
+    state,
+    label: copy.items.find((item) => item.id === id)?.label ?? id,
+    mark: copy.stateMark[state],
+    stateText: copy.stateText[state],
+  }));
+}
+
 export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
+  const discussProgress = useDiscussProgress();
   const step = coachStep(session, ui);
   const screen = session.coachEnabled ? coachScreenOf(session, ui) : null;
   // 아이콘으로 다시 연 화면 번호. 세션에 저장하지 않는 화면 안 상태이고, 화면이 바뀌면 비운다.
@@ -63,7 +79,8 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
   }, [reopened]);
 
   useEffect(() => {
-    if (step === null) {
+    // T140: DISCUSS 체크리스트(안내 3)는 첫 조작으로 닫지 않는다 — '접기'로만 접는다.
+    if (step === null || step === DISCUSS_STEP) {
       return;
     }
     function handleClick(event: MouseEvent) {
@@ -96,7 +113,8 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
         total={COACH_TOTAL}
         title={<HighlightText text={again.title} terms={again.keys} />}
         lines={again.lines}
-        ackLabel={COACH_CLOSE_LABEL}
+        checklist={screen === DISCUSS_STEP ? discussChecklistItems(discussProgress) : undefined}
+        ackLabel={screen === DISCUSS_STEP ? COACH_DISCUSS_CHECKLIST.foldLabel : COACH_CLOSE_LABEL}
         onAck={() => setReopenedScreen(null)}
       />
     );
@@ -109,6 +127,8 @@ export function CoachHost({ session, ui, dispatch }: CoachHostProps) {
       total={COACH_TOTAL}
       title={<HighlightText text={copy.title} terms={copy.keys} />}
       lines={copy.lines}
+      checklist={step === DISCUSS_STEP ? discussChecklistItems(discussProgress) : undefined}
+      ackLabel={step === DISCUSS_STEP ? COACH_DISCUSS_CHECKLIST.foldLabel : undefined}
       onAck={() => dispatch({ type: 'COACH_DISMISS', step })}
     />
   );

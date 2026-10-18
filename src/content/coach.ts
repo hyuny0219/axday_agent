@@ -73,6 +73,19 @@ export const COACH_SCREENS: readonly CoachScreenCopy[] = [
   },
 ];
 
+/** DISCUSS(안내 3/6)만 체크리스트로 그린다(T140) — 번호는 부스 안내판과 같은 3-1~3-4. */
+export const COACH_DISCUSS_CHECKLIST = {
+  items: [
+    { id: 'side', label: '3-1 찬성·반대 고르기' },
+    { id: 'phrase', label: '3-2 추천 문구 담기(직접 써도 됩니다)' },
+    { id: 'assistant', label: '3-3 AI 비서실장 한 가지 이상' },
+    { id: 'submit', label: '3-4 의견 전달' },
+  ],
+  stateText: { done: '완료', current: '지금 할 일', todo: '아직' },
+  stateMark: { done: '✓', current: '▶', todo: '○' },
+  foldLabel: '접기',
+} as const;
+
 export const COACH_ACK_LABEL = '알겠어요 ▶';
 /** 아이콘으로 다시 연 말풍선의 버튼. */
 export const COACH_CLOSE_LABEL = '닫기 ▶';

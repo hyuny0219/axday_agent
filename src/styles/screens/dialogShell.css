@@ -47,6 +47,28 @@
   }
 }
 
+/* 내용 높이에 맞추는 변형(T142 넘어가기 확인). 폭도 줄인다. 아래 미디어 블록보다 뒤에 둬 우선한다. */
+.dialog-shell.dialog-shell--fit {
+  width: min(880px, 94vw);
+  height: auto;
+  max-height: 90vh;
+}
+
+.dialog-shell--fit .dialog-shell__body {
+  flex: 0 1 auto;
+  /* overflow:auto 본문이 버튼 그림자·포커스 링을 자르지 않게 안쪽 여백을 주고 바깥 여백으로 상쇄한다. */
+  margin: 0 -12px;
+  padding: 4px 12px 14px;
+}
+
+@media (max-width: 1280px) {
+  .dialog-shell.dialog-shell--fit {
+    width: min(760px, 94vw);
+    height: auto;
+    max-height: 90vh;
+  }
+}
+
 @keyframes dialog-shell-enter {
   from {
     opacity: 0;

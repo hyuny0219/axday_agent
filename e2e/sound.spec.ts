@@ -68,6 +68,7 @@ test('첫 클릭 전에는 AudioContext가 없고, 끝까지 가도 하나만 �
   await tryAllAssistantFeatures(page);
   await page.getByTestId('submit-opinion').click();
   await page.getByTestId('keep-previous-answer').click();
+  await page.getByTestId('skip-check-skip').click(); // T142: 확인 팝업 → 그래도 넘어가기
   await page.getByTestId('freeze-motion').click();
   await page.getByTestId('vote-radio-YES').check();
   await page.getByTestId('confirm-vote').click();
