@@ -15,8 +15,7 @@ export type AutoActionKind =
   | 'HIGHLIGHT_EXEC'
   | 'ADD_PHRASE'
   | 'OPEN_ASSISTANT'
-  | 'APPLY_ASSISTANT'
-  | 'ADVANCE_REACTION'
+  | 'EXPLAIN_ASSISTANT'
   | 'PICK_FOLLOWUP'
   | 'HIGHLIGHT_CONDITION';
 
@@ -31,8 +30,8 @@ export interface AutoAction {
 
 /** 한 동작이 머무는 가장 짧은 시간. 자막이 길면 autoActionMs가 늘린다. */
 export const AUTO_ACTION_MS = 1500;
-/** 비서실장 ①②③ 번호. */
-export const AUTO_ASSISTANT_STEPS = ['1', '2', '3'] as const;
+/** 비서실장 ①②를 참가자가 누른 뒤 자막으로 설명하는 기능(T147: ① 조건 추천 · ② 내 발언 정리). */
+export type AutoAssistantFeature = 'compare' | 'refine';
 
 function phraseSideOf(phrase: Phrase): 'FOR' | 'AGAINST' | 'BOTH' {
   return phrase.side ?? 'FOR';
@@ -104,17 +103,15 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
       if (!stance) return [];
       return [
         ...autoPhrasePicks(scenario, stance).map((phrase) => action('ADD_PHRASE', phrase.id, phrase.text)),
-        ...AUTO_ASSISTANT_STEPS.map((step) => action('OPEN_ASSISTANT', step, `비서실장 ${step}번을 열어 봅니다.`)),
-        action('APPLY_ASSISTANT', '3', '정리한 결과를 내 발언에 적용합니다.'),
+        // 비서실장 팝업만 자동으로 연다. ① 조건 추천 · ② 내 발언 정리 · 적용은 참가자가 누른다(T147).
+        action('OPEN_ASSISTANT', '', 'AI 비서실장을 엽니다. ① 조건 추천과 ② 내 발언 정리를 차례로 눌러 보세요.'),
       ];
     }
     case 'REACTIONS': {
       if (!stance) return [];
+      // 1/2(반응 듣기)에서 '답하러 가기'는 참가자가 누른다(T147). 이 목록은 2/2(추가 답변)에서만 쓴다.
       const pick = pickAutoFollowUp(scenario, stance);
-      return [
-        action('ADVANCE_REACTION', '2', '임원 반응을 들었으니 추가 질문으로 넘어갑니다.'),
-        ...(pick ? [action('PICK_FOLLOWUP', String(scenario.followUp.options.indexOf(pick)), pick.text)] : []),
-      ];
+      return pick ? [action('PICK_FOLLOWUP', String(scenario.followUp.options.indexOf(pick)), pick.text)] : [];
     }
     case 'MOTION': {
       const stanceForMotion = stance ?? 'FOR';
@@ -133,13 +130,26 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
 /** 첫 동작 전 잠깐 기다리는 시간(화면이 자리 잡은 뒤 시작). */
 export const AUTO_LEAD_MS = 800;
 /** 자막 한 글자를 치는 간격. */
-export const AUTO_TYPE_MS = 55;
-/** 자막을 다 친 뒤 읽을 시간(2026-10-30 사용자 지시 "끝나기 전에 지나가서 더 천천히"). */
-export const AUTO_READ_MS = 2000;
+export const AUTO_TYPE_MS = 35;
+/** 자막을 다 친 뒤 머무는 시간(2026-10-30 사용자 지시: "끝나기 전에 지나가서 더 천천히" → "끝나고 0.5초 뒤 넘어가게"). */
+export const AUTO_READ_MS = 500;
 
 /** 한 동작이 머무는 시간: 자막을 다 치고 읽을 시간까지, 짧아도 AUTO_ACTION_MS. */
 export function autoActionMs(caption: string): number {
   return Math.max(AUTO_ACTION_MS, caption.length * AUTO_TYPE_MS + AUTO_READ_MS);
+}
+
+/** 참가자가 비서실장 ①·②를 누른 뒤 결과를 보여 주며 읽어 주는 자막 한 줄. */
+export function assistantExplainPlan(feature: AutoAssistantFeature): AutoAction[] {
+  return [
+    action(
+      'EXPLAIN_ASSISTANT',
+      feature,
+      feature === 'compare'
+        ? '조건 추천입니다. 어떤 임원이 어떤 조건에 움직이는지 알려 줍니다.'
+        : '내 발언 정리입니다. 쓴 발언을 또렷하게 다듬은 초안이에요. 마음에 들면 내 발언에 적용하세요.',
+    ),
+  ];
 }
 
 /** MOTION 자동 동작: 실제로 확정된 조건만 차례로 강조한다(확정 조건이 없으면 안내 한 줄). */

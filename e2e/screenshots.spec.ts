@@ -318,7 +318,7 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await capture(page, testInfo.project.name, 'coach-icon-discuss');
 });
 
-// T146 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·진행 목록·강조 상자), DISCUSS 참가자 차례(CLICK 알약).
+// T146·T147 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·진행 목록·강조 상자), 비서실장 CLICK 차례, 의견 전달·REACTIONS 1/2 CLICK 알약.
 // testClock으로 시계를 조금씩 돌려 원하는 지점에서 멈춘다.
 test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 캡처한다', async ({ page }, testInfo) => {
   test.setTimeout(75_000);
@@ -347,13 +347,28 @@ test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
-  // 자동 중: 비서실장 ② 단계가 '지금'일 때 멈춘다.
+  // 자동 중: 비서실장 열기 단계가 '지금'일 때 멈춘다.
   const current = page.locator('.auto-steps__item--current');
-  await advanceUntil(async () => ((await current.count()) > 0 ? (await current.first().innerText()).includes('②') : false));
+  await advanceUntil(async () => ((await current.count()) > 0 ? (await current.first().innerText()).includes('비서실장 열기') : false));
   await expect(page.getByTestId('auto-bar')).toBeVisible();
   await capture(page, testInfo.project.name, 'auto-discuss-running');
 
+  // 참가자 차례: 비서실장 안에서 ① 조건 추천 → ② 내 발언 정리 → 내 발언에 적용 순으로 누른다(T147).
   await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('① 조건 추천');
+  await capture(page, testInfo.project.name, 'auto-discuss-assistant-click');
+  await page.getByTestId('assistant-action-compare').click();
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('② 내 발언 정리');
+  await page.getByTestId('assistant-action-refine').click();
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('내 발언에 적용');
+  await page.getByTestId('assistant-apply-refine').click();
   await expect(pill).toContainText('의견 전달');
   await capture(page, testInfo.project.name, 'auto-discuss-click');
+
+  // REACTIONS 1/2: 반응을 다 들은 뒤 '답하러 가기'도 참가자가 누른다(T147).
+  await page.getByTestId('submit-opinion').click();
+  await expect(pill).toContainText('답하러 가기');
+  await capture(page, testInfo.project.name, 'auto-reactions-click');
 });

@@ -86,7 +86,7 @@ describe('지난 화면 보기', () => {
     fireEvent.click(screen.getByTestId('discuss-side-for'));
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    for (const feature of ['summary', 'compare', 'refine']) {
+    for (const feature of ['compare', 'refine']) {
       fireEvent.click(await screen.findByTestId(`assistant-action-${feature}`));
       await screen.findByTestId(`assistant-done-${feature}`, undefined, { timeout: 8000 });
       const keep = screen.queryByTestId('assistant-keep-original');

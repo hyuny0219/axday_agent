@@ -9,7 +9,6 @@ import {
 import { AssistantTimeoutError } from '../../src/services/assistant/types';
 
 const scenario = anonBoardScenario;
-const emptyTranscript = { revision: 0, statements: [] };
 
 function makeRequestBase() {
   const controller = new AbortController();
@@ -32,7 +31,7 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { controller, base } = makeRequestBase();
 
-    const promise = adapter.summarizeOpinions({ ...base, scenario, transcript: emptyTranscript });
+    const promise = adapter.compareConditions({ ...base, scenario, selectedConditionIds: [] });
     const assertion = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
 
     // 응답이 도착하기 전(200ms 전)에 세션이 리셋되어 요청이 취소된 상황을 흉내낸다.
@@ -56,14 +55,12 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { base } = makeRequestBase();
 
-    const promise = adapter.summarizeOpinions({ ...base, scenario, transcript: emptyTranscript });
+    const promise = adapter.compareConditions({ ...base, scenario, selectedConditionIds: [] });
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
     expect(result.mode).toBe('scripted');
-    expect(result.commonPoints.length + result.disagreements.length).toBe(
-      scenario.initialOpinions.length,
-    );
+    expect(Array.isArray(result.remainingConditionIds)).toBe(true);
   });
 
   it('withTimeout은 5초 안에 응답이 없으면 AssistantTimeoutError로 폴백한다', async () => {

@@ -229,7 +229,7 @@ describe('DiscussScreen', () => {
   });
 });
 
-// T97: 추천 문구 선택 → AI 비서실장 세 기능 한 번씩 → 의견 전달.
+// T97: 추천 문구 선택 → AI 비서실장 한 기능 이상 → 의견 전달.
 describe('비서실장 필수 사용 게이팅(T97)', () => {
   const emptyTranscript: Transcript = { revision: 0, statements: [] };
   const entry = (type: AssistantActionType, failed = false) =>
@@ -278,7 +278,7 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
   });
 
   it('한 기능만 써도 전달이 열리고 힌트가 사라진다(T109)', () => {
-    renderDiscuss([entry('OPINION_SUMMARY')]);
+    renderDiscuss([entry('CONDITION_RECOMMEND_VIEW')]);
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     expect(screen.getByTestId('submit-opinion')).toBeEnabled();
     expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
@@ -290,9 +290,8 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.getByTestId('submit-opinion')).toBeEnabled();
   });
 
-  it('세 개를 다 쓰면(실패 기록 포함) 전달이 열리고 힌트가 사라진다', () => {
+  it('두 개를 다 쓰면(실패 기록 포함) 전달이 열리고 힌트가 사라진다', () => {
     renderDiscuss([
-      entry('OPINION_SUMMARY'),
       entry('CONDITION_RECOMMEND_VIEW', true),
       entry('DRAFT_REFINE'),
     ]);
@@ -301,7 +300,7 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
     expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
   });
 
-  it('입장을 고르지 않으면 직접 쓴 글과 세 기능이 있어도 전달·비서실장이 잠긴다(Codex 35차 P2-1)', () => {
+  it('입장을 고르지 않으면 직접 쓴 글과 두 기능이 있어도 전달·비서실장이 잠긴다(Codex 35차 P2-1)', () => {
     render(
       <ControlledDiscuss
         scenario={aiApprovalScenario}
@@ -312,7 +311,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
         onSubmit={noop}
         onAssistantAction={noop}
         assistantActions={[
-          entry('OPINION_SUMMARY'),
           entry('CONDITION_RECOMMEND_VIEW'),
           entry('DRAFT_REFINE'),
         ]}
@@ -329,7 +327,6 @@ describe('비서실장 필수 사용 게이팅(T97)', () => {
 
   it('비서실장을 다 써도 문구가 없으면 전달은 여전히 막힌다', () => {
     renderDiscuss([
-      entry('OPINION_SUMMARY'),
       entry('CONDITION_RECOMMEND_VIEW'),
       entry('DRAFT_REFINE'),
     ]);

@@ -5,8 +5,7 @@
 // 결과를 보여주는 것만으로는 절대 textarea를 덮어쓰지 않는다.
 //
 // T31: draftRevision이 바뀌면(참가자가 그사이 원문을 더 고치면) 화면에 남아 있던 이전
-// 초안을 폐기한다. '의견 한눈에 보기'가 실패하면(5초 초과 등) 실제 발언 카드 목록
-// (transcript.statements)을 그대로 보여준다 — 지어낸 요약으로 대신하지 않는다.
+// 초안을 폐기한다. T147: '의견 한눈에 보기'는 앱에서 없앴다(남은 기능은 ① 조건 추천 · ② 내 발언 정리).
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -17,16 +16,14 @@ import type {
   AssistantAdapter,
   CompareConditionsResult,
   RefineDraftResult,
-  SummarizeOpinionsResult,
 } from '../../services/assistant/types';
 import { buildCompare, scriptedAssistantAdapter, withTimeout } from '../../services/assistant/scripted';
 import type { AssistantActionEvent, AssistantFeatureKey } from '../../domain/assistantLog';
 import { ASSISTANT_FEATURE_ORDER } from '../../domain/assistantLog';
-import { MEMBER_LABELS } from '../memberLabels';
 import { DialogShell } from './DialogShell';
 import { nextStepAttr } from './focusRing';
 import { useDialogOpen } from './useDialogOpen';
-import { useAutoRun } from './autoRunContext';
+import { useAutoReport, useAutoRun } from './autoRunContext';
 import '../../styles/screens/assistant.css';
 
 type FeatureKey = AssistantFeatureKey;
@@ -37,23 +34,20 @@ type Status = 'idle' | 'loading' | 'done' | 'error';
 // 내부 feature key(compare)·기존 결과(CompareConditionsResult)는 그대로 두고 라벨과
 // 렌더 내용만 늘린다.
 const FEATURE_LABELS: Record<FeatureKey, string> = {
-  summary: '의견 한눈에 보기',
   compare: '조건 추천',
   refine: '내 발언 정리',
 };
 
-// T141: 부스 안내판 3-3의 ①②③과 같은 번호. 추천 순서일 뿐 실행 순서를 강제하지 않는다.
+// T141·T147: 부스 안내판 3-3의 ①②와 같은 번호. 추천 순서일 뿐 실행 순서를 강제하지 않는다.
 const FEATURE_NUMBERS: Record<FeatureKey, string> = {
-  summary: '①',
-  compare: '②',
-  refine: '③',
+  compare: '①',
+  refine: '②',
 };
 const numberedLabel = (feature: FeatureKey): string =>
   `${FEATURE_NUMBERS[feature]} ${FEATURE_LABELS[feature]}`;
 
 // T97: 팝업 첫 화면 소개(DISCUSS만). 기능마다 쉬운 말 한 문장.
 const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
-  summary: '임원 네 명 말을 한 줄씩 정리합니다',
   compare: '어떤 임원을 어떤 조건으로 움직일 수 있는지 알려 줍니다',
   refine: '지금 쓴 발언을 더 또렷하게 다듬어 줍니다',
 };
@@ -132,8 +126,7 @@ export interface AssistantPanelProps {
   /** draftText가 바뀔 때마다 호출부(화면)가 늘리는 값. 요청 시점의 값을 그대로 보내고,
    * 응답이 왔을 때 이 값이 달라졌으면(입력이 바뀌었으면) 결과를 폐기한다. */
   draftRevision: number;
-  /** '의견 한눈에 보기'가 근거로 삼는 실제 회의 기록. live 요청과, live 실패 시 발언
-   * 카드 목록 그대로 보여주는 fallback에 함께 쓴다. */
+  /** 실제 회의 기록. 임원이 제안한 조건(live)을 조건 추천에 반영하는 데 쓴다. */
   transcript: Transcript;
   /** '내 발언에 적용'을 눌렀을 때만 호출된다. */
   onApplyDraft: (text: string) => void;
@@ -148,12 +141,6 @@ export interface AssistantPanelProps {
 
 function conditionLabel(scenario: Scenario, id: string): string {
   return scenario.conditions.find((condition) => condition.id === id)?.label ?? id;
-}
-
-/** 자료 ID(E1~E4) 대신 자료명만 쓴다(T52 — "근거: E1, E2" 노출을 T85 #17에서 다시
- * 발견해 고친다). */
-function evidenceLabel(scenario: Scenario, id: string): string {
-  return scenario.evidence.find((item) => item.id === id)?.title ?? id;
 }
 
 export function AssistantPanel({
@@ -212,13 +199,9 @@ export function AssistantPanel({
   }, [allUsed, onAllUsed]);
   const [activeFeature, setActiveFeature] = useState<FeatureKey | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [summaryResult, setSummaryResult] = useState<SummarizeOpinionsResult | null>(null);
   const [compareResult, setCompareResult] = useState<CompareConditionsResult | null>(null);
   const [refineResult, setRefineResult] = useState<RefineDraftResult | null>(null);
   const [refineResultRevision, setRefineResultRevision] = useState<number | null>(null);
-  // T115: 요약은 요청 시점의 회의 기록(transcript.revision)에 대한 결과다. 새 발언이 도착해 기록이
-  // 바뀌면 옛 요약을 비워 지금 임원 입장과 어긋난 내용이 남지 않게 한다.
-  const [summaryRevision, setSummaryRevision] = useState<number | null>(null);
 
   // 리셋·재요청 뒤 도착한 응답을 무시하기 위해 "지금 유효한 요청"만 기록한다.
   // sessionId가 바뀌면(리셋으로 새 세션이 되면) 이전 요청은 더 이상 유효하지 않다.
@@ -240,7 +223,6 @@ export function AssistantPanel({
     currentRequestRef.current = null;
     setStatus('idle');
     setActiveFeature(null);
-    setSummaryResult(null);
     setCompareResult(null);
     setRefineResult(null);
     setRefineResultRevision(null);
@@ -262,19 +244,6 @@ export function AssistantPanel({
     }
   }, [draftRevision, refineResultRevision, activeFeature]);
 
-  useEffect(() => {
-    if (summaryRevision !== null && summaryRevision !== transcript.revision) {
-      setSummaryResult(null);
-      setSummaryRevision(null);
-      if (activeFeature === 'summary') {
-        currentRequestRef.current?.controller.abort();
-        currentRequestRef.current = null;
-        setStatus('idle');
-        setActiveFeature(null);
-      }
-    }
-  }, [transcript.revision, summaryRevision, activeFeature]);
-
   // PR #20 Codex 32차 P2-2: 로딩 중에 팝업을 닫으면 진행 중 요청을 무효화하고 idle로
   // 되돌린다 — 닫힌 뒤 도착한 응답·오류가 화면에 보인 적 없이 사용으로 집계되지 않게
   // 한다(isStillCurrent가 false가 되어 기록 없이 버려진다). 이미 끝난 결과는 그대로 둔다.
@@ -291,31 +260,18 @@ export function AssistantPanel({
   }
   closePopupRef.current = closePopup;
 
-  // 자동 진행(T145): 비서실장 ①②③을 차례로 열어 실행하고, ③ 결과를 내 발언에 적용한 뒤 닫는다.
-  // 동작 목록과 때는 호스트(domain/autoPlay.ts의 DISCUSS 계획)가 정하고 여기는 따라 한다.
+  // 자동 진행(T147): 팝업을 여는 동작만 자동이다. ① 조건 추천 · ② 내 발언 정리 · 적용은 참가자가 누르고,
+  // 팝업은 한 일을 호스트에 알려 결과를 읽어 주는 자막과 다음 CLICK 차례를 받는다.
   const autoRun = useAutoRun();
+  const autoReport = useAutoReport();
   const autoAction = autoRun.action;
-  const autoOpenedRef = useRef(false);
   useEffect(() => {
-    if (!autoRun.running || !autoAction) return;
-    if (autoAction.kind === 'OPEN_ASSISTANT') {
-      const feature = (['summary', 'compare', 'refine'] as const)[Number(autoAction.targetId) - 1];
-      if (!feature) return;
-      autoOpenedRef.current = true;
-      setOpen(true);
-      void runFeature(feature);
-    } else if (autoAction.kind === 'APPLY_ASSISTANT') {
-      handleApplyRefine();
-    }
+    if (!autoRun.running || autoAction?.kind !== 'OPEN_ASSISTANT') return;
+    setOpen(true);
+    autoReport.assistant('OPENED');
     // 동작이 바뀔 때 한 번만 실행한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoAction]);
-  useEffect(() => {
-    if (autoRun.done && autoOpenedRef.current) {
-      autoOpenedRef.current = false;
-      closePopupRef.current();
-    }
-  }, [autoRun.done]);
 
   function isStillCurrent(requestId: string): boolean {
     return currentRequestRef.current?.requestId === requestId;
@@ -339,26 +295,14 @@ export function AssistantPanel({
 
     const base = { sessionId, requestId, signal: controller.signal };
     try {
-      if (feature === 'summary') {
-        const result = await withTimeout(
-          adapter.summarizeOpinions({ ...base, scenario, transcript }),
-        );
-        if (!isStillCurrent(requestId)) return;
-        setSummaryResult(result);
-        setSummaryRevision(transcript.revision);
-        setStatus('done');
-        onAssistantAction({
-          type: 'OPINION_SUMMARY',
-          mode: result.mode,
-          evidenceIds: result.evidenceIds,
-        });
-      } else if (feature === 'compare') {
+      if (feature === 'compare') {
         const result = await withTimeout(
           adapter.compareConditions({ ...base, scenario, selectedConditionIds }),
         );
         if (!isStillCurrent(requestId)) return;
         setCompareResult(result);
         setStatus('done');
+        autoReport.assistant('COMPARE');
         // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 ... 큰 도움이 된다고
         // 느끼게"): "조건 비교하기"를 "조건 추천"으로 강화하면서, 결과 화면에도 옛
         // CONDITION_COMPARE 한 줄 대신 "조건 추천 N회"(countConditionRecommendation)로
@@ -390,6 +334,7 @@ export function AssistantPanel({
         setRefineResult(result);
         setRefineResultRevision(requestDraftRevision);
         setStatus('done');
+        autoReport.assistant('REFINE');
         // T97: 정리한 초안을 화면에 보여준 것도 "써 본 것"이다(applied:false — 결과 화면
         // 'AI가 도운 일'에는 '내 발언에 적용'을 눌렀을 때만 나온다).
         onAssistantAction({
@@ -405,12 +350,7 @@ export function AssistantPanel({
       // T97: 실패·연결 지연 안내를 본 것도 "써 본 것"으로 센다(failed:true — 결과
       // 화면 'AI가 도운 일'에는 나오지 않는다). 막히는 참가자가 없게 하기 위함이다.
       onAssistantAction({
-        type:
-          feature === 'summary'
-            ? 'OPINION_SUMMARY'
-            : feature === 'compare'
-              ? 'CONDITION_RECOMMEND_VIEW'
-              : 'DRAFT_REFINE',
+        type: feature === 'compare' ? 'CONDITION_RECOMMEND_VIEW' : 'DRAFT_REFINE',
         mode,
         evidenceIds: [],
         applied: false,
@@ -528,6 +468,11 @@ export function AssistantPanel({
       evidenceIds: refineResult.evidenceIds,
       applied: true,
     });
+    // 자동 진행: 적용하면 팝업이 닫히고 호스트가 의견 전달 CLICK 차례로 넘어간다.
+    if (autoRun.enabled) {
+      autoReport.assistant('APPLIED');
+      closePopup();
+    }
   }
 
   // '원문 유지' — 제안을 닫기만 한다. 편집창은 절대 건드리지 않는다.
@@ -554,6 +499,7 @@ export function AssistantPanel({
         disabled={toggleLocked}
         aria-describedby={toggleLocked ? 'assistant-toggle-why' : undefined}
         data-testid="assistant-toggle"
+        data-auto-click="assistant-open"
         {...nextStepAttr(focusNext && !dialogOpen && !toggleLocked)}
       >
         AI 비서실장에게 맡기기
@@ -580,10 +526,10 @@ export function AssistantPanel({
                 {status === 'idle' ? (
                   <>
                     <h3 className="assistant-intro__title">
-                      AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)
+                      AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(둘 다 써도 좋아요)
                     </h3>
                     <p className="assistant-intro__order" data-testid="assistant-intro-order">
-                      추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다.
+                      추천 순서: ① 조건을 골라 적용 → ② 담은 문구 다듬기. 하나만 써도 의견 전달이 열립니다.
                     </p>
                     <ul className="assistant-intro__list">
                       {ASSISTANT_FEATURE_ORDER.map((feature) => {
@@ -670,49 +616,6 @@ export function AssistantPanel({
               {status === 'error' && (
                 <div role="alert" data-testid="assistant-error">
                   <p>{activeFeature === 'refine' ? REFINE_FALLBACK_MESSAGE : FALLBACK_MESSAGE}</p>
-                  {activeFeature === 'summary' && (
-                    <ul data-testid="assistant-summary-fallback-statements">
-                      {transcript.statements.length > 0 ? (
-                        transcript.statements.map((statement) => (
-                          <li key={statement.id}>
-                            {MEMBER_LABELS[statement.roleId]}: {statement.text}
-                          </li>
-                        ))
-                      ) : (
-                        <li>아직 도착한 발언이 없습니다.</li>
-                      )}
-                    </ul>
-                  )}
-                </div>
-              )}
-              {status === 'done' && activeFeature === 'summary' && summaryResult && (
-                <div data-testid="assistant-result-summary">
-                  {summaryResult.mode === 'live' ? (
-                    <p data-testid="assistant-summary-text">{summaryResult.summaryText}</p>
-                  ) : (
-                    <>
-                      <h4>공통점</h4>
-                      <ul>
-                        {summaryResult.commonPoints.map((point) => (
-                          <li key={point.memberId}>
-                            {MEMBER_LABELS[point.memberId]}: {point.text}
-                          </li>
-                        ))}
-                      </ul>
-                      <h4>쟁점</h4>
-                      <ul>
-                        {summaryResult.disagreements.map((point) => (
-                          <li key={point.memberId}>
-                            {MEMBER_LABELS[point.memberId]}: {point.text}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  <p className="assistant-panel__evidence">
-                    근거:{' '}
-                    {summaryResult.evidenceIds.map((id) => evidenceLabel(scenario, id)).join(', ')}
-                  </p>
                 </div>
               )}
               {status === 'done' && activeFeature === 'compare' && compareResult && (

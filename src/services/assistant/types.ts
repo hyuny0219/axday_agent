@@ -4,8 +4,7 @@
 // (AssistantPanel)가 무시할 수 있게 한다. 이 파일은 계약만 정의하며 실제 모델을
 // 부르지 않는다.
 
-import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Transcript } from '../../domain/types';
+import type { Scenario } from '../../content/types';
 
 export type AssistantMode = 'scripted' | 'live';
 
@@ -13,13 +12,6 @@ export interface AssistantRequestBase {
   sessionId: string;
   requestId: string;
   signal: AbortSignal;
-}
-
-export interface SummarizeOpinionsRequest extends AssistantRequestBase {
-  scenario: Scenario;
-  /** live 요약이 근거로 삼는 실제 회의 기록(지금까지의 발언). scripted는 이 필드를
-   * 쓰지 않고 scenario.initialOpinions만 본다. */
-  transcript: Transcript;
 }
 
 export interface CompareConditionsRequest extends AssistantRequestBase {
@@ -35,23 +27,6 @@ export interface RefineDraftRequest extends AssistantRequestBase {
   /** 참가자가 draftText를 바꿀 때마다 늘어나는 값(컴포넌트가 관리). live refine은 응답
    * 시점에 이 값이 더 이상 최신이 아니면 결과를 폐기한다. */
   draftRevision: number;
-}
-
-/** 임원 한 명의 발언 한 줄과 그 근거. 표 아이콘·득표수는 포함하지 않는다. */
-export interface OpinionPoint {
-  memberId: ExecMemberId;
-  text: string;
-  evidenceIds: string[];
-}
-
-export interface SummarizeOpinionsResult {
-  mode: AssistantMode;
-  evidenceIds: string[];
-  commonPoints: OpinionPoint[];
-  disagreements: OpinionPoint[];
-  /** live 요약이 실제 회의 기록을 근거로 만든 자유 형식 문장(300자 이내). scripted는
-   * commonPoints/disagreements만 쓰므로 항상 빈 문자열이다. */
-  summaryText: string;
 }
 
 export interface CompareConditionsResult {
@@ -75,7 +50,6 @@ export interface RefineDraftResult {
 }
 
 export interface AssistantAdapter {
-  summarizeOpinions(req: SummarizeOpinionsRequest): Promise<SummarizeOpinionsResult>;
   compareConditions(req: CompareConditionsRequest): Promise<CompareConditionsResult>;
   refineDraft(req: RefineDraftRequest): Promise<RefineDraftResult>;
 }

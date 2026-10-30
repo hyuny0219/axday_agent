@@ -48,10 +48,10 @@ test('DISCUSS: 입장 → 문구 → 비서실장 → 의견 전달 순서로 �
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
   // 팝업 안에서는 첫 기능 버튼 하나뿐.
   await expect(page.locator(RING)).toHaveCount(1);
-  await expect(page.getByTestId('assistant-action-summary')).toHaveAttribute('data-next-step', '');
+  await expect(page.getByTestId('assistant-action-compare')).toHaveAttribute('data-next-step', '');
 
-  await page.getByTestId('assistant-action-summary').click();
-  await expect(page.getByTestId('assistant-done-summary')).toBeVisible({ timeout: 15_000 });
+  await page.getByTestId('assistant-action-compare').click();
+  await expect(page.getByTestId('assistant-done-compare')).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('assistant-close').click();
   await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
 

@@ -4,7 +4,7 @@
 // draftText다. 편집 손실 방지 규칙(직접 수정 후 체크 변경 시 확인)과 조건 제안·충돌
 // 판정은 모두 src/domain의 순수 함수(draft.ts, conditions.ts)에 위임한다. T12에서
 // AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
-// (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
+// (직접 입력·적용마다 늘어나는 값)과 transcript(임원이 제안한 조건 반영)를
 // AssistantPanel에 추가로 넘긴다.
 // T73(docs/design/mockups/S3_Discuss.html·S3b_Discuss_Evidence.html 시안 그대로): 왼쪽
 // 열은 무대(StageBand, App.tsx가 그린다) 아래 HUD 입력 상자(discuss-screen__hud —
@@ -71,7 +71,7 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
+  /** AI 비서실장 조건 추천이 참고하는 실제 회의 기록(live에서 임원이 제안한 조건). */
   transcript: Transcript;
   /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. */
   mode: SessionMode;
@@ -197,7 +197,7 @@ export function DiscussScreen({
   );
 
   const showNoMatchHint = draft.draftText.trim() !== '' && proposedConditionIds.length === 0;
-  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 한 가지 이상(T109에서 세 가지 필수를
+  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 한 가지 이상(T109에서 필수를
   // 완화) → 의견 전달 순서. 실패·연결 지연 안내를 본 것도 사용으로 센다(assistantFeaturesUsed).
   const assistantUsed = useMemo(
     () => assistantFeaturesUsed(assistantActions, 'DISCUSS'),

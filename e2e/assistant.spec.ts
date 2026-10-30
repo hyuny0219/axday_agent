@@ -77,9 +77,9 @@ test('AI 비서실장을 열고 내 발언 정리를 적용하면, 결과에 사
 // BRIEFING의 자동 정리 카드는 T52에서 제거됐다. 그런데도 표시 기록이 남아 결과에
 // "자료 4장 자동 정리 데모 표시"가 항상 나오던 것을 PR #10 Codex 27차 검토(P2)에서 뺐다 —
 // 보이지 않은 것을 표시했다고 기록하지 않는다.
-// T97: 이제 비서실장을 한 번도 안 쓰고는 전달할 수 없다(assistant-gate.spec). 대신 세 기능을
-// 쓰고 정리한 초안은 적용하지 않은 경우, 결과에는 실제로 확인한 두 줄만 남는다.
-test('세 기능을 쓰고 정리 초안을 적용하지 않으면 결과에 확인한 기록만 남고 정리 적용 줄은 없다', async ({ page }) => {
+// T97: 이제 비서실장을 한 번도 안 쓰고는 전달할 수 없다(assistant-gate.spec). 대신 두 기능을
+// 쓰고 정리한 초안은 적용하지 않은 경우, 결과에는 실제로 확인한 기록만 남는다.
+test('두 기능을 쓰고 정리 초안을 적용하지 않으면 결과에 확인한 기록만 남고 정리 적용 줄은 없다', async ({ page }) => {
   await reachDiscuss(page);
 
   await page.getByTestId('phrase-card-P1').click();
@@ -87,7 +87,7 @@ test('세 기능을 쓰고 정리 초안을 적용하지 않으면 결과에 확
 
   const aiHelp = page.getByTestId('result-ai-help');
   await expect(aiHelp).not.toContainText('자동 정리');
-  await expect(aiHelp).toContainText('의견 한눈에 보기를 확인했습니다.');
+  await expect(aiHelp).not.toContainText('한눈에');
   await expect(aiHelp).toContainText('조건 추천 1회');
   await expect(aiHelp).not.toContainText('내 발언 정리를 내 발언에 적용했습니다.');
   await expect(page.getByTestId('result-ai-help-none')).toHaveCount(0);

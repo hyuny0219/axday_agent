@@ -68,7 +68,7 @@ test('6개 화면에서 한 번씩 뜨고, 알겠어요나 첫 조작으로 사�
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
   await expect(page.getByTestId('coach')).toHaveCount(0); // 팝업 안에는 코치가 없다
-  for (const feature of ['summary', 'compare', 'refine'] as const) {
+  for (const feature of ['compare', 'refine'] as const) {
     await page.getByTestId(`assistant-action-${feature}`).click();
     await expect(page.getByTestId(`assistant-done-${feature}`)).toBeVisible({ timeout: 15_000 });
   }

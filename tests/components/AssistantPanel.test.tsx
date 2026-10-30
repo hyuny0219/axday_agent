@@ -137,39 +137,38 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     render(<AssistantPanel {...base()} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('assistant-check-summary')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('assistant-check-compare')).not.toBeInTheDocument();
   });
 
-  it('첫 화면에 제목·기능 세 줄·체크가 보인다', () => {
-    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['summary']) }} />);
+  it('첫 화면에 제목·기능 두 줄·체크가 보인다', () => {
+    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['compare']) }} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     const intro = screen.getByTestId('assistant-intro');
-    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(셋 다 써도 좋아요)');
-    expect(intro).toHaveTextContent('임원 네 명 말을 한 줄씩 정리합니다');
+    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(둘 다 써도 좋아요)');
+    expect(intro).toHaveTextContent('어떤 임원을 어떤 조건으로 움직일 수 있는지 알려 줍니다');
     expect(intro).toHaveTextContent('지금 쓴 발언을 더 또렷하게 다듬어 줍니다');
-    expect(screen.getByTestId('assistant-check-summary')).toHaveTextContent('☑');
-    expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☐');
-    expect(screen.getByTestId('assistant-done-summary')).toHaveTextContent('완료');
+    expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☑');
+    expect(screen.getByTestId('assistant-check-refine')).toHaveTextContent('☐');
+    expect(screen.getByTestId('assistant-done-compare')).toHaveTextContent('완료');
     expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
   });
 
-  it('requiredFeatures 없이도(REACTIONS 2/2) ①②③ 번호 버튼은 있고 추천 순서 줄은 없다(T141)', () => {
+  it('requiredFeatures 없이도(REACTIONS 2/2) ①② 번호 버튼은 있고 추천 순서 줄은 없다(T141·T147)', () => {
     render(<AssistantPanel {...base()} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByRole('button', { name: /^① 의견 한눈에 보기/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^② 조건 추천/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^③ / })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^① 조건 추천/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^② 내 발언 정리/ })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /한눈에 보기/ })).toBeNull();
     expect(screen.queryByTestId('assistant-intro-order')).not.toBeInTheDocument();
   });
 
-  it('버튼 이름에 ①②③이 들어가고 추천 순서 한 줄이 있으며 버튼은 모두 눌린다(T141)', () => {
+  it('버튼 이름에 ①②가 들어가고 추천 순서 한 줄이 있으며 버튼은 모두 눌린다(T141)', () => {
     render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByRole('button', { name: /^① 의견 한눈에 보기/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^② 조건 추천/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^③ 내 발언 정리/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^① 조건 추천/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^② 내 발언 정리/ })).toBeEnabled();
     const order = screen.getByTestId('assistant-intro-order');
-    expect(order).toHaveTextContent('추천 순서: ① 임원 말 훑기 → ② 조건을 골라 적용 → ③ 담은 문구 다듬기');
+    expect(order).toHaveTextContent('추천 순서: ① 조건을 골라 적용 → ② 담은 문구 다듬기');
     expect(order).toHaveTextContent('하나만 써도 의견 전달이 열립니다');
   });
 
@@ -185,11 +184,11 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     expect(screen.queryByTestId('assistant-intro-done')).not.toBeInTheDocument();
   });
 
-  it('세 기능을 다 쓰면 완료 문구가 뜬다', () => {
+  it('두 기능을 다 쓰면 완료 문구가 뜬다', () => {
     render(
       <AssistantPanel
         {...base()}
-        requiredFeatures={{ used: new Set(['summary', 'compare', 'refine']) }}
+        requiredFeatures={{ used: new Set(['compare', 'refine']) }}
       />,
     );
     fireEvent.click(screen.getByTestId('assistant-toggle'));
@@ -204,7 +203,7 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     fireEvent.click(screen.getByTestId('assistant-action-compare'));
     await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
     expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('한눈에 보기');
+    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('내 발언 정리');
     expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('조건 추천');
   });
 
@@ -218,7 +217,7 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     rerender(
       <AssistantPanel
         {...props}
-        requiredFeatures={{ used: new Set(['summary', 'compare', 'refine']), onAllUsed }}
+        requiredFeatures={{ used: new Set(['compare', 'refine']), onAllUsed }}
       />,
     );
     expect(onAllUsed).toHaveBeenCalledTimes(1);
@@ -240,7 +239,6 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
   it('기능이 실패해도 같은 유형을 failed:true로 남겨 사용으로 센다', async () => {
     const failing: AssistantAdapter = {
       ...scriptedAssistantAdapter,
-      summarizeOpinions: () => Promise.reject(new Error('연결 실패')),
       compareConditions: () => Promise.reject(new Error('연결 실패')),
       refineDraft: () => Promise.reject(new Error('연결 실패')),
     };
@@ -248,7 +246,6 @@ describe('AssistantPanel 필수 사용 소개(T97)', () => {
     render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={failing} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     for (const [feature, type] of [
-      ['summary', 'OPINION_SUMMARY'],
       ['compare', 'CONDITION_RECOMMEND_VIEW'],
       ['refine', 'DRAFT_REFINE'],
     ] as const) {
@@ -268,20 +265,20 @@ describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
     let calls = 0;
     const adapter: AssistantAdapter = {
       ...scriptedAssistantAdapter,
-      summarizeOpinions: async (req) => {
+      refineDraft: async (req) => {
         calls += 1;
         if (calls === 1) {
           await new Promise<void>((resolve) => {
             releaseFirst = resolve;
           });
         }
-        return scriptedAssistantAdapter.summarizeOpinions(req);
+        return scriptedAssistantAdapter.refineDraft(req);
       },
     };
     render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={adapter} />);
 
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-summary'));
+    fireEvent.click(screen.getByTestId('assistant-action-refine'));
     fireEvent.click(screen.getByTestId('assistant-close'));
     await act(async () => {
       releaseFirst();
@@ -289,9 +286,9 @@ describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
     expect(onAssistantAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-summary'));
+    fireEvent.click(screen.getByTestId('assistant-action-refine'));
     await waitFor(() => {
-      expect(onAssistantAction.mock.calls.filter(([e]) => e.type === 'OPINION_SUMMARY')).toHaveLength(1);
+      expect(onAssistantAction.mock.calls.filter(([e]) => e.type === 'DRAFT_REFINE')).toHaveLength(1);
     });
   });
 });

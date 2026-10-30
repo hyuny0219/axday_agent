@@ -15,7 +15,6 @@ import type { AssistantMode } from '../services/assistant/types';
 export type { AssistantMode } from '../services/assistant/types';
 
 export type AssistantActionType =
-  | 'OPINION_SUMMARY'
   | 'CONDITION_COMPARE'
   | 'DRAFT_REFINE'
   // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
@@ -58,7 +57,6 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = [
-  'OPINION_SUMMARY',
   'CONDITION_COMPARE',
   'DRAFT_REFINE',
   'CONDITION_RECOMMEND_VIEW',
@@ -116,8 +114,6 @@ function describeEntry(entry: AssistantAction): string | null {
   }
   const base = (() => {
     switch (entry.type) {
-      case 'OPINION_SUMMARY':
-        return '의견 한눈에 보기를 확인했습니다.';
       case 'CONDITION_COMPARE':
         return '조건 비교하기를 확인했습니다.';
       case 'DRAFT_REFINE':
@@ -246,19 +242,18 @@ export function describeAdditionalHelp(
   return lines;
 }
 
-export type AssistantFeatureKey = 'summary' | 'compare' | 'refine';
+export type AssistantFeatureKey = 'compare' | 'refine';
 
-export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['summary', 'compare', 'refine'];
+export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['compare', 'refine'];
 
 const FEATURE_OF_ACTION: Partial<Record<AssistantActionType, AssistantFeatureKey>> = {
-  OPINION_SUMMARY: 'summary',
   CONDITION_RECOMMEND_VIEW: 'compare',
   CONDITION_COMPARE: 'compare',
   DRAFT_REFINE: 'refine',
 };
 
 /**
- * T97: DISCUSS에서 AI 비서실장 세 기능(한눈에 보기·조건 추천·발언 정리)을 각각 한 번
+ * T97: DISCUSS에서 AI 비서실장 두 기능(조건 추천·발언 정리)을 각각 한 번
  * 이상 써 봤는지. 결과를 렌더했을 때뿐 아니라 실패·연결 지연 안내를 본 경우(failed)도
  * "써 본 것"으로 센다 — 연결이 늦어도 참가자가 막히지 않게 한다. 기록은 세션 단위라
  * stage는 지금 'DISCUSS'뿐이지만, 단계별 요구가 생기면 여기서 가른다.

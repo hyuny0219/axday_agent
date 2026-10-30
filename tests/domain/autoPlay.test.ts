@@ -5,6 +5,7 @@ import {
   autoConfirmedConditionIds,
   autoPhrasePicks,
   autoPlan,
+  assistantExplainPlan,
   autoProgress,
   motionAutoPlan,
   pickAutoFollowUp,
@@ -58,10 +59,29 @@ describe('autoPlan', () => {
       expect(autoPlan('BRIEFING', sc)).toHaveLength(sc.evidence.length);
       expect(autoPlan('OPINIONS', sc)).toHaveLength(sc.initialOpinions.length);
       expect(autoPlan('DISCUSS', sc)).toEqual([]);
-      expect(autoPlan('DISCUSS', sc, 'FOR').some((a) => a.kind === 'APPLY_ASSISTANT')).toBe(true);
-      expect(autoPlan('REACTIONS', sc, 'AGAINST').map((a) => a.kind)).toEqual(['ADVANCE_REACTION', 'PICK_FOLLOWUP']);
+      expect(autoPlan('DISCUSS', sc, 'FOR').some((a) => a.kind === 'OPEN_ASSISTANT')).toBe(true);
+      expect(autoPlan('REACTIONS', sc, 'AGAINST').map((a) => a.kind)).toEqual(['PICK_FOLLOWUP']);
       expect(autoPlan('MOTION', sc, 'FOR').length).toBeGreaterThan(0);
       for (const a of autoPlan('BRIEFING', sc)) expect(a.durationMs).toBeGreaterThanOrEqual(1000);
+    }
+  });
+});
+
+describe('비서실장 자동 진행(T147)', () => {
+  it('DISCUSS는 팝업 열기만 자동이고 ①②·적용 동작은 목록에 없다', () => {
+    for (const sc of scenarios) {
+      const kinds = autoPlan('DISCUSS', sc, 'FOR').map((a) => a.kind);
+      expect(kinds.filter((kind) => kind === 'OPEN_ASSISTANT')).toHaveLength(1);
+      expect(kinds.every((kind) => kind === 'ADD_PHRASE' || kind === 'OPEN_ASSISTANT')).toBe(true);
+    }
+  });
+
+  it('① 조건 추천 · ② 내 발언 정리 설명 자막은 동작 하나씩이고 한눈에 보기는 없다', () => {
+    for (const feature of ['compare', 'refine'] as const) {
+      const plan = assistantExplainPlan(feature);
+      expect(plan).toHaveLength(1);
+      expect(plan[0]).toMatchObject({ kind: 'EXPLAIN_ASSISTANT', targetId: feature });
+      expect(plan[0].caption).not.toContain('한눈에');
     }
   });
 });

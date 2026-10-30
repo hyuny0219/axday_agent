@@ -5,8 +5,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { AssistantPanel } from '../../src/components/parts/AssistantPanel';
 import { aiApprovalScenario } from '../../src/content/scenarios';
 import { scriptedStances } from '../../src/domain/stance';
-import type { AssistantAdapter } from '../../src/services/assistant/types';
-import { scriptedAssistantAdapter } from '../../src/services/assistant/scripted';
 
 afterEach(() => cleanup());
 
@@ -40,18 +38,5 @@ describe('AssistantPanel 결과 갱신(T115)', () => {
     rerender(<AssistantPanel {...props({ selectedConditionIds: ['LOG'] })} />);
     expect(screen.queryByText('지금까지 확정한 조건이 없습니다.')).toBeNull();
     expect(screen.getByTestId('assistant-result-compare')).toHaveTextContent('승인 사유 기록');
-  });
-
-  it('live 요약을 본 뒤 회의 기록이 바뀌면(새 반응 도착) 옛 요약을 비운다', async () => {
-    const adapter: AssistantAdapter = {
-      ...scriptedAssistantAdapter,
-      summarizeOpinions: async () => ({ mode: 'live', evidenceIds: [], commonPoints: [], disagreements: [], summaryText: '옛 요약 문장' }),
-    };
-    const { rerender } = render(<AssistantPanel {...props({ adapter, mode: 'live' })} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-summary'));
-    await screen.findByTestId('assistant-summary-text');
-    rerender(<AssistantPanel {...props({ adapter, mode: 'live', transcript: { revision: 3, statements: [] } })} />);
-    expect(screen.queryByText('옛 요약 문장')).toBeNull();
   });
 });

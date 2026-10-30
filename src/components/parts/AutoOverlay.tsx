@@ -113,7 +113,7 @@ export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel 
           <b>{AUTO_PILL_PREFIX}</b> {clickLabel}
         </div>
       )}
-      {mode === 'run' && steps && steps.length > 0 && (
+      {steps && steps.length > 0 && (
         <ol className="auto-steps" data-testid="auto-steps" aria-label="진행 목록">
           {steps.map((step) => (
             <li key={step.id} className={`auto-steps__item auto-steps__item--${step.state}`}>

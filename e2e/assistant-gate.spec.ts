@@ -17,7 +17,7 @@ async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickS
   }
 }
 
-async function runFeature(page: Page, feature: 'summary' | 'compare' | 'refine') {
+async function runFeature(page: Page, feature: 'compare' | 'refine') {
   await page.getByTestId(`assistant-action-${feature}`).click();
   await expect(page.getByTestId(`assistant-done-${feature}`)).toBeVisible({ timeout: 15_000 });
   if (feature === 'refine') {
@@ -70,13 +70,12 @@ test('한 기능만 써도 의견 전달이 열린다(T109)', async ({ page }) =
   ).toBeVisible();
 });
 
-test('세 개를 다 써도 의견 전달이 열린다', async ({ page }) => {
+test('두 개를 다 써도 의견 전달이 열린다', async ({ page }) => {
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await runFeature(page, 'summary');
   await runFeature(page, 'compare');
   await page.getByTestId('assistant-close').click();
 
@@ -100,7 +99,7 @@ test('팝업 첫 화면은 소개와 체크가 스크롤 없이 화면 안에 �
 
   const intro = page.getByTestId('assistant-intro');
   await expect(intro).toBeVisible();
-  await expect(page.getByTestId('assistant-check-summary')).toHaveText('☐');
+  await expect(page.getByTestId('assistant-check-compare')).toHaveText('☐');
 
   const viewport = page.viewportSize();
   expect(viewport).not.toBeNull();
@@ -127,7 +126,6 @@ test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
-  await runFeature(page, 'summary');
   await runFeature(page, 'compare');
   await page.getByTestId('assistant-action-refine').click();
   await expect(page.getByTestId('assistant-error')).toBeVisible({ timeout: 15_000 });
@@ -141,7 +139,6 @@ test('다시 답하기(REACTIONS)는 비서실장을 쓰지 않아도 전달할 
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
   await page.getByTestId('assistant-toggle').click();
-  await runFeature(page, 'summary');
   await runFeature(page, 'compare');
   await runFeature(page, 'refine');
   await page.getByTestId('assistant-close').click();

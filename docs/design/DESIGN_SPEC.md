@@ -1368,3 +1368,9 @@ MOTION·다시 답하기(REACTIONS 2/2)·ATTRACT·INTRO·SELECT에는 안내가 
 - 설정: 세션 필드 `autoPlay`(기본 true), 운영 메뉴 "자동 진행 끄기/켜기", 주소 `?auto=off`로 끈 채 시작(새 체험을 눌러도 유지). 켜진 채 열면 모드는 scripted로 고정되어 /api를 부르지 않는다. 끄면 지금의 직접 진행과 같다.
 - 결과 고정: 두 안건 × 찬성·반대 모두 자동 경로를 그대로 따라가고 참가자가 자기 입장대로 표결하면 성공(같은 표 3석 이상)이다(`tests/domain/autoPlay.test.ts`).
 - 테스트: 단위 `tests/domain/autoPlay.test.ts`, e2e `auto-flow.spec.ts`(1080·720, 두 안건 × 찬성·반대 RESULT 성공 엔딩까지, 운영 메뉴로 끄면 직접 진행으로 돌아가는지, 자동 중 화면 막힘·코치 없음). 자동 동작은 `?testClock=1`의 `__boardroom.advance`로 조금씩 앞으로 돌려 건너뛴다. 기존 e2e는 fixtures가 주소에 `auto=off`를 더해 그대로 지나간다. 스크린샷 `auto-briefing-click`·`auto-discuss-running`·`auto-discuss-click`.
+
+
+### T147: 자동 진행 손질
+
+- AI 비서실장은 ① 조건 추천 · ② 내 발언 정리 두 기능뿐이다('의견 한눈에 보기' 제거). 서버 `/api/assistant/summarize`는 이번 카드에서 건드리지 않아 남겨 두었다(클라이언트는 호출하지 않음 — 서버 정리는 별도 카드).
+- 자동 진행에서 비서실장 팝업 열기만 자동이고, ①·②·적용·의견 전달·REACTIONS의 '답하러 가기'는 모두 참가자가 누르는 CLICK 차례다. ①·②를 누르면 결과를 읽어 주는 자막이 나온다.

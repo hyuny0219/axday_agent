@@ -101,7 +101,7 @@ import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
-import { useAutoRun } from '../parts/autoRunContext';
+import { useAutoReport, useAutoRun } from '../parts/autoRunContext';
 import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -146,7 +146,7 @@ export interface ReactionsScreenProps {
   roundLog: RoundLogEntry[];
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
+  /** AI 비서실장 조건 추천이 참고하는 실제 회의 기록 revision. */
   transcriptRevision: number;
   /** 입장 선택(T89, 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할
    * 수 있도록") — App.tsx StageRouter의 state를 DiscussScreen과 공유한다. DISCUSS에서
@@ -706,14 +706,15 @@ export function ReactionsScreen({
     return appliedIds;
   }
 
-  // 자동 진행(T145): 고른 추가 답변 동작이 시작되면 1/2에서 2/2로 넘어가고 그 추천 답변을 담는다.
+  // 자동 진행(T147): 1/2의 '답하러 가기'는 참가자가 누른다. 호스트에 지금 단계를 알리고,
+  // 2/2에서 고른 추가 답변 동작이 시작되면 그 추천 답변을 담는다.
   const autoAction = useAutoRun().action;
+  const reportAutoStep = useAutoReport().reactionsStep;
   useEffect(() => {
-    if (readOnly || autoAction?.kind !== 'PICK_FOLLOWUP') return;
-    if (step === 'listen') {
-      onAdvanceStep();
-      return;
-    }
+    reportAutoStep(step);
+  }, [step, reportAutoStep]);
+  useEffect(() => {
+    if (readOnly || autoAction?.kind !== 'PICK_FOLLOWUP' || step === 'listen') return;
     const index = Number(autoAction.targetId);
     if (!selectedOptionIds.includes(autoAction.targetId) && !duplicateOptionIndexes.has(index)) {
       handleToggleOption(index);
@@ -835,6 +836,7 @@ export function ReactionsScreen({
             onClick={onAdvanceStep}
             disabled={listenLocked}
             data-testid="reactions-advance"
+            data-auto-click="reactions-advance"
             {...nextStepAttr(gate.visible && reactionsListenNextStep({ locked: listenLocked }) === 'advance')}
             aria-describedby={listenLocked ? 'reactions-advance-why' : undefined}
           >
