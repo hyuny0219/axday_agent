@@ -1,7 +1,7 @@
 // 부스 자동 진행(T143~T146): 자동이 켜진 채 참가자 클릭만으로 RESULT 성공 엔딩까지 가는지 확인한다.
 // 두 안건 × 찬성·반대. 자동 동작은 testClock(?testClock=1)으로 시계를 앞으로 돌려 기다리지 않고 넘긴다.
 // 참가자 클릭: 시작 · 안내 확인 · 안건 카드 · 의견 듣기 · 내 의견 쓰러 가기 · 찬성/반대 · 의견 전달 ·
-// 발언 정리 · 내 발언에 적용 · 답하러 가기 · 답변 전달 · 이 안건으로 표결 · 표결 도장 · 표결 확정 · 마무리.
+// 발언 정리 · 의견 전달 · 답하러 가기 · 답변 전달 · 이 안건으로 표결 · 표결 도장 · 표결 확정 · 마무리.
 import { test, expect, type Page } from './fixtures';
 
 type Side = 'for' | 'against';
@@ -49,7 +49,7 @@ async function playAutoToResult(page: Page, scenarioId: ScenarioId, side: Side) 
   await skipAuto(page);
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
 
-  // DISCUSS: 입장을 고르면 추천 문구 담기는 자동. '발언 정리'와 '내 발언에 적용'은 참가자가 누른다
+  // DISCUSS: 입장을 고르면 추천 문구 담기는 자동. '발언 정리'와 '의견 전달'은 참가자가 누른다
   // (결과가 보이는 동안은 자막으로 설명). 코치는 뜨지 않는다.
   await expect(page.getByTestId('auto-pill')).toContainText('찬성이나 반대');
   await page.getByTestId(`discuss-side-${side}`).click();
@@ -57,9 +57,6 @@ async function playAutoToResult(page: Page, scenarioId: ScenarioId, side: Side) 
   await expect(page.getByTestId('auto-pill')).toContainText('발언 정리');
   await page.getByTestId('assistant-toggle').click();
   await skipAuto(page);
-  await expect(page.getByTestId('auto-pill')).toContainText('내 발언에 적용');
-  await page.getByTestId('assistant-apply-refine').click();
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
   await expect(page.getByTestId('auto-pill')).toContainText('의견 전달');
   await page.getByTestId('submit-opinion').click();
 

@@ -17,18 +17,10 @@ async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickS
   }
 }
 
-/** '발언 정리'를 누르면 바로 결과(또는 실패 안내)가 뜬다. 정리한 초안은 적용하지 않고 원문을 유지한다. */
+/** '발언 정리'를 누르면 팝업 없이 바로 정리해 내 발언에 넣는다. 정리(성공/실패)가 끝나 의견 전달이 열릴 때까지 기다린다. */
 async function runRefine(page: Page) {
   await page.getByTestId('assistant-toggle').click();
-  const keep = page.getByTestId('assistant-keep-original');
-  const failure = page.getByTestId('assistant-error');
-  await expect(keep.or(failure)).toBeVisible({ timeout: 15_000 });
-  if (await keep.isVisible()) {
-    await keep.click();
-  } else {
-    await page.getByTestId('assistant-close').click();
-  }
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
 }
 
 test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 보이며, 문구를 고르면 열린다', async ({ page }) => {
@@ -60,40 +52,12 @@ test('발언 정리를 한 번 하면 의견 전달이 열린다(T149)', async (
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-result-refine')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId('assistant-apply-refine')).toBeVisible();
-  await expect(page.getByTestId('assistant-keep-original')).toBeVisible();
-  await page.getByTestId('assistant-keep-original').click();
-
-  await expect(page.getByTestId('submit-opinion')).toBeEnabled();
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
   await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-});
-
-test('발언 정리 팝업은 결과와 두 버튼이 스크롤 없이 화면 안에 들어온다', async ({ page }) => {
-  await reachDiscuss(page);
-  await page.getByTestId('phrase-card-P1').click();
-  await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-result-refine')).toBeVisible({ timeout: 15_000 });
-
-  const viewport = page.viewportSize();
-  expect(viewport).not.toBeNull();
-  for (const testId of ['assistant-panel', 'assistant-apply-refine', 'assistant-keep-original', 'assistant-close']) {
-    // 팝업 등장 애니메이션(8px 이동)이 끝난 뒤의 위치를 잰다.
-    await page.getByTestId(testId).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-    const box = await page.getByTestId(testId).boundingBox();
-    expect(box, `${testId} 위치를 알 수 없다`).not.toBeNull();
-    if (box && viewport) {
-      expect(box.y, `${testId} 위쪽이 잘렸다`).toBeGreaterThanOrEqual(-1);
-      expect(box.y + box.height, `${testId} 아래쪽이 잘렸다`).toBeLessThanOrEqual(viewport.height + 1);
-    }
-  }
-  const body = page.locator('.dialog-shell__body');
-  const overflow = await body.evaluate((el) => el.scrollHeight - el.clientHeight);
-  expect(overflow, '팝업 본문이 스크롤된다').toBeLessThanOrEqual(1);
 });
 
 test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 의견 전달이 열린다', async ({ page }) => {
@@ -105,7 +69,6 @@ test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-error')).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId('assistant-close').click();
 
   await expect(page.getByTestId('submit-opinion')).toBeEnabled();
 });

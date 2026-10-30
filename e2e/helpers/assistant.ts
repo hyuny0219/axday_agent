@@ -8,17 +8,6 @@ const REFINE_TIMEOUT_MS = 15_000;
 
 export async function tryAllAssistantFeatures(page: Page): Promise<void> {
   await page.getByTestId('assistant-toggle').click();
-  const panel = page.getByTestId('assistant-panel');
-  await expect(panel).toBeVisible();
-
-  const keepOriginal = page.getByTestId('assistant-keep-original');
-  const failure = page.getByTestId('assistant-error');
-  await expect(keepOriginal.or(failure)).toBeVisible({ timeout: REFINE_TIMEOUT_MS });
-  if (await keepOriginal.isVisible()) {
-    // 기존 테스트의 본문 기대값을 바꾸지 않도록 정리한 초안은 적용하지 않는다('원문 유지'는 팝업을 닫는다).
-    await keepOriginal.click();
-  } else {
-    await page.getByTestId('assistant-close').click();
-  }
-  await expect(panel).toBeHidden();
+  // 팝업 없이 바로 내 발언에 적용된다. 정리가 끝나(성공/실패) 의견 전달이 열릴 때까지 기다린다.
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: REFINE_TIMEOUT_MS });
 }

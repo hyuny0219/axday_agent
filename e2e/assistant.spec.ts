@@ -1,8 +1,8 @@
 import { test, expect, type Page } from './fixtures';
 import { tryAllAssistantFeatures } from './helpers/assistant';
 
-async function reachDiscuss(page: Page) {
-  await page.goto('/?mode=scripted&coach=off');
+async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off') {
+  await page.goto(url);
   await page.getByRole('button', { name: '체험 시작' }).click();
   await page.getByRole('button', { name: '확인', exact: true }).click();
   await page.getByTestId('scenario-card-ai-approval').click();
@@ -42,27 +42,13 @@ test('발언 정리를 눌러 적용하면, 결과에 사용 기록이 남는다
   const textarea = page.getByTestId('draft-editor-textarea');
   await textarea.fill('아직 확인되지 않은 부분이 있어 검토 없이 바로 진행하지 않겠습니다.');
 
-  // 팝업은 닫혀 있다가 '발언 정리' 버튼을 누르면 바로 정리해 결과를 보이고, '닫기'가 항상 보인다.
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
+  // 팝업 없이, '발언 정리' 버튼을 누르면 바로 정리해 내 발언에 적용된다.
+  const original = '아직 확인되지 않은 부분이 있어 검토 없이 바로 진행하지 않겠습니다.';
   await page.getByTestId('assistant-toggle').click();
-  const panel = page.getByTestId('assistant-panel');
-  await expect(panel).toBeVisible();
-  await expect(page.getByTestId('assistant-close')).toBeVisible();
-  await expect(panel.getByRole('heading', { name: '발언 정리', exact: true })).toBeVisible();
-
-  const refineResult = page.getByTestId('assistant-result-refine');
-  await expect(refineResult).toBeVisible();
-
-  const refinedText = await page.getByTestId('assistant-refine-draft').textContent();
+  await expect(textarea).not.toHaveValue(original);
+  const refinedText = await textarea.inputValue();
   expect(refinedText).toContain('않');
   expect(refinedText).toContain('없이');
-
-  // 적용을 누르기 전에는 원문이 바뀌지 않는다.
-  await expect(textarea).toHaveValue('아직 확인되지 않은 부분이 있어 검토 없이 바로 진행하지 않겠습니다.');
-
-  await page.getByTestId('assistant-apply-refine').click();
-  await expect(textarea).toHaveValue(refinedText ?? '');
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
 
   await finishToResult(page);
 
@@ -74,10 +60,13 @@ test('발언 정리를 눌러 적용하면, 결과에 사용 기록이 남는다
 // BRIEFING의 자동 정리 카드는 T52에서 제거됐다. 그런데도 표시 기록이 남아 결과에
 // "자료 4장 자동 정리 데모 표시"가 항상 나오던 것을 PR #10 Codex 27차 검토(P2)에서 뺐다 —
 // 보이지 않은 것을 표시했다고 기록하지 않는다.
-// T149: 발언 정리를 한 번도 안 하고는 전달할 수 없다(assistant-gate.spec). 정리하고 '원문 유지'를
-// 고른 경우, 결과에는 적용한 기록이 없다.
-test('발언 정리를 하고 원문 유지를 고르면 결과에 정리 적용 줄이 없다', async ({ page }) => {
-  await reachDiscuss(page);
+// T149: 발언 정리를 한 번도 안 하고는 전달할 수 없다(assistant-gate.spec). 정리가 실패해
+// 적용되지 않은 경우, 결과에는 적용한 기록이 없다.
+test('발언 정리가 실패해 적용되지 않으면 결과에 정리 적용 줄이 없다', async ({ page }) => {
+  await page.route('**/api/assistant/refine', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"fail"}' }),
+  );
+  await reachDiscuss(page, '/?coach=off');
 
   await page.getByTestId('phrase-card-P1').click();
   await finishToResult(page);
@@ -115,19 +104,10 @@ test('live 모드에서 내 발언 정리가 실제로 서버를 호출하면 �
 
   await page.getByTestId('assistant-toggle').click();
 
-  const refineResult = page.getByTestId('assistant-result-refine');
-  await expect(refineResult).toBeVisible({ timeout: 10_000 });
-  // T86: live에서는 '실시간 AI 응답' 캡션 자체를 그리지 않는다.
-  await expect(refineResult.locator('.assistant-panel__badge')).toHaveCount(0);
-
-  const refinedText = await page.getByTestId('assistant-refine-draft').textContent();
+  // 팝업 없이 정리한 초안이 바로 내 발언에 들어간다.
+  await expect(textarea).not.toHaveValue(originalText, { timeout: 10_000 });
+  const refinedText = await textarea.inputValue();
   expect(refinedText).toBeTruthy();
-  expect(refinedText).not.toBe(originalText);
-
-  await expect(textarea).toHaveValue(originalText);
-  await page.getByTestId('assistant-apply-refine').click();
-  await expect(textarea).toHaveValue(refinedText ?? '');
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
 
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();

@@ -66,12 +66,7 @@ test('6개 화면에서 한 번씩 뜨고, 알겠어요나 첫 조작으로 사�
   await expect(check('phrase')).toHaveAttribute('data-state', 'done');
   await expect(check('assistant')).toHaveAttribute('data-state', 'current');
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expect(page.getByTestId('coach')).toHaveCount(0); // 팝업 안에는 코치가 없다
-  await expect(page.getByTestId('assistant-keep-original')).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId('assistant-keep-original').click();
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
-  await expect(page.getByTestId('submit-opinion')).toBeEnabled();
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
   await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
   await expect(check('assistant')).toHaveAttribute('data-state', 'done');
   await expect(check('submit')).toHaveAttribute('data-state', 'current');

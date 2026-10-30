@@ -65,8 +65,8 @@ test('반대 근거 카드·칩은 빨강이고 자료 이름이 붙는다(안�
 
   // 비서실장 드로어까지 연 가장 내용이 많은 상태에서도 스크롤이 없다.
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 드로어)');
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
+  await expectNoPageScroll(page, 'DISCUSS(발언 정리 뒤)');
 });
 
 test('반대 근거 둘 + 추가 답변으로 성공한다: 안건은 원안 그대로, 반대 사유로 나란히 적힌다(안건 ①)', async ({ page }) => {

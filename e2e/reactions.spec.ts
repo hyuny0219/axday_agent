@@ -296,31 +296,6 @@ test('추천 답변 체크 카드가 키보드 포커스에서 보이는 테두�
   await expect(card).toHaveCSS('outline-width', '2px');
 });
 
-test('발언 정리 팝업이 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
-  page,
-}) => {
-  await reachReactionsWithRecordConfirmed(page);
-  const info = page.getByTestId('reactions-info');
-  await expect(info).not.toHaveAttribute('inert', '');
-
-  // T74부터 이 버튼(T149: '발언 정리')은 편집기 토글 없이 늘 보인다.
-  await page.getByTestId('followup-option-0').click();
-  const openAssistant = page.getByRole('button', { name: '발언 정리' });
-  await openAssistant.click();
-  await expect(info).toHaveAttribute('inert', '');
-  // inert 안의 요소는 포커스를 받지 못한다.
-  const focusedInside = await page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>('[data-testid="reactions-info"] button, [data-testid="reactions-info"] [tabindex="0"]');
-    el?.focus();
-    return el ? document.activeElement === el : false;
-  });
-  expect(focusedInside).toBe(false);
-
-  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
-  await page.getByTestId('assistant-close').click();
-  await expect(info).not.toHaveAttribute('inert', '');
-});
-
 // PR #12 Codex 3차 검토 1: 유지/바뀜 배지는 텍스트가 아니라 stance로 가른다 — 같은
 // 역할이 OPINIONS·REACTIONS에서 다른 stance로 답하면 "바뀜", 같은 stance로 답하면
 // (문장이 완전히 다시 쓰여도) "유지"다.

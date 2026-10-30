@@ -142,10 +142,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   // 문구를 고르기 전에는 비서실장 버튼이 잠겨 있으므로 먼저 추천 문구를 하나 고른다.
   await page.locator('[data-testid^="phrase-card-"]').first().click();
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
-  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 팝업 자체의 닫기 버튼으로 닫는다.
-  await page.getByTestId('assistant-close').click();
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
+  await expectNoPageScroll(page, 'DISCUSS(발언 정리 뒤)');
 
   // 2026-10-08 팀리드 지시: 설득 현황판(T96)이 더해지며 왼쪽 열이 세로로 넘쳐 하단
   // CTA가 뷰포트 밖으로 밀렸는데도 문서 스크롤 자체는 없어(.app-body__actions가
@@ -171,9 +169,8 @@ test('ATTRACT부터 RESULT까지 모든 단계가 페이지 스크롤 없이 한
   await expectNoPageScroll(page, 'REACTIONS(직접 입력 + 조건 칩)');
 
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectNoPageScroll(page, 'REACTIONS(비서실장 팝업 열림)');
-  await page.getByTestId('assistant-close').click();
+  await expect(page.getByTestId('assistant-toggle')).toBeEnabled({ timeout: 15_000 });
+  await expectNoPageScroll(page, 'REACTIONS(발언 정리 뒤)');
 
   // T96: DISCUSS와 같은 이유로 REACTIONS(다시 답하기)도 CTA가 뷰포트 안에 보이는지
   // 직접 확인한다.
@@ -734,8 +731,8 @@ for (const { scenarioId, side, phraseId, cards } of T119_CASES) {
     await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} ${side} 답변 전달 버튼`);
 
     await page.getByTestId('assistant-toggle').click();
-    await expect(page.getByTestId('assistant-result-refine')).toBeVisible({ timeout: 15_000 });
-    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 발언 정리 열림`);
+    await expect(page.getByTestId('assistant-toggle')).toBeEnabled({ timeout: 15_000 });
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 발언 정리 뒤`);
   });
 }
 

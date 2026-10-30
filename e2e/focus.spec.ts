@@ -45,12 +45,8 @@ test('DISCUSS: 입장 → 문구 → 발언 정리 → 의견 전달 순서로 �
   await expect(page.getByTestId('assistant-toggle')).toHaveAttribute('data-next-step', '');
 
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  // 발언 정리는 누르는 즉시 결과가 뜬다. 팝업이 열려 있는 동안에는 점선이 없다.
-  await expect(page.getByTestId('assistant-keep-original')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator(RING)).toHaveCount(0);
-  await page.getByTestId('assistant-keep-original').click();
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
+  // 발언 정리는 팝업 없이 바로 내 발언에 적용된다. 끝나면 의견 전달이 열린다.
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
 
   await expect(page.locator(RING)).toHaveCount(1);
   await expect(page.getByTestId('submit-opinion')).toHaveAttribute('data-next-step', '');
