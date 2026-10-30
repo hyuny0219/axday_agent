@@ -55,7 +55,6 @@ async function playAutoToResult(page: Page, scenarioId: ScenarioId, side: Side) 
   await page.getByTestId(`discuss-side-${side}`).click();
   await skipAuto(page);
   await expect(page.getByTestId('auto-pill')).toContainText('① 조건 추천');
-  await expect(page.getByTestId('auto-steps')).not.toContainText('한눈에');
   await page.getByTestId('assistant-action-compare').click();
   await skipAuto(page);
   await expect(page.getByTestId('auto-pill')).toContainText('② 내 발언 정리');

@@ -23,15 +23,6 @@ export const AUTO_CLICK_LABELS = {
 
 export type AutoClickKey = keyof typeof AUTO_CLICK_LABELS;
 
-/** DISCUSS 진행 목록(T147: 비서실장은 ① 조건 추천 · ② 내 발언 정리, 누르는 차례는 참가자). */
-export const AUTO_DISCUSS_STEP_LABELS = {
-  phrases: '추천 문구 담기',
-  open: 'AI 비서실장 열기',
-  compare: '① 조건 추천',
-  refine: '② 내 발언 정리',
-  apply: '내 발언에 적용',
-} as const;
-
 /** OPINIONS 자막(T148): 비서실장이 임원마다 짚어 주는 완결된 한 문장. 각 initialOpinions.text와 뜻이 같다. */
 export const AUTO_OPINION_CAPTIONS: Record<string, Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', string>> = {
   'ai-approval': {

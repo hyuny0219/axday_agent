@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { scenarios } from '../../content/scenarios';
-import { AUTO_CLICK_LABELS, AUTO_DISCUSS_STEP_LABELS, type AutoClickKey } from '../../content/autoPlay';
+import { AUTO_CLICK_LABELS, type AutoClickKey } from '../../content/autoPlay';
 import type { Clock } from '../../domain/clock';
 import {
   AUTO_LEAD_MS,
@@ -18,7 +18,7 @@ import {
 } from '../../domain/autoPlay';
 import type { Session } from '../../domain/types';
 import { collectConfirmedConditionIds } from '../opinionConditions';
-import { AutoOverlay, type AutoStepItem } from './AutoOverlay';
+import { AutoOverlay } from './AutoOverlay';
 import {
   AutoReportContext,
   AutoRunContext,
@@ -75,30 +75,6 @@ interface AssistantFlags {
   applied: boolean;
 }
 const NO_ASSISTANT_FLAGS: AssistantFlags = { opened: false, compare: false, refine: false, applied: false };
-
-/** DISCUSS 진행 목록: 자동 동작 순번과 참가자가 한 일로 완료·지금·남음을 가른다. */
-function discussSteps(plan: AutoAction[], index: number, done: boolean, flags: AssistantFlags): AutoStepItem[] {
-  const phraseIdx = plan.flatMap((a, i) => (a.kind === 'ADD_PHRASE' ? [i] : []));
-  const openIdx = plan.findIndex((a) => a.kind === 'OPEN_ASSISTANT');
-  const phrases: AutoStepItem['state'] =
-    phraseIdx.length === 0 ? 'done' : done || Math.max(...phraseIdx) < index ? 'done' : phraseIdx.includes(index) ? 'current' : 'todo';
-  // 팝업은 동작이 시작되면 바로 열리므로(flags.opened) 이 동작이 진행 중인 동안은 '지금'으로 둔다.
-  const open: AutoStepItem['state'] =
-    !done && index === openIdx ? 'current' : flags.opened || done || index > openIdx ? 'done' : 'todo';
-  const items: { id: string; label: string; state: AutoStepItem['state'] }[] = [
-    { id: 'phrases', label: AUTO_DISCUSS_STEP_LABELS.phrases, state: phrases },
-    { id: 'open', label: AUTO_DISCUSS_STEP_LABELS.open, state: open },
-    { id: 'compare', label: AUTO_DISCUSS_STEP_LABELS.compare, state: flags.compare ? 'done' : 'todo' },
-    { id: 'refine', label: AUTO_DISCUSS_STEP_LABELS.refine, state: flags.refine ? 'done' : 'todo' },
-    { id: 'apply', label: AUTO_DISCUSS_STEP_LABELS.apply, state: flags.applied ? 'done' : 'todo' },
-  ];
-  // 자동 동작이 끝났으면 아직 안 한 첫 칸이 참가자가 누를 차례(지금).
-  if (done) {
-    const next = items.find((item) => item.state === 'todo');
-    if (next) next.state = 'current';
-  }
-  return items;
-}
 
 /** 참가자 차례에 누를 버튼. 자동이 없는 단계·이미 눌린 뒤에는 null. */
 function clickKeyFor(
@@ -238,11 +214,6 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   const target = action ? selectorFor(action) : null;
   const conditionIndex =
     action?.kind === 'HIGHLIGHT_CONDITION' ? plan.findIndex((item) => item === action) : 0;
-  // DISCUSS 진행 목록은 자동 동작·설명 자막·참가자 차례 내내 보인다(side를 고른 뒤).
-  const steps =
-    enabled && stage === 'DISCUSS' && side !== null
-      ? discussSteps(plan, extraActive ? plan.length : progress.index, extraActive ? true : progress.done, flags)
-      : undefined;
 
   return (
     <AutoReportContext.Provider value={reporter}>
@@ -254,7 +225,6 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
             selector={target?.selector ?? null}
             nth={action.kind === 'HIGHLIGHT_CONDITION' && action.targetId !== '' ? conditionIndex : 0}
             caption={typedCaption(action.caption, progress.actionElapsedMs)}
-            steps={steps}
           />
         )}
         {clickKey && (!dialogOpen || clickInDialog) && (
@@ -262,7 +232,6 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
             mode="click"
             selector={clickSelector(clickKey)}
             clickLabel={AUTO_CLICK_LABELS[clickKey]}
-            steps={steps}
           />
         )}
       </AutoRunContext.Provider>

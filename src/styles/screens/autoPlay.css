@@ -72,46 +72,6 @@
   min-width: 0;
 }
 
-.auto-steps {
-  /* 가로 한 줄로 자막 띠 바로 위에 둔다(T147: 오른쪽 위에 두면 '추천 문구' 글자를 덮고 화면 끝에 붙었다). */
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 8px 18px;
-  margin: 0;
-  padding: 6px 16px;
-  list-style: none;
-  border: 2px solid #ffd23f;
-  border-radius: 10px;
-  background: rgba(6, 20, 36, 0.94);
-  color: var(--text-muted, #acc0d3);
-  font-size: 15px;
-  line-height: 1.4;
-  white-space: nowrap;
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-}
-
-.auto-steps--run {
-  bottom: 76px;
-}
-
-/* 참가자 차례(자막 띠 없음)에는 맨 아래. */
-.auto-steps--click {
-  bottom: 12px;
-}
-
-.auto-steps__item--done {
-  color: #8fe3a0;
-}
-
-.auto-steps__item--current {
-  color: #ffd23f;
-  font-weight: 700;
-}
-
 /* 자동 진행 동작 중에는 팝업(AI 비서실장) 안의 클릭도 막는다(T145). */
 body[data-auto-running] [role='dialog'] {
   pointer-events: none;

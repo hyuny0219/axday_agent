@@ -318,7 +318,7 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await capture(page, testInfo.project.name, 'coach-icon-discuss');
 });
 
-// T146·T147 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·진행 목록·강조 상자), 비서실장 CLICK 차례, 의견 전달·REACTIONS 1/2 CLICK 알약.
+// T146·T147 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·강조 상자), 비서실장 CLICK 차례, 의견 전달·REACTIONS 1/2 CLICK 알약.
 // testClock으로 시계를 조금씩 돌려 원하는 지점에서 멈춘다.
 test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 캡처한다', async ({ page }, testInfo) => {
   test.setTimeout(75_000);
@@ -347,9 +347,8 @@ test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 
   await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
   await page.getByTestId('discuss-side-for').click();
 
-  // 자동 중: 비서실장 열기 단계가 '지금'일 때 멈춘다.
-  const current = page.locator('.auto-steps__item--current');
-  await advanceUntil(async () => ((await current.count()) > 0 ? (await current.first().innerText()).includes('비서실장 열기') : false));
+  // 자동 중(추천 문구 담는 동안) 자막 띠가 보일 때 멈춘다.
+  await advanceUntil(() => page.getByTestId('auto-bar').isVisible());
   await expect(page.getByTestId('auto-bar')).toBeVisible();
   await capture(page, testInfo.project.name, 'auto-discuss-running');
 

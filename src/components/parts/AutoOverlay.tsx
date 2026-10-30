@@ -1,4 +1,4 @@
-// 자동 진행 표시(T144, copilot_secret_agent 참고): 자막 띠 + 노란 강조 상자 + 진행 목록, 그리고
+// 자동 진행 표시(T144, copilot_secret_agent 참고): 자막 띠 + 노란 강조 상자, 그리고
 // 참가자 차례의 'CLICK 눌러서 …' 알약(나머지 어둡게 + 흰 테두리). body로 portal해 화면 맞춤
 // 축소(transform)의 영향을 받지 않는다. 클릭은 막지 않는다 — 입력 막기는 호스트가 맡는다.
 
@@ -6,12 +6,6 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AUTO_BAR_LABEL, AUTO_PILL_PREFIX } from '../../content/autoPlay';
 import '../../styles/screens/autoPlay.css';
-
-export interface AutoStepItem {
-  id: string;
-  label: string;
-  state: 'done' | 'current' | 'todo';
-}
 
 export interface AutoOverlayProps {
   mode: 'run' | 'click';
@@ -22,7 +16,6 @@ export interface AutoOverlayProps {
   caption?: string;
   /** click: 알약에 쓸 버튼 이름. */
   clickLabel?: string;
-  steps?: readonly AutoStepItem[];
 }
 
 interface Rect {
@@ -31,8 +24,6 @@ interface Rect {
   width: number;
   height: number;
 }
-
-const MARK: Record<AutoStepItem['state'], string> = { done: '✓', current: '▶', todo: '○' };
 
 function measure(selector: string | null, nth: number): Rect | null {
   if (!selector) return null;
@@ -74,7 +65,7 @@ function sameRect(a: Rect | null, b: Rect | null): boolean {
   return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
 }
 
-export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel = '', steps }: AutoOverlayProps) {
+export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel = '' }: AutoOverlayProps) {
   const [rect, setRect] = useState<Rect | null>(null);
   // 요소 위치를 따라간다. 시간 계산이 아니라 화면 위치 측정이라 실제 타이머를 써도 된다.
   const [measureTick, setMeasureTick] = useState(0);
@@ -112,15 +103,6 @@ export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel 
         >
           <b>{AUTO_PILL_PREFIX}</b> {clickLabel}
         </div>
-      )}
-      {steps && steps.length > 0 && (
-        <ol className={`auto-steps auto-steps--${mode}`} data-testid="auto-steps" aria-label="진행 목록">
-          {steps.map((step) => (
-            <li key={step.id} className={`auto-steps__item auto-steps__item--${step.state}`}>
-              <span aria-hidden="true">{MARK[step.state]}</span> {step.label}
-            </li>
-          ))}
-        </ol>
       )}
       {mode === 'run' && (
         <div className="auto-bar" data-testid="auto-bar" role="status" aria-live="polite">
