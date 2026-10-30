@@ -86,7 +86,7 @@ describe('지난 화면 보기', () => {
     fireEvent.click(screen.getByTestId('discuss-side-for'));
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(await screen.findByTestId('assistant-keep-original', undefined, { timeout: 8000 }));
+    await waitFor(() => expect(screen.getByTestId('submit-opinion')).toBeEnabled(), { timeout: 8000 });
     fireEvent.click(screen.getByTestId('submit-opinion'));
     fireEvent.click(await screen.findByTestId('reactions-advance'));
     const answer = '진행 상황을 계속 공유해 주세요.';

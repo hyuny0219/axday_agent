@@ -10,7 +10,6 @@ export const AUTO_CLICK_LABELS = {
   'motion-freeze': '이 안건으로 표결',
   'discuss-side': '찬성이나 반대 고르기',
   'assistant-refine': '발언 정리',
-  'assistant-apply': '내 발언에 적용',
   'discuss-submit': '의견 전달',
   'reactions-advance': '답하러 가기',
   'reactions-submit': '답변 전달',
@@ -45,5 +44,5 @@ export const autoConditionCaption = (conditionLabel: string): string =>
   `'${conditionLabel}' 조건이 안건에 반영됩니다.`;
 export const AUTO_NO_CONDITION_CAPTION = '붙은 조건이 없어 처음 안 그대로 표결합니다.';
 export const AUTO_EXPLAIN_CAPTIONS = {
-  refine: '발언 정리는 쓴 발언을 또렷하게 다듬은 초안을 보여 주니, 마음에 들면 내 발언에 적용하세요.',
+  refine: '발언 정리가 담은 문구를 자연스러운 발언으로 다듬어 내 발언에 넣었습니다.',
 } as const;

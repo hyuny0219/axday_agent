@@ -83,9 +83,8 @@ function clickKeyFor(
   switch (session.stage) {
     case 'DISCUSS':
       if (side === null) return 'discuss-side';
-      if (flags.applied) return 'discuss-submit';
-      if (!dialogOpen) return flags.refine ? 'discuss-submit' : 'assistant-refine';
-      return flags.refine ? 'assistant-apply' : null;
+      if (flags.applied || flags.refine) return 'discuss-submit';
+      return dialogOpen ? null : 'assistant-refine';
     case 'REACTIONS':
       if (reactionsStep === 'listen') return 'reactions-advance';
       return side === null ? null : 'reactions-submit';
@@ -194,8 +193,6 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
 
   const dialogOpen = useDialogOpen();
   const clickKey = enabled && progress.done && !thinkingBusy ? clickKeyFor(session, side, flags, dialogOpen, reactionsStep) : null;
-  // '내 발언에 적용'은 팝업이 열린 채로 누른다.
-  const clickInDialog = clickKey === 'assistant-apply';
 
   const value = useMemo<AutoRunState>(
     () => (enabled ? { enabled: true, running, done: progress.done, action } : INACTIVE_AUTO_RUN),
@@ -218,7 +215,7 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
             caption={typedCaption(action.caption, progress.actionElapsedMs)}
           />
         )}
-        {clickKey && (!dialogOpen || clickInDialog) && (
+        {clickKey && !dialogOpen && (
           <AutoOverlay
             mode="click"
             selector={clickSelector(clickKey)}
@@ -230,8 +227,7 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   );
 }
 
-/** CLICK 차례의 강조 대상. 팝업 안의 적용 버튼은 팝업이 단 data-testid로 찾는다. */
+/** CLICK 차례의 강조 대상. */
 function clickSelector(key: AutoClickKey): string {
-  if (key === 'assistant-apply') return '[data-testid="assistant-apply-refine"]';
   return `[data-auto-click="${key}"]`;
 }

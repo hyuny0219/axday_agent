@@ -117,11 +117,8 @@ describe('DiscussScreen', () => {
     expect(info.hasAttribute('inert')).toBe(false);
     fireEvent.click(screen.getByTestId('discuss-side-for'));
     fireEvent.click(document.querySelector('[data-testid^="phrase-card-"]') as HTMLElement);
+    // 발언 정리는 팝업 없이 제자리에서 끝나므로 오른쪽 열을 막지 않는다(2026-10-30).
     fireEvent.click(screen.getByRole('button', { name: '발언 정리' }));
-    expect(info.hasAttribute('inert')).toBe(true);
-    // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글 라벨이 "숨기기"로 바뀌지
-    // 않고, 팝업 자체의 닫기 버튼(testid assistant-close)으로 닫는다.
-    fireEvent.click(screen.getByTestId('assistant-close'));
     expect(info.hasAttribute('inert')).toBe(false);
   });
 
