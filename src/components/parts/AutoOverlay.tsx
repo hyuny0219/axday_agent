@@ -43,6 +43,32 @@ function measure(selector: string | null, nth: number): Rect | null {
   return { left: box.left, top: box.top, width: box.width, height: box.height };
 }
 
+const PILL_HEIGHT = 46;
+const PILL_GAP = 14;
+
+interface PillPlace {
+  left: number;
+  top: number;
+  transform: string;
+}
+
+/** 알약 자리: 기본은 버튼 위. 위가 무대(임원 이름표 등)를 가리면 아래, 아래가 모자라면 오른쪽에 둔다. */
+function placePill(box: Rect): PillPlace {
+  const stage = document.querySelector('.stage-band')?.getBoundingClientRect() ?? null;
+  const aboveBottom = box.top - PILL_GAP;
+  const aboveTop = aboveBottom - PILL_HEIGHT;
+  const coversStage = stage !== null && aboveBottom > stage.top && aboveTop < stage.bottom;
+  const centerX = box.left + box.width / 2;
+  if (aboveTop >= 8 && !coversStage) {
+    return { left: centerX, top: aboveBottom, transform: 'translate(-50%, -100%)' };
+  }
+  const belowTop = box.top + box.height + PILL_GAP;
+  if (belowTop + PILL_HEIGHT <= window.innerHeight - 8) {
+    return { left: centerX, top: belowTop, transform: 'translate(-50%, 0)' };
+  }
+  return { left: box.left + box.width + PILL_GAP, top: box.top + box.height / 2, transform: 'translate(0, -50%)' };
+}
+
 function sameRect(a: Rect | null, b: Rect | null): boolean {
   if (a === null || b === null) return a === b;
   return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
@@ -82,11 +108,7 @@ export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel 
         <div
           className="auto-pill"
           data-testid="auto-pill"
-          style={{
-            left: boxStyle.left + boxStyle.width / 2,
-            top: boxStyle.top > 64 ? boxStyle.top - 14 : boxStyle.top + boxStyle.height + 14,
-            transform: boxStyle.top > 64 ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
-          }}
+          style={placePill(boxStyle)}
         >
           <b>{AUTO_PILL_PREFIX}</b> {clickLabel}
         </div>

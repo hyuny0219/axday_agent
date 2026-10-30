@@ -10,7 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
-| T143~T146 | 진행 중 | 부스 자동 진행(네 카드로 나눔: T143 기반·T144 표시·T145 DISCUSS·REACTIONS·T146 e2e·문서) — AI 비서실장 에이전트가 자료 읽기·추천 문구 담기·비서실장·추가 답변을 화면에서 해 보이고, 참가자는 찬반·다음·표결만 클릭(2026-10-30 사용자 지시). 자동 켜짐이 기본, 켜지면 scripted 고정, 안건은 참가자가 고름. 상세는 아래 T143 카드 |
+| T143~T146 | 완료 | 부스 자동 진행(네 카드로 나눔: T143 기반·T144 표시·T145 DISCUSS·REACTIONS·T146 e2e·문서) — AI 비서실장 에이전트가 자료 읽기·추천 문구 담기·비서실장·추가 답변을 화면에서 해 보이고, 참가자는 찬반·다음·표결만 클릭(2026-10-30 사용자 지시). 자동 켜짐이 기본, 켜지면 scripted 고정, 안건은 참가자가 고름. 상세는 아래 T143 카드 |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
 | T142 | 완료 | 반응에 답하기의 '넘어가기'를 누르면 바로 넘어가지 않고 확인 체크리스트(추가 질문·추천 답변·AI 비서실장)를 먼저 띄움. 넘어간 뒤 결과는 미리 말하지 않음(2026-10-17 사용자 지시). 상세는 아래 T142 카드. 완료: 넘어가기 → 확인 팝업(질문 원문·체크 3줄, 답하러 가기 ▶ / 그래도 넘어가기, Esc는 닫기), 결과 예고 문구 없음(domain/skipCheck.ts) |
 | T141 | 완료 | AI 비서실장 세 기능 버튼에 ①②③ 번호와 추천 순서 한 줄(순서 강제 없음)(2026-10-17 사용자 지시, 시안 https://claude.ai/artifact/MP4hQmQi79FUtwdq9fXnRp B3). 상세는 아래 T141 카드. 완료: 버튼·목록·압축 줄에 ①②③ + 소개 상자 추천 순서 한 줄, 강제 없음 |
@@ -210,7 +210,22 @@
   2. 스크린샷 갱신(screenshots.spec에 자동 중 DISCUSS·CLICK 차례 DISCUSS 추가) 두 해상도, Read로 확인.
   3. 문서: DESIGN_SPEC "## T143"(T143~T146 묶음), FACILITATOR_GUIDE(자동 진행 켜기/끄기·끌 때·scripted 고정), TASKS 진행 상황 행 T143~T146.
 - 허용 경로·하지 말 것: T143과 같음.
-- 완료 확인: `npm run check`, e2e 전체 1080·720(워크트리 전용 포트).
+- 완료 확인: `npm run check`, e2e 전체 1080·720(워크트리 전용 포트). 8787에는 시연용 실서버(live)가 떠 있으므로 건드리지 말고, live(mock) spec(T144·T145에서 mock 서버가 없어 실패로 남은 operations 모델 연결 확인·assistant-gate:124·assistant:101·reactions:361·stance:244·stance:323)은 **mock 서버를 다른 포트(예: 8887)로 띄우고 preview 프록시도 그 포트를 보게 한 scratchpad 설정**(T143 builder가 쓴 4273/8887 방식)으로 돌려 통과를 확인한다.
+- 마무리 손질: CLICK 알약이 BRIEFING에서 CEO 이름표를 덮는다 — 알약이 대상 버튼 위쪽 무대 요소를 가리지 않게 위치 조정.
+- 크기: M.
+
+## T147 자동 진행 손질 — 클릭 차례 추가·'의견 한눈에 보기' 제거·비서실장 번호 ①②
+
+- 사용자 지시(2026-10-30, 8787에서 T143~T145 본 뒤):
+  1. "내 의견 쓰기하고 난 후 임원 의견 듣고 답하러 가기를 누르지 않았는데 넘어가는데, 이것도 클릭해서 넘어가도록" → REACTIONS 1/2는 자동 이동하지 않고, 반응을 다 들은 뒤 **'답하러 가기 ▶' CLICK 차례**. 2/2의 추천 답변 자동 담기 → '답변 전달 ▶' CLICK은 그대로.
+  2. "AI 비서실장에서는 모두 클릭해서 넘어가도록" → DISCUSS에서 추천 문구 자동 담기 뒤, 비서실장 팝업 안의 각 단계를 참가자가 누른다: **① 조건 추천 CLICK → (결과 보이며 자막 설명) → ② 내 발언 정리 CLICK → '내 발언에 적용' CLICK**(적용하면 팝업이 닫힘) → '의견 전달 ▶' CLICK. 비서실장 팝업을 여는 동작(맡기기 버튼)은 자동으로 둔다. 진행 목록도 이 순서로.
+  3. "AI 임원의 발언 요약은 기능을 빼도 될 것 같아"(범위 확인: 앱에서 기능 자체 제거, 번호는 ①②로 다시 매김) → AI 비서실장 '의견 한눈에 보기'(summary)를 **자동·직접 진행 모두에서 제거**. 남는 두 기능을 **① 조건 추천 · ② 내 발언 정리**로. 클라이언트의 summary live 요청(/api/assistant/summarize)·fallback·관련 transcript prop·assistantLog 문구·추천 순서 한 줄·T140 체크리스트 3-3 문구·코치 문구·INTRO 팁 등 summary를 가리키는 곳을 정리. 서버 엔드포인트는 이번에 건드리지 않는다(호출만 없어짐 — 남겨 둔 이유를 DESIGN_SPEC에 한 줄).
+  4. (이미 반영, 미커밋) 자막 타이핑 35ms/글자, 다 친 뒤 0.5초 머묾 — `src/domain/autoPlay.ts`의 AUTO_TYPE_MS·AUTO_READ_MS. 이 카드 커밋에 포함한다.
+- 부스 안내물: `docs/booth/booth-guide.html`(3-3 ①②③ 설명·핀, 3-4 문구, 진행요원 줄 "①②③ 중 아무거나")과 `docs/booth/agenda-guide.html`(TIP "② 조건 추천")을 새 번호(①②)와 새 클릭 흐름에 맞게 고친다. 화면 캡처가 바뀌면 `docs/screenshots` 갱신 뒤 `node scripts/booth-guide-pdf.mjs`로 PDF·미리보기 다시 생성. 이 카드에 한해 `docs/booth/`·`scripts/booth-guide-pdf.mjs`의 미커밋 변경(안건 안내판 신규·부스 안내판 강조)도 함께 커밋해도 된다. `docs/booth/*.zip`은 사용자 파일이라 건드리지 않는다.
+- 읽을 것: `src/domain/autoPlay.ts`, `src/content/autoPlay.ts`, `src/components/parts/{AutoPlayHost,AutoOverlay,AssistantPanel}.tsx`, `src/components/screens/{Discuss,Reactions}Screen.tsx`, `src/domain/{assistantLog,coach}.ts`, `src/services/assistant/`, T140·T141·T143~T146 카드, e2e `auto-flow.spec.ts`·assistant*·discuss·reactions.
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`, `scripts/booth-guide-pdf.mjs`.
+- 하지 말 것: 서버·프롬프트 변경, 표결 규칙표 변경, 영문 UI, 8787 서버 건드리기·메인 트리 e2e(워크트리 전용 포트, mock은 8887 같은 다른 포트).
+- 완료 확인: `npm run check`, e2e auto-flow·assistant·assistant-gate·discuss·reactions·coach·noscroll 1080·720, 스크린샷 갱신(자동 DISCUSS 비서실장 CLICK 차례, REACTIONS 1/2 CLICK 차례) 뒤 Read, 안내판 PDF 미리보기 Read.
 - 크기: M.
 
 ## T142 넘어가기 전 확인 체크리스트

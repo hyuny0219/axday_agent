@@ -317,3 +317,43 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await expect(page.getByTestId('coach-icon')).toBeVisible();
   await capture(page, testInfo.project.name, 'coach-icon-discuss');
 });
+
+// T146 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·진행 목록·강조 상자), DISCUSS 참가자 차례(CLICK 알약).
+// testClock으로 시계를 조금씩 돌려 원하는 지점에서 멈춘다.
+test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 캡처한다', async ({ page }, testInfo) => {
+  test.setTimeout(75_000);
+  const advanceUntil = async (done: () => Promise<boolean>) => {
+    await page.waitForFunction(() => document.body.hasAttribute('data-auto-running'));
+    for (let i = 0; i < 200 && !(await done()); i += 1) {
+      await page.evaluate(() => {
+        (window as unknown as { __boardroom: { advance(ms: number): void } }).__boardroom.advance(700);
+      });
+      await page.waitForTimeout(120);
+    }
+  };
+  const pill = page.getByTestId('auto-pill');
+
+  await page.goto('/?testClock=1&auto=on');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('의견 듣기');
+  await capture(page, testInfo.project.name, 'auto-briefing-click');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+
+  await advanceUntil(() => pill.isVisible());
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  // 자동 중: 비서실장 ② 단계가 '지금'일 때 멈춘다.
+  const current = page.locator('.auto-steps__item--current');
+  await advanceUntil(async () => ((await current.count()) > 0 ? (await current.first().innerText()).includes('②') : false));
+  await expect(page.getByTestId('auto-bar')).toBeVisible();
+  await capture(page, testInfo.project.name, 'auto-discuss-running');
+
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('의견 전달');
+  await capture(page, testInfo.project.name, 'auto-discuss-click');
+});

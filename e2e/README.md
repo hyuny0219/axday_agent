@@ -34,6 +34,9 @@ URL을 기록한다. 각 테스트가 끝나면 기록된 외부 요청이 0건�
 - `flow-early.spec.ts` — 대기 화면부터 임원 의견까지, 준비 중 안건 선택 차단.
 - `flow-full.spec.ts` — ATTRACT부터 RESULT까지 완주(추천 문구만 / 직접 입력만 두 경로),
   5석 결과 카드.
+- `auto-flow.spec.ts` — 부스 자동 진행(T146): 두 안건 × 찬성·반대, 참가자 클릭만으로 RESULT 성공 엔딩까지
+  (`?testClock=1`로 자동 동작을 조금씩 건너뜀), 운영 메뉴로 끄면 직접 진행으로 돌아감. 다른 spec은
+  fixtures가 `auto=off`를 더해 기존 방식으로 지나간다.
 - `discuss.spec.ts` — 추천 문구 조합, 직접 입력만으로 의견 전달, 직접 수정 후 유지/재구성
   확인 UI.
 - `reactions.spec.ts` — 누적 조건 충돌 재검사, 후속 질문에서 이전 조건 유지/해제.
