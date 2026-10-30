@@ -95,3 +95,8 @@
   color: #ffd23f;
   font-weight: 700;
 }
+
+/* 자동 진행 동작 중에는 팝업(AI 비서실장) 안의 클릭도 막는다(T145). */
+body[data-auto-running] [role='dialog'] {
+  pointer-events: none;
+}

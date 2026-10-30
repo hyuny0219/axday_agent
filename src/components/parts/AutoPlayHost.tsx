@@ -5,13 +5,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { scenarios } from '../../content/scenarios';
-import { AUTO_CLICK_LABELS, type AutoClickKey } from '../../content/autoPlay';
+import { AUTO_CLICK_LABELS, AUTO_DISCUSS_STEP_LABELS, type AutoClickKey } from '../../content/autoPlay';
 import type { Clock } from '../../domain/clock';
 import { autoPlan, autoProgress, motionAutoPlan, typedCaption, type AutoAction } from '../../domain/autoPlay';
 import type { Session } from '../../domain/types';
 import { collectConfirmedConditionIds } from '../opinionConditions';
-import { AutoOverlay } from './AutoOverlay';
-import { AutoRunContext, INACTIVE_AUTO_RUN, type AutoRunState } from './autoRunContext';
+import { AutoOverlay, type AutoStepItem } from './AutoOverlay';
+import { AutoRunContext, INACTIVE_AUTO_RUN, type AutoRunState, type AutoSide } from './autoRunContext';
 import { useDialogOpen } from './useDialogOpen';
 
 export interface AutoPlayHostProps {
@@ -19,6 +19,8 @@ export interface AutoPlayHostProps {
   /** 보기 모드(지난 화면)에서는 표시하지 않는다. */
   paused: boolean;
   clock: Clock;
+  /** 참가자가 DISCUSS·REACTIONS에서 고른 입장(T145). */
+  side?: AutoSide;
   children: ReactNode;
 }
 
@@ -34,14 +36,52 @@ function selectorFor(action: AutoAction): { selector: string; nth: number } | nu
       return action.targetId === ''
         ? { selector: '[data-testid="motion-card"]', nth: 0 }
         : { selector: '[data-testid="motion-conditions"] li, [data-testid="motion-objections"] li', nth: 0 };
+    case 'ADD_PHRASE':
+      return { selector: `[data-testid="phrase-card-${action.targetId}"]`, nth: 0 };
+    case 'OPEN_ASSISTANT': {
+      const feature = ASSISTANT_STEP_FEATURE[action.targetId] ?? 'summary';
+      return { selector: `[data-testid="assistant-action-${feature}"]`, nth: 0 };
+    }
+    case 'APPLY_ASSISTANT':
+      return { selector: '[data-testid="assistant-apply-refine"]', nth: 0 };
+    case 'ADVANCE_REACTION':
+      return { selector: '[data-testid="reactions-advance"]', nth: 0 };
+    case 'PICK_FOLLOWUP':
+      return { selector: `[data-testid="followup-option-${action.targetId}"]`, nth: 0 };
     default:
       return null;
   }
 }
 
+const ASSISTANT_STEP_FEATURE: Record<string, string> = { '1': 'summary', '2': 'compare', '3': 'refine' };
+
+/** DISCUSS 진행 목록: 동작 순번으로 완료·지금·남음을 가른다. */
+function discussSteps(plan: AutoAction[], index: number, done: boolean): AutoStepItem[] {
+  const groups: { id: string; label: string; match: (a: AutoAction) => boolean }[] = [
+    { id: 'phrases', label: AUTO_DISCUSS_STEP_LABELS.phrases, match: (a) => a.kind === 'ADD_PHRASE' },
+    { id: 'summary', label: AUTO_DISCUSS_STEP_LABELS.summary, match: (a) => a.kind === 'OPEN_ASSISTANT' && a.targetId === '1' },
+    { id: 'compare', label: AUTO_DISCUSS_STEP_LABELS.compare, match: (a) => a.kind === 'OPEN_ASSISTANT' && a.targetId === '2' },
+    { id: 'refine', label: AUTO_DISCUSS_STEP_LABELS.refine, match: (a) => a.kind === 'OPEN_ASSISTANT' && a.targetId === '3' },
+    { id: 'apply', label: AUTO_DISCUSS_STEP_LABELS.apply, match: (a) => a.kind === 'APPLY_ASSISTANT' },
+  ];
+  return groups
+    .map((group) => {
+      const indices = plan.flatMap((a, i) => (group.match(a) ? [i] : []));
+      if (indices.length === 0) return null;
+      const state: AutoStepItem['state'] =
+        done || Math.max(...indices) < index ? 'done' : indices.includes(index) ? 'current' : 'todo';
+      return { id: group.id, label: group.label, state };
+    })
+    .filter((item): item is AutoStepItem => item !== null);
+}
+
 /** 참가자 차례에 누를 버튼. 자동이 없는 단계·이미 눌린 뒤에는 null. */
-function clickKeyFor(session: Session): AutoClickKey | null {
+function clickKeyFor(session: Session, side: AutoSide): AutoClickKey | null {
   switch (session.stage) {
+    case 'DISCUSS':
+      return side === null ? 'discuss-side' : 'discuss-submit';
+    case 'REACTIONS':
+      return side === null ? null : 'reactions-submit';
     case 'BRIEFING':
       return 'briefing-next';
     case 'OPINIONS':
@@ -58,7 +98,7 @@ function clickKeyFor(session: Session): AutoClickKey | null {
   }
 }
 
-export function AutoPlayHost({ session, paused, clock, children }: AutoPlayHostProps) {
+export function AutoPlayHost({ session, paused, clock, side = null, children }: AutoPlayHostProps) {
   const scenario = scenarios.find((item) => item.id === session.scenarioId) ?? null;
   const stage = session.stage;
   const enabled = session.autoPlay && !paused && scenario !== null;
@@ -67,12 +107,13 @@ export function AutoPlayHost({ session, paused, clock, children }: AutoPlayHostP
   const plan = useMemo<AutoAction[]>(() => {
     if (!enabled || !scenario) return [];
     if (stage === 'BRIEFING' || stage === 'OPINIONS') return autoPlan(stage, scenario);
+    if (stage === 'DISCUSS' || stage === 'REACTIONS') return side === null ? [] : autoPlan(stage, scenario, side);
     if (stage === 'MOTION') return motionAutoPlan(scenario, confirmedKey === '' ? [] : confirmedKey.split(','));
     return [];
-  }, [enabled, scenario, stage, confirmedKey]);
+  }, [enabled, scenario, stage, confirmedKey, side]);
 
   // 단계가 바뀌면 그 시각을 시작점으로 잡는다. 시작점이 낡은 동안(키 불일치)은 흐른 시간 0으로 본다.
-  const runKey = `${session.sessionId}:${stage}`;
+  const runKey = `${session.sessionId}:${stage}:${stage === 'DISCUSS' || stage === 'REACTIONS' ? (side ?? '') : ''}`;
   const [start, setStart] = useState<{ key: string; at: number }>(() => ({ key: runKey, at: clock.now() }));
   const [now, setNow] = useState(() => clock.now());
   useEffect(() => {
@@ -95,11 +136,16 @@ export function AutoPlayHost({ session, paused, clock, children }: AutoPlayHostP
     if (!running) return;
     const live = document.querySelector('[data-live-screen]');
     live?.setAttribute('inert', '');
-    return () => live?.removeAttribute('inert');
+    // 팝업(비서실장)은 화면 본문 밖이라 inert가 닿지 않는다 — 동작 중 클릭만 막는다.
+    document.body.setAttribute('data-auto-running', '');
+    return () => {
+      live?.removeAttribute('inert');
+      document.body.removeAttribute('data-auto-running');
+    };
   }, [running]);
 
   const dialogOpen = useDialogOpen();
-  const clickKey = enabled && progress.done ? clickKeyFor(session) : null;
+  const clickKey = enabled && progress.done ? clickKeyFor(session, side) : null;
 
   const value = useMemo<AutoRunState>(
     () => (enabled ? { enabled: true, running, done: progress.done, action } : INACTIVE_AUTO_RUN),
@@ -119,6 +165,7 @@ export function AutoPlayHost({ session, paused, clock, children }: AutoPlayHostP
           selector={target?.selector ?? null}
           nth={action.kind === 'HIGHLIGHT_CONDITION' && action.targetId !== '' ? conditionIndex : 0}
           caption={typedCaption(action.caption, progress.actionElapsedMs)}
+          steps={stage === 'DISCUSS' ? discussSteps(plan, progress.index, progress.done) : undefined}
         />
       )}
       {clickKey && !dialogOpen && (

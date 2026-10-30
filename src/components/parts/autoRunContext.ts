@@ -19,6 +19,10 @@ export const INACTIVE_AUTO_RUN: AutoRunState = { enabled: false, running: false,
 
 export const AutoRunContext = createContext<AutoRunState>(INACTIVE_AUTO_RUN);
 
+/** 화면이 고른 입장(찬성/반대)을 자동 진행 호스트에 알리는 길(T145). 입장은 StageScreen 상태라 호스트가 직접 못 본다. */
+export type AutoSide = 'FOR' | 'AGAINST' | null;
+export const AutoSideReportContext = createContext<(side: AutoSide) => void>(() => {});
+
 export function useAutoRun(): AutoRunState {
   return useContext(AutoRunContext);
 }

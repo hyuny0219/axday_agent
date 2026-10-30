@@ -58,6 +58,7 @@ import {
   releasedHint,
 } from '../conditionSource';
 import { findPhraseForCondition } from '../recommendMatch';
+import { useAutoRun } from '../parts/autoRunContext';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -436,6 +437,23 @@ export function DiscussScreen({
     return appliedIds;
   }
 
+  // 자동 진행(T145): ADD_PHRASE 동작이 시작될 때 그 추천 문구를 담는다. 직접 쓴 글이 있어 확인 창이
+  // 뜨면 '다시 구성'으로 바로 처리한다. 비서실장 동작은 AssistantPanel이 같은 문맥을 읽어 처리한다.
+  const autoAction = useAutoRun().action;
+  useEffect(() => {
+    if (readOnly || autoAction?.kind !== 'ADD_PHRASE') return;
+    if (!draft.selectedPhraseIds.includes(autoAction.targetId)) {
+      handleTogglePhrase(autoAction.targetId);
+    }
+    // 동작이 바뀔 때 한 번만 담는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAction]);
+  const autoEnabled = useAutoRun().enabled;
+  useEffect(() => {
+    if (autoEnabled && pendingPhraseId !== null) resolvePending('rebuild');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEnabled, pendingPhraseId]);
+
   function handleSubmit() {
     if (!canSubmit) {
       return;
@@ -505,6 +523,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
+            data-auto-click="discuss-submit"
             data-sound="send"
             {...nextStepAttr(gate.visible && nextStep === 'submit')}
             aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
@@ -542,6 +561,7 @@ export function DiscussScreen({
           <div
             className="side-select"
             data-testid="discuss-side-select"
+            data-auto-click="discuss-side"
             {...nextStepAttr(gate.visible && nextStep === 'side')}
           >
             <button

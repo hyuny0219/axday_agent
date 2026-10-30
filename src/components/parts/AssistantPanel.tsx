@@ -26,6 +26,7 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { DialogShell } from './DialogShell';
 import { nextStepAttr } from './focusRing';
 import { useDialogOpen } from './useDialogOpen';
+import { useAutoRun } from './autoRunContext';
 import '../../styles/screens/assistant.css';
 
 type FeatureKey = AssistantFeatureKey;
@@ -289,6 +290,32 @@ export function AssistantPanel({
     setOpen(false);
   }
   closePopupRef.current = closePopup;
+
+  // 자동 진행(T145): 비서실장 ①②③을 차례로 열어 실행하고, ③ 결과를 내 발언에 적용한 뒤 닫는다.
+  // 동작 목록과 때는 호스트(domain/autoPlay.ts의 DISCUSS 계획)가 정하고 여기는 따라 한다.
+  const autoRun = useAutoRun();
+  const autoAction = autoRun.action;
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!autoRun.running || !autoAction) return;
+    if (autoAction.kind === 'OPEN_ASSISTANT') {
+      const feature = (['summary', 'compare', 'refine'] as const)[Number(autoAction.targetId) - 1];
+      if (!feature) return;
+      autoOpenedRef.current = true;
+      setOpen(true);
+      void runFeature(feature);
+    } else if (autoAction.kind === 'APPLY_ASSISTANT') {
+      handleApplyRefine();
+    }
+    // 동작이 바뀔 때 한 번만 실행한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAction]);
+  useEffect(() => {
+    if (autoRun.done && autoOpenedRef.current) {
+      autoOpenedRef.current = false;
+      closePopupRef.current();
+    }
+  }, [autoRun.done]);
 
   function isStillCurrent(requestId: string): boolean {
     return currentRequestRef.current?.requestId === requestId;

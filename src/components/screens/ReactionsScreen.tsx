@@ -101,6 +101,7 @@ import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
+import { useAutoRun } from '../parts/autoRunContext';
 import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -705,6 +706,22 @@ export function ReactionsScreen({
     return appliedIds;
   }
 
+  // 자동 진행(T145): 고른 추가 답변 동작이 시작되면 1/2에서 2/2로 넘어가고 그 추천 답변을 담는다.
+  const autoAction = useAutoRun().action;
+  useEffect(() => {
+    if (readOnly || autoAction?.kind !== 'PICK_FOLLOWUP') return;
+    if (step === 'listen') {
+      onAdvanceStep();
+      return;
+    }
+    const index = Number(autoAction.targetId);
+    if (!selectedOptionIds.includes(autoAction.targetId) && !duplicateOptionIndexes.has(index)) {
+      handleToggleOption(index);
+    }
+    // 동작이나 단계가 바뀔 때만 처리한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAction, step]);
+
   function handleSubmit() {
     if (!canSubmit) {
       return;
@@ -1048,6 +1065,7 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
+            data-auto-click="reactions-submit"
             data-sound="send"
             {...nextStepAttr(gate.visible && answerStep === 'submit')}
             aria-describedby={!canSubmit ? 'reactions-submit-why' : undefined}

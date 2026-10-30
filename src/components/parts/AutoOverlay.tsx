@@ -63,7 +63,7 @@ export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel 
   }, []);
   useEffect(() => {
     if (!selector) return;
-    document.querySelectorAll(selector)[nth]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    document.querySelectorAll(selector)[nth]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }, [selector, nth]);
   useLayoutEffect(() => {
     const next = measure(selector, nth);
