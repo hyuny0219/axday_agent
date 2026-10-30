@@ -1,0 +1,49 @@
+/* 임원 "…" 생각 중 카드(T148). */
+.thinking-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+}
+
+.thinking-card__member {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.thinking-card__dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.thinking-card__dots span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  animation: thinking-dot-blink 1000ms ease-in-out infinite;
+}
+
+.thinking-card__dots span:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.thinking-card__dots span:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+@keyframes thinking-dot-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}

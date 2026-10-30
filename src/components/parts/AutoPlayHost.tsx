@@ -29,6 +29,7 @@ import {
   type AutoRunState,
   type AutoSide,
 } from './autoRunContext';
+import { useThinkingBusy } from './thinkingContext';
 import { useDialogOpen } from './useDialogOpen';
 
 export interface AutoPlayHostProps {
@@ -154,12 +155,14 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
 
   // 단계가 바뀌면 그 시각을 시작점으로 잡는다. 시작점이 낡은 동안(키 불일치)은 흐른 시간 0으로 본다.
   const runKey = `${session.sessionId}:${stage}:${stage === 'DISCUSS' || stage === 'REACTIONS' ? (side ?? '') : ''}:${answerStep ? 'answer' : ''}`;
+  // T148: 임원 발언이 "…" 뒤에 다 뜰 때까지는 시작하지 않고, 마지막 발언이 뜬 시각을 시작점으로 잡는다.
+  const thinkingBusy = useThinkingBusy();
   const [start, setStart] = useState<{ key: string; at: number }>(() => ({ key: runKey, at: clock.now() }));
   const [now, setNow] = useState(() => clock.now());
   useEffect(() => {
     setStart({ key: runKey, at: clock.now() });
     setNow(clock.now());
-  }, [runKey, clock]);
+  }, [runKey, clock, thinkingBusy]);
   useEffect(() => {
     if (!enabled) return;
     const timer = window.setInterval(() => setNow(clock.now()), TICK_MS);
@@ -202,7 +205,7 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   const activePlan = extraActive ? extraActive.plan : plan;
   const elapsed = extraActive
     ? Math.max(0, now - extraActive.at) + AUTO_LEAD_MS
-    : start.key === runKey
+    : start.key === runKey && !thinkingBusy
       ? Math.max(0, now - start.at)
       : 0;
   const progress = autoProgress(activePlan, elapsed);
@@ -223,7 +226,7 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   }, [running]);
 
   const dialogOpen = useDialogOpen();
-  const clickKey = enabled && progress.done ? clickKeyFor(session, side, flags, dialogOpen, reactionsStep) : null;
+  const clickKey = enabled && progress.done && !thinkingBusy ? clickKeyFor(session, side, flags, dialogOpen, reactionsStep) : null;
   // 비서실장 팝업 안의 단계는 팝업이 열린 채로 누른다.
   const clickInDialog = clickKey !== null && (clickKey.startsWith('assistant-') && clickKey !== 'assistant-open');
 

@@ -31,3 +31,31 @@ export const AUTO_DISCUSS_STEP_LABELS = {
   refine: '② 내 발언 정리',
   apply: '내 발언에 적용',
 } as const;
+
+/** OPINIONS 자막(T148): 비서실장이 임원마다 짚어 주는 완결된 한 문장. 각 initialOpinions.text와 뜻이 같다. */
+export const AUTO_OPINION_CAPTIONS: Record<string, Record<'CEO' | 'CFO' | 'CAIO' | 'CISO', string>> = {
+  'ai-approval': {
+    CEO: 'CEO는 담당자가 없으면 일이 멈추니, 범위를 정해 AI에게 맡겨 보자고 합니다.',
+    CFO: 'CFO는 금액 한도와 다시 확인하는 절차가 있으면 따를 수 있다고 합니다.',
+    CAIO: 'CAIO는 승인 이유를 남기는 장치부터 만들고, 그게 되는지 보고 정하겠다고 합니다.',
+    CISO: 'CISO는 기록과 책임질 사람부터 정해야 한다며 반대합니다.',
+  },
+  'experience-first': {
+    CEO: 'CEO는 데이터도 보되 방향은 사람이 잡아야 하니 경험을 앞세우자고 합니다.',
+    CFO: 'CFO는 숫자가 경고할 때 멈출 수 있다면 따를 수 있다고 합니다.',
+    CAIO: 'CAIO는 데이터가 약한 상황으로 범위를 좁히면 경험을 앞세워도 괜찮다고 봅니다.',
+    CISO: 'CISO는 판단 근거를 기록으로 남기지 않으면 반대한다고 합니다.',
+  },
+};
+
+/** 자막 문장 틀(조건 라벨·문구 원문을 끼운다). */
+export const autoPhraseCaption = (conditionLabel: string, text: string): string =>
+  `'${conditionLabel}' 조건이 붙는 문구를 담습니다: ${text}`;
+export const autoFollowUpCaption = (text: string): string => `추가 질문에는 이렇게 답합니다: ${text}`;
+export const autoConditionCaption = (conditionLabel: string): string =>
+  `'${conditionLabel}' 조건이 안건에 반영됩니다.`;
+export const AUTO_NO_CONDITION_CAPTION = '붙은 조건이 없어 처음 안 그대로 표결합니다.';
+export const AUTO_EXPLAIN_CAPTIONS = {
+  compare: '① 조건 추천은 어떤 임원이 어떤 조건에 움직이는지 알려 줍니다.',
+  refine: '② 내 발언 정리는 쓴 발언을 또렷하게 다듬은 초안을 보여 주니, 마음에 들면 내 발언에 적용하세요.',
+} as const;

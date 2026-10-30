@@ -4,7 +4,7 @@
 // (2·3: 근거 자료 팝업 발언 열의 stance·판단 중/실패 표시는 T105에서 열을 없애며 함께 뺐다.)
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   ReactionsScreen,
@@ -15,6 +15,19 @@ import type { ExecMemberId } from '../../src/content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../src/domain/types';
 import type { RoundLogEntry } from '../../src/components/minutes';
 import { scriptedStances } from '../../src/domain/stance';
+
+// T148: scripted 반응이 "…" 뒤에 한 명씩 뜨므로, 이 파일의 시나리오는 reduced-motion(뜸 없음)으로 본다.
+beforeEach(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
+});
 
 afterEach(() => {
   cleanup();

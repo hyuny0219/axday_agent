@@ -102,6 +102,9 @@ import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
 import { useAutoReport, useAutoRun } from '../parts/autoRunContext';
+import { ThinkingCard } from '../parts/ThinkingCard';
+import { useThinkingReveal } from '../parts/thinkingContext';
+import { useMatchMedia } from '../useMatchMedia';
 import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -174,6 +177,9 @@ export interface ReactionsScreenProps {
   /** 실패한 역할만 골라 REACTIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
 }
+
+/** T148: 반응 듣기에서 "…" 뒤에 차례로 뜨는 자리(임원 네 명 + 추가 질문). */
+const THINKING_ORDER: readonly string[] = [...EXEC_MEMBER_ORDER, 'FOLLOWUP'];
 
 /** 반응 카드(scripted) 왼쪽 띠·stance 글자색에 쓰는 소문자 modifier(DiscussScreen·
  * OpinionsScreen의 STANCE_MODIFIER와 같은 값). */
@@ -280,7 +286,15 @@ export function ReactionsScreen({
         (entry) => entry.stage === 'REACTIONS' && entry.roleId === roleId && entry.status === 'failed',
       ),
   );
-  const listenLocked = !readOnly && mode === 'live' && !allExecsSettled;
+  // T148: scripted 반응 듣기는 임원 네 명과 추가 질문이 한 명씩 "…" 뒤에 뜬다(지난 화면·reduced-motion은 바로).
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  const thinking = useThinkingReveal(
+    'REACTIONS',
+    THINKING_ORDER,
+    mode === 'scripted' && step === 'listen' && !readOnly && !reducedMotion,
+    scenario.id,
+  );
+  const listenLocked = !readOnly && ((mode === 'live' && !allExecsSettled) || (mode === 'scripted' && !thinking.done));
 
   // 추천 답변 체크 카드(T74): 선택된 것(문자열 인덱스)을 followUp.options 순서대로
   // 이어 붙여 textValue를 구성한다 — DISCUSS의 selectedPhraseIds·buildDraftText와 같은
@@ -884,7 +898,16 @@ export function ReactionsScreen({
               />
             ) : (
               <div className="reactions-screen__cards">
-                {EXEC_MEMBER_ORDER.map((memberId) => {
+                {EXEC_MEMBER_ORDER.map((memberId, memberIndex) => {
+                  if (memberIndex >= thinking.shownCount) {
+                    return thinking.thinkingId === memberId ? (
+                      <ThinkingCard
+                        key={memberId}
+                        label={MEMBER_LABELS[memberId]}
+                        testId={`thinking-card-${memberId}`}
+                      />
+                    ) : null;
+                  }
                   const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
                   const opposition = oppositionReactionText(
                     scenario,
@@ -953,6 +976,11 @@ export function ReactionsScreen({
                 })}
               </div>
             )}
+            {thinking.shownCount < THINKING_ORDER.length ? (
+              thinking.thinkingId === 'FOLLOWUP' && (
+                <ThinkingCard label={`추가 질문 · ${followUpPrompt.askedBy}`} testId="thinking-card-FOLLOWUP" />
+              )
+            ) : (
             <div className="reactions-screen__followup" data-testid="followup-question">
               <span className="reactions-screen__followup-label">
                 추가 질문 · {followUpPrompt.askedBy}가 묻습니다
@@ -964,6 +992,7 @@ export function ReactionsScreen({
                 />
               </p>
             </div>
+            )}
           </div>
         </div>
         {skipCheckDialog}

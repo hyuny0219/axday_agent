@@ -151,3 +151,45 @@ describe('typedCaption·motionAutoPlan', () => {
     expect(motionAutoPlan(sc, [])).toHaveLength(1);
   });
 });
+
+describe('자막은 완결된 문장(T148)', () => {
+  it('OPINIONS 자막은 말풍선 구절과 다르고 임원 직함으로 시작하는 문장이다', () => {
+    for (const sc of scenarios) {
+      for (const [index, a] of autoPlan('OPINIONS', sc).entries()) {
+        const opinion = sc.initialOpinions[index]!;
+        expect(a.caption).not.toBe(opinion.bubble);
+        expect(a.caption.startsWith(opinion.memberId)).toBe(true);
+        expect(a.caption.endsWith('.')).toBe(true);
+      }
+    }
+  });
+
+  it('DISCUSS 문구 자막은 조건 라벨로 무엇을 하는지 먼저 말한다', () => {
+    for (const sc of scenarios) {
+      for (const side of sides) {
+        for (const a of autoPlan('DISCUSS', sc, side)) {
+          if (a.kind !== 'ADD_PHRASE') continue;
+          const phrase = sc.phrases.find((item) => item.id === a.targetId)!;
+          const label = sc.conditions.find((item) => item.id === phrase.conditionId)!.label;
+          expect(a.caption.startsWith(`'${label}' 조건이 붙는 문구를 담습니다: `)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('비서실장·답변·MOTION 자막은 모두 마침표로 끝난다', () => {
+    for (const sc of scenarios) {
+      for (const side of sides) {
+        const captions = [
+          ...autoPlan('DISCUSS', sc, side),
+          ...autoPlan('REACTIONS', sc, side),
+          ...autoPlan('MOTION', sc, side),
+          ...assistantExplainPlan('compare'),
+          ...assistantExplainPlan('refine'),
+          ...motionAutoPlan(sc, []),
+        ].map((a) => a.caption);
+        for (const caption of captions) expect(caption.endsWith('.')).toBe(true);
+      }
+    }
+  });
+});

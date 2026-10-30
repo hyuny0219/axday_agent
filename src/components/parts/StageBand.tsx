@@ -34,6 +34,7 @@ import { execRevealDelay } from '../resultStamp';
 import { firstSentenceClipped } from '../stageText';
 import { bubbleLineOf } from '../bubbleText';
 import { reactionBubble } from '../reactionsFor';
+import { useThinkingHidden } from './thinkingContext';
 import { stanceVerdict, tallyParts } from '../stanceDisplay';
 import { useChangeFlip } from '../useChangeFlip';
 import type { LeaningMap } from '../../domain/stance';
@@ -263,6 +264,8 @@ export function StageBand({
   chairLine,
 }: StageBandProps) {
   const participant = participantSeatOverlay(stage, opinions);
+  // T148: scripted에서 아직 "…" 중인 임원은 말풍선 대신 생각 중 점을 보인다.
+  const thinkingHidden = useThinkingHidden(stage);
   const sealed = SEALED_STAGES.has(stage);
   // 집계는 임원이 의견을 낸 뒤(OPINIONS~REACTIONS)에만 보인다 — BRIEFING은 아직 아무도 말하지
   // 않았고, 봉인 단계는 방향을 가리며, RESULT는 표 배지가 대신한다.
@@ -301,7 +304,7 @@ export function StageBand({
           </div>
         )}
         {EXEC_MEMBER_ORDER.map((memberId) => {
-          const overlay = execSeatOverlay(
+          const baseOverlay = execSeatOverlay(
             memberId,
             stage,
             mode,
@@ -312,6 +315,10 @@ export function StageBand({
             chairLine,
             stances[memberId],
           );
+          const overlay: SeatOverlay =
+            mode === 'scripted' && thinkingHidden.includes(memberId)
+              ? { bubbleKind: 'pending', bubbleText: '', dimmed: false }
+              : baseOverlay;
           return (
             <div
               key={memberId}

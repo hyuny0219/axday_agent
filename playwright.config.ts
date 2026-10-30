@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   reporter: 'list',
+  // T148: scripted 임원 발언이 "…" 뒤에 한 명씩(1.2~2.4초) 뜨므로 화면 대기 기본값을 늘린다.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:4173',
   },

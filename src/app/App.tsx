@@ -27,6 +27,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
 import { AutoPlayHost } from '../components/parts/AutoPlayHost';
+import { ThinkingProvider } from '../components/parts/thinkingContext';
 import { AutoSideReportContext, type AutoSide } from '../components/parts/autoRunContext';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
@@ -890,7 +891,9 @@ function AppShell() {
 export function App() {
   return (
     <SessionProvider>
-      <AppShell />
+      <ThinkingProvider>
+        <AppShell />
+      </ThinkingProvider>
     </SessionProvider>
   );
 }

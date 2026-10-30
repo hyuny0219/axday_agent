@@ -8,7 +8,7 @@
 // 규칙은 유지). 라운드는 App.tsx가 이 단계에 들어올 때 자동으로 시작하므로 이 화면은
 // 상태만 그린다.
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { opinionsNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import type { ExecMemberId, Scenario } from '../../content/types';
@@ -18,7 +18,8 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { useMatchMedia } from '../useMatchMedia';
 import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
-import { useAutoRun } from '../parts/autoRunContext';
+import { ThinkingCard } from '../parts/ThinkingCard';
+import { useThinkingReveal } from '../parts/thinkingContext';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { StanceBand } from '../parts/StanceBand';
 import '../../styles/screens/opinions.css';
@@ -80,28 +81,19 @@ export function OpinionsScreen({
   // 한 번 누르면 버튼을 잠가 재요청 의도를 분명히 한다.
   const [retryUsed, setRetryUsed] = useState(false);
 
-  // scripted 카드 순차 노출(T95, 2026-10-08 사용자 — "필수로 보고 넘어가도록"): 네 카드가
-  // 0.8초 간격으로 차례로 나타나고, 다 나올 때까지 CTA를 잠근다. prefers-reduced-motion이면
-  // 즉시 다 보여준다(live는 roleStatus 기반 allExecsSettled 잠금을 그대로 쓰므로 영향 없음).
+  // scripted 임원 발언(T148): 한 명씩 "…"로 1.2~2.4초 뜸을 들인 뒤 발언을 띄우고, 다 뜰 때까지 CTA를
+  // 잠근다(T95 순차 노출을 대체). 지난 화면 보기·reduced-motion은 뜸 없이 바로 보인다(live는 영향 없음).
   const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
   const totalCards = scenario.initialOpinions.length;
-  // 자동 진행(T144)이 켜져 있으면 카드를 처음부터 다 보여 준다(한 명씩 강조해야 하므로).
-  const autoEnabled = useAutoRun().enabled;
-  const showAll = mode === 'live' || reducedMotion || readOnly || autoEnabled;
-  const [revealedCount, setRevealedCount] = useState(showAll ? totalCards : 0);
-  useEffect(() => {
-    if (showAll) {
-      setRevealedCount(totalCards);
-      return;
-    }
-    setRevealedCount(0);
-    const timers = Array.from({ length: totalCards }, (_, index) =>
-      setTimeout(() => setRevealedCount((count) => Math.max(count, index + 1)), (index + 1) * 800),
-    );
-    return () => timers.forEach(clearTimeout);
-    // scenario가 바뀔 때만 다시 돈다(mode·reducedMotion도 바뀌면 처음부터).
-  }, [scenario.id, showAll, totalCards]);
-  const allCardsRevealed = mode === 'live' || revealedCount >= totalCards;
+  const thinkingOrder = useMemo(() => scenario.initialOpinions.map((opinion) => opinion.memberId), [scenario]);
+  const thinking = useThinkingReveal(
+    'OPINIONS',
+    thinkingOrder,
+    mode === 'scripted' && !reducedMotion && !readOnly,
+    scenario.id,
+  );
+  const revealedCount = mode === 'live' ? totalCards : thinking.shownCount;
+  const allCardsRevealed = mode === 'live' || thinking.done;
 
   function handleRetry() {
     const failedRoleIds = EXEC_MEMBER_ORDER.filter((roleId) => roleStatus[roleId] === 'failed');
@@ -224,6 +216,12 @@ export function OpinionsScreen({
                 </article>
               );
             })}
+            {thinking.thinkingId && (
+              <ThinkingCard
+                label={MEMBER_LABELS[thinking.thinkingId as ExecMemberId]}
+                testId={`thinking-card-${thinking.thinkingId}`}
+              />
+            )}
           </div>
         </div>
       </div>

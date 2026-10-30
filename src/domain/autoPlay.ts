@@ -3,6 +3,14 @@
 // 건드리지 않고 decideBoard의 결과만 읽는다 — 함정 조건은 표가 모자라 자연히 고르지 않게 된다.
 
 import type { FollowUpOption, Phrase, Scenario } from '../content/types';
+import {
+  AUTO_EXPLAIN_CAPTIONS,
+  AUTO_NO_CONDITION_CAPTION,
+  AUTO_OPINION_CAPTIONS,
+  autoConditionCaption,
+  autoFollowUpCaption,
+  autoPhraseCaption,
+} from '../content/autoPlay';
 import { filterConditionIdsForStance } from './conditions';
 import { freezeMotion } from './motion';
 import { decideBoard, participantTargetVote } from './voting';
@@ -86,6 +94,10 @@ export function pickAutoFollowUp(scenario: Scenario, stance: AutoSide): FollowUp
   return best;
 }
 
+function conditionLabelOf(scenario: Scenario, conditionId: string | null): string {
+  return scenario.conditions.find((condition) => condition.id === conditionId)?.label ?? conditionId ?? '';
+}
+
 function action(kind: AutoActionKind, targetId: string, caption: string): AutoAction {
   return { kind, targetId, caption, durationMs: autoActionMs(caption) };
 }
@@ -97,12 +109,14 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
       return scenario.evidence.map((card) => action('OPEN_EVIDENCE', card.id, card.insight));
     case 'OPINIONS':
       return scenario.initialOpinions.map((opinion) =>
-        action('HIGHLIGHT_EXEC', opinion.memberId, opinion.bubble ?? opinion.text),
+        action('HIGHLIGHT_EXEC', opinion.memberId, AUTO_OPINION_CAPTIONS[scenario.id]?.[opinion.memberId] ?? opinion.text),
       );
     case 'DISCUSS': {
       if (!stance) return [];
       return [
-        ...autoPhrasePicks(scenario, stance).map((phrase) => action('ADD_PHRASE', phrase.id, phrase.text)),
+        ...autoPhrasePicks(scenario, stance).map((phrase) =>
+          action('ADD_PHRASE', phrase.id, autoPhraseCaption(conditionLabelOf(scenario, phrase.conditionId), phrase.text)),
+        ),
         // 비서실장 팝업만 자동으로 연다. ① 조건 추천 · ② 내 발언 정리 · 적용은 참가자가 누른다(T147).
         action('OPEN_ASSISTANT', '', 'AI 비서실장을 엽니다. ① 조건 추천과 ② 내 발언 정리를 차례로 눌러 보세요.'),
       ];
@@ -111,17 +125,13 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
       if (!stance) return [];
       // 1/2(반응 듣기)에서 '답하러 가기'는 참가자가 누른다(T147). 이 목록은 2/2(추가 답변)에서만 쓴다.
       const pick = pickAutoFollowUp(scenario, stance);
-      return pick ? [action('PICK_FOLLOWUP', String(scenario.followUp.options.indexOf(pick)), pick.text)] : [];
+      return pick ? [action('PICK_FOLLOWUP', String(scenario.followUp.options.indexOf(pick)), autoFollowUpCaption(pick.text))] : [];
     }
     case 'MOTION': {
       const stanceForMotion = stance ?? 'FOR';
       const pick = pickAutoFollowUp(scenario, stanceForMotion);
       return autoConfirmedConditionIds(scenario, stanceForMotion, pick).map((id) =>
-        action(
-          'HIGHLIGHT_CONDITION',
-          id,
-          `${scenario.conditions.find((condition) => condition.id === id)?.label ?? id}이(가) 안건에 반영됩니다.`,
-        ),
+action('HIGHLIGHT_CONDITION', id, autoConditionCaption(conditionLabelOf(scenario, id))),
       );
     }
   }
@@ -145,9 +155,7 @@ export function assistantExplainPlan(feature: AutoAssistantFeature): AutoAction[
     action(
       'EXPLAIN_ASSISTANT',
       feature,
-      feature === 'compare'
-        ? '조건 추천입니다. 어떤 임원이 어떤 조건에 움직이는지 알려 줍니다.'
-        : '내 발언 정리입니다. 쓴 발언을 또렷하게 다듬은 초안이에요. 마음에 들면 내 발언에 적용하세요.',
+      AUTO_EXPLAIN_CAPTIONS[feature],
     ),
   ];
 }
@@ -155,14 +163,10 @@ export function assistantExplainPlan(feature: AutoAssistantFeature): AutoAction[
 /** MOTION 자동 동작: 실제로 확정된 조건만 차례로 강조한다(확정 조건이 없으면 안내 한 줄). */
 export function motionAutoPlan(scenario: Scenario, confirmedConditionIds: string[]): AutoAction[] {
   if (confirmedConditionIds.length === 0) {
-    return [action('HIGHLIGHT_CONDITION', '', '붙은 조건이 없어 처음 안 그대로 표결합니다.')];
+    return [action('HIGHLIGHT_CONDITION', '', AUTO_NO_CONDITION_CAPTION)];
   }
   return confirmedConditionIds.map((id) =>
-    action(
-      'HIGHLIGHT_CONDITION',
-      id,
-      `${scenario.conditions.find((condition) => condition.id === id)?.label ?? id}이(가) 안건에 반영됩니다.`,
-    ),
+action('HIGHLIGHT_CONDITION', id, autoConditionCaption(conditionLabelOf(scenario, id))),
   );
 }
 

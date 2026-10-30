@@ -9,6 +9,7 @@ import { OpinionsScreen } from '../../src/components/screens/OpinionsScreen';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { scriptedStances } from '../../src/domain/stance';
 import { EXEC_MEMBER_ORDER } from '../../src/domain/voting';
+import { thinkingDurationMs, thinkingRevealTimes } from '../../src/domain/thinking';
 import type { RoleStatus } from '../../src/domain/types';
 
 function mockMatchMedia(reducedMotion: boolean) {
@@ -43,7 +44,7 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
     vi.useFakeTimers();
   });
 
-  it('카드가 0.8초 간격으로 하나씩 나타나고, 다 나오기 전에는 CTA가 잠긴다', () => {
+  it('한 명씩 "…" 뜸 뒤에 카드가 나타나고, 다 나오기 전에는 CTA가 잠긴다', () => {
     render(
       <OpinionsScreen
         scenario={anonBoardScenario}
@@ -59,22 +60,25 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
     expect(nextButton).toBeDisabled();
     expect(nextButton).toHaveAccessibleDescription('임원 의견이 다 나오면 열립니다');
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(0);
+    expect(screen.getByTestId('thinking-card-CEO')).toBeInTheDocument();
 
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(thinkingDurationMs(0));
     });
+    expect(screen.getByTestId('thinking-card-CFO')).toBeInTheDocument();
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(1);
     // T128: 도착음 감지 표시(src/audio/cues.ts countArrivals)
     expect(document.querySelectorAll('.opinion-card[data-arrival-card]')).toHaveLength(1);
     expect(nextButton).toBeDisabled();
 
     act(() => {
-      vi.advanceTimersByTime(800 * 3);
+      vi.advanceTimersByTime(thinkingRevealTimes(4)[3]! - thinkingDurationMs(0));
     });
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(
       anonBoardScenario.initialOpinions.length,
     );
     expect(nextButton).toBeEnabled();
+    expect(screen.queryByTestId('thinking-card-CISO')).toBeNull();
     expect(document.querySelector('[data-guide]')).toBeNull();
   });
 });
