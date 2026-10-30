@@ -81,7 +81,7 @@ describe('비서실장 자동 진행(T147)', () => {
       const plan = assistantExplainPlan(feature);
       expect(plan).toHaveLength(1);
       expect(plan[0]).toMatchObject({ kind: 'EXPLAIN_ASSISTANT', targetId: feature });
-      expect(plan[0].caption).not.toContain('한눈에');
+      expect(plan[0]?.caption).not.toContain('한눈에');
     }
   });
 });
