@@ -114,7 +114,7 @@ export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel 
         </div>
       )}
       {steps && steps.length > 0 && (
-        <ol className="auto-steps" data-testid="auto-steps" aria-label="진행 목록">
+        <ol className={`auto-steps auto-steps--${mode}`} data-testid="auto-steps" aria-label="진행 목록">
           {steps.map((step) => (
             <li key={step.id} className={`auto-steps__item auto-steps__item--${step.state}`}>
               <span aria-hidden="true">{MARK[step.state]}</span> {step.label}

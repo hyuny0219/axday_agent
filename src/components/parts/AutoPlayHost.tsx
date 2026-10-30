@@ -81,7 +81,9 @@ function discussSteps(plan: AutoAction[], index: number, done: boolean, flags: A
   const openIdx = plan.findIndex((a) => a.kind === 'OPEN_ASSISTANT');
   const phrases: AutoStepItem['state'] =
     phraseIdx.length === 0 ? 'done' : done || Math.max(...phraseIdx) < index ? 'done' : phraseIdx.includes(index) ? 'current' : 'todo';
-  const open: AutoStepItem['state'] = flags.opened || done ? 'done' : index === openIdx ? 'current' : 'todo';
+  // 팝업은 동작이 시작되면 바로 열리므로(flags.opened) 이 동작이 진행 중인 동안은 '지금'으로 둔다.
+  const open: AutoStepItem['state'] =
+    !done && index === openIdx ? 'current' : flags.opened || done || index > openIdx ? 'done' : 'todo';
   const items: { id: string; label: string; state: AutoStepItem['state'] }[] = [
     { id: 'phrases', label: AUTO_DISCUSS_STEP_LABELS.phrases, state: phrases },
     { id: 'open', label: AUTO_DISCUSS_STEP_LABELS.open, state: open },

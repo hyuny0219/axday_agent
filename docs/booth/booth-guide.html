@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>BECOME A BOARD 부스 안내판</title>
-<!-- 부스 앞에 세우는 인쇄용 진행 순서(A3 세로). 번호(1-1 … 5-2, 3-3 ①②③)는 앱의 진행 도우미·
+<!-- 부스 앞에 세우는 인쇄용 진행 순서(A3 세로). 번호(1-1 … 5-2, 3-3 ①②)는 앱의 진행 도우미·
      AI 비서실장 번호(T140·T141)와 진행 요원 가이드가 같이 쓴다. 화면은 docs/screenshots를 그대로 참조하므로
      스크린샷을 갱신한 뒤 scripts/booth-guide-pdf.mjs로 PDF를 다시 뽑는다. 핀 좌표는 1920×1080 기준 %. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@600&display=swap">
@@ -126,7 +126,7 @@ p { margin: 0; }
             <li><span class="k ghost">안내</span><span>왼쪽 위 체크리스트가 지금 할 일을 <b>▶</b>로 알려 줍니다. 끝낸 일에는 ✓가 붙습니다.</span></li>
             <li><span class="k">3-1</span><span><b>찬성 쪽 / 반대 쪽에서 말하기</b> 중 하나를 고릅니다. 표결은 마지막에 따로 합니다.</span></li>
             <li><span class="k">3-2</span><span>추천 문구를 <b>여러 개</b> 담습니다. 왼쪽 "내 발언"에 이어 붙고, 직접 고쳐도 됩니다.</span></li>
-            <li><span class="k">3-3</span><span><b>AI 비서실장에게 맡기기</b>를 열어 오른쪽 ①②③ 중 한 가지 이상 써 봅니다.</span></li>
+            <li><span class="k">3-3</span><span><b>AI 비서실장</b>이 열리면(자동 진행에서는 저절로 열립니다) ① 조건 추천 → ② 내 발언 정리를 안내에 따라 눌러 봅니다. 한 가지 이상이면 됩니다.</span></li>
             <li><span class="k">3-4</span><span><b>의견 전달 ▶</b> <span class="warn">3-3을 하지 않으면 눌리지 않습니다.</span> 버튼 아래에 이유가 나옵니다.</span></li>
           </ul>
         </div>
@@ -135,12 +135,10 @@ p { margin: 0; }
             <img src="../screenshots/desktop-1080/discuss-assistant-intro.png" alt="">
             <span class="pin" style="--x:22.9%;--y:48.5%">①</span>
             <span class="pin" style="--x:32.3%;--y:48.5%">②</span>
-            <span class="pin" style="--x:40.9%;--y:48.5%">③</span>
           </div>
           <ul class="sub">
-            <li><span class="k">3-3 ①</span><span><b>의견 한눈에 보기</b>: 임원 네 명의 말을 한 줄씩 정리해 줍니다.</span></li>
-            <li><span class="k">3-3 ②</span><span><b>조건 추천</b>: 아직 설득 안 된 임원과 그 임원을 움직일 조건이 보입니다. <b>적용</b>을 누르면 그 문구가 담깁니다.</span></li>
-            <li><span class="k">3-3 ③</span><span><b>내 발언 정리</b>: 담은 문구를 다듬어 줍니다. <b>내 발언에 적용</b> 또는 <b>원문 유지</b>를 고릅니다.</span></li>
+            <li><span class="k">3-3 ①</span><span><b>조건 추천</b>: 아직 설득 안 된 임원과 그 임원을 움직일 조건이 보입니다. <b>적용</b>을 누르면 그 문구가 담깁니다.</span></li>
+            <li><span class="k">3-3 ②</span><span><b>내 발언 정리</b>: 담은 문구를 다듬어 줍니다. <b>내 발언에 적용</b> 또는 <b>원문 유지</b>를 고릅니다.</span></li>
             <li><span class="k ghost">닫기</span><span>오른쪽 위 <b>닫기</b>로 돌아와 3-4로 갑니다.</span></li>
           </ul>
         </div>
@@ -159,7 +157,7 @@ p { margin: 0; }
         <ul class="sub">
           <li><span class="k">4-1</span><span><b>?</b>가 붙은 임원은 아직 마음을 정하지 않았습니다.</span></li>
           <li><span class="k">4-2</span><span>아래 <b>추가 질문</b>을 읽습니다.</span></li>
-          <li><span class="k">4-3</span><span><b>답하러 가기 ▶</b> → 추천 답변 고르기 → <b>답변 전달 ▶</b></span></li>
+          <li><span class="k">4-3</span><span>반응을 다 들으면 <b>답하러 가기 ▶</b> → 추천 답변 고르기 → <b>답변 전달 ▶</b> (자동 진행에서도 답하러 가기는 직접 누릅니다)</span></li>
           <li><span class="k ghost">넘어가기</span><span>누르면 확인 창이 먼저 뜹니다.</span></li>
         </ul>
       </div>
@@ -184,7 +182,7 @@ p { margin: 0; }
 
   <dl class="staff">
     <dt>막히면</dt><dd>무대 사진 위 둥근 <b>안내</b> 버튼을 누르거나 손을 들어 주세요.</dd>
-    <dt>3-4가 안 눌림</dt><dd>AI 비서실장에서 ①②③ 중 아무거나 하나 눌러 보세요.</dd>
+    <dt>3-4가 안 눌림</dt><dd>AI 비서실장에서 ①② 중 아무거나 하나 눌러 보세요.</dd>
     <dt>4-3에서 망설임</dt><dd>추천 답변을 한번 훑어보세요. 마음에 드는 답이 있으면 골라 전달하면 됩니다.</dd>
     <dt>결과 뒤</dt><dd><b>마무리 ▶</b>를 누르면 엔딩 화면이 나오고 처음으로 돌아갑니다.</dd>
   </dl>
