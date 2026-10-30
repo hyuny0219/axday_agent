@@ -18,6 +18,7 @@ import { MEMBER_LABELS } from '../memberLabels';
 import { useMatchMedia } from '../useMatchMedia';
 import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
+import { useAutoRun } from '../parts/autoRunContext';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { StanceBand } from '../parts/StanceBand';
 import '../../styles/screens/opinions.css';
@@ -84,9 +85,12 @@ export function OpinionsScreen({
   // 즉시 다 보여준다(live는 roleStatus 기반 allExecsSettled 잠금을 그대로 쓰므로 영향 없음).
   const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
   const totalCards = scenario.initialOpinions.length;
-  const [revealedCount, setRevealedCount] = useState(mode === 'live' || reducedMotion || readOnly ? totalCards : 0);
+  // 자동 진행(T144)이 켜져 있으면 카드를 처음부터 다 보여 준다(한 명씩 강조해야 하므로).
+  const autoEnabled = useAutoRun().enabled;
+  const showAll = mode === 'live' || reducedMotion || readOnly || autoEnabled;
+  const [revealedCount, setRevealedCount] = useState(showAll ? totalCards : 0);
   useEffect(() => {
-    if (mode === 'live' || reducedMotion || readOnly) {
+    if (showAll) {
       setRevealedCount(totalCards);
       return;
     }
@@ -96,7 +100,7 @@ export function OpinionsScreen({
     );
     return () => timers.forEach(clearTimeout);
     // scenario가 바뀔 때만 다시 돈다(mode·reducedMotion도 바뀌면 처음부터).
-  }, [scenario.id, mode, reducedMotion, readOnly, totalCards]);
+  }, [scenario.id, showAll, totalCards]);
   const allCardsRevealed = mode === 'live' || revealedCount >= totalCards;
 
   function handleRetry() {
@@ -127,6 +131,7 @@ export function OpinionsScreen({
         onClick={onNext}
         disabled={locked}
         data-testid="opinions-next"
+        data-auto-click="opinions-next"
         {...nextStepAttr(gate.visible && nextStep === 'next')}
         aria-describedby={locked ? 'opinions-next-why' : undefined}
       >

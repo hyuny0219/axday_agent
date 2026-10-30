@@ -5,7 +5,12 @@ import {
   autoConfirmedConditionIds,
   autoPhrasePicks,
   autoPlan,
+  autoProgress,
+  motionAutoPlan,
   pickAutoFollowUp,
+  typedCaption,
+  AUTO_ACTION_MS,
+  AUTO_LEAD_MS,
   type AutoSide,
 } from '../../src/domain/autoPlay';
 import { freezeMotion } from '../../src/domain/motion';
@@ -88,4 +93,39 @@ describe('결과표 고정 — 자동 경로 + 자기 입장 표결이면 같은
       });
     }
   }
+});
+
+describe('autoProgress', () => {
+  const plan = autoPlan('BRIEFING', scenarios[0]!);
+  it('시작 전·동작 중·끝남을 시계 값으로 정한다', () => {
+    expect(autoProgress(plan, 0).index).toBe(-1);
+    expect(autoProgress(plan, AUTO_LEAD_MS).index).toBe(0);
+    expect(autoProgress(plan, AUTO_LEAD_MS + AUTO_ACTION_MS + 10)).toMatchObject({ index: 1, actionElapsedMs: 10, done: false });
+    const total = AUTO_LEAD_MS + plan.reduce((sum, a) => sum + a.durationMs, 0);
+    expect(autoProgress(plan, total).done).toBe(true);
+  });
+  it('동작이 없으면 처음부터 참가자 차례', () => {
+    expect(autoProgress([], 0).done).toBe(true);
+  });
+  it('한 화면 자동은 10초 안팎', () => {
+    for (const sc of scenarios) {
+      for (const stage of ['BRIEFING', 'OPINIONS'] as const) {
+        const p = autoPlan(stage, sc);
+        expect(AUTO_LEAD_MS + p.reduce((s, a) => s + a.durationMs, 0)).toBeLessThanOrEqual(10000);
+      }
+    }
+  });
+});
+
+describe('typedCaption·motionAutoPlan', () => {
+  it('자막은 시간에 따라 늘어난다', () => {
+    expect(typedCaption('안녕하세요', 0)).toBe('안');
+    expect(typedCaption('안녕하세요', 10000)).toBe('안녕하세요');
+  });
+  it('확정된 조건만 강조하고, 없으면 안내 한 줄', () => {
+    const sc = scenarios[0]!;
+    const id = sc.conditions[0]!.id;
+    expect(motionAutoPlan(sc, [id]).map((a) => a.targetId)).toEqual([id]);
+    expect(motionAutoPlan(sc, [])).toHaveLength(1);
+  });
 });

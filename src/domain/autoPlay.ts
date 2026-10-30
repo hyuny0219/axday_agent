@@ -129,3 +129,49 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
     }
   }
 }
+
+/** 첫 동작 전 잠깐 기다리는 시간(화면이 자리 잡은 뒤 시작). */
+export const AUTO_LEAD_MS = 800;
+/** 자막 한 글자를 치는 간격. */
+export const AUTO_TYPE_MS = 45;
+
+/** MOTION 자동 동작: 실제로 확정된 조건만 차례로 강조한다(확정 조건이 없으면 안내 한 줄). */
+export function motionAutoPlan(scenario: Scenario, confirmedConditionIds: string[]): AutoAction[] {
+  if (confirmedConditionIds.length === 0) {
+    return [action('HIGHLIGHT_CONDITION', '', '붙은 조건이 없어 처음 안 그대로 표결합니다.')];
+  }
+  return confirmedConditionIds.map((id) =>
+    action(
+      'HIGHLIGHT_CONDITION',
+      id,
+      `${scenario.conditions.find((condition) => condition.id === id)?.label ?? id}이(가) 안건에 반영됩니다.`,
+    ),
+  );
+}
+
+export interface AutoProgress {
+  /** 지금 하는 동작 순번. 아직 시작 전이면 -1, 끝났으면 plan.length. */
+  index: number;
+  /** 모든 동작이 끝나 참가자 차례가 됨(동작이 없으면 처음부터 true). */
+  done: boolean;
+  /** 지금 동작을 시작한 뒤 흐른 시간. */
+  actionElapsedMs: number;
+}
+
+/** 시작 뒤 흐른 시간(주입 시계로 잰 값)으로 지금 동작을 정한다. */
+export function autoProgress(plan: AutoAction[], elapsedMs: number): AutoProgress {
+  if (plan.length === 0) return { index: 0, done: true, actionElapsedMs: 0 };
+  let t = elapsedMs - AUTO_LEAD_MS;
+  if (t < 0) return { index: -1, done: false, actionElapsedMs: 0 };
+  for (const [i, step] of plan.entries()) {
+    if (t < step.durationMs) return { index: i, done: false, actionElapsedMs: t };
+    t -= step.durationMs;
+  }
+  return { index: plan.length, done: true, actionElapsedMs: 0 };
+}
+
+/** 자막 타이핑: 흐른 시간만큼의 앞부분. */
+export function typedCaption(caption: string, actionElapsedMs: number): string {
+  const count = Math.max(0, Math.floor(actionElapsedMs / AUTO_TYPE_MS) + 1);
+  return caption.slice(0, count);
+}

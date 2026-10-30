@@ -19,6 +19,7 @@ import { briefingNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { HighlightText } from '../parts/HighlightText';
+import { useAutoRun } from '../parts/autoRunContext';
 import '../../styles/screens/briefing.css';
 
 export interface BriefingScreenProps {
@@ -33,7 +34,11 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
   // 열어도(두 번째부터) 이미 본 것으로 유지한다.
   const [evidenceSeen, setEvidenceSeen] = useState(false);
   const gate = useFocusGate('briefing');
-  const nextStep = briefingNextStep({ evidenceSeen });
+  // 자동 진행(T144): 동작 중에는 근거 자료를 열어 두고, 끝나면 본 것으로 친다(의견 듣기 잠금 해제).
+  const auto = useAutoRun();
+  const autoOpen = auto.running && auto.action?.kind === 'OPEN_EVIDENCE';
+  const seen = evidenceSeen || (auto.enabled && auto.done);
+  const nextStep = briefingNextStep({ evidenceSeen: seen });
 
 
   function handleCloseEvidence() {
@@ -59,13 +64,14 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           type="button"
           className="cta briefing-screen__cta"
           onClick={onNext}
-          disabled={!evidenceSeen}
+          disabled={!seen}
+          data-auto-click="briefing-next"
           {...nextStepAttr(gate.visible && nextStep === 'next')}
-          aria-describedby={!evidenceSeen ? 'briefing-next-why' : undefined}
+          aria-describedby={!seen ? 'briefing-next-why' : undefined}
         >
           의견 듣기 ▶
         </button>
-        {!evidenceSeen && (
+        {!seen && (
           <span id="briefing-next-why" className="sr-only">
             근거 자료를 먼저 확인해 주세요
           </span>
@@ -120,7 +126,7 @@ export function BriefingScreen({ scenario, onNext }: BriefingScreenProps) {
           </div>
         </div>
       </div>
-      {evidenceOpen && (
+      {(evidenceOpen || autoOpen) && (
         <EvidenceDialog
           evidence={scenario.evidence}
           scenario={scenario}

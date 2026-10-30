@@ -222,6 +222,7 @@ export function MotionScreen({
               aria-describedby={freezeDisabled ? 'motion-freeze-why' : undefined}
               onClick={() => onFreeze(confirmedConditionIds)}
               data-testid="freeze-motion"
+              data-auto-click="motion-freeze"
               {...nextStepAttr(gate.visible && motionNextStep({ locked: freezeDisabled }) === 'freeze')}
             >
               이 안건으로 표결 ▶

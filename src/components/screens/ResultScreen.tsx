@@ -295,6 +295,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             onClick={() => setEndingOpen(true)}
             disabled={endSessionConfirmOpen}
             data-testid="result-finish"
+            data-auto-click="result-finish"
             {...nextStepAttr(gate.visible && !endingOpen)}
           >
             마무리 ▶

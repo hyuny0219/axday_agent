@@ -26,6 +26,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
+import { AutoPlayHost } from '../components/parts/AutoPlayHost';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
 import { answeredRoleIds, leaningStances, liveStances, scriptedStances } from '../domain/stance';
@@ -714,16 +715,18 @@ function StageRouter() {
       {/* T126: 지금 화면은 보기 모드에서도 숨긴 채 그대로 둔다(마운트 유지) — 쓰던 글·고른 문구·
           조건 칩이 돌아왔을 때 남아 있다. 지난 화면은 따로 그린다. display:contents라 평소에는
           그리드 배치에 영향이 없다. */}
-      <div data-live-screen style={{ display: viewPage ? 'none' : 'contents' }}>
-        <StageScreen variant="live" />
-      </div>
+      <AutoPlayHost session={session} paused={viewPage !== null} clock={appClock}>
+        <div data-live-screen style={{ display: viewPage ? 'none' : 'contents' }}>
+          <StageScreen variant="live" />
+        </div>
+      </AutoPlayHost>
       {viewPage !== null && (
         <div key={viewPage} data-past-screen style={{ display: 'contents' }}>
           <StageScreen variant="past" />
         </div>
       )}
       {/* T126: 지난 화면을 보는 동안은 코치 말풍선·아이콘을 끈다(실제 조작이 아니므로 안내를 소모하지 않는다). */}
-      {viewPage === null && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
+      {viewPage === null && !session.autoPlay && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
     </>
   );
 }
