@@ -7,7 +7,7 @@ BECOME A BOARD를 새 PC(부스 PC·노트북)에 설치해 그 PC에서 띄우�
 | 항목 | 내용 |
 |---|---|
 | Node.js | **22 이상**. https://nodejs.org 에서 LTS 설치 후 `node -v`로 확인 |
-| Git | Mac은 기본 설치(없으면 `xcode-select --install`), Windows는 **Git for Windows**(Git Bash 포함) |
+| Git | Mac은 기본 설치(없으면 `xcode-select --install`), Windows는 **Git for Windows**(Git Bash 포함) https://git-scm.com/install/windows |
 | API 키 | Anthropic API 키(`sk-ant-…`). 실제 AI 임원(live)을 쓸 때만 필요. 없으면 사전 구성(scripted)으로만 동작 |
 | 인터넷 | 설치·갱신과 live 모드에 필요. scripted만 쓸 때는 설치 뒤 인터넷 없이도 동작 |
 | 화면 | 1920×1080 또는 1280×720 권장(그 밖의 크기는 자동으로 맞춤) |

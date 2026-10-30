@@ -4,6 +4,7 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { z } from 'zod';
 import { loadConfig } from './config';
 import { createMockProvider } from './providers/mock';
@@ -277,8 +278,10 @@ export function createBoardServer(opts: CreateBoardServerOptions = {}) {
 }
 
 /* c8 ignore start -- 진입점 실행은 통합 확인(curl)으로 검증하고 단위 테스트 대상이 아니다. */
+// Windows에서는 argv[1]이 C:\…\index.ts라 `file://${argv[1]}`가 import.meta.url(file:///C:/…)과
+// 어긋나 listen() 없이 조용히 종료됐다. pathToFileURL로 같은 꼴로 바꿔 비교한다(공백·한글 경로도 같이 맞음).
 const isMainModule =
-  process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`;
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMainModule) {
   const server = createBoardServer();
   server.listen(config.port, () => {
