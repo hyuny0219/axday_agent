@@ -180,12 +180,12 @@ describe('StageBand 봉인·순차 공개(T114)', () => {
 });
 
 describe('결과 순차 공개 타이밍(T114)', () => {
-  it('임원 표는 2초 간격으로 한 장씩, 순서대로 뒤집힌다(한 명씩 개표)', () => {
+  it('임원 표는 1.2초 간격으로 한 장씩, 순서대로 뒤집힌다(한 명씩 개표)', () => {
     expect(execRevealDelay(0)).toBeCloseTo(EXEC_REVEAL_FIRST_SECONDS);
     for (let i = 1; i < 4; i += 1) {
       expect(execRevealDelay(i) - execRevealDelay(i - 1)).toBeCloseTo(EXEC_REVEAL_STEP_SECONDS);
     }
-    expect(EXEC_REVEAL_STEP_SECONDS).toBeCloseTo(2);
+    expect(EXEC_REVEAL_STEP_SECONDS).toBeCloseTo(1.2);
   });
 
   it('집계·도장은 마지막 장이 뒤집힌 뒤에 나오고 설득 도장이 그 뒤를 잇는다', () => {

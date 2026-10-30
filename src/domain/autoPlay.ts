@@ -200,9 +200,9 @@ export function typedCaption(caption: string, actionElapsedMs: number): string {
 }
 
 /** 결과 화면 개표: 임원 한 명이 공개되는 간격(결과 화면 표 뒤집기와 같은 값). */
-export const RESULT_REVEAL_STEP_MS = 2000;
+export const RESULT_REVEAL_STEP_MS = 1200;
 /** 개표 뒤 결과 보고서에 머무는 추가 시간. */
-export const RESULT_REPORT_HOLD_MS = 2000;
+export const RESULT_REPORT_HOLD_MS = 1000;
 
 /** RESULT 자동 동작: 임원 한 명씩 개표 자막·강조 → 결과 보고서 강조. 표 공개 시각과 맞추려고 개표
  * 동작은 자막 길이와 상관없이 RESULT_REVEAL_STEP_MS로 고정한다. */
