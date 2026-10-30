@@ -706,7 +706,7 @@ const T119_CASES = [
   { scenarioId: 'experience-first', side: 'against', phraseId: 'N4', cards: 6, hinted: 'AG_WHY' },
 ] as const;
 
-for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
+for (const { scenarioId, side, phraseId, cards } of T119_CASES) {
   test(`T119: 조건 0개로 넘어온 ${scenarioId} ${side === 'for' ? '찬성' : '반대'} 2/2 화면에 모든 추가 답변이 보여도 잘리거나 스크롤되지 않는다`, async ({
     page,
   }) => {
@@ -734,10 +734,8 @@ for (const { scenarioId, side, phraseId, cards, hinted } of T119_CASES) {
     await expectFullyVisible(page, 'submit-followup', `T119 ${scenarioId} ${side} 답변 전달 버튼`);
 
     await page.getByTestId('assistant-toggle').click();
-    await page.getByTestId('assistant-action-compare').click();
-    await expect(page.getByTestId('assistant-recommend-opening')).toBeVisible();
-    await expect(page.getByTestId(`assistant-remaining-${hinted}`)).toContainText('추가 답변에서 고를 수 있습니다');
-    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 비서실장 열림`);
+    await expect(page.getByTestId('assistant-result-refine')).toBeVisible({ timeout: 15_000 });
+    await expectNoPageScroll(page, `T119 ${scenarioId} ${side} 발언 정리 열림`);
   });
 }
 

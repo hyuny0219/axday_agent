@@ -1,6 +1,6 @@
 // services/assistant/live.ts: refineDraft의 세션당 요청 상한(2회)·동시 요청 거절·
 // draftRevision 변경 시 폐기, 실패 시에도 예외로만 끝나고 아무것도 적용하지 않음을
-// 확인한다(AGENT_BOARDROOM_SPEC.md 4장). compareConditions는 실제 AI를 부르지 않는다.
+// 확인한다(AGENT_BOARDROOM_SPEC.md 4장).
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
@@ -131,26 +131,5 @@ describe('live assistant adapter: refineDraft', () => {
     await expect(
       adapter.refineDraft({ ...makeBase(sessionId, 'req-2'), scenario, draftText: '원문', draftRevision: 1 }),
     ).resolves.toMatchObject({ draftText: '정리된 문장 rev1' });
-  });
-});
-
-describe('live assistant adapter: compareConditions', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('실제 AI를 부르지 않고 mode를 항상 scripted로 남긴다', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-    const adapter = createLiveAssistantAdapter();
-
-    const result = await adapter.compareConditions({
-      ...makeBase('session-compare', 'req-1'),
-      scenario,
-      selectedConditionIds: ['PILOT'],
-    });
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.mode).toBe('scripted');
   });
 });

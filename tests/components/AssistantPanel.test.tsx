@@ -1,13 +1,11 @@
-// AI 비서실장 "조건 추천" 적용 기록(T96, Codex 27차 검토 P2-3): onRecommendCondition이
-// 실제로 반영했는지(true/false)를 돌려줄 때만 CONDITION_RECOMMEND_APPLY를 기록해, 결과
-// 화면 "추천 조건 N개 반영"이 실제 반영 수와 일치하는지 확인한다.
+// '발언 정리' 버튼과 결과 팝업(T149): 누르면 기능 고르기 없이 바로 정리하고, 결과에서
+// '내 발언에 적용' / '원문 유지'를 고른다. 사용 기록은 DRAFT_REFINE 하나다.
 
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AssistantPanel } from '../../src/components/parts/AssistantPanel';
 import { aiApprovalScenario } from '../../src/content/scenarios';
-import { scriptedStances } from '../../src/domain/stance';
 import type { AssistantActionEvent } from '../../src/domain/assistantLog';
 import { scriptedAssistantAdapter } from '../../src/services/assistant/scripted';
 import type { AssistantAdapter } from '../../src/services/assistant/types';
@@ -16,250 +14,90 @@ afterEach(() => {
   cleanup();
 });
 
-const scenario = aiApprovalScenario;
-
-function baseProps(
-  onAssistantAction: (event: AssistantActionEvent) => void,
-  onRecommendCondition: (id: string) => boolean,
-) {
-  const stances = scriptedStances(scenario, { stage: 'DISCUSS', opinions: [] });
+function baseProps(onAssistantAction: (event: AssistantActionEvent) => void = () => {}) {
   return {
-    scenario,
+    scenario: aiApprovalScenario,
     sessionId: 's1',
-    selectedConditionIds: [] as string[],
-    participantStance: 'FOR' as const,
     mode: 'scripted' as const,
-    stances,
-    onRecommendCondition,
-    draftText: '',
+    draftText: '  작은   범위로 먼저 시작합시다.  ',
     draftRevision: 0,
-    transcript: { revision: 0, statements: [] },
     onApplyDraft: () => {},
     onAssistantAction,
   };
 }
 
-async function openRecommendation() {
-  fireEvent.click(screen.getByTestId('assistant-toggle'));
-  fireEvent.click(screen.getByTestId('assistant-action-compare'));
-  await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
-}
+describe('AssistantPanel 발언 정리(T149)', () => {
+  it('버튼은 "발언 정리" 하나이고 기능 고르기·번호·추천 순서는 없다', () => {
+    render(<AssistantPanel {...baseProps()} />);
+    expect(screen.getByTestId('assistant-toggle')).toHaveTextContent('발언 정리');
+    expect(screen.queryByText(/조건 추천/)).toBeNull();
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    expect(screen.queryByTestId('assistant-action-compare')).toBeNull();
+    expect(screen.queryByTestId('assistant-action-refine')).toBeNull();
+    expect(screen.queryByTestId('assistant-intro')).toBeNull();
+  });
 
-describe('AssistantPanel "조건 추천" 적용 기록(T96)', () => {
-  it('onRecommendCondition이 true를 돌려주면 그 조건 하나만 CONDITION_RECOMMEND_APPLY로 기록된다', async () => {
+  it('누르면 바로 정리해 원문·정리한 초안과 적용/원문 유지를 보인다', async () => {
     const onAssistantAction = vi.fn();
-    const onRecommendCondition = vi.fn().mockReturnValue(true);
-    render(<AssistantPanel {...baseProps(onAssistantAction, onRecommendCondition)} />);
-    await openRecommendation();
-
-    // LOG는 단독으로 CAIO를 움직이는 단일 행이다(조건이 하나도 없는 상태).
-    // handleApplyRecommendation은 비동기(await onRecommendCondition(...))라 act로
-    // 감싸 마이크로태스크가 끝날 때까지 기다린다.
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
-    });
-
-    const applyCalls = onAssistantAction.mock.calls.filter(
-      ([event]) => event.type === 'CONDITION_RECOMMEND_APPLY',
-    );
-    expect(applyCalls).toHaveLength(1);
-    expect(applyCalls[0]?.[0].evidenceIds).toEqual(['LOG']);
-  });
-
-  it('onRecommendCondition이 false를 돌려주면(매칭되는 문구 없음) 기록하지 않는다', async () => {
-    const onAssistantAction = vi.fn();
-    const onRecommendCondition = vi.fn().mockReturnValue(false);
-    render(<AssistantPanel {...baseProps(onAssistantAction, onRecommendCondition)} />);
-    await openRecommendation();
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
-    });
-
-    const applyCalls = onAssistantAction.mock.calls.filter(
-      ([event]) => event.type === 'CONDITION_RECOMMEND_APPLY',
-    );
-    expect(applyCalls).toHaveLength(0);
-  });
-
-  it('묶음 적용에서 조건 하나만 실제로 반영되면("추천 조건 N개 반영") N은 실제 반영 수와 같다', async () => {
-    const onAssistantAction = vi.fn();
-    // CFO 묶음(LIMIT+REVIEW)의 "모두 적용" — LIMIT은 매칭되는 문구가 없어 false,
-    // REVIEW만 실제로 반영된다고 가정한다.
-    const onRecommendCondition = vi.fn((id: string) => id === 'REVIEW');
-    render(<AssistantPanel {...baseProps(onAssistantAction, onRecommendCondition)} />);
-    await openRecommendation();
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
-    });
-
-    const applyCalls = onAssistantAction.mock.calls.filter(
-      ([event]) => event.type === 'CONDITION_RECOMMEND_APPLY',
-    );
-    // 버튼은 한 번 눌렀지만(조건 2개짜리 묶음), 실제로 반영된 조건은 REVIEW 하나뿐이라
-    // 기록도 1건이어야 한다 — "추천 조건 N개 반영"이 실제 반영 수와 일치해야 한다는
-    // Codex 27차 검토 요구사항.
-    expect(applyCalls).toHaveLength(1);
-    expect(applyCalls[0]?.[0].evidenceIds).toEqual(['REVIEW']);
-  });
-});
-
-describe('AssistantPanel 묶음 일괄 적용(Codex 28차 P2-1)', () => {
-  it('onRecommendConditions가 있으면 묶음 전체를 한 번에 넘기고 반영된 조건만 기록한다', async () => {
-    const onAssistantAction = vi.fn();
-    const onRecommendConditions = vi.fn((ids: string[]) => ids.filter((id) => id !== 'LIMIT'));
-    const onRecommendCondition = vi.fn().mockReturnValue(true);
-    render(
-      <AssistantPanel
-        {...baseProps(onAssistantAction, onRecommendCondition)}
-        onRecommendConditions={onRecommendConditions}
-      />,
-    );
-    await openRecommendation();
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('assistant-recommend-apply-bundle-LIMIT+REVIEW'));
-    });
-    expect(onRecommendConditions).toHaveBeenCalledTimes(1);
-    expect(onRecommendConditions).toHaveBeenCalledWith(['LIMIT', 'REVIEW']);
-    expect(onRecommendCondition).not.toHaveBeenCalled();
-    const applyCalls = onAssistantAction.mock.calls.filter(([event]) => event.type === 'CONDITION_RECOMMEND_APPLY');
-    expect(applyCalls.map(([event]) => event.evidenceIds)).toEqual([['REVIEW']]);
-  });
-});
-
-// T97: DISCUSS 전용 첫 화면 소개·체크리스트와 실패 기록.
-describe('AssistantPanel 필수 사용 소개(T97)', () => {
-  const noopAction = () => {};
-  const base = () => baseProps(noopAction, () => true);
-
-  it('requiredFeatures를 넘기지 않으면 소개 블록도 완료 표시도 없다', () => {
-    render(<AssistantPanel {...base()} />);
+    render(<AssistantPanel {...baseProps(onAssistantAction)} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('assistant-check-compare')).not.toBeInTheDocument();
-  });
-
-  it('첫 화면에 제목·기능 두 줄·체크가 보인다', () => {
-    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set(['compare']) }} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    const intro = screen.getByTestId('assistant-intro');
-    expect(intro).toHaveTextContent('AI 비서실장이 도와드립니다 — 하나 이상 써 보세요(둘 다 써도 좋아요)');
-    expect(intro).toHaveTextContent('어떤 임원을 어떤 조건으로 움직일 수 있는지 알려 줍니다');
-    expect(intro).toHaveTextContent('지금 쓴 발언을 더 또렷하게 다듬어 줍니다');
-    expect(screen.getByTestId('assistant-check-compare')).toHaveTextContent('☑');
-    expect(screen.getByTestId('assistant-check-refine')).toHaveTextContent('☐');
-    expect(screen.getByTestId('assistant-done-compare')).toHaveTextContent('완료');
-    expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
-  });
-
-  it('requiredFeatures 없이도(REACTIONS 2/2) ①② 번호 버튼은 있고 추천 순서 줄은 없다(T141·T147)', () => {
-    render(<AssistantPanel {...base()} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByRole('button', { name: /^① 조건 추천/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^② 내 발언 정리/ })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: /한눈에 보기/ })).toBeNull();
-    expect(screen.queryByTestId('assistant-intro-order')).not.toBeInTheDocument();
-  });
-
-  it('버튼 이름에 ①②가 들어가고 추천 순서 한 줄이 있으며 버튼은 모두 눌린다(T141)', () => {
-    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByRole('button', { name: /^① 조건 추천/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: /^② 내 발언 정리/ })).toBeEnabled();
-    const order = screen.getByTestId('assistant-intro-order');
-    expect(order).toHaveTextContent('추천 순서: ① 조건을 골라 적용 → ② 담은 문구 다듬기');
-    expect(order).toHaveTextContent('하나만 써도 의견 전달이 열립니다');
-  });
-
-  it('한 기능만 써도 완료 문구가 뜨고, 하나도 안 쓰면 안 뜬다(T109)', () => {
-    const { unmount } = render(
-      <AssistantPanel {...base()} requiredFeatures={{ used: new Set(['compare']) }} />,
-    );
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByTestId('assistant-intro-done')).toBeInTheDocument();
-    unmount();
-    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.queryByTestId('assistant-intro-done')).not.toBeInTheDocument();
-  });
-
-  it('두 기능을 다 쓰면 완료 문구가 뜬다', () => {
-    render(
-      <AssistantPanel
-        {...base()}
-        requiredFeatures={{ used: new Set(['compare', 'refine']) }}
-      />,
-    );
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    expect(screen.getByTestId('assistant-intro-done')).toHaveTextContent(
-      '이제 팝업을 닫고 의견을 전달하세요',
-    );
-  });
-
-  it('결과가 생기면 소개가 한 줄로 줄어든다', async () => {
-    render(<AssistantPanel {...base()} requiredFeatures={{ used: new Set() }} />);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
-    expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('내 발언 정리');
-    expect(screen.getByTestId('assistant-intro-compact')).toHaveTextContent('조건 추천');
-  });
-
-  it('한 기능이 채워지는 순간 onAllUsed가 한 번 불린다(T109)', () => {
-    const onAllUsed = vi.fn();
-    const props = base();
-    const { rerender } = render(
-      <AssistantPanel {...props} requiredFeatures={{ used: new Set(), onAllUsed }} />,
-    );
-    expect(onAllUsed).not.toHaveBeenCalled();
-    rerender(
-      <AssistantPanel
-        {...props}
-        requiredFeatures={{ used: new Set(['compare', 'refine']), onAllUsed }}
-      />,
-    );
-    expect(onAllUsed).toHaveBeenCalledTimes(1);
-  });
-
-  it('정리한 초안을 화면에 보이면 applied:false로 DRAFT_REFINE을 남긴다', async () => {
-    const onAssistantAction = vi.fn();
-    render(
-      <AssistantPanel {...baseProps(onAssistantAction, () => true)} draftText="초안 문장입니다." />,
-    );
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-refine'));
     await screen.findByTestId('assistant-result-refine', {}, { timeout: 2000 });
+    expect(screen.getByTestId('assistant-refine-draft')).toHaveTextContent('작은 범위로 먼저 시작합시다.');
+    expect(screen.getByTestId('assistant-apply-refine')).toBeEnabled();
+    expect(screen.getByTestId('assistant-keep-original')).toBeEnabled();
     expect(onAssistantAction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'DRAFT_REFINE', applied: false }),
     );
   });
 
-  it('기능이 실패해도 같은 유형을 failed:true로 남겨 사용으로 센다', async () => {
+  it('"내 발언에 적용"을 눌러야만 draft를 바꾸고(applied:true 기록) 팝업이 닫힌다', async () => {
+    const onAssistantAction = vi.fn();
+    const onApplyDraft = vi.fn();
+    render(<AssistantPanel {...baseProps(onAssistantAction)} onApplyDraft={onApplyDraft} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    await screen.findByTestId('assistant-result-refine', {}, { timeout: 2000 });
+    expect(onApplyDraft).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('assistant-apply-refine'));
+    expect(onApplyDraft).toHaveBeenCalledWith('작은 범위로 먼저 시작합시다.');
+    expect(onAssistantAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DRAFT_REFINE', applied: true }),
+    );
+    expect(screen.queryByTestId('assistant-panel')).toBeNull();
+  });
+
+  it('"원문 유지"는 draft를 건드리지 않고 팝업만 닫는다', async () => {
+    const onApplyDraft = vi.fn();
+    render(<AssistantPanel {...baseProps()} onApplyDraft={onApplyDraft} />);
+    fireEvent.click(screen.getByTestId('assistant-toggle'));
+    await screen.findByTestId('assistant-result-refine', {}, { timeout: 2000 });
+    fireEvent.click(screen.getByTestId('assistant-keep-original'));
+    expect(onApplyDraft).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('assistant-panel')).toBeNull();
+  });
+
+  it('잠겨 있으면 버튼이 막히고 안내 문구가 있다', () => {
+    render(<AssistantPanel {...baseProps()} toggleLocked toggleLockedHint="먼저 입장을 골라 주세요" />);
+    expect(screen.getByTestId('assistant-toggle')).toBeDisabled();
+    expect(screen.getByTestId('assistant-toggle-hint')).toHaveTextContent('먼저 입장을 골라 주세요');
+  });
+
+  it('실패해도 failed:true로 남겨 사용으로 센다', async () => {
     const failing: AssistantAdapter = {
       ...scriptedAssistantAdapter,
-      compareConditions: () => Promise.reject(new Error('연결 실패')),
       refineDraft: () => Promise.reject(new Error('연결 실패')),
     };
     const onAssistantAction = vi.fn();
-    render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={failing} />);
+    render(<AssistantPanel {...baseProps(onAssistantAction)} adapter={failing} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    for (const [feature, type] of [
-      ['compare', 'CONDITION_RECOMMEND_VIEW'],
-      ['refine', 'DRAFT_REFINE'],
-    ] as const) {
-      fireEvent.click(screen.getByTestId(`assistant-action-${feature}`));
-      await screen.findByTestId('assistant-error');
-      expect(onAssistantAction).toHaveBeenCalledWith(
-        expect.objectContaining({ type, failed: true }),
-      );
-    }
+    await screen.findByTestId('assistant-error');
+    expect(onAssistantAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'DRAFT_REFINE', failed: true }),
+    );
   });
 });
 
 describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
-  it('로딩 중 팝업을 닫으면 늦게 도착한 응답은 기록되지 않고, 다시 열어 실행하면 정상 기록된다', async () => {
+  it('로딩 중 팝업을 닫으면 늦게 도착한 응답은 기록되지 않고, 다시 눌러 실행하면 정상 기록된다', async () => {
     const onAssistantAction = vi.fn();
     let releaseFirst: () => void = () => {};
     let calls = 0;
@@ -275,10 +113,9 @@ describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
         return scriptedAssistantAdapter.refineDraft(req);
       },
     };
-    render(<AssistantPanel {...baseProps(onAssistantAction, () => true)} adapter={adapter} />);
+    render(<AssistantPanel {...baseProps(onAssistantAction)} adapter={adapter} />);
 
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-refine'));
     fireEvent.click(screen.getByTestId('assistant-close'));
     await act(async () => {
       releaseFirst();
@@ -286,7 +123,6 @@ describe('AssistantPanel 로딩 중 닫기(Codex 32차 P2-2)', () => {
     expect(onAssistantAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-refine'));
     await waitFor(() => {
       expect(onAssistantAction.mock.calls.filter(([e]) => e.type === 'DRAFT_REFINE')).toHaveLength(1);
     });

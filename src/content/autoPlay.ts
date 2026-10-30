@@ -9,10 +9,8 @@ export const AUTO_CLICK_LABELS = {
   'opinions-next': '내 의견 쓰러 가기',
   'motion-freeze': '이 안건으로 표결',
   'discuss-side': '찬성이나 반대 고르기',
-  'assistant-compare': '① 조건 추천',
-  'assistant-refine': '② 내 발언 정리',
+  'assistant-refine': '발언 정리',
   'assistant-apply': '내 발언에 적용',
-  'assistant-open': 'AI 비서실장 열기',
   'discuss-submit': '의견 전달',
   'reactions-advance': '답하러 가기',
   'reactions-submit': '답변 전달',
@@ -47,6 +45,5 @@ export const autoConditionCaption = (conditionLabel: string): string =>
   `'${conditionLabel}' 조건이 안건에 반영됩니다.`;
 export const AUTO_NO_CONDITION_CAPTION = '붙은 조건이 없어 처음 안 그대로 표결합니다.';
 export const AUTO_EXPLAIN_CAPTIONS = {
-  compare: '① 조건 추천은 어떤 임원이 어떤 조건에 움직이는지 알려 줍니다.',
-  refine: '② 내 발언 정리는 쓴 발언을 또렷하게 다듬은 초안을 보여 주니, 마음에 들면 내 발언에 적용하세요.',
+  refine: '발언 정리는 쓴 발언을 또렷하게 다듬은 초안을 보여 주니, 마음에 들면 내 발언에 적용하세요.',
 } as const;

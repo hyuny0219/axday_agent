@@ -28,7 +28,7 @@ test('BRIEFING: 아무것도 안 누르면 6초 뒤 근거 자료 버튼에 점�
   await expect(page.getByTestId('open-evidence')).toHaveAttribute('data-next-step', '');
 });
 
-test('DISCUSS: 입장 → 문구 → 비서실장 → 의견 전달 순서로 점선이 옮겨 가고 전달 뒤에는 0개다', async ({ page }) => {
+test('DISCUSS: 입장 → 문구 → 발언 정리 → 의견 전달 순서로 점선이 옮겨 가고 전달 뒤에는 0개다', async ({ page }) => {
   await toDiscuss(page);
   await expect(page.getByTestId('discuss-side-select')).toBeVisible();
 
@@ -46,13 +46,10 @@ test('DISCUSS: 입장 → 문구 → 비서실장 → 의견 전달 순서로 �
 
   await page.getByTestId('assistant-toggle').click();
   await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  // 팝업 안에서는 첫 기능 버튼 하나뿐.
-  await expect(page.locator(RING)).toHaveCount(1);
-  await expect(page.getByTestId('assistant-action-compare')).toHaveAttribute('data-next-step', '');
-
-  await page.getByTestId('assistant-action-compare').click();
-  await expect(page.getByTestId('assistant-done-compare')).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId('assistant-close').click();
+  // 발언 정리는 누르는 즉시 결과가 뜬다. 팝업이 열려 있는 동안에는 점선이 없다.
+  await expect(page.getByTestId('assistant-keep-original')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(RING)).toHaveCount(0);
+  await page.getByTestId('assistant-keep-original').click();
   await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
 
   await expect(page.locator(RING)).toHaveCount(1);

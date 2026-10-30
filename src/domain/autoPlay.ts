@@ -22,7 +22,6 @@ export type AutoActionKind =
   | 'OPEN_EVIDENCE'
   | 'HIGHLIGHT_EXEC'
   | 'ADD_PHRASE'
-  | 'OPEN_ASSISTANT'
   | 'EXPLAIN_ASSISTANT'
   | 'PICK_FOLLOWUP'
   | 'HIGHLIGHT_CONDITION';
@@ -38,8 +37,8 @@ export interface AutoAction {
 
 /** 한 동작이 머무는 가장 짧은 시간. 자막이 길면 autoActionMs가 늘린다. */
 export const AUTO_ACTION_MS = 1500;
-/** 비서실장 ①②를 참가자가 누른 뒤 자막으로 설명하는 기능(T147: ① 조건 추천 · ② 내 발언 정리). */
-export type AutoAssistantFeature = 'compare' | 'refine';
+/** 참가자가 '발언 정리'를 누른 뒤 자막으로 설명하는 기능(T149: 조건 추천을 없애 하나뿐). */
+export type AutoAssistantFeature = 'refine';
 
 function phraseSideOf(phrase: Phrase): 'FOR' | 'AGAINST' | 'BOTH' {
   return phrase.side ?? 'FOR';
@@ -113,13 +112,10 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
       );
     case 'DISCUSS': {
       if (!stance) return [];
-      return [
-        ...autoPhrasePicks(scenario, stance).map((phrase) =>
-          action('ADD_PHRASE', phrase.id, autoPhraseCaption(conditionLabelOf(scenario, phrase.conditionId), phrase.text)),
-        ),
-        // 비서실장 팝업만 자동으로 연다. ① 조건 추천 · ② 내 발언 정리 · 적용은 참가자가 누른다(T147).
-        action('OPEN_ASSISTANT', '', 'AI 비서실장을 엽니다. ① 조건 추천과 ② 내 발언 정리를 차례로 눌러 보세요.'),
-      ];
+      // 추천 문구만 자동으로 담는다. '발언 정리'와 '내 발언에 적용'은 참가자가 누른다(T149).
+      return autoPhrasePicks(scenario, stance).map((phrase) =>
+        action('ADD_PHRASE', phrase.id, autoPhraseCaption(conditionLabelOf(scenario, phrase.conditionId), phrase.text)),
+      );
     }
     case 'REACTIONS': {
       if (!stance) return [];
@@ -149,7 +145,7 @@ export function autoActionMs(caption: string): number {
   return Math.max(AUTO_ACTION_MS, caption.length * AUTO_TYPE_MS + AUTO_READ_MS);
 }
 
-/** 참가자가 비서실장 ①·②를 누른 뒤 결과를 보여 주며 읽어 주는 자막 한 줄. */
+/** 참가자가 '발언 정리'를 누른 뒤 결과를 보여 주며 읽어 주는 자막 한 줄. */
 export function assistantExplainPlan(feature: AutoAssistantFeature): AutoAction[] {
   return [
     action(

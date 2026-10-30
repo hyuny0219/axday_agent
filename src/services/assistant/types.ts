@@ -14,12 +14,6 @@ export interface AssistantRequestBase {
   signal: AbortSignal;
 }
 
-export interface CompareConditionsRequest extends AssistantRequestBase {
-  scenario: Scenario;
-  /** 참가자가 지금까지 확정한 조건 ID. 아직 MOTION에서 고정되기 전 값이다. */
-  selectedConditionIds: string[];
-}
-
 export interface RefineDraftRequest extends AssistantRequestBase {
   scenario: Scenario;
   /** 참가자가 직접 쓴 원문. 부정·유보 표현을 포함할 수 있으며 그대로 보존해야 한다. */
@@ -27,17 +21,6 @@ export interface RefineDraftRequest extends AssistantRequestBase {
   /** 참가자가 draftText를 바꿀 때마다 늘어나는 값(컴포넌트가 관리). live refine은 응답
    * 시점에 이 값이 더 이상 최신이 아니면 결과를 폐기한다. */
   draftRevision: number;
-}
-
-export interface CompareConditionsResult {
-  mode: AssistantMode;
-  evidenceIds: string[];
-  /** 원안에는 없고 참가자가 확정한 조건 ID(반대 근거는 안건을 수정하지 않으므로 뺀다, T137). */
-  addedConditionIds: string[];
-  /** 참가자가 든 반대 근거 ID(T137). 없으면 생략한다. */
-  objectionConditionIds?: string[];
-  /** 아직 확정하지 않아 남아 있는 조건 ID(남은 확인 사항). */
-  remainingConditionIds: string[];
 }
 
 export interface RefineDraftResult {
@@ -50,7 +33,6 @@ export interface RefineDraftResult {
 }
 
 export interface AssistantAdapter {
-  compareConditions(req: CompareConditionsRequest): Promise<CompareConditionsResult>;
   refineDraft(req: RefineDraftRequest): Promise<RefineDraftResult>;
 }
 

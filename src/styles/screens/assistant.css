@@ -77,48 +77,6 @@
   white-space: pre-wrap;
 }
 
-/* "조건 추천" 행(T96) — 조건 라벨 + 움직이는 임원 + 푸는 걱정 + 적용 버튼을 한 줄
-   묶음으로. */
-[data-testid='assistant-recommend-rows'],
-[data-testid='assistant-recommend-bundles'] {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-[data-testid^='assistant-recommend-row-'],
-[data-testid^='assistant-recommend-bundle-'] {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background-color: var(--paper-2);
-  border: 1px solid var(--paper-border);
-  border-radius: var(--radius-control);
-}
-
-.assistant-panel__recommend-label {
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.assistant-panel__recommend-moves,
-.assistant-panel__recommend-where,
-.assistant-panel__remaining-where,
-.assistant-panel__recommend-worry {
-  color: var(--ink-muted);
-  font-size: var(--fs-meta);
-}
-
-.assistant-panel__recommend-worry,
-.assistant-panel__recommend-where {
-  flex-basis: 100%;
-}
-
 .assistant-panel__evidence {
   display: flex;
   flex-wrap: wrap;
@@ -151,102 +109,8 @@
   min-height: 0;
 }
 
-.assistant-panel__content > .assistant-panel__actions {
-  flex-shrink: 0;
-  margin-top: 0;
-}
-
 .assistant-panel__results {
   flex: 1;
   min-height: 0;
   overflow: auto;
-}
-
-.assistant-panel__done-mark {
-  font-size: var(--fs-meta);
-  color: var(--ink-muted);
-}
-
-.assistant-intro {
-  flex-shrink: 0;
-  padding: var(--space-1) var(--space-2);
-  background-color: var(--paper-2);
-  border: 1px solid var(--paper-border);
-  border-left: 4px solid var(--amber);
-  border-radius: var(--radius-control);
-  color: var(--ink);
-}
-
-.assistant-intro__title {
-  margin: 0 0 var(--space-1);
-  font-size: 18px;
-  line-height: 1.35;
-}
-
-.assistant-intro__order {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
-  color: var(--ink);
-}
-
-.assistant-intro__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.assistant-intro__item {
-  font-size: var(--fs-meta);
-  line-height: 1.45;
-}
-
-.assistant-intro__check {
-  display: inline-block;
-  width: 1.6em;
-  font-size: 1.15em;
-}
-
-.assistant-intro__desc {
-  color: var(--ink-muted);
-}
-
-.assistant-intro--compact {
-  padding: 4px var(--space-2);
-}
-
-.assistant-intro__compact-line {
-  margin: 0;
-  font-size: var(--fs-meta);
-}
-
-.assistant-intro__done {
-  margin: 4px 0 0;
-  font-weight: 700;
-  font-size: var(--fs-meta);
-  color: var(--ink);
-}
-
-@media (max-width: 1280px) {
-  .assistant-intro {
-    padding: 6px var(--space-1);
-  }
-
-  .assistant-intro__title {
-    margin-bottom: 4px;
-    font-size: 15px;
-  }
-
-  .assistant-intro__item {
-    font-size: 13px;
-    line-height: 1.35;
-  }
-
-  .assistant-panel__content > .assistant-panel__actions .cta {
-    padding: 0 var(--space-1);
-    font-size: 14px;
-  }
 }

@@ -85,12 +85,8 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
 
   const additionalHelp = useMemo(
     () =>
-      describeAdditionalHelp(
-        session.assistantActions,
-        finalMotion?.effectiveConditionIds,
-        (conditionId) => scenario.conditions.find((condition) => condition.id === conditionId)?.label,
-      ),
-    [session.assistantActions, finalMotion, scenario],
+      describeAdditionalHelp(session.assistantActions),
+    [session.assistantActions],
   );
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);

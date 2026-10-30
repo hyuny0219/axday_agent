@@ -6,7 +6,7 @@ export const SKIP_CHECK_COPY = {
   items: {
     question: '추가 질문을 읽었나요?',
     options: '추천 답변을 살펴봤나요?',
-    assistant: 'AI 비서실장에게 물어봤나요? (선택)',
+    assistant: '발언 정리를 해 봤나요? (선택)',
   },
   stateMark: { neutral: '?', done: '✓', todo: '○' },
   stateText: { neutral: '', done: '완료', todo: '아직' },

@@ -132,7 +132,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('condition-chip-LOG')).toBeVisible();
   await expect(page.getByTestId('condition-chip-REVIEW')).toBeVisible();
 
-  // DISCUSS(T97): 문구를 고른 뒤 비서실장 팝업 첫 화면(소개·체크리스트)을 캡처한다.
+  // DISCUSS(T149): 문구를 고른 뒤 '발언 정리'를 눌러 결과 팝업(적용/원문 유지)을 캡처한다.
   // 이 시점에는 전달 버튼이 아직 닫혀 있다.
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeDisabled();
@@ -141,17 +141,17 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await capture(page, testInfo.project.name, 'discuss-locked');
   await page.getByTestId('assistant-toggle').click();
   const assistantDialog = page.getByTestId('assistant-panel');
-  await expect(page.getByTestId('assistant-intro')).toBeVisible();
+  await expect(page.getByTestId('assistant-result-refine')).toBeVisible({ timeout: 15_000 });
   await page
     .getByTestId('assistant-panel-backdrop')
     .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await assistantDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await capture(page, testInfo.project.name, 'discuss-assistant-intro');
-  await page.getByTestId('assistant-close').click();
+  await page.getByTestId('assistant-keep-original').click();
   await expect(assistantDialog).toHaveCount(0);
 
-  // 비서실장 세 기능을 쓰고 나면 전달 버튼이 열린 상태가 된다.
-  await tryAllAssistantFeatures(page);
+  // 발언 정리를 한 번 하고 나면 전달 버튼이 열린 상태가 된다.
+  await expect(submitOpinion).toBeEnabled();
   await expect(submitOpinion).toBeEnabled();
   await capture(page, testInfo.project.name, 'discuss');
 
@@ -352,14 +352,11 @@ test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 
   await expect(page.getByTestId('auto-bar')).toBeVisible();
   await capture(page, testInfo.project.name, 'auto-discuss-running');
 
-  // 참가자 차례: 비서실장 안에서 ① 조건 추천 → ② 내 발언 정리 → 내 발언에 적용 순으로 누른다(T147).
+  // 참가자 차례: '발언 정리' → 내 발언에 적용 순으로 누른다(T149).
   await advanceUntil(() => pill.isVisible());
-  await expect(pill).toContainText('① 조건 추천');
+  await expect(pill).toContainText('발언 정리');
   await capture(page, testInfo.project.name, 'auto-discuss-assistant-click');
-  await page.getByTestId('assistant-action-compare').click();
-  await advanceUntil(() => pill.isVisible());
-  await expect(pill).toContainText('② 내 발언 정리');
-  await page.getByTestId('assistant-action-refine').click();
+  await page.getByTestId('assistant-toggle').click();
   await advanceUntil(() => pill.isVisible());
   await expect(pill).toContainText('내 발언에 적용');
   await page.getByTestId('assistant-apply-refine').click();

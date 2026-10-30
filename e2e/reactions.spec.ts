@@ -296,16 +296,16 @@ test('추천 답변 체크 카드가 키보드 포커스에서 보이는 테두�
   await expect(card).toHaveCSS('outline-width', '2px');
 });
 
-test('AI 비서실장 드로어가 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
+test('발언 정리 팝업이 열린 동안 REACTIONS 오른쪽 열은 inert라 가려진 버튼에 포커스가 가지 않는다(PR #11 Codex 32차)', async ({
   page,
 }) => {
   await reachReactionsWithRecordConfirmed(page);
   const info = page.getByTestId('reactions-info');
   await expect(info).not.toHaveAttribute('inert', '');
 
-  // T74부터 "AI 비서실장에게 맡기기" 버튼은 편집기 토글 없이 늘 보인다.
+  // T74부터 이 버튼(T149: '발언 정리')은 편집기 토글 없이 늘 보인다.
   await page.getByTestId('followup-option-0').click();
-  const openAssistant = page.getByRole('button', { name: 'AI 비서실장에게 맡기기' });
+  const openAssistant = page.getByRole('button', { name: '발언 정리' });
   await openAssistant.click();
   await expect(info).toHaveAttribute('inert', '');
   // inert 안의 요소는 포커스를 받지 못한다.

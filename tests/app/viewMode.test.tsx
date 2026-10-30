@@ -86,13 +86,7 @@ describe('지난 화면 보기', () => {
     fireEvent.click(screen.getByTestId('discuss-side-for'));
     fireEvent.click(screen.getByTestId('phrase-card-P1'));
     fireEvent.click(screen.getByTestId('assistant-toggle'));
-    for (const feature of ['compare', 'refine']) {
-      fireEvent.click(await screen.findByTestId(`assistant-action-${feature}`));
-      await screen.findByTestId(`assistant-done-${feature}`, undefined, { timeout: 8000 });
-      const keep = screen.queryByTestId('assistant-keep-original');
-      if (keep) fireEvent.click(keep);
-    }
-    fireEvent.click(screen.getByTestId('assistant-close'));
+    fireEvent.click(await screen.findByTestId('assistant-keep-original', undefined, { timeout: 8000 }));
     fireEvent.click(screen.getByTestId('submit-opinion'));
     fireEvent.click(await screen.findByTestId('reactions-advance'));
     const answer = '진행 상황을 계속 공유해 주세요.';

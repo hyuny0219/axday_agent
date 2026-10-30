@@ -11,17 +11,12 @@
 //
 // T147: '의견 한눈에 보기'(summarize)는 앱에서 없앴다. 서버 엔드포인트는 그대로 남아 있다.
 //
-// '조건 비교하기'(compareConditions)는 실제 AI를 부르지 않는다(정규화된 원안/제안 차이는
-// 프로그램이 표시하면 된다 — 4장). scripted.ts의 buildCompare를 그대로 재사용하고 mode도
-// 항상 'scripted'로 둔다("실제 AI 사용"이라고 과장하지 않기 위해서다).
+// T149: '조건 추천'(compareConditions)도 앱에서 없앴다. 남은 기능은 refineDraft 하나다.
 
 import { accessHeaders } from '../transport/accessToken';
-import { buildCompare } from './scripted';
 import { AssistantTimeoutError } from './types';
 import type {
   AssistantAdapter,
-  CompareConditionsRequest,
-  CompareConditionsResult,
   RefineDraftRequest,
   RefineDraftResult,
 } from './types';
@@ -167,9 +162,6 @@ async function requestRefine(req: RefineDraftRequest): Promise<RefineDraftResult
 /** live 비서실장 어댑터를 만든다. fetch만 사용하고 CDN·외부 SDK는 부르지 않는다. */
 export function createLiveAssistantAdapter(): AssistantAdapter {
   return {
-    compareConditions(req: CompareConditionsRequest): Promise<CompareConditionsResult> {
-      return Promise.resolve(buildCompare(req.scenario, req.selectedConditionIds));
-    },
     refineDraft(req) {
       return requestRefine(req);
     },

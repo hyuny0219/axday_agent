@@ -24,7 +24,7 @@ export type AutoSide = 'FOR' | 'AGAINST' | null;
 export const AutoSideReportContext = createContext<(side: AutoSide) => void>(() => {});
 
 /** 화면·팝업이 호스트에 알리는 진행 신호(T147). 참가자가 누른 뒤의 설명 자막과 다음 CLICK 차례를 호스트가 고른다. */
-export type AutoAssistantEvent = 'OPENED' | 'COMPARE' | 'REFINE' | 'APPLIED';
+export type AutoAssistantEvent = 'REFINE' | 'APPLIED';
 export type AutoReactionsStep = 'listen' | 'answer';
 export interface AutoReporter {
   assistant: (event: AutoAssistantEvent) => void;

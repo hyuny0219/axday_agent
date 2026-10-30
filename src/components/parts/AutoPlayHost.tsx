@@ -56,8 +56,6 @@ function selectorFor(action: AutoAction): { selector: string; nth: number } | nu
         : { selector: '[data-testid="motion-conditions"] li, [data-testid="motion-objections"] li', nth: 0 };
     case 'ADD_PHRASE':
       return { selector: `[data-testid="phrase-card-${action.targetId}"]`, nth: 0 };
-    case 'OPEN_ASSISTANT':
-      return { selector: '[data-testid="assistant-toggle"]', nth: 0 };
     case 'EXPLAIN_ASSISTANT':
       return { selector: `[data-testid="assistant-result-${action.targetId}"]`, nth: 0 };
     case 'PICK_FOLLOWUP':
@@ -69,12 +67,10 @@ function selectorFor(action: AutoAction): { selector: string; nth: number } | nu
 
 /** 비서실장에서 참가자가 지금까지 한 일(팝업이 알려 준다). */
 interface AssistantFlags {
-  opened: boolean;
-  compare: boolean;
   refine: boolean;
   applied: boolean;
 }
-const NO_ASSISTANT_FLAGS: AssistantFlags = { opened: false, compare: false, refine: false, applied: false };
+const NO_ASSISTANT_FLAGS: AssistantFlags = { refine: false, applied: false };
 
 /** 참가자 차례에 누를 버튼. 자동이 없는 단계·이미 눌린 뒤에는 null. */
 function clickKeyFor(
@@ -88,10 +84,8 @@ function clickKeyFor(
     case 'DISCUSS':
       if (side === null) return 'discuss-side';
       if (flags.applied) return 'discuss-submit';
-      if (!dialogOpen) return flags.opened && !flags.compare && !flags.refine ? 'assistant-open' : 'discuss-submit';
-      if (!flags.compare) return 'assistant-compare';
-      if (!flags.refine) return 'assistant-refine';
-      return 'assistant-apply';
+      if (!dialogOpen) return flags.refine ? 'discuss-submit' : 'assistant-refine';
+      return flags.refine ? 'assistant-apply' : null;
     case 'REACTIONS':
       if (reactionsStep === 'listen') return 'reactions-advance';
       return side === null ? null : 'reactions-submit';
@@ -159,16 +153,13 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
         if (!discussRun) return;
         setFlagState((previous) => {
           const base = previous.key === runKey ? previous.flags : NO_ASSISTANT_FLAGS;
-          const key = event === 'OPENED' ? 'opened' : event === 'COMPARE' ? 'compare' : event === 'REFINE' ? 'refine' : 'applied';
+          const key = event === 'REFINE' ? 'refine' : 'applied';
           if (base[key]) return previous;
           return { key: runKey, flags: { ...base, [key]: true } };
         });
-        if (event === 'COMPARE' || event === 'REFINE') {
-          const feature = event === 'COMPARE' ? 'compare' : 'refine';
+        if (event === 'REFINE') {
           setExtra((previous) =>
-            previous?.key === runKey && previous.plan[0]?.targetId === feature
-              ? previous
-              : { key: runKey, plan: assistantExplainPlan(feature), at: clock.now() },
+            previous?.key === runKey ? previous : { key: runKey, plan: assistantExplainPlan('refine'), at: clock.now() },
           );
         }
       },
@@ -203,8 +194,8 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
 
   const dialogOpen = useDialogOpen();
   const clickKey = enabled && progress.done && !thinkingBusy ? clickKeyFor(session, side, flags, dialogOpen, reactionsStep) : null;
-  // 비서실장 팝업 안의 단계는 팝업이 열린 채로 누른다.
-  const clickInDialog = clickKey !== null && (clickKey.startsWith('assistant-') && clickKey !== 'assistant-open');
+  // '내 발언에 적용'은 팝업이 열린 채로 누른다.
+  const clickInDialog = clickKey === 'assistant-apply';
 
   const value = useMemo<AutoRunState>(
     () => (enabled ? { enabled: true, running, done: progress.done, action } : INACTIVE_AUTO_RUN),
@@ -239,10 +230,8 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   );
 }
 
-/** CLICK 차례의 강조 대상. 비서실장 내용 안의 버튼은 팝업이 단 data-testid로 찾는다. */
+/** CLICK 차례의 강조 대상. 팝업 안의 적용 버튼은 팝업이 단 data-testid로 찾는다. */
 function clickSelector(key: AutoClickKey): string {
-  if (key === 'assistant-compare') return '[data-testid="assistant-action-compare"]';
-  if (key === 'assistant-refine') return '[data-testid="assistant-action-refine"]';
   if (key === 'assistant-apply') return '[data-testid="assistant-apply-refine"]';
   return `[data-auto-click="${key}"]`;
 }

@@ -31,7 +31,7 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { controller, base } = makeRequestBase();
 
-    const promise = adapter.compareConditions({ ...base, scenario, selectedConditionIds: [] });
+    const promise = adapter.refineDraft({ ...base, scenario, draftText: '원문', draftRevision: 0 });
     const assertion = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
 
     // 응답이 도착하기 전(200ms 전)에 세션이 리셋되어 요청이 취소된 상황을 흉내낸다.
@@ -55,12 +55,12 @@ describe('scripted assistant adapter', () => {
     const adapter = createScriptedAdapter();
     const { base } = makeRequestBase();
 
-    const promise = adapter.compareConditions({ ...base, scenario, selectedConditionIds: [] });
+    const promise = adapter.refineDraft({ ...base, scenario, draftText: '원문', draftRevision: 0 });
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
     expect(result.mode).toBe('scripted');
-    expect(Array.isArray(result.remainingConditionIds)).toBe(true);
+    expect(result.draftText).toBe('원문');
   });
 
   it('withTimeout은 5초 안에 응답이 없으면 AssistantTimeoutError로 폴백한다', async () => {

@@ -577,7 +577,6 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
           statements={session.transcript.statements}
           roundLog={roundLog}
           stances={stancesFor(session, scenario)}
-          transcriptRevision={session.transcript.revision}
           side={side}
           readOnly={readOnly}
           pastOpinion={pastOpinion}
