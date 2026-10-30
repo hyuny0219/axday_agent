@@ -105,9 +105,10 @@ describe('useResultReveal(타이머)', () => {
       initialProps: { skip: false },
     });
     expect(result.current).toEqual({ execRevealed: 0, allRevealed: false });
+    // 첫 장 0.8초, 이후 2초 간격(2026-10-30 한 명씩 개표).
     advance(1000);
     expect(result.current.execRevealed).toBe(1);
-    advance(1800);
+    advance(4000);
     expect(result.current.execRevealed).toBe(3);
     expect(result.current.allRevealed).toBe(false);
     rerender({ skip: true });

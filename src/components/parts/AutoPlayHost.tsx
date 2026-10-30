@@ -13,6 +13,7 @@ import {
   autoPlan,
   autoProgress,
   motionAutoPlan,
+  resultAutoPlan,
   typedCaption,
   type AutoAction,
 } from '../../domain/autoPlay';
@@ -50,6 +51,10 @@ function selectorFor(action: AutoAction): { selector: string; nth: number } | nu
       return { selector: `[data-testid="evidence-card-${action.targetId}"]`, nth: 0 };
     case 'HIGHLIGHT_EXEC':
       return { selector: `[data-arrival-card="${action.targetId}"]`, nth: 0 };
+    case 'HIGHLIGHT_VERDICT':
+      return { selector: `[data-testid="result-seat-${action.targetId}"]`, nth: 0 };
+    case 'HIGHLIGHT_REPORT':
+      return { selector: '.app-body__content.result-screen', nth: 0 };
     case 'HIGHLIGHT_CONDITION':
       return action.targetId === ''
         ? { selector: '[data-testid="motion-card"]', nth: 0 }
@@ -119,8 +124,9 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
     if (stage === 'DISCUSS') return side === null ? [] : autoPlan(stage, scenario, side);
     if (stage === 'REACTIONS') return side === null || !answerStep ? [] : autoPlan(stage, scenario, side);
     if (stage === 'MOTION') return motionAutoPlan(scenario, confirmedKey === '' ? [] : confirmedKey.split(','));
+    if (stage === 'RESULT') return resultAutoPlan(session.ballots);
     return [];
-  }, [enabled, scenario, stage, confirmedKey, side, answerStep]);
+  }, [enabled, scenario, stage, confirmedKey, side, answerStep, session.ballots]);
 
   // 단계가 바뀌면 그 시각을 시작점으로 잡는다. 시작점이 낡은 동안(키 불일치)은 흐른 시간 0으로 본다.
   const runKey = `${session.sessionId}:${stage}:${stage === 'DISCUSS' || stage === 'REACTIONS' ? (side ?? '') : ''}:${answerStep ? 'answer' : ''}`;

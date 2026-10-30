@@ -42,7 +42,7 @@ describe('AssistantPanel 발언 정리(T149)', () => {
     render(<AssistantPanel {...baseProps(onAssistantAction)} onApplyDraft={onApplyDraft} />);
     fireEvent.click(screen.getByTestId('assistant-toggle'));
     expect(screen.getByTestId('assistant-toggle')).toHaveTextContent('정리하는 중');
-    await waitFor(() => expect(onApplyDraft).toHaveBeenCalledWith('작은 범위로 먼저 시작합시다.'), { timeout: 2000 });
+    await waitFor(() => expect(onApplyDraft).toHaveBeenCalledWith(expect.stringContaining('작은 범위로 먼저 시작합시다.')), { timeout: 2000 });
     expect(onAssistantAction).toHaveBeenCalledWith(expect.objectContaining({ type: 'DRAFT_REFINE', applied: true }));
     expect(screen.getByTestId('assistant-toggle')).toHaveTextContent('발언 정리');
   });

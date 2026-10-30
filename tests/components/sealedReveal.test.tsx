@@ -149,7 +149,7 @@ describe('StageBand 봉인·순차 공개(T114)', () => {
     expect(screen.getByTestId('stage-band').textContent ?? '').not.toMatch(/찬성 쪽|반대 쪽/);
   });
 
-  it('RESULT에서 임원 표 배지는 봉인과 함께 0.9초 간격 지연으로 깔리고 참가자 표는 지연이 없다', () => {
+  it('RESULT에서 임원 표 배지는 봉인과 함께 한 장씩 간격 지연으로 깔리고 참가자 표는 지연이 없다', () => {
     const ballots: Ballot[] = [
       { memberId: 'CEO', vote: 'YES' },
       { memberId: 'CFO', vote: 'NO' },
@@ -180,12 +180,12 @@ describe('StageBand 봉인·순차 공개(T114)', () => {
 });
 
 describe('결과 순차 공개 타이밍(T114)', () => {
-  it('임원 표는 0.9초 간격으로 한 장씩, 순서대로 뒤집힌다', () => {
+  it('임원 표는 2초 간격으로 한 장씩, 순서대로 뒤집힌다(한 명씩 개표)', () => {
     expect(execRevealDelay(0)).toBeCloseTo(EXEC_REVEAL_FIRST_SECONDS);
     for (let i = 1; i < 4; i += 1) {
       expect(execRevealDelay(i) - execRevealDelay(i - 1)).toBeCloseTo(EXEC_REVEAL_STEP_SECONDS);
     }
-    expect(EXEC_REVEAL_STEP_SECONDS).toBeCloseTo(0.9);
+    expect(EXEC_REVEAL_STEP_SECONDS).toBeCloseTo(2);
   });
 
   it('집계·도장은 마지막 장이 뒤집힌 뒤에 나오고 설득 도장이 그 뒤를 잇는다', () => {

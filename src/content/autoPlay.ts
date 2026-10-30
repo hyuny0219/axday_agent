@@ -46,3 +46,16 @@ export const AUTO_NO_CONDITION_CAPTION = '붙은 조건이 없어 처음 안 그
 export const AUTO_EXPLAIN_CAPTIONS = {
   refine: '발언 정리가 담은 문구를 자연스러운 발언으로 다듬어 내 발언에 넣었습니다.',
 } as const;
+
+/** 결과 화면 개표 자막(2026-10-30). */
+export const autoVerdictCaption = (memberId: string, vote: 'YES' | 'NO' | 'UNCAST', same: boolean, sameSeats: number): string => {
+  if (vote === 'UNCAST') return `${memberId}는 표를 내지 못했습니다.`;
+  const word = vote === 'YES' ? '찬성' : '반대';
+  return same
+    ? `${memberId}는 ${word}입니다. 이사님과 같은 표, 지금 ${sameSeats}석입니다.`
+    : `${memberId}는 ${word}입니다. 이사님과 다른 표입니다.`;
+};
+export const autoReportCaption = (earned: boolean, sameSeats: number): string =>
+  earned
+    ? `개표가 끝났습니다. 같은 표 ${sameSeats}석으로 성공 도장을 받았습니다. 결과 보고서를 확인해 보세요.`
+    : `개표가 끝났습니다. 같은 표 ${sameSeats}석이라 실패 도장입니다. 결과 보고서를 확인해 보세요.`;

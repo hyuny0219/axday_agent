@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import {
+  refine,
+  REFINE_CLOSING,
   ASSISTANT_TIMEOUT_MS,
   createScriptedAdapter,
   SCRIPTED_DELAY_MS,
@@ -60,7 +62,7 @@ describe('scripted assistant adapter', () => {
     const result = await promise;
 
     expect(result.mode).toBe('scripted');
-    expect(result.draftText).toBe('원문');
+    expect(result.draftText).toBe(refine('원문'));
   });
 
   it('withTimeout은 5초 안에 응답이 없으면 AssistantTimeoutError로 폴백한다', async () => {
@@ -81,7 +83,7 @@ describe('scripted assistant adapter', () => {
     await vi.advanceTimersByTimeAsync(SCRIPTED_DELAY_MS);
     const result = await promise;
 
-    expect(result.draftText).toBe('원문 그대로');
+    expect(result.draftText).toBe(refine('원문 그대로'));
   });
 
   it('내 발언 정리는 "않"·"없이" 같은 부정·유보 표현을 지우지 않는다', async () => {
@@ -110,5 +112,13 @@ describe('scripted assistant adapter', () => {
     const result = await promise;
 
     expect(result.draftText.length).toBeLessThanOrEqual(300);
+  });
+});
+
+describe('scripted 발언 정리(refine)', () => {
+  it('문장을 이음말로 잇고 맺음말을 붙이되 단어는 지우지 않는다, 다시 정리해도 두 번 붙지 않는다', () => {
+    const once = refine('한도를 정합시다. 사유를 기록합시다. 사람이 다시 봅시다.');
+    expect(once).toBe('한도를 정합시다. 또한 사유를 기록합시다. 마지막으로 사람이 다시 봅시다. ' + REFINE_CLOSING);
+    expect(refine(once)).toBe(once);
   });
 });

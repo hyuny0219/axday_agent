@@ -6,6 +6,7 @@
 import type { Scenario, Vote } from '../content/types';
 import { isObjectionCondition } from '../domain/conditions';
 import type { Session } from '../domain/types';
+import { AUTO_LEAD_MS, RESULT_REVEAL_STEP_MS } from '../domain/autoPlay';
 import { persuasionStamp, type PersuasionStamp } from '../domain/stance';
 import { collectConfirmedConditionIds } from './opinionConditions';
 
@@ -16,8 +17,10 @@ import { collectConfirmedConditionIds } from './opinionConditions';
  * 판단 행)과 StageBand(표 배지)가 같은 값을 쓰도록 여기 한 곳에 둔다. setTimeout이 아니라
  * CSS animation-delay로 그대로 꽂아 Clock 규칙과 무관하게 만든다 — prefers-reduced-motion
  * (base.css가 delay를 0으로)과 운영자 skip(`data-result-skip`)이면 즉시 전부 공개된다. */
-export const EXEC_REVEAL_FIRST_SECONDS = 0.9;
-export const EXEC_REVEAL_STEP_SECONDS = 0.9;
+// 2026-10-30 사용자 지시("결과가 바로 찍혀서 어떻게 나왔는지 확인이 잘 안 돼. AI 임원 한 명씩 개표"):
+// 0.9초 간격 → 자동 진행 개표 자막과 같은 리듬(첫 장 AUTO_LEAD_MS, 한 장 RESULT_REVEAL_STEP_MS).
+export const EXEC_REVEAL_FIRST_SECONDS = AUTO_LEAD_MS / 1000;
+export const EXEC_REVEAL_STEP_SECONDS = RESULT_REVEAL_STEP_MS / 1000;
 /** 한 장이 뒤집히는 데 걸리는 시간(초). CSS의 `--reveal-flip` 값과 같다. */
 export const EXEC_REVEAL_FLIP_SECONDS = 0.5;
 

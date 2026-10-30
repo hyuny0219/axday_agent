@@ -11,6 +11,8 @@ import {
   pickAutoFollowUp,
   typedCaption,
   AUTO_READ_MS,
+  RESULT_REVEAL_STEP_MS,
+  resultAutoPlan,
   AUTO_TYPE_MS,
   AUTO_LEAD_MS,
   type AutoSide,
@@ -188,5 +190,22 @@ describe('자막은 완결된 문장(T148)', () => {
         for (const caption of captions) expect(caption.endsWith('.')).toBe(true);
       }
     }
+  });
+});
+
+describe('resultAutoPlan(한 명씩 개표)', () => {
+  it('임원 넷을 차례로 개표하고 결과 보고서를 짚는다, 같은 표 수를 센다', () => {
+    const plan = resultAutoPlan([
+      { memberId: 'PARTICIPANT', vote: 'YES' },
+      { memberId: 'CEO', vote: 'YES' },
+      { memberId: 'CFO', vote: 'NO' },
+      { memberId: 'CAIO', vote: 'YES' },
+      { memberId: 'CISO', vote: 'YES' },
+    ] as never);
+    expect(plan.map((a) => a.kind)).toEqual(['HIGHLIGHT_VERDICT', 'HIGHLIGHT_VERDICT', 'HIGHLIGHT_VERDICT', 'HIGHLIGHT_VERDICT', 'HIGHLIGHT_REPORT']);
+    expect(plan.slice(0, 4).every((a) => a.durationMs === RESULT_REVEAL_STEP_MS)).toBe(true);
+    expect(plan[1]!.caption).toContain('다른 표');
+    expect(plan[3]!.caption).toContain('4석');
+    expect(plan[4]!.caption).toContain('성공 도장');
   });
 });

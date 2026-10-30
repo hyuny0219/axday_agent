@@ -71,11 +71,34 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs = ASSISTANT_TIMEOU
   });
 }
 
-/** 공백만 정리하고 단어를 지우지 않는다 — "않"·"없이" 같은 부정·유보 표현이 삭제되지
- * 않도록, 요약이 아니라 다듬기만 한다. 300자를 넘으면 그 지점에서 자르기만 한다. */
-function refine(draftText: string): string {
+/** 정리한 발언의 맺음말. 이미 붙어 있으면(다시 누름) 또 붙이지 않는다. */
+export const REFINE_CLOSING = '이 점을 함께 검토해 주시기 바랍니다.';
+const CONNECTIVES = ['또한', '그리고', '마지막으로'];
+const LEADING_CONNECTIVE = /^(또한|그리고|마지막으로|아울러|그래서|하지만|다만)\s/;
+
+/**
+ * 사전 구성 발언 정리(2026-10-30 사용자 지시 "정리된 발언으로 변경해서 들어가게"): 공백을 정리하고
+ * 문장마다 이음말(또한·그리고·마지막으로)을 붙인 뒤 맺음말을 더해 한 편의 발언으로 다듬는다.
+ * 단어는 지우지 않는다 — "않"·"없이" 같은 부정·유보 표현이 사라지지 않게, 요약이 아니라 다듬기만
+ * 한다. 300자를 넘으면 맺음말을 빼고, 그래도 넘으면 그 지점에서 자른다.
+ */
+export function refine(draftText: string): string {
   const normalized = draftText.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  return normalized.length > 300 ? normalized.slice(0, 300) : normalized;
+  if (normalized === '' || normalized.endsWith(REFINE_CLOSING)) {
+    return normalized.length > 300 ? normalized.slice(0, 300) : normalized;
+  }
+  const sentences = normalized.split(/(?<=[.!?])\s+/).filter((sentence) => sentence !== '');
+  const linked = sentences.map((sentence, index) => {
+    if (index === 0 || LEADING_CONNECTIVE.test(sentence)) return sentence;
+    const isLast = index === sentences.length - 1 && sentences.length >= 3;
+    const word = isLast ? CONNECTIVES[2] : CONNECTIVES[Math.min(index - 1, 1)];
+    return `${word} ${sentence}`;
+  });
+  const joined = linked.join(' ');
+  const body = /[.!?]$/.test(joined) ? joined : `${joined}.`;
+  const withClosing = `${body} ${REFINE_CLOSING}`;
+  if (withClosing.length <= 300) return withClosing;
+  return body.length > 300 ? body.slice(0, 300) : body;
 }
 
 /** 사전 구성 어댑터. 시나리오 데이터 밖의 사실을 만들지 않고, 지연 후 즉시 값을

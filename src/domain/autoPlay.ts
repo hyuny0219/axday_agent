@@ -10,7 +10,11 @@ import {
   autoConditionCaption,
   autoFollowUpCaption,
   autoPhraseCaption,
+  autoReportCaption,
+  autoVerdictCaption,
 } from '../content/autoPlay';
+import type { Ballot } from './types';
+import { EXEC_MEMBER_ORDER } from './voting';
 import { filterConditionIdsForStance } from './conditions';
 import { freezeMotion } from './motion';
 import { decideBoard, participantTargetVote } from './voting';
@@ -24,7 +28,9 @@ export type AutoActionKind =
   | 'ADD_PHRASE'
   | 'EXPLAIN_ASSISTANT'
   | 'PICK_FOLLOWUP'
-  | 'HIGHLIGHT_CONDITION';
+  | 'HIGHLIGHT_CONDITION'
+  | 'HIGHLIGHT_VERDICT'
+  | 'HIGHLIGHT_REPORT';
 
 export interface AutoAction {
   kind: AutoActionKind;
@@ -191,4 +197,32 @@ export function autoProgress(plan: AutoAction[], elapsedMs: number): AutoProgres
 export function typedCaption(caption: string, actionElapsedMs: number): string {
   const count = Math.max(0, Math.floor(actionElapsedMs / AUTO_TYPE_MS) + 1);
   return caption.slice(0, count);
+}
+
+/** 결과 화면 개표: 임원 한 명이 공개되는 간격(결과 화면 표 뒤집기와 같은 값). */
+export const RESULT_REVEAL_STEP_MS = 2000;
+/** 개표 뒤 결과 보고서에 머무는 추가 시간. */
+export const RESULT_REPORT_HOLD_MS = 2000;
+
+/** RESULT 자동 동작: 임원 한 명씩 개표 자막·강조 → 결과 보고서 강조. 표 공개 시각과 맞추려고 개표
+ * 동작은 자막 길이와 상관없이 RESULT_REVEAL_STEP_MS로 고정한다. */
+export function resultAutoPlan(ballots: readonly Ballot[]): AutoAction[] {
+  const participantVote = ballots.find((ballot) => ballot.memberId === 'PARTICIPANT')?.vote ?? 'UNCAST';
+  let sameSeats = participantVote === 'UNCAST' ? 0 : 1;
+  const verdicts = EXEC_MEMBER_ORDER.map((memberId): AutoAction => {
+    const vote = ballots.find((ballot) => ballot.memberId === memberId)?.vote ?? 'UNCAST';
+    const same = vote !== 'UNCAST' && vote === participantVote;
+    if (same) sameSeats += 1;
+    return {
+      kind: 'HIGHLIGHT_VERDICT',
+      targetId: memberId,
+      caption: autoVerdictCaption(memberId, vote, same, sameSeats),
+      durationMs: RESULT_REVEAL_STEP_MS,
+    };
+  });
+  const report = autoReportCaption(sameSeats >= 3, sameSeats);
+  return [
+    ...verdicts,
+    { kind: 'HIGHLIGHT_REPORT', targetId: '', caption: report, durationMs: autoActionMs(report) + RESULT_REPORT_HOLD_MS },
+  ];
 }
