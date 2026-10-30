@@ -1,5 +1,4 @@
-// live AI 비서실장 어댑터(T31, AGENT_BOARDROOM_SPEC.md 4장). /api/assistant/refine·
-// /api/assistant/summarize를 호출해 서버가 검증까지 끝낸 응답만 결과로 옮긴다. 실제 판단은
+// live AI 비서실장 어댑터(T31, AGENT_BOARDROOM_SPEC.md 4장). /api/assistant/refine을 호출해 서버가 검증까지 끝낸 응답만 결과로 옮긴다. 실제 판단은
 // 서버(handlers/assistant.ts)가 하며 이 파일은 요청 조립·세션당 한도·응답 형태 변환만
 // 담당한다(services/boardAgents/live.ts와 같은 원칙).
 //
@@ -10,25 +9,16 @@
 // 발급되는 UUID라 항목이 계속 쌓일 수 있다 — 데모 키오스크가 재시작 주기를 가지므로 이 카드
 // 범위에서는 정리 로직을 추가하지 않는다.
 //
-// '의견 한눈에 보기'(summarizeOpinions)는 실제 회의 기록(transcript)을 서버에 보내 자유 형식
-// 요약(summaryText)만 받는다 — scripted처럼 임원별 commonPoints/disagreements로 미리 쪼개
-// 보여주지 않는다(사전에 쓰인 임원 요약을 live 결과에 붙이지 않기 위해서다).
+// T147: '의견 한눈에 보기'(summarize)는 앱에서 없앴다. 서버 엔드포인트는 그대로 남아 있다.
 //
-// '조건 비교하기'(compareConditions)는 실제 AI를 부르지 않는다(정규화된 원안/제안 차이는
-// 프로그램이 표시하면 된다 — 4장). scripted.ts의 buildCompare를 그대로 재사용하고 mode도
-// 항상 'scripted'로 둔다("실제 AI 사용"이라고 과장하지 않기 위해서다).
+// T149: '조건 추천'(compareConditions)도 앱에서 없앴다. 남은 기능은 refineDraft 하나다.
 
 import { accessHeaders } from '../transport/accessToken';
-import { buildCompare } from './scripted';
 import { AssistantTimeoutError } from './types';
 import type {
   AssistantAdapter,
-  CompareConditionsRequest,
-  CompareConditionsResult,
   RefineDraftRequest,
   RefineDraftResult,
-  SummarizeOpinionsRequest,
-  SummarizeOpinionsResult,
 } from './types';
 
 /** 서버 요청 하나가 기다리는 최대 시간(AGENT_BOARDROOM_SPEC.md 4장 "요청당 5초"). */
@@ -110,44 +100,6 @@ async function postAssistantRequest(
   }
 }
 
-function transcriptPayload(req: { transcript: SummarizeOpinionsRequest['transcript'] }) {
-  return {
-    revision: req.transcript.revision,
-    statements: req.transcript.statements.map((s) => ({ id: s.id, roleId: s.roleId, message: s.text })),
-  };
-}
-
-async function requestSummarize(req: SummarizeOpinionsRequest): Promise<SummarizeOpinionsResult> {
-  const raw = await postAssistantRequest(
-    '/api/assistant/summarize',
-    {
-      sessionId: req.sessionId,
-      requestId: req.requestId,
-      mode: 'live' as const,
-      scenarioId: req.scenario.id,
-      budgetMs: ASSISTANT_LIVE_TIMEOUT_MS,
-      transcript: transcriptPayload(req),
-    },
-    req.signal,
-    ASSISTANT_LIVE_TIMEOUT_MS,
-  );
-  if (
-    isRecord(raw) &&
-    raw.status === 'answered' &&
-    typeof raw.draftText === 'string' &&
-    isStringArray(raw.evidenceIds)
-  ) {
-    return {
-      mode: 'live',
-      evidenceIds: raw.evidenceIds,
-      commonPoints: [],
-      disagreements: [],
-      summaryText: raw.draftText,
-    };
-  }
-  throw new AssistantTimeoutError('의견 한눈에 보기 응답을 확인할 수 없습니다.');
-}
-
 async function requestRefine(req: RefineDraftRequest): Promise<RefineDraftResult> {
   const state = getRefineState(req.sessionId);
   if (state.requestCount >= REFINE_MAX_REQUESTS_PER_SESSION) {
@@ -210,12 +162,6 @@ async function requestRefine(req: RefineDraftRequest): Promise<RefineDraftResult
 /** live 비서실장 어댑터를 만든다. fetch만 사용하고 CDN·외부 SDK는 부르지 않는다. */
 export function createLiveAssistantAdapter(): AssistantAdapter {
   return {
-    summarizeOpinions(req) {
-      return requestSummarize(req);
-    },
-    compareConditions(req: CompareConditionsRequest): Promise<CompareConditionsResult> {
-      return Promise.resolve(buildCompare(req.scenario, req.selectedConditionIds));
-    },
     refineDraft(req) {
       return requestRefine(req);
     },

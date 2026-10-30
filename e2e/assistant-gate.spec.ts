@@ -1,6 +1,6 @@
-// T97: DISCUSS는 추천 문구 선택 → AI 비서실장 한 가지 이상(T109, 셋 다 써도 됨) → 의견 전달 순서다.
-// 한 기능도 쓰기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 화면 읽기용 설명으로 알려 준다(T103: 눈에 보이는 안내는 진행 도우미가 맡는다).
-// 다시 답하기(REACTIONS)는 비서실장 없이도 전달할 수 있다.
+// T149: DISCUSS는 추천 문구 선택 → 발언 정리 한 번 → 의견 전달 순서다.
+// 발언 정리를 하기 전에는 '의견 전달'이 닫혀 있고, 닫힌 이유를 화면 읽기용 설명으로 알려 준다(T103: 눈에 보이는 안내는 진행 도우미가 맡는다).
+// 다시 답하기(REACTIONS)는 발언 정리 없이도 전달할 수 있다.
 import { test, expect, type Page } from './fixtures';
 
 async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickSide = true) {
@@ -17,15 +17,10 @@ async function reachDiscuss(page: Page, url = '/?mode=scripted&coach=off', pickS
   }
 }
 
-async function runFeature(page: Page, feature: 'summary' | 'compare' | 'refine') {
-  await page.getByTestId(`assistant-action-${feature}`).click();
-  await expect(page.getByTestId(`assistant-done-${feature}`)).toBeVisible({ timeout: 15_000 });
-  if (feature === 'refine') {
-    const keep = page.getByTestId('assistant-keep-original');
-    if (await keep.isVisible()) {
-      await keep.click();
-    }
-  }
+/** '발언 정리'를 누르면 팝업 없이 바로 정리해 내 발언에 넣는다. 정리(성공/실패)가 끝나 의견 전달이 열릴 때까지 기다린다. */
+async function runRefine(page: Page) {
+  await page.getByTestId('assistant-toggle').click();
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
 }
 
 test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 보이며, 문구를 고르면 열린다', async ({ page }) => {
@@ -39,7 +34,7 @@ test('문구를 고르기 전에는 비서실장 버튼이 잠기고 힌트가 �
   await expect(page.getByTestId('assistant-toggle-hint')).toHaveCount(0);
 });
 
-test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 비서실장 사용을 권하며 옛 맥동 강조는 없다', async ({ page }) => {
+test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 발언 정리를 권하며 옛 맥동 강조는 없다', async ({ page }) => {
   await reachDiscuss(page);
 
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
@@ -48,75 +43,21 @@ test('문구만 고르면 의견 전달이 닫혀 있고 힌트가 비서실장 
 
   await page.getByTestId('phrase-card-P1').click();
   await expect(page.getByTestId('submit-opinion')).toBeDisabled();
-  await expect(page.getByTestId('discuss-cta-hint')).toContainText('AI 비서실장을 한 번 써 보세요');
+  await expect(page.getByTestId('discuss-cta-hint')).toContainText('발언 정리를 한 번 해 보세요');
   await expect(page.locator('[data-guide]')).toHaveCount(0);
 });
 
-test('한 기능만 써도 의견 전달이 열린다(T109)', async ({ page }) => {
+test('발언 정리를 한 번 하면 의견 전달이 열린다(T149)', async ({ page }) => {
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-intro-done')).toHaveCount(0);
-  await runFeature(page, 'compare');
-  await expect(page.getByTestId('assistant-intro-done')).toContainText('이제 팝업을 닫고 의견을 전달하세요');
-  await page.getByTestId('assistant-close').click();
-
-  await expect(page.getByTestId('submit-opinion')).toBeEnabled();
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
   await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
   await page.getByTestId('submit-opinion').click();
   await expect(
     page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
   ).toBeVisible();
-});
-
-test('세 개를 다 써도 의견 전달이 열린다', async ({ page }) => {
-  await reachDiscuss(page);
-  await page.getByTestId('phrase-card-P1').click();
-
-  await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await runFeature(page, 'summary');
-  await runFeature(page, 'compare');
-  await page.getByTestId('assistant-close').click();
-
-  await page.getByTestId('assistant-toggle').click();
-  await runFeature(page, 'refine');
-  await expect(page.getByTestId('assistant-intro-done')).toContainText('이제 팝업을 닫고 의견을 전달하세요');
-  await page.getByTestId('assistant-close').click();
-
-  await expect(page.getByTestId('submit-opinion')).toBeEnabled();
-  await expect(page.getByTestId('discuss-cta-hint')).toHaveCount(0);
-  await page.getByTestId('submit-opinion').click();
-  await expect(
-    page.getByRole('heading', { name: '이사님 의견에 대한 반응 — 한 가지만 더 여쭙겠습니다' }),
-  ).toBeVisible();
-});
-
-test('팝업 첫 화면은 소개와 체크가 스크롤 없이 화면 안에 들어온다', async ({ page }) => {
-  await reachDiscuss(page);
-  await page.getByTestId('phrase-card-P1').click();
-  await page.getByTestId('assistant-toggle').click();
-
-  const intro = page.getByTestId('assistant-intro');
-  await expect(intro).toBeVisible();
-  await expect(page.getByTestId('assistant-check-summary')).toHaveText('☐');
-
-  const viewport = page.viewportSize();
-  expect(viewport).not.toBeNull();
-  for (const testId of ['assistant-panel', 'assistant-intro', 'assistant-action-refine', 'assistant-close']) {
-    // 팝업 등장 애니메이션(8px 이동)이 끝난 뒤의 위치를 잰다.
-    await page.getByTestId(testId).evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-    const box = await page.getByTestId(testId).boundingBox();
-    expect(box, `${testId} 위치를 알 수 없다`).not.toBeNull();
-    if (box && viewport) {
-      expect(box.y, `${testId} 위쪽이 잘렸다`).toBeGreaterThanOrEqual(-1);
-      expect(box.y + box.height, `${testId} 아래쪽이 잘렸다`).toBeLessThanOrEqual(viewport.height + 1);
-    }
-  }
-  const body = page.locator('.dialog-shell__body');
-  const overflow = await body.evaluate((el) => el.scrollHeight - el.clientHeight);
-  expect(overflow, '팝업 본문이 첫 화면에서 스크롤된다').toBeLessThanOrEqual(1);
 });
 
 test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 의견 전달이 열린다', async ({ page }) => {
@@ -127,24 +68,15 @@ test('live(mock)에서 내 발언 정리가 실패해도 사용으로 세어져 
   await page.getByTestId('phrase-card-P1').click();
 
   await page.getByTestId('assistant-toggle').click();
-  await runFeature(page, 'summary');
-  await runFeature(page, 'compare');
-  await page.getByTestId('assistant-action-refine').click();
   await expect(page.getByTestId('assistant-error')).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByTestId('assistant-done-refine')).toBeVisible();
-  await page.getByTestId('assistant-close').click();
 
   await expect(page.getByTestId('submit-opinion')).toBeEnabled();
 });
 
-test('다시 답하기(REACTIONS)는 비서실장을 쓰지 않아도 전달할 수 있다', async ({ page }) => {
+test('다시 답하기(REACTIONS)는 발언 정리를 하지 않아도 전달할 수 있다', async ({ page }) => {
   await reachDiscuss(page);
   await page.getByTestId('phrase-card-P1').click();
-  await page.getByTestId('assistant-toggle').click();
-  await runFeature(page, 'summary');
-  await runFeature(page, 'compare');
-  await runFeature(page, 'refine');
-  await page.getByTestId('assistant-close').click();
+  await runRefine(page);
   await page.getByTestId('submit-opinion').click();
 
   await expect(

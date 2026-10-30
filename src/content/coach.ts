@@ -38,7 +38,7 @@ export const COACH_SCREENS: readonly CoachScreenCopy[] = [
     lines: [
       '찬성·반대를 고릅니다.',
       '추천 문구를 여러 개 담거나 직접 씁니다.',
-      'AI 비서실장을 열어 한 가지 이상 써 봅니다(셋 다 써도 좋아요).',
+      '발언 정리를 한 번 눌러 내 발언을 다듬어 봅니다.',
       '의견 전달을 누릅니다.',
     ],
   },
@@ -78,7 +78,7 @@ export const COACH_DISCUSS_CHECKLIST = {
   items: [
     { id: 'side', label: '3-1 찬성·반대 고르기' },
     { id: 'phrase', label: '3-2 추천 문구 담기(직접 써도 됩니다)' },
-    { id: 'assistant', label: '3-3 AI 비서실장 한 가지 이상' },
+    { id: 'assistant', label: '3-3 발언 정리 한 번' },
     { id: 'submit', label: '3-4 의견 전달' },
   ],
   stateText: { done: '완료', current: '지금 할 일', todo: '아직' },

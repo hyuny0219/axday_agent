@@ -15,6 +15,9 @@ export interface OperatorMenuProps {
   /** 진행 도우미(T103)가 켜져 있는가. onToggleCoach와 함께 줄 때만 "안내 끄기/켜기" 항목이 보인다. */
   coachEnabled?: boolean;
   onToggleCoach?: () => void;
+  /** 부스 자동 진행(T143)이 켜져 있는가. onToggleAutoPlay와 함께 줄 때만 "자동 진행 끄기/켜기" 항목이 보인다. */
+  autoPlay?: boolean;
+  onToggleAutoPlay?: () => void;
 }
 
 type PanelState =
@@ -73,6 +76,8 @@ export function OperatorMenu({
   onRestartScripted,
   coachEnabled = true,
   onToggleCoach,
+  autoPlay = true,
+  onToggleAutoPlay,
 }: OperatorMenuProps) {
   const [panel, setPanel] = useState<PanelState>('closed');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
@@ -203,6 +208,20 @@ export function OperatorMenu({
               data-testid="operator-toggle-coach"
             >
               {coachEnabled ? '안내 끄기' : '안내 켜기'}
+            </button>
+          )}
+          {onToggleAutoPlay && (
+            <button
+              type="button"
+              role="menuitem"
+              className="operator-menu__item"
+              onClick={() => {
+                onToggleAutoPlay();
+                close();
+              }}
+              data-testid="operator-toggle-auto"
+            >
+              {autoPlay ? '자동 진행 끄기' : '자동 진행 켜기'}
             </button>
           )}
           <button

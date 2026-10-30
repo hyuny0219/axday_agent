@@ -132,7 +132,7 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('condition-chip-LOG')).toBeVisible();
   await expect(page.getByTestId('condition-chip-REVIEW')).toBeVisible();
 
-  // DISCUSS(T97): 문구를 고른 뒤 비서실장 팝업 첫 화면(소개·체크리스트)을 캡처한다.
+  // DISCUSS(T149): 문구를 고른 뒤 '발언 정리'를 눌러 바로 내 발언에 적용된 상태를 캡처한다.
   // 이 시점에는 전달 버튼이 아직 닫혀 있다.
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeDisabled();
@@ -140,18 +140,11 @@ test('대기·선택·브리핑·임원 의견·토론·반응·투표·결과�
   await expect(page.getByTestId('discuss-cta-hint')).toBeVisible();
   await capture(page, testInfo.project.name, 'discuss-locked');
   await page.getByTestId('assistant-toggle').click();
-  const assistantDialog = page.getByTestId('assistant-panel');
-  await expect(page.getByTestId('assistant-intro')).toBeVisible();
-  await page
-    .getByTestId('assistant-panel-backdrop')
-    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  await assistantDialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  await expect(submitOpinion).toBeEnabled({ timeout: 15_000 });
   await capture(page, testInfo.project.name, 'discuss-assistant-intro');
-  await page.getByTestId('assistant-close').click();
-  await expect(assistantDialog).toHaveCount(0);
 
-  // 비서실장 세 기능을 쓰고 나면 전달 버튼이 열린 상태가 된다.
-  await tryAllAssistantFeatures(page);
+  // 발언 정리를 한 번 하고 나면 전달 버튼이 열린 상태가 된다.
+  await expect(submitOpinion).toBeEnabled();
   await expect(submitOpinion).toBeEnabled();
   await capture(page, testInfo.project.name, 'discuss');
 
@@ -316,4 +309,53 @@ test('진행 도우미 BRIEFING(1/6)·DISCUSS(3/6) 안내를 캡처한다', asyn
   await page.getByTestId('coach-ack').click();
   await expect(page.getByTestId('coach-icon')).toBeVisible();
   await capture(page, testInfo.project.name, 'coach-icon-discuss');
+});
+
+// T146·T147 자동 진행 캡처: BRIEFING의 CLICK 알약, DISCUSS 자동 중(자막 띠·강조 상자), 비서실장 CLICK 차례, 의견 전달·REACTIONS 1/2 CLICK 알약.
+// testClock으로 시계를 조금씩 돌려 원하는 지점에서 멈춘다.
+test('자동 진행 BRIEFING CLICK·DISCUSS 자동 중·DISCUSS CLICK 차례를 캡처한다', async ({ page }, testInfo) => {
+  test.setTimeout(75_000);
+  const advanceUntil = async (done: () => Promise<boolean>) => {
+    await page.waitForFunction(() => document.body.hasAttribute('data-auto-running'));
+    for (let i = 0; i < 200 && !(await done()); i += 1) {
+      await page.evaluate(() => {
+        (window as unknown as { __boardroom: { advance(ms: number): void } }).__boardroom.advance(700);
+      });
+      await page.waitForTimeout(120);
+    }
+  };
+  const pill = page.getByTestId('auto-pill');
+
+  await page.goto('/?testClock=1&auto=on');
+  await page.getByRole('button', { name: '체험 시작' }).click();
+  await page.getByRole('button', { name: '확인', exact: true }).click();
+  await page.getByTestId('scenario-card-ai-approval').click();
+
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('의견 듣기');
+  await capture(page, testInfo.project.name, 'auto-briefing-click');
+  await page.getByRole('button', { name: '의견 듣기' }).click();
+
+  await advanceUntil(() => pill.isVisible());
+  await page.getByRole('button', { name: '내 의견 쓰러 가기' }).click();
+  await page.getByTestId('discuss-side-for').click();
+
+  // 자동 중(추천 문구 담는 동안) 자막 띠가 보일 때 멈춘다.
+  await advanceUntil(() => page.getByTestId('auto-bar').isVisible());
+  await expect(page.getByTestId('auto-bar')).toBeVisible();
+  await capture(page, testInfo.project.name, 'auto-discuss-running');
+
+  // 참가자 차례: '발언 정리' → '의견 전달' 순으로 누른다(T149).
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('발언 정리');
+  await capture(page, testInfo.project.name, 'auto-discuss-assistant-click');
+  await page.getByTestId('assistant-toggle').click();
+  await advanceUntil(() => pill.isVisible());
+  await expect(pill).toContainText('의견 전달');
+  await capture(page, testInfo.project.name, 'auto-discuss-click');
+
+  // REACTIONS 1/2: 반응을 다 들은 뒤 '답하러 가기'도 참가자가 누른다(T147).
+  await page.getByTestId('submit-opinion').click();
+  await expect(pill).toContainText('답하러 가기');
+  await capture(page, testInfo.project.name, 'auto-reactions-click');
 });

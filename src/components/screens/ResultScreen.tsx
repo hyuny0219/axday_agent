@@ -85,12 +85,8 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
 
   const additionalHelp = useMemo(
     () =>
-      describeAdditionalHelp(
-        session.assistantActions,
-        finalMotion?.effectiveConditionIds,
-        (conditionId) => scenario.conditions.find((condition) => condition.id === conditionId)?.label,
-      ),
-    [session.assistantActions, finalMotion, scenario],
+      describeAdditionalHelp(session.assistantActions),
+    [session.assistantActions],
   );
 
   const tallyResult = useMemo(() => tally(session.ballots), [session.ballots]);
@@ -295,6 +291,7 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
             onClick={() => setEndingOpen(true)}
             disabled={endSessionConfirmOpen}
             data-testid="result-finish"
+            data-auto-click="result-finish"
             {...nextStepAttr(gate.visible && !endingOpen)}
           >
             마무리 ▶

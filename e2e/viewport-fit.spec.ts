@@ -79,17 +79,9 @@ test('1272×698(설계 크기보다 살짝 작은 노트북 창 모드)에서 �
   await page.getByTestId('discuss-side-for').click();
   await page.getByTestId('phrase-card-P1').click();
 
-  // 축소 상태에서도 AI 비서실장 드로어가 화면 안(뷰포트 밖으로 잘리지 않음)에 뜬다
-  // (드로어는 position:absolute라 축소 컨테이닝 블록의 영향을 받을 수 있다).
-  await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  await expectInViewport(page, 'assistant-panel', 'DISCUSS(비서실장 팝업 열림)');
-  await expectNoPageScroll(page, 'DISCUSS(비서실장 팝업 열림)');
-  // T89: 드로어 대신 팝업(DialogShell)이 된 뒤로는 토글이 닫지 않고 팝업 자체의
-  // 닫기 버튼으로 닫는다.
-  await page.getByTestId('assistant-close').click();
-
+  // 발언 정리는 팝업 없이 바로 적용된다. 정리 뒤에도 화면 안·스크롤 없음을 확인한다.
   await tryAllAssistantFeatures(page);
+  await expectNoPageScroll(page, 'DISCUSS(발언 정리 뒤)');
   const submitOpinion = page.getByTestId('submit-opinion');
   await expect(submitOpinion).toBeEnabled();
   await expect(submitOpinion).toBeInViewport();

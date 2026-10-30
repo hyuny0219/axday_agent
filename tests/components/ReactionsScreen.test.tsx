@@ -4,7 +4,7 @@
 // (2·3: 근거 자료 팝업 발언 열의 stance·판단 중/실패 표시는 T105에서 열을 없애며 함께 뺐다.)
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import {
   ReactionsScreen,
@@ -15,6 +15,19 @@ import type { ExecMemberId } from '../../src/content/types';
 import type { Opinion, RoleStatus, Stance, Statement } from '../../src/domain/types';
 import type { RoundLogEntry } from '../../src/components/minutes';
 import { scriptedStances } from '../../src/domain/stance';
+
+// T148: scripted 반응이 "…" 뒤에 한 명씩 뜨므로, 이 파일의 시나리오는 reduced-motion(뜸 없음)으로 본다.
+beforeEach(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
+});
 
 afterEach(() => {
   cleanup();
@@ -42,7 +55,6 @@ function baseProps() {
     scenario,
     sessionId: 's1',
     opinions: [] as Opinion[],
-    transcriptRevision: 0,
     // T89: anonBoard의 followUp.options는 side가 없어(과거 시나리오) 'FOR'로 보는
     // 기본값에 해당하므로, 이 스위트의 기존 단언들은 side='FOR'에서 바뀌지 않는다.
     side: 'FOR' as const,
@@ -494,7 +506,7 @@ describe('ReactionsScreen 전달 버튼 가시성·안내판(T98)', () => {
   });
 });
 
-// T97: DISCUSS는 비서실장 세 기능을 써야 전달이 열리지만, 다시 답하기(REACTIONS)는 선택
+// T97: DISCUSS는 비서실장 기능을 써야 전달이 열리지만, 다시 답하기(REACTIONS)는 선택
 // 사항 그대로다 — 비서실장 사용 기록이 하나도 없어도 전달할 수 있다.
 describe('ReactionsScreen 비서실장 게이팅 없음(T97)', () => {
   it('비서실장을 한 번도 쓰지 않아도 추천 답변을 고르면 전달 버튼이 열린다', () => {
@@ -513,170 +525,6 @@ describe('ReactionsScreen 비서실장 게이팅 없음(T97)', () => {
     expect(screen.getByTestId('submit-followup')).toBeEnabled();
     expect(screen.queryByTestId('discuss-cta-hint')).not.toBeInTheDocument();
     expect(screen.queryByTestId('assistant-intro')).not.toBeInTheDocument();
-  });
-});
-
-// PR #20 Codex 31차: 확인 창은 비서실장 팝업을 닫고 보이며, 유지는 기록하지 않고, 표시·실행 검사가 같다.
-describe('조건 추천 적용과 확인 창(Codex 31차)', () => {
-  const sc = aiApprovalScenario;
-  const logIndex = sc.followUp.options.findIndex(
-    (option) => option.proposeConditionId === 'LOG' && (option.side ?? 'FOR') === 'FOR',
-  );
-
-  function renderReactions(actions: { type: string; evidenceIds: string[] }[]) {
-    return render(
-      <ReactionsScreen
-        {...baseProps()}
-        scenario={sc}
-        onAssistantAction={(event) => actions.push(event)}
-        mode="scripted"
-        roleStatus={idleRoleStatus}
-        statements={[]}
-        roundLog={[]}
-        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
-      />,
-    );
-  }
-
-  async function applyLogOnDirtyText() {
-    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '제 나름의 답변입니다.' } });
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    fireEvent.click(await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 }));
-    await screen.findByTestId('rebuild-confirm');
-  }
-
-  it('2/2에서는 추가 답변에 있는 조건에 "추가 답변에서" 안내와 적용 버튼이 보이고 "직접 써 주세요"는 없다(T119)', async () => {
-    renderReactions([]);
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
-    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent('추가 답변에서 고를 수 있습니다');
-    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
-  });
-
-  it('2/2에서 추가 답변을 고른 뒤 칩을 해제하면 "직접 써 주세요" 없이 재확정 안내가 보이고 적용이 칩을 다시 확정한다(T119)', async () => {
-    renderReactions([]);
-    fireEvent.click(screen.getByTestId(`followup-option-${logIndex}`));
-    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
-    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
-    expect(screen.getByTestId('condition-chip-LOG')).not.toHaveClass('condition-chip--new');
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
-    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
-      '이미 고른 답변의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
-    );
-    fireEvent.click(screen.getByTestId('assistant-recommend-apply-LOG'));
-    expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
-  });
-
-  it('2/2에서 카드를 고르지 않고 직접 쓴 조건을 해제하면 "이미 쓴 내용" 안내가 보인다(T119)', async () => {
-    renderReactions([]);
-    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '자동 승인마다 승인 사유를 기록합시다.' } });
-    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
-    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent(
-      '이미 쓴 내용의 조건입니다 · 조건 칩을 다시 누르면 붙습니다',
-    );
-  });
-
-  function renderWithFirstOpinion(selectedPhraseIds: string[], currentSide: 'FOR' | 'AGAINST' = 'FOR') {
-    return render(
-      <ReactionsScreen
-        {...baseProps()}
-        side={currentSide}
-        scenario={sc}
-        opinions={[
-          {
-            id: 'o1',
-            originalText: '자동 승인마다 승인 사유를 기록합시다.',
-            selectedPhraseIds,
-            confirmedConditionIds: ['LOG'],
-            stance: 'FOR',
-            createdAt: 0,
-          },
-        ]}
-        mode="scripted"
-        roleStatus={idleRoleStatus}
-        statements={[]}
-        roundLog={[]}
-        stances={scriptedStances(sc, { stage: 'DISCUSS', opinions: [] })}
-      />,
-    );
-  }
-
-  async function releaseLogAndCompare() {
-    // 조건 없는 공통 답변으로 시작하면 이전 의견의 확정 조건 칩이 나타난다.
-    const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
-    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
-    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 });
-    expect(screen.queryByTestId('assistant-recommend-manual-LOG')).not.toBeInTheDocument();
-  }
-
-  it('첫 의견에서 문구 2번(LOG)을 골라 제출한 뒤 2/2에서 칩을 해제하면 "이미 고른 문구 2번(첫 의견)" 안내가 보인다(T119)', async () => {
-    renderWithFirstOpinion(['P2']);
-    await releaseLogAndCompare();
-    const where = screen.getByTestId('assistant-recommend-where-LOG');
-    expect(where).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다 · 조건 칩을 다시 누르면 붙습니다');
-    expect(where).not.toHaveTextContent('이미 쓴 내용');
-  });
-
-  it('첫 의견(찬성)의 문구 번호는 칩을 해제해도 첫 의견에서 고른 문구 번호로 안내한다(T119)', async () => {
-    // T137: 두 입장의 조건이 달라 입장을 바꾸면 찬성 조건은 "남은 확인 사항"에서 빠지므로 같은 입장에서 확인한다.
-    renderWithFirstOpinion(['P2']);
-    const both = sc.followUp.options.findIndex((option) => option.side === 'BOTH');
-    fireEvent.click(screen.getByTestId(`followup-option-${both}`));
-    fireEvent.click(screen.getByTestId('condition-chip-LOG'));
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    const remaining = await screen.findByTestId('assistant-remaining-LOG', {}, { timeout: 2000 });
-    expect(remaining).toHaveTextContent('이미 고른 문구 2번(첫 의견)의 조건입니다');
-    expect(remaining).not.toHaveTextContent('이미 쓴 내용');
-  });
-
-  it('첫 의견을 직접 써서 제출했으면 2/2에서 칩을 해제해도 "이미 쓴 내용" 안내가 유지된다(T119)', async () => {
-    renderWithFirstOpinion([]);
-    await releaseLogAndCompare();
-    expect(screen.getByTestId('assistant-recommend-where-LOG')).toHaveTextContent('이미 쓴 내용의 조건입니다');
-  });
-
-  it('직접 쓴 뒤 적용하면 비서실장 팝업이 닫히고 확인 창이 보이며, 다시 구성하면 기록 1건이다', async () => {
-    const actions: { type: string; evidenceIds: string[] }[] = [];
-    renderReactions(actions);
-    await applyLogOnDirtyText();
-    expect(screen.queryByTestId('assistant-panel')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('rebuild-confirm-rebuild'));
-    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
-    expect(actions.filter((e) => e.type === 'CONDITION_RECOMMEND_APPLY').map((e) => e.evidenceIds)).toEqual([['LOG']]);
-  });
-
-  it('직접 쓴 내용 유지를 고르면 조건 적용 기록을 남기지 않는다', async () => {
-    const actions: { type: string; evidenceIds: string[] }[] = [];
-    renderReactions(actions);
-    await applyLogOnDirtyText();
-    fireEvent.click(screen.getByTestId('rebuild-confirm-keep'));
-    expect(screen.queryByTestId('rebuild-confirm')).not.toBeInTheDocument();
-    expect(actions.filter((e) => e.type === 'CONDITION_RECOMMEND_APPLY')).toEqual([]);
-  });
-
-  it('추천 답변을 고른 뒤 본문을 고쳐 조건이 빠지면 적용 버튼 대신 직접 써 달라고 안내한다', async () => {
-    expect(logIndex).toBeGreaterThanOrEqual(0);
-    renderReactions([]);
-    fireEvent.click(screen.getByTestId(`followup-option-${logIndex}`));
-    fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '제 나름의 답변입니다.' } });
-    fireEvent.click(screen.getByTestId('assistant-toggle'));
-    fireEvent.click(screen.getByTestId('assistant-action-compare'));
-    await screen.findByTestId('assistant-recommend-opening', {}, { timeout: 2000 });
-    expect(screen.queryByTestId('assistant-recommend-apply-LOG')).not.toBeInTheDocument();
-    expect(screen.getByTestId('assistant-recommend-manual-LOG')).toHaveTextContent('직접 써 주세요');
   });
 });
 
@@ -1058,48 +906,6 @@ describe('ReactionsScreen 기울어진 방향(T118)', () => {
         (o) => !o.keepPrevious && ((o.side ?? 'FOR') === 'FOR' || o.side === 'BOTH'),
       );
       expect(visibleOptionTexts().length).toBe(forOptions.length);
-    });
-
-    it('첫 의견에서 문구를 고르고 칩을 해제해 제출했어도 비서실장 적용은 숨긴 카드를 고르지 않고 칩을 재확정한다(Codex 108차)', async () => {
-      const opinions: Opinion[] = [
-        {
-          id: 'o1',
-          originalText: '자동 승인마다 승인 사유를 기록합시다.',
-          selectedPhraseIds: ['P2'],
-          confirmedConditionIds: [],
-          stance: 'FOR',
-          createdAt: 0,
-        },
-      ];
-      render(
-        <ReactionsScreen
-          {...baseProps()}
-          scenario={ai}
-          opinions={opinions}
-          mode="scripted"
-          roleStatus={idleRoleStatus}
-          statements={[]}
-          roundLog={[]}
-          stances={aiStances}
-        />,
-      );
-      const logIndexes = ai.followUp.options
-        .map((option, index) => ({ option, index }))
-        .filter(({ option }) => option.proposeConditionId === 'LOG' && (option.side ?? 'FOR') === 'FOR');
-      expect(logIndexes.length).toBeGreaterThan(0);
-      fireEvent.click(screen.getByTestId('assistant-toggle'));
-      fireEvent.click(screen.getByTestId('assistant-action-compare'));
-      fireEvent.click(await screen.findByTestId('assistant-recommend-apply-LOG', {}, { timeout: 2000 }));
-      for (const { option, index } of logIndexes) {
-        expect(screen.queryByTestId(`followup-option-${index}`)).not.toBeInTheDocument();
-        expect((screen.getByTestId('followup-textarea') as HTMLTextAreaElement).value).not.toContain(option.text);
-      }
-      // 답을 쓰기 시작하면 재확정된 LOG 칩이 눌린 상태로 보인다.
-      fireEvent.change(screen.getByTestId('followup-textarea'), { target: { value: '이어서 직접 씁니다.' } });
-      expect(screen.getByTestId('condition-chip-LOG')).toHaveAttribute('aria-pressed', 'true');
-      // 이전 의견에서 확정되지 않았던 조건이라 '기존 확정'이 아니라 새 조건으로 보인다.
-      expect(screen.getByTestId('condition-chip-LOG')).toHaveClass('condition-chip--new');
-      expect(screen.getByTestId('condition-chip-LOG')).toHaveTextContent('+ 새 조건');
     });
   });
 });

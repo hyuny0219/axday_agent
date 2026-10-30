@@ -9,7 +9,7 @@
 // T74(docs/design/mockups/S4_Reactions.html 시안 그대로): 왼쪽 열은 무대(App.tsx가
 // 그린다) 아래 HUD 입력 상자("MY REPLY · 내 답변" — DiscussScreen의 DraftEditor를
 // label·testid만 바꿔 그대로 재사용) + CONDITIONS 칩(ConditionChips 그대로 재사용) +
-// 버튼 줄([AI 비서실장 열기][답변 전달 ▶]). 오른쪽 종이는 STEP 04 + 제목 + 반응 카드
+// 버튼 줄([발언 정리][답변 전달 ▶]). 오른쪽 종이는 STEP 04 + 제목 + 반응 카드
 // 2×2(live는 LiveStatementCards variant='reaction', scripted는 이 파일의
 // .reaction-card) + 점선 FOLLOW-UP 상자 + 추천 답변 체크 카드 2열(PhraseCard를
 // followUp.options에 재사용 — 여러 개 선택 가능, 고르면 왼쪽 답변에 이어 붙는다,
@@ -83,13 +83,6 @@ import type { AssistantAdapter } from '../../services/assistant/types';
 import { MEMBER_LABELS } from '../memberLabels';
 import { SHORT_STANCE_LABEL } from '../moodLabel';
 import {
-  conditionSourceHint,
-  isConditionOffered,
-  isLaterStageOnly,
-  releasedHint,
-} from '../conditionSource';
-import { findFollowUpIndexForCondition } from '../recommendMatch';
-import {
   changeCauseLabel,
   reactionBodyText,
   reactionsFor,
@@ -101,6 +94,10 @@ import type { LeaningMap } from '../../domain/stance';
 import type { RoundLogEntry } from '../minutes';
 import { DraftEditor } from '../parts/DraftEditor';
 import { PhraseCard } from '../parts/PhraseCard';
+import { useAutoReport, useAutoRun } from '../parts/autoRunContext';
+import { ThinkingCard } from '../parts/ThinkingCard';
+import { useThinkingReveal } from '../parts/thinkingContext';
+import { useMatchMedia } from '../useMatchMedia';
 import { reactionsAnswerNextStep, reactionsListenNextStep } from '../../domain/nextStep';
 import { nextStepAttr, useFocusGate } from '../parts/focusRing';
 import { RebuildConfirm } from '../parts/RebuildConfirm';
@@ -145,8 +142,6 @@ export interface ReactionsScreenProps {
   roundLog: RoundLogEntry[];
   /** 무대 표정 배지의 접근 가능한 대응 텍스트(T63). */
   stances: Record<ExecMemberId, Stance>;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록 revision. */
-  transcriptRevision: number;
   /** 입장 선택(T89, 사용자 지시 "반응에 답하기에서도 내 의견에서와 마찬가지로 선택할
    * 수 있도록") — App.tsx StageRouter의 state를 DiscussScreen과 공유한다. DISCUSS에서
    * 고른 쪽이 기본값으로 이어지고, 여기서 바꿀 수도 있다. */
@@ -173,6 +168,9 @@ export interface ReactionsScreenProps {
   /** 실패한 역할만 골라 REACTIONS 라운드를 다시 부른다(T65 "다시 요청"). live에서만 쓴다. */
   onRetryFailedRoles?: (roleIds: ExecMemberId[]) => void;
 }
+
+/** T148: 반응 듣기에서 "…" 뒤에 차례로 뜨는 자리(임원 네 명 + 추가 질문). */
+const THINKING_ORDER: readonly string[] = [...EXEC_MEMBER_ORDER, 'FOLLOWUP'];
 
 /** 반응 카드(scripted) 왼쪽 띠·stance 글자색에 쓰는 소문자 modifier(DiscussScreen·
  * OpinionsScreen의 STANCE_MODIFIER와 같은 값). */
@@ -201,7 +199,6 @@ export function ReactionsScreen({
   statements,
   roundLog,
   stances,
-  transcriptRevision,
   side,
   onViewChange,
   onChooseSide,
@@ -279,7 +276,15 @@ export function ReactionsScreen({
         (entry) => entry.stage === 'REACTIONS' && entry.roleId === roleId && entry.status === 'failed',
       ),
   );
-  const listenLocked = !readOnly && mode === 'live' && !allExecsSettled;
+  // T148: scripted 반응 듣기는 임원 네 명과 추가 질문이 함께 "…"로 고민한 뒤 한 번에 뜬다(지난 화면·reduced-motion은 바로).
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  const thinking = useThinkingReveal(
+    'REACTIONS',
+    THINKING_ORDER,
+    mode === 'scripted' && step === 'listen' && !readOnly && !reducedMotion,
+    scenario.id,
+  );
+  const listenLocked = !readOnly && ((mode === 'live' && !allExecsSettled) || (mode === 'scripted' && !thinking.done));
 
   // 추천 답변 체크 카드(T74): 선택된 것(문자열 인덱스)을 followUp.options 순서대로
   // 이어 붙여 textValue를 구성한다 — DISCUSS의 selectedPhraseIds·buildDraftText와 같은
@@ -292,9 +297,6 @@ export function ReactionsScreen({
   // 다시 구성하지 않은 동안) true다. P1-a·P1-b(위 주석) 모두 이 플래그로 가른다.
   const [dirty, setDirty] = useState(() => readOnly && pastOpinion !== null);
   const [pendingOptionIndex, setPendingOptionIndex] = useState<number | null>(null);
-  // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 승인 시 전체를 한 번에 반영한다.
-  const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
-  const [pendingBatch, setPendingBatch] = useState<{ index: number; conditionId: string }[] | null>(null);
   const [acceptedConditionIds, setAcceptedConditionIds] = useState<string[]>(() =>
     readOnly && pastOpinion ? pastOpinion.confirmedConditionIds : previousConfirmedIds,
   );
@@ -305,10 +307,6 @@ export function ReactionsScreen({
   const [assistantUsedHere, setAssistantUsedHere] = useState(false);
   // discuss-screen과 같은 이유로 textValue가 바뀔 때마다 늘린다.
   const [draftRevision, setDraftRevision] = useState(0);
-  const transcript = useMemo(
-    () => ({ revision: transcriptRevision, statements }),
-    [transcriptRevision, statements],
-  );
 
   const composeText = useCallback(
     (ids: string[]) =>
@@ -330,7 +328,6 @@ export function ReactionsScreen({
     }
     onChooseSide(next);
     setPendingOptionIndex(null);
-    setPendingBatch(null);
     if (selectedOptionIds.length === 0) {
       return;
     }
@@ -476,8 +473,7 @@ export function ReactionsScreen({
     if (pendingOptionIndex === null) {
       return;
     }
-    const batch = pendingBatch ?? [{ index: pendingOptionIndex, conditionId: null }];
-    const toggled = batch.map((item) => String(item.index));
+    const toggled = [String(pendingOptionIndex)];
     const flip = (previous: string[]) => {
       const kept = previous.filter((id) => !toggled.includes(id));
       const added = toggled.filter((id) => !previous.includes(id));
@@ -495,14 +491,6 @@ export function ReactionsScreen({
       setDraftRevision((value) => value + 1);
     }
     setPendingOptionIndex(null);
-    setPendingBatch(null);
-    // '유지'는 직접 쓴 답을 그대로 두어 조건이 제안되지 않으므로 기록하지 않는다(PR #20
-    // Codex 31차 P2-2). 다시 구성했을 때만 실제 반영분을 기록한다.
-    for (const item of batch) {
-      if (choice === 'rebuild' && item.conditionId !== null) {
-        handleAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
-      }
-    }
   }
 
   function handleKeepCustomText() {
@@ -574,136 +562,22 @@ export function ReactionsScreen({
     );
   }
 
-  // AI 비서실장 "조건 추천"의 "적용"(T96) — DiscussScreen.handleRecommendCondition과
-  // 같은 규칙으로, 그 조건과 연결된 추천 답변 체크 카드를 고른다.
-  // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
-  // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
-  const guideSide = side ?? lastOpinion?.stance ?? 'FOR';
-  // T119(Codex 103차): 제안돼 있지만 칩을 해제해 지금은 빠진 조건 — 칩을 다시 확정하면 된다.
-  // 출처는 실제로 고른 추천 답변만 센다 — 카드를 안 고르고 직접 쓴 조건은 "이미 쓴 내용"이다.
-  function releasedSourceText(conditionId: string): string {
-    const picked = scenario.followUp.options.some(
-      (option, index) => option.proposeConditionId === conditionId && selectedOptionIds.includes(String(index)),
-    );
-    if (picked) {
-      return '이미 고른 답변의 조건입니다';
+  // 자동 진행(T147): 1/2의 '답하러 가기'는 참가자가 누른다. 호스트에 지금 단계를 알리고,
+  // 2/2에서 고른 추가 답변 동작이 시작되면 그 추천 답변을 담는다.
+  const autoAction = useAutoRun().action;
+  const reportAutoStep = useAutoReport().reactionsStep;
+  useEffect(() => {
+    reportAutoStep(step);
+  }, [step, reportAutoStep]);
+  useEffect(() => {
+    if (readOnly || autoAction?.kind !== 'PICK_FOLLOWUP' || step === 'listen') return;
+    const index = Number(autoAction.targetId);
+    if (!selectedOptionIds.includes(autoAction.targetId) && !duplicateOptionIndexes.has(index)) {
+      handleToggleOption(index);
     }
-    // 이전 단계(첫 의견)에서 고른 문구가 이 조건을 제안했으면 그 문구의 DISCUSS 카드 번호를 말한다.
-    // 번호는 첫 의견 화면에서 보였던 번호여야 하므로 지금 고른 입장이 아니라 첫 의견 당시 입장 기준이다.
-    const firstSide = lastOpinion?.stance ?? 'FOR';
-    const visible = scenario.phrases.filter((phrase) => {
-      const phraseSide = phrase.side ?? 'FOR';
-      return phraseSide === 'BOTH' || phraseSide === firstSide;
-    });
-    const firstIndex = visible.findIndex(
-      (phrase) => phrase.conditionId === conditionId && (lastOpinion?.selectedPhraseIds ?? []).includes(phrase.id),
-    );
-    return firstIndex >= 0
-      ? `이미 고른 문구 ${firstIndex + 1}번(첫 의견)의 조건입니다`
-      : '이미 쓴 내용의 조건입니다';
-  }
-
-  // T120: 그 조건을 제안하는 보이는 추천 답변이 없고 전부 첫 의견과 겹쳐 숨겨진 경우 — 안내는
-  // 숨긴 카드가 아니라 첫 의견에서 이미 고른 문구를 가리킨다.
-  function isHiddenOnlyCondition(conditionId: string): boolean {
-    const offering = scenario.followUp.options
-      .map((option, index) => ({ option, index }))
-      .filter(
-        ({ option }) =>
-          option.proposeConditionId === conditionId &&
-          !option.keepPrevious &&
-          ((option.side ?? 'FOR') === 'BOTH' || (option.side ?? 'FOR') === guideSide),
-      );
-    return offering.length > 0 && offering.every(({ index }) => duplicateOptionIndexes.has(index));
-  }
-
-  function isReleasedCondition(conditionId: string): boolean {
-    return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
-  }
-  const conditionGuide = useMemo(
-    () => ({
-      hint: (id: string) =>
-        isReleasedCondition(id)
-          ? releasedHint(releasedSourceText(id))
-          : isHiddenOnlyCondition(id)
-            ? releasedSourceText(id)
-            : conditionSourceHint(scenario, id, guideSide, 'REACTIONS'),
-      // 칩만 해제한 조건은 입장이 바뀌어 추천 답변에 없어도 칩을 다시 눌러 붙일 수 있다(T137: 두 입장의 조건이 다르다).
-      offered: (id: string) => isReleasedCondition(id) || isConditionOffered(scenario, id, guideSide),
-      later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, guideSide, 'REACTIONS'),
-    }),
+    // 동작이나 단계가 바뀔 때만 처리한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, guideSide, proposedConditionIds, acceptedConditionIds, selectedOptionIds, lastOpinion, duplicateOptionIndexes],
-  );
-
-  function canApplyRecommendation(conditionId: string): boolean {
-    return (
-      confirmedConditionIds.includes(conditionId) ||
-      isReleasedCondition(conditionId) ||
-      findFollowUpIndexForCondition(scenario, conditionId, side ?? lastOpinion?.stance ?? 'FOR', selectedOptionIds, duplicateOptionIndexes) >= 0
-    );
-  }
-
-  function handleRecommendCondition(conditionId: string): boolean {
-    return handleRecommendConditions([conditionId]).length > 0;
-  }
-
-  // 묶음 "모두 적용"(PR #20 Codex 28차 P2-1) — 선택 목록을 로컬에서 접어 한 번만 반영하고,
-  // 실제로 반영된 조건 id를 돌려준다.
-  function handleRecommendConditions(conditionIds: string[]): string[] {
-    if (pendingOptionIndex !== null) {
-      return [];
-    }
-    // 해제된 조건은 칩을 다시 확정하고, 나머지는 추천 답변 카드를 체크해 적용한다.
-    const released = conditionIds.filter(isReleasedCondition);
-    if (released.length > 0) {
-      setAcceptedConditionIds((previous) => uniqueInOrder([...previous, ...released]));
-      const rest = conditionIds.filter((id) => !released.includes(id));
-      return [...released, ...(rest.length > 0 ? applyRecommendedOptions(rest) : [])];
-    }
-    return applyRecommendedOptions(conditionIds);
-  }
-
-  function applyRecommendedOptions(conditionIds: string[]): string[] {
-    const resolvedSide = side ?? lastOpinion?.stance ?? 'FOR';
-    if (dirty) {
-      // 직접 고친 내용이 있으면 확인 UI를 먼저 띄운다(handleToggleOption과 같은 규칙).
-      // 묶음 전체를 보존해 승인 시 한 번에 반영하고 그때 기록한다.
-      const batch: { index: number; conditionId: string }[] = [];
-      for (const conditionId of conditionIds) {
-        const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, [
-          ...selectedOptionIds,
-          ...batch.map((item) => String(item.index)),
-        ], duplicateOptionIndexes);
-        if (index >= 0) {
-          batch.push({ index, conditionId });
-        }
-      }
-      const first = batch[0];
-      if (first) {
-        setPendingBatch(batch);
-        setPendingOptionIndex(first.index);
-        setAssistantCloseRequest((value) => value + 1);
-      }
-      return [];
-    }
-    let next = selectedOptionIds;
-    const appliedIds: string[] = [];
-    for (const conditionId of conditionIds) {
-      const index = findFollowUpIndexForCondition(scenario, conditionId, resolvedSide, next, duplicateOptionIndexes);
-      if (index < 0) {
-        continue;
-      }
-      next = [...next, String(index)];
-      appliedIds.push(conditionId);
-    }
-    if (appliedIds.length > 0) {
-      setSelectedOptionIds(next);
-      setTextValue(composeText(next));
-      setDraftRevision((value) => value + 1);
-    }
-    return appliedIds;
-  }
+  }, [autoAction, step]);
 
   function handleSubmit() {
     if (!canSubmit) {
@@ -818,6 +692,7 @@ export function ReactionsScreen({
             onClick={onAdvanceStep}
             disabled={listenLocked}
             data-testid="reactions-advance"
+            data-auto-click="reactions-advance"
             {...nextStepAttr(gate.visible && reactionsListenNextStep({ locked: listenLocked }) === 'advance')}
             aria-describedby={listenLocked ? 'reactions-advance-why' : undefined}
           >
@@ -865,7 +740,16 @@ export function ReactionsScreen({
               />
             ) : (
               <div className="reactions-screen__cards">
-                {EXEC_MEMBER_ORDER.map((memberId) => {
+                {EXEC_MEMBER_ORDER.map((memberId, memberIndex) => {
+                  if (memberIndex >= thinking.shownCount) {
+                    return thinking.thinkingIds.includes(memberId) ? (
+                      <ThinkingCard
+                        key={memberId}
+                        label={MEMBER_LABELS[memberId]}
+                        testId={`thinking-card-${memberId}`}
+                      />
+                    ) : null;
+                  }
                   const reactions = reactionsFor(scenario, memberId, previousConfirmedIds);
                   const opposition = oppositionReactionText(
                     scenario,
@@ -934,6 +818,11 @@ export function ReactionsScreen({
                 })}
               </div>
             )}
+            {thinking.shownCount < THINKING_ORDER.length ? (
+              thinking.thinkingIds.includes('FOLLOWUP') && (
+                <ThinkingCard label={`추가 질문 · ${followUpPrompt.askedBy}`} testId="thinking-card-FOLLOWUP" />
+              )
+            ) : (
             <div className="reactions-screen__followup" data-testid="followup-question">
               <span className="reactions-screen__followup-label">
                 추가 질문 · {followUpPrompt.askedBy}가 묻습니다
@@ -945,6 +834,7 @@ export function ReactionsScreen({
                 />
               </p>
             </div>
+            )}
           </div>
         </div>
         {skipCheckDialog}
@@ -953,7 +843,7 @@ export function ReactionsScreen({
   }
 
   // "다시 답하기"(T89 2/2): DiscussScreen과 같은 구성 — 왼쪽 열은 무대 + 내 답변
-  // 편집기(discuss-screen__hud와 같은 모양) + [AI 비서실장에게 맡기기][답하지 않고
+  // 편집기(discuss-screen__hud와 같은 모양) + [발언 정리][답하지 않고
   // 넘어가기][답변 전달 ▶], 오른쪽 종이는 질문 한 줄 + 입장 선택 + 그 쪽(+BOTH)
   // 추천 답변 그리드 + 근거 자료 버튼이다. 레이아웃·CSS는 discuss.css의
   // discuss-screen__paper·head·step·title·phrase-hint·guide·phrase-list·
@@ -1012,19 +902,9 @@ export function ReactionsScreen({
           <AssistantPanel
             scenario={scenario}
             sessionId={sessionId}
-            selectedConditionIds={confirmedConditionIds}
-            participantStance={boardParticipantStance}
             mode={mode}
-            stances={effectiveStances}
-            awaitingAnswerIds={awaitingAnswerIds}
-            onRecommendCondition={handleRecommendCondition}
-            onRecommendConditions={handleRecommendConditions}
-            canApplyCondition={canApplyRecommendation}
-            conditionGuide={conditionGuide}
-            closeRequest={assistantCloseRequest}
             draftText={textValue}
             draftRevision={draftRevision}
-            transcript={transcript}
             onApplyDraft={handleTextChange}
             onAssistantAction={handleAssistantAction}
             onOpenChange={handleAssistantOpenChange}
@@ -1048,6 +928,7 @@ export function ReactionsScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-followup"
+            data-auto-click="reactions-submit"
             data-sound="send"
             {...nextStepAttr(gate.visible && answerStep === 'submit')}
             aria-describedby={!canSubmit ? 'reactions-submit-why' : undefined}

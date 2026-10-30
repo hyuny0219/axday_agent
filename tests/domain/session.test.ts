@@ -259,7 +259,7 @@ describe('단계 밖 액션 무시', () => {
       session,
       {
         type: 'RECORD_ASSISTANT_ACTION',
-        entry: { type: 'OPINION_SUMMARY', mode: 'scripted', evidenceIds: [] },
+        entry: { type: 'DRAFT_REFINE', mode: 'scripted', evidenceIds: [] },
       },
       T0,
     );

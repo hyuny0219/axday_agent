@@ -1,0 +1,116 @@
+// 자동 진행 표시(T144, copilot_secret_agent 참고): 자막 띠 + 노란 강조 상자, 그리고
+// 참가자 차례의 'CLICK 눌러서 …' 알약(나머지 어둡게 + 흰 테두리). body로 portal해 화면 맞춤
+// 축소(transform)의 영향을 받지 않는다. 클릭은 막지 않는다 — 입력 막기는 호스트가 맡는다.
+
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AUTO_BAR_LABEL, AUTO_PILL_PREFIX } from '../../content/autoPlay';
+import '../../styles/screens/autoPlay.css';
+
+export interface AutoOverlayProps {
+  mode: 'run' | 'click';
+  /** 강조할 요소를 찾는 CSS 선택자. 여럿이면 nth번째. */
+  selector: string | null;
+  nth?: number;
+  /** run: 이미 타이핑된 자막. */
+  caption?: string;
+  /** click: 알약에 쓸 버튼 이름. */
+  clickLabel?: string;
+}
+
+interface Rect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+function measure(selector: string | null, nth: number): Rect | null {
+  if (!selector) return null;
+  const element = document.querySelectorAll(selector)[nth];
+  if (!element) return null;
+  const box = element.getBoundingClientRect();
+  if (box.width === 0 && box.height === 0) return null;
+  return { left: box.left, top: box.top, width: box.width, height: box.height };
+}
+
+const PILL_HEIGHT = 46;
+const PILL_GAP = 14;
+
+interface PillPlace {
+  left: number;
+  top: number;
+  transform: string;
+}
+
+/** 알약 자리: 기본은 버튼 위. 위가 무대(임원 이름표 등)를 가리면 아래, 아래가 모자라면 오른쪽에 둔다. */
+function placePill(box: Rect): PillPlace {
+  const stage = document.querySelector('.stage-band')?.getBoundingClientRect() ?? null;
+  const aboveBottom = box.top - PILL_GAP;
+  const aboveTop = aboveBottom - PILL_HEIGHT;
+  const coversStage = stage !== null && aboveBottom > stage.top && aboveTop < stage.bottom;
+  const centerX = box.left + box.width / 2;
+  if (aboveTop >= 8 && !coversStage) {
+    return { left: centerX, top: aboveBottom, transform: 'translate(-50%, -100%)' };
+  }
+  const belowTop = box.top + box.height + PILL_GAP;
+  if (belowTop + PILL_HEIGHT <= window.innerHeight - 8) {
+    return { left: centerX, top: belowTop, transform: 'translate(-50%, 0)' };
+  }
+  return { left: box.left + box.width + PILL_GAP, top: box.top + box.height / 2, transform: 'translate(0, -50%)' };
+}
+
+function sameRect(a: Rect | null, b: Rect | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+}
+
+export function AutoOverlay({ mode, selector, nth = 0, caption = '', clickLabel = '' }: AutoOverlayProps) {
+  const [rect, setRect] = useState<Rect | null>(null);
+  // 요소 위치를 따라간다. 시간 계산이 아니라 화면 위치 측정이라 실제 타이머를 써도 된다.
+  const [measureTick, setMeasureTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setMeasureTick((value) => value + 1), 150);
+    const onResize = () => setMeasureTick((value) => value + 1);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+  useEffect(() => {
+    if (!selector) return;
+    document.querySelectorAll(selector)[nth]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [selector, nth]);
+  useLayoutEffect(() => {
+    const next = measure(selector, nth);
+    setRect((previous) => (sameRect(previous, next) ? previous : next));
+  }, [selector, nth, measureTick]);
+
+  const pad = mode === 'click' ? 6 : 4;
+  const boxStyle = rect
+    ? { left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }
+    : undefined;
+
+  return createPortal(
+    <div className="auto-overlay" data-testid={mode === 'run' ? 'auto-overlay' : 'auto-click'} data-auto-mode={mode}>
+      {boxStyle && <div className={mode === 'run' ? 'auto-box' : 'auto-spot'} style={boxStyle} />}
+      {mode === 'click' && boxStyle && (
+        <div
+          className="auto-pill"
+          data-testid="auto-pill"
+          style={placePill(boxStyle)}
+        >
+          <b>{AUTO_PILL_PREFIX}</b> {clickLabel}
+        </div>
+      )}
+      {mode === 'run' && (
+        <div className="auto-bar" data-testid="auto-bar" role="status" aria-live="polite">
+          <span className="auto-bar__label">{AUTO_BAR_LABEL}</span>
+          <span className="auto-bar__text">{caption}</span>
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+}

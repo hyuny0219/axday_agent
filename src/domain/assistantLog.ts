@@ -14,19 +14,9 @@ import type { AssistantMode } from '../services/assistant/types';
 
 export type { AssistantMode } from '../services/assistant/types';
 
-export type AssistantActionType =
-  | 'OPINION_SUMMARY'
-  | 'CONDITION_COMPARE'
-  | 'DRAFT_REFINE'
-  // T96(2026-10-08 사용자 지시 "AI 비서실장을 잘 쓰면 안건의 여러 측면에 맞는 조건을
-  // 고르는 데 큰 도움이 된다고 느끼게"): "조건 추천"을 열어 확인할 때마다
-  // CONDITION_RECOMMEND_VIEW 한 건, 추천 조건을 눌러 실제로 체크에 반영할 때마다
-  // CONDITION_RECOMMEND_APPLY 한 건(evidenceIds에 반영한 조건 id 하나를 담는다 — 이
-  // 필드는 이름과 달리 "조건 id를 담는 범용 문자열 칸"으로 재사용한다, 아래 count
-  // 집계용). 기존 세 유형과 달리 "마지막 1건만"이 아니라 "몇 번·몇 개"로 모은다
-  // (describeAdditionalHelp의 countConditionRecommendation 참고).
-  | 'CONDITION_RECOMMEND_VIEW'
-  | 'CONDITION_RECOMMEND_APPLY';
+// T149: 조건 추천을 앱에서 없애, 남은 기록 유형은 '발언 정리' 하나다. 과거 세션의
+// CONDITION_* 기록은 디코더가 알 수 없는 유형으로 보고 조용히 건너뛴다.
+export type AssistantActionType = 'DRAFT_REFINE';
 
 /** AssistantPanel이 실제로 결과를 렌더했을 때만 만드는 기록 한 건. requestedAt은
  * 참가자가 요청해 받은 결과(요약·비교·정리)의 시각이다. */
@@ -57,13 +47,7 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = [
-  'OPINION_SUMMARY',
-  'CONDITION_COMPARE',
-  'DRAFT_REFINE',
-  'CONDITION_RECOMMEND_VIEW',
-  'CONDITION_RECOMMEND_APPLY',
-];
+const KNOWN_ACTION_TYPES: readonly AssistantActionType[] = ['DRAFT_REFINE'];
 
 /** AssistantActionEvent + requestedAt을 session.assistantActions(string[])에 그대로
  * 넣을 수 있는 JSON 문자열로 굳힌다. */
@@ -116,10 +100,6 @@ function describeEntry(entry: AssistantAction): string | null {
   }
   const base = (() => {
     switch (entry.type) {
-      case 'OPINION_SUMMARY':
-        return '의견 한눈에 보기를 확인했습니다.';
-      case 'CONDITION_COMPARE':
-        return '조건 비교하기를 확인했습니다.';
       case 'DRAFT_REFINE':
         return entry.applied ? '내 발언 정리를 내 발언에 적용했습니다.' : null;
       default:
@@ -134,86 +114,16 @@ function describeEntry(entry: AssistantAction): string | null {
 
 /**
  * session.assistantActions(문자열 배열)에서 참가자가 실제로 사용한 도움만 한국어
- * 문장으로 바꾼다. 같은 유형(type)이 여러 번 있어도 한 줄만
- * 보여주되, 나중 기록이 applied:true면 먼저 있던 applied:false 기록 대신 그 줄을 쓴다
- * (미적용 요청 뒤에 실제로 적용한 경우 "미적용" 대신 "적용"으로 보여준다).
- * 디코딩할 수 없는 레이블(구조화되지 않은 값)은 조용히 무시해 실제로 없었던 도움을
- * 과장해 보여주지 않는다.
+ * 문장으로 바꾼다. 같은 유형(type)이 여러 번 있어도 한 줄만 보여주되, 나중 기록이
+ * applied:true면 먼저 있던 applied:false 기록 대신 그 줄을 쓴다. 디코딩할 수 없는
+ * 레이블은 조용히 무시해 실제로 없었던 도움을 과장해 보여주지 않는다.
  */
-/** T96 "조건 추천" 전용 집계 — 기존 세 유형("마지막 1건만 보여준다")과 달리 "몇 번
- * 열어 봤는지"·"조건을 몇 개 반영했는지"를 센다. appliedConditionIds는 evidenceIds[0]에
- * 담긴 조건 id를 중복 없이 모은다(같은 조건을 두 번 눌러도 1개로 센다). */
-function countConditionRecommendation(actionLabels: readonly string[], finalConditionIds?: readonly string[]): {
-  viewCount: number;
-  appliedConditionIds: string[];
-  /** T101: 열어 본 "조건 추천"이 보여준 조건 id(중복 없이, 처음 나온 순서). */
-  recommendedConditionIds: string[];
-} {
-  let viewCount = 0;
-  const appliedConditionIds: string[] = [];
-  const recommendedConditionIds: string[] = [];
-  for (const label of actionLabels) {
-    const entry = decodeAssistantLogEntry(label);
-    if (!entry) {
-      continue;
-    }
-    if (entry.failed) {
-      continue;
-    }
-    if (entry.type === 'CONDITION_RECOMMEND_VIEW') {
-      viewCount += 1;
-      for (const id of entry.evidenceIds) {
-        if (!recommendedConditionIds.includes(id)) {
-          recommendedConditionIds.push(id);
-        }
-      }
-    } else if (entry.type === 'CONDITION_RECOMMEND_APPLY') {
-      const conditionId = entry.evidenceIds[0];
-      // 기록은 취소되지 않으므로, 최종안 조건이 주어지면 거기 남은 조건만 센다(PR #20 Codex 33차 P2-3).
-      if (finalConditionIds && conditionId && !finalConditionIds.includes(conditionId)) {
-        continue;
-      }
-      if (conditionId && !appliedConditionIds.includes(conditionId)) {
-        appliedConditionIds.push(conditionId);
-      }
-    }
-  }
-  return { viewCount, appliedConditionIds, recommendedConditionIds };
-}
-
-/** "조건 추천 N회 · 이름, 이름 → N개 반영" 한 줄(T101). 추천한 조건 이름은 세 개까지만
- * 보여주고 나머지는 "외 N개"로 줄인다. 이름을 찾을 수 없는 id(옛 기록)는 건너뛴다. */
-function describeConditionRecommendation(
-  recommendation: ReturnType<typeof countConditionRecommendation>,
-  conditionLabelOf?: (conditionId: string) => string | undefined,
-): string | null {
-  const { viewCount, appliedConditionIds, recommendedConditionIds } = recommendation;
-  const applied = appliedConditionIds.length;
-  if (viewCount === 0) {
-    return applied > 0 ? `추천 조건 ${applied}개 반영` : null;
-  }
-  const names = recommendedConditionIds
-    .map((id) => conditionLabelOf?.(id))
-    .filter((name): name is string => Boolean(name));
-  const shown = names.slice(0, 3).join(', ');
-  const rest = names.length > 3 ? ` 외 ${names.length - 3}개` : '';
-  return (
-    `조건 추천 ${viewCount}회` +
-    (names.length > 0 ? ` · ${shown}${rest}` : '') +
-    (applied > 0 ? ` → ${applied}개 반영` : '')
-  );
-}
-
-export function describeAdditionalHelp(
-  actionLabels: readonly string[],
-  finalConditionIds?: readonly string[],
-  conditionLabelOf?: (conditionId: string) => string | undefined,
-): string[] {
+export function describeAdditionalHelp(actionLabels: readonly string[]): string[] {
   const order: AssistantActionType[] = [];
   const latestByType = new Map<AssistantActionType, AssistantAction>();
   for (const label of actionLabels) {
     const entry = decodeAssistantLogEntry(label);
-    if (!entry || entry.type === 'CONDITION_RECOMMEND_VIEW' || entry.type === 'CONDITION_RECOMMEND_APPLY') {
+    if (!entry) {
       continue;
     }
     const existing = latestByType.get(entry.type);
@@ -238,30 +148,17 @@ export function describeAdditionalHelp(
       lines.push(line);
     }
   }
-  const recommendation = countConditionRecommendation(actionLabels, finalConditionIds);
-  const recommendationLine = describeConditionRecommendation(recommendation, conditionLabelOf);
-  if (recommendationLine) {
-    lines.push(recommendationLine);
-  }
   return lines;
 }
 
-export type AssistantFeatureKey = 'summary' | 'compare' | 'refine';
+export type AssistantFeatureKey = 'refine';
 
-export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['summary', 'compare', 'refine'];
-
-const FEATURE_OF_ACTION: Partial<Record<AssistantActionType, AssistantFeatureKey>> = {
-  OPINION_SUMMARY: 'summary',
-  CONDITION_RECOMMEND_VIEW: 'compare',
-  CONDITION_COMPARE: 'compare',
-  DRAFT_REFINE: 'refine',
-};
+export const ASSISTANT_FEATURE_ORDER: readonly AssistantFeatureKey[] = ['refine'];
 
 /**
- * T97: DISCUSS에서 AI 비서실장 세 기능(한눈에 보기·조건 추천·발언 정리)을 각각 한 번
- * 이상 써 봤는지. 결과를 렌더했을 때뿐 아니라 실패·연결 지연 안내를 본 경우(failed)도
- * "써 본 것"으로 센다 — 연결이 늦어도 참가자가 막히지 않게 한다. 기록은 세션 단위라
- * stage는 지금 'DISCUSS'뿐이지만, 단계별 요구가 생기면 여기서 가른다.
+ * DISCUSS에서 '발언 정리'를 한 번 이상 써 봤는지(T149). 결과를 렌더했을 때뿐 아니라
+ * 실패·연결 지연 안내를 본 경우(failed)도 "써 본 것"으로 센다 — 연결이 늦어도 참가자가
+ * 막히지 않게 한다.
  */
 export function assistantFeaturesUsed(
   assistantActions: readonly string[],
@@ -272,10 +169,8 @@ export function assistantFeaturesUsed(
     return used;
   }
   for (const label of assistantActions) {
-    const entry = decodeAssistantLogEntry(label);
-    const feature = entry ? FEATURE_OF_ACTION[entry.type] : undefined;
-    if (feature) {
-      used.add(feature);
+    if (decodeAssistantLogEntry(label)?.type === 'DRAFT_REFINE') {
+      used.add('refine');
     }
   }
   return used;

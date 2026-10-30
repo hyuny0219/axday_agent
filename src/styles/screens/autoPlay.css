@@ -1,0 +1,78 @@
+/* 자동 진행 표시(T144). 코치(35)보다 위, 팝업(40)보다 위에 자막·강조 상자를 둔다(팝업 속 자료 강조).
+   모두 pointer-events:none — 입력 막기는 화면에 inert로 건다. */
+.auto-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.auto-box {
+  position: fixed;
+  box-sizing: border-box;
+  border: 3px solid #ffd23f;
+  border-radius: 8px;
+  background: rgba(255, 210, 63, 0.16);
+  box-shadow: 0 0 18px rgba(255, 210, 63, 0.55);
+  transition: left 200ms ease, top 200ms ease, width 200ms ease, height 200ms ease;
+}
+
+.auto-spot {
+  position: fixed;
+  box-sizing: border-box;
+  border: 3px solid #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62), 0 0 22px rgba(255, 255, 255, 0.7);
+}
+
+.auto-pill {
+  position: fixed;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #fff;
+  color: #10131a;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.auto-pill b {
+  color: #b36b00;
+  letter-spacing: 0.04em;
+}
+
+.auto-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(920px, calc(100vw - 32px));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 10px 18px;
+  border: 2px solid #ffd23f;
+  border-radius: 12px;
+  background: rgba(6, 20, 36, 0.94);
+  color: var(--text, #f3f7ff);
+  font-size: 18px;
+}
+
+.auto-bar__label {
+  flex: none;
+  color: #ffd23f;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.auto-bar__text {
+  min-width: 0;
+}
+
+/* 자동 진행 동작 중에는 팝업(AI 비서실장) 안의 클릭도 막는다(T145). */
+body[data-auto-running] [role='dialog'] {
+  pointer-events: none;
+}

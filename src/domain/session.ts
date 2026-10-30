@@ -33,6 +33,7 @@ export type SessionAction =
   | { type: 'START' }
   | { type: 'COACH_SET_ENABLED'; enabled: boolean }
   | { type: 'COACH_DISMISS'; step: number }
+  | { type: 'AUTO_PLAY_SET_ENABLED'; enabled: boolean }
   | { type: 'SELECT_SCENARIO'; scenarioId: string }
   | { type: 'NEXT_STAGE' }
   | {
@@ -121,6 +122,7 @@ export function createInitialSession(_now: number, sessionId: string = newSessio
     pendingVote: null,
     coachEnabled: true,
     coachDismissed: [],
+    autoPlay: true,
     warnings: [],
   };
 }
@@ -160,6 +162,10 @@ export function reduce(session: Session, action: SessionAction, now: number): Se
 
     case 'COACH_SET_ENABLED': {
       return withNoWarnings({ ...session, coachEnabled: action.enabled });
+    }
+
+    case 'AUTO_PLAY_SET_ENABLED': {
+      return withNoWarnings({ ...session, autoPlay: action.enabled });
     }
 
     case 'COACH_DISMISS': {

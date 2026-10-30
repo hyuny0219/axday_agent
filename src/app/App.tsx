@@ -26,6 +26,9 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 import { createInitialSession, newSessionId, reduce } from '../domain/session';
 import { CoachHost } from '../components/parts/CoachHost';
+import { AutoPlayHost } from '../components/parts/AutoPlayHost';
+import { ThinkingProvider } from '../components/parts/thinkingContext';
+import { AutoSideReportContext, type AutoSide } from '../components/parts/autoRunContext';
 import type { SessionAction } from '../domain/session';
 import type { Session, Stance, StatementStage } from '../domain/types';
 import { answeredRoleIds, leaningStances, liveStances, scriptedStances } from '../domain/stance';
@@ -35,7 +38,7 @@ import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
-import { coachOffByQuery, detectInitialMode } from './mode';
+import { autoOffByQuery, coachOffByQuery, detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
 import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
@@ -144,11 +147,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
       }
       const next = reduce(state, action, now);
       // `?coach=off`는 페이지 단위 설정이라 새 체험으로 리셋해도 유지한다(T104).
-      return action.type === 'OPERATOR_RESET' && coachOffByQuery() ? { ...next, coachEnabled: false } : next;
+      if (action.type !== 'OPERATOR_RESET') return next;
+      // `?auto=off`도 같은 방식으로 유지한다(T143).
+      return { ...next, ...(coachOffByQuery() ? { coachEnabled: false } : {}), autoPlay: !autoOffByQuery() };
     },
     undefined,
     // 코치는 기본 켜짐. 운영·테스트용 `?coach=off`로 시작할 때만 끈다(T104).
-    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery() }),
+    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery(), autoPlay: !autoOffByQuery() }),
   );
 
   // 회의록 패널의 라운드별 기록(roundLog, v1.0 7절, T41). stage가 실린 SET_ROLE_STATUS만
@@ -470,6 +475,11 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
   useEffect(() => {
     setSidePick(null);
   }, [session.sessionId]);
+  // T145: 자동 진행 호스트가 고른 입장을 알 수 있게 지금 화면의 선택만 올려 보낸다.
+  const reportAutoSide = useContext(AutoSideReportContext);
+  useEffect(() => {
+    if (variant === 'live') reportAutoSide(sidePick);
+  }, [variant, sidePick, reportAutoSide]);
   // 지난 화면에서는 그때 실제로 전달한 입장을 보여 준다(sidePick은 나중에 바뀌었을 수 있다).
   const side = readOnly
     ? viewPage === 'REACTIONS_LISTEN'
@@ -567,7 +577,6 @@ function StageScreen({ variant }: { variant: 'live' | 'past' }) {
           statements={session.transcript.statements}
           roundLog={roundLog}
           stances={stancesFor(session, scenario)}
-          transcriptRevision={session.transcript.revision}
           side={side}
           readOnly={readOnly}
           pastOpinion={pastOpinion}
@@ -707,22 +716,25 @@ function leaningFor(session: Session, scenario: Scenario | null): LeaningMap {
 /** 화면 + 진행 도우미(T103·T104). 화면별 안내는 한 번만 보이고 흐름을 막지 않는다. */
 function StageRouter() {
   const { session, dispatch, reactionsStep, viewPage } = useSession();
+  const [autoSide, setAutoSide] = useState<AutoSide>(null);
   return (
-    <>
+    <AutoSideReportContext.Provider value={setAutoSide}>
       {/* T126: 지금 화면은 보기 모드에서도 숨긴 채 그대로 둔다(마운트 유지) — 쓰던 글·고른 문구·
           조건 칩이 돌아왔을 때 남아 있다. 지난 화면은 따로 그린다. display:contents라 평소에는
           그리드 배치에 영향이 없다. */}
-      <div data-live-screen style={{ display: viewPage ? 'none' : 'contents' }}>
-        <StageScreen variant="live" />
-      </div>
+      <AutoPlayHost session={session} paused={viewPage !== null} clock={appClock} side={autoSide}>
+        <div data-live-screen style={{ display: viewPage ? 'none' : 'contents' }}>
+          <StageScreen variant="live" />
+        </div>
+      </AutoPlayHost>
       {viewPage !== null && (
         <div key={viewPage} data-past-screen style={{ display: 'contents' }}>
           <StageScreen variant="past" />
         </div>
       )}
       {/* T126: 지난 화면을 보는 동안은 코치 말풍선·아이콘을 끈다(실제 조작이 아니므로 안내를 소모하지 않는다). */}
-      {viewPage === null && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
-    </>
+      {viewPage === null && !session.autoPlay && <CoachHost session={session} ui={{ reactionsStep }} dispatch={dispatch} />}
+    </AutoSideReportContext.Provider>
   );
 }
 
@@ -819,6 +831,8 @@ function AppShell() {
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
             coachEnabled={session.coachEnabled}
             onToggleCoach={() => dispatch({ type: 'COACH_SET_ENABLED', enabled: !session.coachEnabled })}
+            autoPlay={session.autoPlay}
+            onToggleAutoPlay={() => dispatch({ type: 'AUTO_PLAY_SET_ENABLED', enabled: !session.autoPlay })}
           />
           {viewPage !== null && <ViewBanner onExit={exitView} />}
           {hasStageBand && scenario ? (
@@ -876,7 +890,9 @@ function AppShell() {
 export function App() {
   return (
     <SessionProvider>
-      <AppShell />
+      <ThinkingProvider>
+        <AppShell />
+      </ThinkingProvider>
     </SessionProvider>
   );
 }

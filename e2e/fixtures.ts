@@ -14,7 +14,28 @@ interface BoardroomFixtures {
   externalRequests: string[];
 }
 
+// 부스 자동 진행(T143)이 기본 켜짐이라, 기존 e2e가 직접 진행 경로를 그대로 타도록 모든
+// page.goto에 `auto=off`를 더한다(이미 auto 쿼리가 있으면 그대로 둔다). 자동 진행을 직접
+// 검증하는 spec은 `?auto=on`을 명시한다.
+function withAutoOff(url: string): string {
+  if (!url.startsWith('/') && !url.startsWith('http://localhost') && !url.startsWith('http://127.0.0.1')) {
+    return url;
+  }
+  const hashAt = url.indexOf('#');
+  const hash = hashAt >= 0 ? url.slice(hashAt) : '';
+  const base = hashAt >= 0 ? url.slice(0, hashAt) : url;
+  if (/[?&]auto=/.test(base)) return url;
+  return `${base}${base.includes('?') ? '&' : '?'}auto=off${hash}`;
+}
+
 export const test = base.extend<BoardroomFixtures>({
+  page: async ({ page }, use) => {
+    const originalGoto = page.goto.bind(page);
+    page.goto = ((url: string, options?: Parameters<Page['goto']>[1]) =>
+      originalGoto(withAutoOff(url), options)) as Page['goto'];
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- Playwright fixture의 use이지 React Hook이 아니다.
+    await use(page);
+  },
   // auto: true — 각 spec이 명시적으로 요청하지 않아도 모든 테스트에 적용된다.
   externalRequests: [
     async ({ page }, use) => {

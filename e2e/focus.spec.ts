@@ -28,7 +28,7 @@ test('BRIEFING: 아무것도 안 누르면 6초 뒤 근거 자료 버튼에 점�
   await expect(page.getByTestId('open-evidence')).toHaveAttribute('data-next-step', '');
 });
 
-test('DISCUSS: 입장 → 문구 → 비서실장 → 의견 전달 순서로 점선이 옮겨 가고 전달 뒤에는 0개다', async ({ page }) => {
+test('DISCUSS: 입장 → 문구 → 발언 정리 → 의견 전달 순서로 점선이 옮겨 가고 전달 뒤에는 0개다', async ({ page }) => {
   await toDiscuss(page);
   await expect(page.getByTestId('discuss-side-select')).toBeVisible();
 
@@ -45,15 +45,8 @@ test('DISCUSS: 입장 → 문구 → 비서실장 → 의견 전달 순서로 �
   await expect(page.getByTestId('assistant-toggle')).toHaveAttribute('data-next-step', '');
 
   await page.getByTestId('assistant-toggle').click();
-  await expect(page.getByTestId('assistant-panel')).toBeVisible();
-  // 팝업 안에서는 첫 기능 버튼 하나뿐.
-  await expect(page.locator(RING)).toHaveCount(1);
-  await expect(page.getByTestId('assistant-action-summary')).toHaveAttribute('data-next-step', '');
-
-  await page.getByTestId('assistant-action-summary').click();
-  await expect(page.getByTestId('assistant-done-summary')).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId('assistant-close').click();
-  await expect(page.getByTestId('assistant-panel')).toHaveCount(0);
+  // 발언 정리는 팝업 없이 바로 내 발언에 적용된다. 끝나면 의견 전달이 열린다.
+  await expect(page.getByTestId('submit-opinion')).toBeEnabled({ timeout: 15_000 });
 
   await expect(page.locator(RING)).toHaveCount(1);
   await expect(page.getByTestId('submit-opinion')).toHaveAttribute('data-next-step', '');

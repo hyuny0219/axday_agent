@@ -4,8 +4,7 @@
 // (AssistantPanel)가 무시할 수 있게 한다. 이 파일은 계약만 정의하며 실제 모델을
 // 부르지 않는다.
 
-import type { ExecMemberId, Scenario } from '../../content/types';
-import type { Transcript } from '../../domain/types';
+import type { Scenario } from '../../content/types';
 
 export type AssistantMode = 'scripted' | 'live';
 
@@ -15,19 +14,6 @@ export interface AssistantRequestBase {
   signal: AbortSignal;
 }
 
-export interface SummarizeOpinionsRequest extends AssistantRequestBase {
-  scenario: Scenario;
-  /** live 요약이 근거로 삼는 실제 회의 기록(지금까지의 발언). scripted는 이 필드를
-   * 쓰지 않고 scenario.initialOpinions만 본다. */
-  transcript: Transcript;
-}
-
-export interface CompareConditionsRequest extends AssistantRequestBase {
-  scenario: Scenario;
-  /** 참가자가 지금까지 확정한 조건 ID. 아직 MOTION에서 고정되기 전 값이다. */
-  selectedConditionIds: string[];
-}
-
 export interface RefineDraftRequest extends AssistantRequestBase {
   scenario: Scenario;
   /** 참가자가 직접 쓴 원문. 부정·유보 표현을 포함할 수 있으며 그대로 보존해야 한다. */
@@ -35,34 +21,6 @@ export interface RefineDraftRequest extends AssistantRequestBase {
   /** 참가자가 draftText를 바꿀 때마다 늘어나는 값(컴포넌트가 관리). live refine은 응답
    * 시점에 이 값이 더 이상 최신이 아니면 결과를 폐기한다. */
   draftRevision: number;
-}
-
-/** 임원 한 명의 발언 한 줄과 그 근거. 표 아이콘·득표수는 포함하지 않는다. */
-export interface OpinionPoint {
-  memberId: ExecMemberId;
-  text: string;
-  evidenceIds: string[];
-}
-
-export interface SummarizeOpinionsResult {
-  mode: AssistantMode;
-  evidenceIds: string[];
-  commonPoints: OpinionPoint[];
-  disagreements: OpinionPoint[];
-  /** live 요약이 실제 회의 기록을 근거로 만든 자유 형식 문장(300자 이내). scripted는
-   * commonPoints/disagreements만 쓰므로 항상 빈 문자열이다. */
-  summaryText: string;
-}
-
-export interface CompareConditionsResult {
-  mode: AssistantMode;
-  evidenceIds: string[];
-  /** 원안에는 없고 참가자가 확정한 조건 ID(반대 근거는 안건을 수정하지 않으므로 뺀다, T137). */
-  addedConditionIds: string[];
-  /** 참가자가 든 반대 근거 ID(T137). 없으면 생략한다. */
-  objectionConditionIds?: string[];
-  /** 아직 확정하지 않아 남아 있는 조건 ID(남은 확인 사항). */
-  remainingConditionIds: string[];
 }
 
 export interface RefineDraftResult {
@@ -75,8 +33,6 @@ export interface RefineDraftResult {
 }
 
 export interface AssistantAdapter {
-  summarizeOpinions(req: SummarizeOpinionsRequest): Promise<SummarizeOpinionsResult>;
-  compareConditions(req: CompareConditionsRequest): Promise<CompareConditionsResult>;
   refineDraft(req: RefineDraftRequest): Promise<RefineDraftResult>;
 }
 

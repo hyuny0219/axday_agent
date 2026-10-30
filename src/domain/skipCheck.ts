@@ -10,7 +10,7 @@ export type SkipCheckItemState = SkipCheckState | 'neutral';
 export interface SkipCheckInput {
   /** 이번 REACTIONS에서 2/2(다시 답하기) 화면에 들어간 적이 있는가. */
   answerVisited: boolean;
-  /** 이번 REACTIONS에서 AI 비서실장을 써서 결과를 받았는가(실패 안내를 본 경우도 써 본 것으로 센다). */
+  /** 이번 REACTIONS에서 발언 정리를 해서 결과를 받았는가(실패 안내를 본 경우도 써 본 것으로 센다). */
   assistantUsed: boolean;
 }
 
@@ -24,7 +24,7 @@ export interface SkipCheckItem {
 /**
  * ① 추가 질문은 읽었는지 화면이 알 수 없으므로 ✓/○ 없이 중립 표식('neutral')과 질문 원문만 보여 준다.
  * ② 추천 답변은 2/2 화면에서만 보이므로 들어간 적이 있어야 완료다.
- * ③ AI 비서실장은 선택이다.
+ * ③ 발언 정리는 선택이다.
  */
 export function skipChecklist(input: SkipCheckInput): SkipCheckItem[] {
   return [

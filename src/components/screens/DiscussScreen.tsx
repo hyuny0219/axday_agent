@@ -4,7 +4,7 @@
 // draftText다. 편집 손실 방지 규칙(직접 수정 후 체크 변경 시 확인)과 조건 제안·충돌
 // 판정은 모두 src/domain의 순수 함수(draft.ts, conditions.ts)에 위임한다. T12에서
 // AssistantPanel(선택적으로 여는 AI 비서실장 사이드 패널)을 붙였다. T31에서 draftRevision
-// (직접 입력·적용마다 늘어나는 값)과 transcript(의견 한눈에 보기 live 요청·실패 fallback)를
+// (직접 입력·적용마다 늘어나는 값)과 transcript(임원이 제안한 조건 반영)를
 // AssistantPanel에 추가로 넘긴다.
 // T73(docs/design/mockups/S3_Discuss.html·S3b_Discuss_Evidence.html 시안 그대로): 왼쪽
 // 열은 무대(StageBand, App.tsx가 그린다) 아래 HUD 입력 상자(discuss-screen__hud —
@@ -51,13 +51,7 @@ import { ConditionChips } from '../parts/ConditionChips';
 import { AssistantPanel } from '../parts/AssistantPanel';
 import { EvidenceDialog } from '../parts/EvidenceDialog';
 import { PersuasionBoard } from '../parts/PersuasionBoard';
-import {
-  conditionSourceHint,
-  isConditionOffered,
-  isLaterStageOnly,
-  releasedHint,
-} from '../conditionSource';
-import { findPhraseForCondition } from '../recommendMatch';
+import { useAutoRun } from '../parts/autoRunContext';
 import { STANCE_LABEL } from '../moodLabel';
 import '../../styles/screens/discuss.css';
 
@@ -70,7 +64,7 @@ export interface DiscussSubmitPayload {
 export interface DiscussScreenProps {
   scenario: Scenario;
   sessionId: string;
-  /** AI 비서실장 '의견 한눈에 보기'(live)가 근거로 삼는 실제 회의 기록. */
+  /** AI 비서실장 조건 추천이 참고하는 실제 회의 기록(live에서 임원이 제안한 조건). */
   transcript: Transcript;
   /** live/scripted 중 App.tsx가 session.mode로 고른 진행 방식. */
   mode: SessionMode;
@@ -132,8 +126,6 @@ export function DiscussScreen({
       : EMPTY_DRAFT_STATE,
   );
   const [pendingPhraseId, setPendingPhraseId] = useState<string | null>(null);
-  const [assistantCloseRequest, setAssistantCloseRequest] = useState(0);
-  const [pendingBatch, setPendingBatch] = useState<{ phraseId: string; conditionId: string | null }[] | null>(null);
   // AI 비서실장 드로어가 열린 동안 오른쪽 열(추천 문구·근거 자료 버튼·STANCE 칩)은
   // 시각적으로 가려지지만 포커스 대상에서는 빠지지 않아 Tab으로 숨은 "근거 자료 보기"에
   // 닿을 수 있었다(PR #11 Codex 31차). 드로어가 열려 있으면 열 전체에 inert를 걸어
@@ -196,7 +188,7 @@ export function DiscussScreen({
   );
 
   const showNoMatchHint = draft.draftText.trim() !== '' && proposedConditionIds.length === 0;
-  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 한 가지 이상(T109에서 세 가지 필수를
+  // T97(2026-10-08 사용자 지시): 추천 문구 선택 → AI 비서실장 한 가지 이상(T109에서 필수를
   // 완화) → 의견 전달 순서. 실패·연결 지연 안내를 본 것도 사용으로 센다(assistantFeaturesUsed).
   const assistantUsed = useMemo(
     () => assistantFeaturesUsed(assistantActions, 'DISCUSS'),
@@ -249,7 +241,6 @@ export function DiscussScreen({
     }
     onChooseSide(next);
     setPendingPhraseId(null);
-    setPendingBatch(null);
     if (draft.selectedPhraseIds.length === 0) {
       return;
     }
@@ -261,12 +252,10 @@ export function DiscussScreen({
     setDraftRevision((value) => value + 1);
   }
 
-  /** true면 즉시 적용됨, false면 RebuildConfirm 확인 대기(Codex 27차 검토 P2-3 —
-   * handleRecommendCondition이 이 값으로 "실제로 반영됐는지"를 가른다). */
+  /** true면 즉시 적용됨, false면 RebuildConfirm 확인 대기. */
   function handleTogglePhrase(phraseId: string): boolean {
     // PR #20 Codex 37차 검토 P2: RebuildConfirm이 뜬 동안(pendingPhraseId !== null)은 다른 문구를
-    // 잠근다 — 묶음(pendingBatch) 확인 중에 다른 문구를 누르면 pendingPhraseId만 바뀌고 묶음이
-    // 우선 반영돼 마지막에 누른 문구가 무시됐다. REACTIONS(handleToggleOption)와 같은 가드.
+    // 잠근다 — REACTIONS(handleToggleOption)와 같은 가드.
     if (pendingPhraseId !== null) {
       return false;
     }
@@ -280,29 +269,13 @@ export function DiscussScreen({
     return false;
   }
 
-  // 확인 대기 중인 추천 묶음(PR #20 Codex 30차 P2-2) — 직접 쓴 내용이 있을 때 묶음
-  // "모두 적용"은 확인 UI를 먼저 띄우므로, 묶음 전체를 보존했다가 승인 시 한 번에 반영한다.
-  // 추천이 아닌 일반 문구 선택(handleTogglePhrase)은 단일 pendingPhraseId만 쓴다.
   function resolvePending(choice: 'keep' | 'rebuild') {
     if (pendingPhraseId === null) {
       return;
     }
-    const batch = pendingBatch ?? [{ phraseId: pendingPhraseId, conditionId: null }];
-    let state = draft;
-    for (const item of batch) {
-      state = resolveConfirm(state, scenario, item.phraseId, choice);
-    }
-    setDraft(state);
+    setDraft(resolveConfirm(draft, scenario, pendingPhraseId, choice));
     setDraftRevision((value) => value + 1);
     setPendingPhraseId(null);
-    setPendingBatch(null);
-    // DISCUSS는 직접 쓴 글(dirty)이어도 선택 문구의 조건이 제안에 들어가므로(phraseConditionIds)
-    // 유지·다시 구성 모두 실제 확정된 조건을 기록한다(PR #20 Codex 32차 P2-1).
-    for (const item of batch) {
-      if (item.conditionId !== null) {
-        onAssistantAction({ type: 'CONDITION_RECOMMEND_APPLY', mode, evidenceIds: [item.conditionId] });
-      }
-    }
   }
 
   function handleKeep() {
@@ -326,115 +299,22 @@ export function DiscussScreen({
     );
   }
 
-  // AI 비서실장 "조건 추천"의 "적용"(T96) — 그 조건과 연결된 추천 문구를 체크한다.
-  // 이미 그 조건으로 체크된 문구가 있으면(재적용) 아무것도 하지 않는다. 입장을 아직
-  // 고르지 않았으면 'FOR' 쪽 문구를 기본으로 삼는다(PersuasionBoard·AssistantPanel의
-  // 기본 설득 목표와 같다).
-  // 표시 검사와 실행 검사가 같은 인자(현재 선택 목록)를 쓴다(PR #20 Codex 31차 P2-3). 이미
-  // 확정된 조건은 적용된 상태이므로 버튼을 그대로 둔다.
-  const conditionGuide = useMemo(
-    () => ({
-      hint: (id: string) =>
-        isReleasedCondition(id)
-          ? releasedHint(releasedSourceText(id))
-          : conditionSourceHint(scenario, id, side, 'DISCUSS'),
-      offered: (id: string) => isConditionOffered(scenario, id, side),
-      later: (id: string) => !isReleasedCondition(id) && isLaterStageOnly(scenario, id, side, 'DISCUSS'),
-    }),
+  // 자동 진행(T145): ADD_PHRASE 동작이 시작될 때 그 추천 문구를 담는다. 직접 쓴 글이 있어 확인 창이
+  // 뜨면 '다시 구성'으로 바로 처리한다. 비서실장 동작은 AssistantPanel이 같은 문맥을 읽어 처리한다.
+  const autoAction = useAutoRun().action;
+  useEffect(() => {
+    if (readOnly || autoAction?.kind !== 'ADD_PHRASE') return;
+    if (!draft.selectedPhraseIds.includes(autoAction.targetId)) {
+      handleTogglePhrase(autoAction.targetId);
+    }
+    // 동작이 바뀔 때 한 번만 담는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scenario, side, proposedConditionIds, acceptedConditionIds, draft.selectedPhraseIds],
-  );
-
-  // T119(Codex 103차): 고른 문구가 제안하지만 칩을 해제해 지금은 빠진 조건. 내용은 초안에 그대로
-  // 있으므로 "직접 써 주세요"가 아니라 칩을 다시 확정하면 된다.
-  // 출처는 실제로 고른 문구만 센다 — 문구를 안 고르고 직접 쓴 조건은 "이미 쓴 내용"이다.
-  function releasedSourceText(conditionId: string): string {
-    const visible = scenario.phrases.filter((phrase) => {
-      const phraseSide = phrase.side ?? 'FOR';
-      return phraseSide === 'BOTH' || phraseSide === (side ?? 'FOR');
-    });
-    const index = visible.findIndex(
-      (phrase) => phrase.conditionId === conditionId && draft.selectedPhraseIds.includes(phrase.id),
-    );
-    return index >= 0 ? `이미 고른 문구 ${index + 1}번의 조건입니다` : '이미 쓴 내용의 조건입니다';
-  }
-
-  function isReleasedCondition(conditionId: string): boolean {
-    return proposedConditionIds.includes(conditionId) && !acceptedConditionIds.includes(conditionId);
-  }
-
-  function canApplyRecommendation(conditionId: string): boolean {
-    return (
-      confirmedConditionIds.includes(conditionId) ||
-      isReleasedCondition(conditionId) ||
-      findPhraseForCondition(scenario, conditionId, side, draft.selectedPhraseIds) !== undefined
-    );
-  }
-
-  function handleRecommendCondition(conditionId: string): boolean {
-    return handleRecommendConditions([conditionId]).length > 0;
-  }
-
-  // 묶음 "모두 적용"(PR #20 Codex 28차 P2-1) — 조건마다 setDraft를 따로 부르면 모두 같은
-  // 렌더의 draft에서 새 상태를 만들어 뒤 호출이 앞 호출을 덮어쓴다. 갱신된 상태를 다음
-  // 조건 처리에 넘기며 로컬에서 접어 한 번만 반영하고, 실제로 반영된 조건 id를 돌려준다.
-  function handleRecommendConditions(conditionIds: string[]): string[] {
-    if (pendingPhraseId !== null) {
-      return [];
-    }
-    // 해제된 조건은 칩을 다시 확정하고, 나머지는 문구를 체크해 적용한다.
-    const released = conditionIds.filter(isReleasedCondition);
-    if (released.length > 0) {
-      setAcceptedConditionIds((previous) => uniqueInOrder([...previous, ...released]));
-      const rest = conditionIds.filter((id) => !released.includes(id));
-      return [...released, ...(rest.length > 0 ? applyRecommendedPhrases(rest) : [])];
-    }
-    return applyRecommendedPhrases(conditionIds);
-  }
-
-  function applyRecommendedPhrases(conditionIds: string[]): string[] {
-    if (draft.dirty) {
-      // 직접 쓴 내용이 있으면 확인 UI를 먼저 띄운다. 묶음 전체를 보존해 승인 시 한 번에
-      // 반영하고, 그때 기록한다(지금은 아직 반영되지 않았으므로 빈 목록).
-      const batch: { phraseId: string; conditionId: string }[] = [];
-      for (const conditionId of conditionIds) {
-        const phrase = findPhraseForCondition(
-          scenario,
-          conditionId,
-          side,
-          [...draft.selectedPhraseIds, ...batch.map((item) => item.phraseId)],
-        );
-        if (phrase) {
-          batch.push({ phraseId: phrase.id, conditionId });
-        }
-      }
-      const first = batch[0];
-      if (first) {
-        setPendingBatch(batch);
-        setPendingPhraseId(first.phraseId);
-        setAssistantCloseRequest((value) => value + 1);
-      }
-      return [];
-    }
-    let state = draft;
-    const appliedIds: string[] = [];
-    for (const conditionId of conditionIds) {
-      const phrase = findPhraseForCondition(scenario, conditionId, side, state.selectedPhraseIds);
-      if (!phrase) {
-        continue;
-      }
-      const result = togglePhrase(state, scenario, phrase.id);
-      if (result.kind === 'applied') {
-        state = result.state;
-        appliedIds.push(conditionId);
-      }
-    }
-    if (appliedIds.length > 0) {
-      setDraft(state);
-      setDraftRevision((value) => value + 1);
-    }
-    return appliedIds;
-  }
+  }, [autoAction]);
+  const autoEnabled = useAutoRun().enabled;
+  useEffect(() => {
+    if (autoEnabled && pendingPhraseId !== null) resolvePending('rebuild');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEnabled, pendingPhraseId]);
 
   function handleSubmit() {
     if (!canSubmit) {
@@ -478,21 +358,11 @@ export function DiscussScreen({
           <AssistantPanel
             scenario={scenario}
             sessionId={sessionId}
-            selectedConditionIds={confirmedConditionIds}
-            participantStance={side}
             mode={mode}
-            stances={stances}
-            onRecommendCondition={handleRecommendCondition}
-            onRecommendConditions={handleRecommendConditions}
-            canApplyCondition={canApplyRecommendation}
-            conditionGuide={conditionGuide}
-            closeRequest={assistantCloseRequest}
             draftText={draft.draftText}
             draftRevision={draftRevision}
-            transcript={transcript}
             onApplyDraft={handleDraftTextChange}
             onAssistantAction={onAssistantAction}
-            requiredFeatures={{ used: assistantUsed }}
             focusNext={!readOnly && gate.armed && nextStep === 'assistant'}
             toggleLocked={!draftReady}
             toggleLockedHint={side === null ? '먼저 입장을 골라 주세요' : undefined}
@@ -505,6 +375,7 @@ export function DiscussScreen({
             disabled={!canSubmit}
             onClick={handleSubmit}
             data-testid="submit-opinion"
+            data-auto-click="discuss-submit"
             data-sound="send"
             {...nextStepAttr(gate.visible && nextStep === 'submit')}
             aria-describedby={!canSubmit ? 'discuss-submit-why' : undefined}
@@ -516,7 +387,7 @@ export function DiscussScreen({
               {side === null
                 ? '먼저 입장을 골라 주세요'
                 : draftReady
-                ? 'AI 비서실장을 한 번 써 보세요'
+                ? '발언 정리를 한 번 해 보세요'
                 : '추천 문구를 고르거나 직접 써 주세요'}
             </span>
           )}
@@ -542,6 +413,7 @@ export function DiscussScreen({
           <div
             className="side-select"
             data-testid="discuss-side-select"
+            data-auto-click="discuss-side"
             {...nextStepAttr(gate.visible && nextStep === 'side')}
           >
             <button

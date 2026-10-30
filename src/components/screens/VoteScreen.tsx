@@ -232,6 +232,7 @@ export function VoteScreen({
           <fieldset
             className="vote-screen__choices"
             disabled={submitted}
+            data-auto-click="vote-stamps"
             {...nextStepAttr(gate.visible && nextStep === 'choice')}
           >
             <legend className="vote-screen__sr-only">이사님의 최종 표를 선택해 주세요</legend>
@@ -270,6 +271,7 @@ export function VoteScreen({
               aria-describedby={pendingVote === null && !submitted ? 'vote-confirm-why' : undefined}
               onClick={handleConfirm}
               data-testid="confirm-vote"
+              data-auto-click="vote-confirm"
               {...nextStepAttr(gate.visible && nextStep === 'confirm')}
             >
               {submitted ? (
