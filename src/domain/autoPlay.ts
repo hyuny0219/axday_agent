@@ -29,7 +29,7 @@ export interface AutoAction {
   durationMs: number;
 }
 
-/** 한 동작이 머무는 시간(한 동작 1~2초). */
+/** 한 동작이 머무는 가장 짧은 시간. 자막이 길면 autoActionMs가 늘린다. */
 export const AUTO_ACTION_MS = 1500;
 /** 비서실장 ①②③ 번호. */
 export const AUTO_ASSISTANT_STEPS = ['1', '2', '3'] as const;
@@ -88,7 +88,7 @@ export function pickAutoFollowUp(scenario: Scenario, stance: AutoSide): FollowUp
 }
 
 function action(kind: AutoActionKind, targetId: string, caption: string): AutoAction {
-  return { kind, targetId, caption, durationMs: AUTO_ACTION_MS };
+  return { kind, targetId, caption, durationMs: autoActionMs(caption) };
 }
 
 /** 스테이지별 자동 동작 목록. DISCUSS는 참가자가 입장을 누른 뒤(stance 필요), 나머지는 입장과 무관하다. */
@@ -133,7 +133,14 @@ export function autoPlan(stage: AutoStage, scenario: Scenario, stance: AutoSide 
 /** 첫 동작 전 잠깐 기다리는 시간(화면이 자리 잡은 뒤 시작). */
 export const AUTO_LEAD_MS = 800;
 /** 자막 한 글자를 치는 간격. */
-export const AUTO_TYPE_MS = 45;
+export const AUTO_TYPE_MS = 55;
+/** 자막을 다 친 뒤 읽을 시간(2026-10-30 사용자 지시 "끝나기 전에 지나가서 더 천천히"). */
+export const AUTO_READ_MS = 2000;
+
+/** 한 동작이 머무는 시간: 자막을 다 치고 읽을 시간까지, 짧아도 AUTO_ACTION_MS. */
+export function autoActionMs(caption: string): number {
+  return Math.max(AUTO_ACTION_MS, caption.length * AUTO_TYPE_MS + AUTO_READ_MS);
+}
 
 /** MOTION 자동 동작: 실제로 확정된 조건만 차례로 강조한다(확정 조건이 없으면 안내 한 줄). */
 export function motionAutoPlan(scenario: Scenario, confirmedConditionIds: string[]): AutoAction[] {

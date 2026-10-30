@@ -10,6 +10,7 @@
 
 | 작업 | 상태 | 비고 |
 | --- | --- | --- |
+| T143~T146 | 진행 중 | 부스 자동 진행(네 카드로 나눔: T143 기반·T144 표시·T145 DISCUSS·REACTIONS·T146 e2e·문서) — AI 비서실장 에이전트가 자료 읽기·추천 문구 담기·비서실장·추가 답변을 화면에서 해 보이고, 참가자는 찬반·다음·표결만 클릭(2026-10-30 사용자 지시). 자동 켜짐이 기본, 켜지면 scripted 고정, 안건은 참가자가 고름. 상세는 아래 T143 카드 |
 | T110 | 완료 | 난이도 조절 — 첫 의견(추천 문구)만으로 전원 설득되지 않게(2026-10-09 사용자 지시): 1차 반응은 조건이 맞아도 '고민 중'까지만, 추가 질문에 답(`session.followUpAnswered`)해야 찬성, 답하지 않고 넘어가면 표결에서 반대(반대 참가자는 대칭). scripted(`VoteContext.followUpAnswered`·`reactions[].pendingText`)와 live(프롬프트 v12) 모두. 상세는 아래 T110 카드와 DESIGN_SPEC T110 |
 | T142 | 완료 | 반응에 답하기의 '넘어가기'를 누르면 바로 넘어가지 않고 확인 체크리스트(추가 질문·추천 답변·AI 비서실장)를 먼저 띄움. 넘어간 뒤 결과는 미리 말하지 않음(2026-10-17 사용자 지시). 상세는 아래 T142 카드. 완료: 넘어가기 → 확인 팝업(질문 원문·체크 3줄, 답하러 가기 ▶ / 그래도 넘어가기, Esc는 닫기), 결과 예고 문구 없음(domain/skipCheck.ts) |
 | T141 | 완료 | AI 비서실장 세 기능 버튼에 ①②③ 번호와 추천 순서 한 줄(순서 강제 없음)(2026-10-17 사용자 지시, 시안 https://claude.ai/artifact/MP4hQmQi79FUtwdq9fXnRp B3). 상세는 아래 T141 카드. 완료: 버튼·목록·압축 줄에 ①②③ + 소개 상자 추천 순서 한 줄, 강제 없음 |
@@ -153,6 +154,64 @@
 - 하지 말 것: 기능 실행 순서 강제·버튼 비활성화, 비서실장 동작·live 요청 변경, 영문 UI.
 - 완료 확인: `npm run check`, e2e 비서실장·noscroll 1080·720(워크트리 전용 포트), 스크린샷 `discuss-assistant-intro.png` 두 해상도 갱신 뒤 Read.
 - 크기: S.
+
+## T143 부스 자동 진행(AI 비서실장 에이전트) — 참가자는 찬반·다음·표결만
+
+- 목표(2026-10-30 사용자 지시): "참가자들이 클릭만 해서 넘어갈 수 있도록. 찬반 정하는 것과 다음으로 넘어가는 부분, 마지막 투표만 하게끔 하고 결과 화면으로 이어지게. 자동화하는 부분은 copilot_secret_agent처럼 표시하면서 설명을 붙인다." 시안(사용자 확인): scratchpad `auto-flow.html`의 내용을 아래에 옮겼다. 결정: **① 자동 진행은 scripted 모드로 ② 안건은 참가자가 고른다 ③ 자동 진행은 기본 켜짐**.
+- 참가자 클릭(이것만 남긴다): 시작 · 안내 확인 · 안건 카드 · 의견 듣기 ▶ · 내 의견 쓰러 가기 ▶ · **찬성/반대** · 의견 전달 ▶ · 답변 전달 ▶ · 이 안건으로 표결 ▶ · **표결 도장 · 표결 확정 ▶** · 마무리 ▶.
+- 자동(AI 비서실장 에이전트가 화면에서 해 보임):
+  1. BRIEFING: 근거 자료 1~4를 차례로 열어(지금 '의견 듣기' 잠금을 푸는 그 동작) 핵심 문장 강조, 자막에 자료마다 한 줄(insight).
+  2. OPINIONS: 임원 의견을 한 명씩 강조하며 자막으로 걱정을 짚음.
+  3. DISCUSS: 참가자가 찬성/반대를 누르면 그 쪽 추천 문구 중 **조건이 붙는 문구를 모두** 담는다(conditionId null 문구는 담지 않음) → 조건 칩. 이어서 비서실장 ①②③을 차례로 열어 보여 주고 ③ 정리 결과를 내 발언에 적용(지금 '의견 전달' 잠금을 푸는 그 동작). 참가자가 반대 쪽으로 바꾸면 담은 문구를 비우고 그 쪽으로 다시 자동.
+  4. REACTIONS: 1/2 반응 듣기는 자막 뒤 2/2로 자동 이동, 2/2에서 추천 답변 하나를 골라 담는다. 고르는 규칙은 domain 순수 함수: 그 입장의 답변 후보마다 표결 규칙표(voting)로 같은 표 수를 계산해 가장 큰 것(함정 조건은 자연히 제외됨), 동률은 목록 순. '넘어가기'는 자동 중 쓰지 않는다.
+  5. MOTION: 조건이 안건에 반영되는 모습(미정 □→☑)을 차례로 강조.
+  6. RESULT: 지금의 표 공개 연출 그대로(자동 추가 없음). VOTE는 자동 없음.
+- 표시(copilot_secret_agent 참고, 시안 그대로): 자동 중에는 화면 아래 **자막 띠**("● AI 비서실장 진행 중" + 지금 하는 일을 타이핑, 노란 테두리), 지금 다루는 요소에 **노란 강조 상자**, DISCUSS에는 오른쪽 위 **진행 목록**(✓ 끝남/▶ 지금/○ 남음). 자동이 끝나 참가자 차례가 되면 나머지는 어둡게, 누를 버튼만 **흰 테두리 + 'CLICK 눌러서 …' 알약**. 자동 중에는 화면 조작을 막는다(운영 메뉴는 열림). 한 동작 1~2초, 한 화면 자동 10초 안팎. 진행 도우미(코치)·DISCUSS 체크리스트는 자동이 켜져 있으면 띄우지 않는다(겹침 방지).
+- 설정: 세션 필드(예: `autoPlay`, 기본 true) + 운영 메뉴 "자동 진행 끄기/켜기"(코치 토글과 같은 패턴). 끄면 지금과 똑같이 직접 진행. `?auto=off` 쿼리로 끈 채 시작(테스트·운영용, `?coach=off`와 같은 방식).
+- 모드: 자동 진행이 켜진 세션은 **scripted로 고정**(detectInitialMode가 health를 묻지 않음 → /api 호출 없음). 끄면 지금의 감지(health) 그대로.
+- 읽을 것: `src/app/{App.tsx,mode.ts,testClock.ts}`, `src/domain/{session.ts,coach.ts,voting.ts}`, `src/components/screens/{Briefing,Opinions,Discuss,Reactions,Motion}Screen.tsx`, `src/components/parts/{OperatorMenu,Coach,CoachHost,AssistantPanel,ConditionChips}.tsx`, `src/content/scenarios/{aiApproval,experienceFirst}.ts`, e2e `fixtures.ts`·`flow-full.spec.ts`·`coach.spec.ts`, 참고 화면 `/Users/hyun/Claude/MyProjects/copilot_secret_agent/prototype/station.html`(CLICK 알약·어둡게 하기 모양).
+- 나눔(2026-10-30, builder 판단으로 L 초과): 위 설계를 네 카드로 나눠 차례로 만든다. **T143(이 카드) 기반** → T144 표시 부품·BRIEFING/OPINIONS/MOTION 연결 → T145 DISCUSS·REACTIONS 자동 → T146 e2e·문서. 위 설계 단락은 네 카드 공통 기준이다.
+- 만들 것(T143 범위):
+  1. domain: 자동 단계 계획(스테이지별 동작 목록)과 추가 답변 고르기 순수 함수 + 단위 테스트. **결과표 고정**: 두 안건 × 찬성/반대, 자동 경로(조건 붙는 추천 문구 모두 + 고른 추가 답변) 그대로 진행하고 참가자가 자기 입장대로 표결하면 성공(같은 표 3석 이상)임을 테스트로 고정.
+  2. 세션 필드 `autoPlay`(기본 true)·액션, 운영 메뉴 "자동 진행 끄기/켜기", `?auto=off`, 자동이 켜진 세션은 scripted 고정(detectInitialMode). 화면 동작은 아직 바뀌지 않아도 된다(자동 동작 연결은 T144·T145).
+  3. 기존 e2e가 그대로 지나가도록 fixtures 기본 URL에 `auto=off`를 더한다(자동 켜짐이 기본이라 이후 카드에서 화면 동작이 바뀌어도 기존 e2e가 깨지지 않게).
+- 허용 경로: `src/`, `tests/`, `e2e/`, `docs/`(단 `docs/booth/`는 제외).
+- 하지 말 것: live 경로·서버·프롬프트 변경, 표결 규칙표·시나리오 문구 변경, 영문 UI, 메인 트리 빌드·e2e(워크트리 전용 포트), `docs/booth/`·`scripts/booth-guide-pdf.mjs`의 미커밋 변경을 건드리거나 스테이징하기.
+- 완료 확인: `npm run check`, e2e operations·flow-full·coach 1080·720(auto=off 기본으로 지금과 같이 통과).
+- 크기: M.
+
+## T144 자동 진행 표시 부품 + BRIEFING·OPINIONS·MOTION 자동
+
+- 기준: T143 카드의 설계 단락(자동 1·2·5, 표시, 설정). T143에서 만든 `autoPlay`·자동 단계 계획을 쓴다.
+- 만들 것:
+  1. 표시 부품: 자막 띠(타이핑, "● AI 비서실장 진행 중"), 노란 강조 상자(대상 요소 위치를 따라감), 진행 목록, CLICK 차례 오버레이(나머지 어둡게 + 흰 테두리 + 'CLICK 눌러서 …' 알약), 자동 중 입력 막기(운영 메뉴는 열림). 코치·DISCUSS 체크리스트는 autoPlay일 때 띄우지 않는다.
+  2. BRIEFING(근거 자료 1~4 차례로 열고 닫기 → '의견 듣기 ▶' CLICK 차례), OPINIONS(임원 한 명씩 강조·자막 → '내 의견 쓰러 가기 ▶'), MOTION(조건 반영 강조 → '이 안건으로 표결 ▶'), VOTE(도장·표결 확정에 CLICK 차례 표시만), RESULT('마무리 ▶').
+  3. 대기 시간은 clock 주입(testClock으로 넘길 수 있게).
+- 허용 경로·하지 말 것: T143과 같음.
+- 완료 확인: `npm run check`, 수동 확인용 스크린샷(BRIEFING 자동 중, OPINIONS CLICK 차례) 1080 두 장 만든 뒤 Read, 기존 e2e briefing·coach·flow-full 1080·720(auto=off) 통과.
+- 크기: M.
+
+## T145 DISCUSS·REACTIONS 자동(추천 문구·비서실장·추가 답변)
+
+- 기준: T143 카드의 설계 단락(자동 3·4). T143의 추가 답변 고르기 함수, T144의 표시 부품을 쓴다.
+- 만들 것:
+  1. DISCUSS: 찬성/반대 클릭 → 그 쪽 조건 붙는 추천 문구를 하나씩 담기(강조·조건 칩) → AI 비서실장 열어 ①②③ 차례로 실행(scripted 어댑터) → ③ 결과 내 발언에 적용 → 닫기 → '의견 전달 ▶' CLICK 차례. 입장을 바꾸면 담은 문구를 비우고 다시. 진행 목록 표시.
+  2. REACTIONS: 1/2 자막 뒤 2/2로 자동 이동 → 고른 추천 답변 담기 → '답변 전달 ▶' CLICK 차례. 넘어가기는 쓰지 않음.
+  3. AssistantPanel·두 화면의 기존 수동 동작은 autoPlay=false일 때 그대로.
+- 허용 경로·하지 말 것: T143과 같음.
+- 완료 확인: `npm run check`, 기존 e2e discuss·assistant·assistant-gate·reactions·stance·opposition 1080·720(auto=off) 통과, 스크린샷(DISCUSS 자동 중, DISCUSS CLICK 차례) 1080 두 장 만든 뒤 Read.
+- 크기: L.
+
+## T146 자동 진행 e2e·문서
+
+- 기준: T143 카드 설계 단락. T143~T145 결과를 묶는다.
+- 만들 것:
+  1. e2e `auto-flow.spec.ts`: 1080·720, 두 안건 × 찬성·반대(최소 안건 ① 찬성·반대, 안건 ② 하나), 카드에 적힌 참가자 클릭만으로 RESULT 성공까지. testClock으로 대기 단축. 운영 메뉴 토글로 끄면 지금 방식으로 돌아가는지 한 케이스.
+  2. 스크린샷 갱신(screenshots.spec에 자동 중 DISCUSS·CLICK 차례 DISCUSS 추가) 두 해상도, Read로 확인.
+  3. 문서: DESIGN_SPEC "## T143"(T143~T146 묶음), FACILITATOR_GUIDE(자동 진행 켜기/끄기·끌 때·scripted 고정), TASKS 진행 상황 행 T143~T146.
+- 허용 경로·하지 말 것: T143과 같음.
+- 완료 확인: `npm run check`, e2e 전체 1080·720(워크트리 전용 포트).
+- 크기: M.
 
 ## T142 넘어가기 전 확인 체크리스트
 

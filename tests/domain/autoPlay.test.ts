@@ -9,7 +9,8 @@ import {
   motionAutoPlan,
   pickAutoFollowUp,
   typedCaption,
-  AUTO_ACTION_MS,
+  AUTO_READ_MS,
+  AUTO_TYPE_MS,
   AUTO_LEAD_MS,
   type AutoSide,
 } from '../../src/domain/autoPlay';
@@ -100,18 +101,19 @@ describe('autoProgress', () => {
   it('시작 전·동작 중·끝남을 시계 값으로 정한다', () => {
     expect(autoProgress(plan, 0).index).toBe(-1);
     expect(autoProgress(plan, AUTO_LEAD_MS).index).toBe(0);
-    expect(autoProgress(plan, AUTO_LEAD_MS + AUTO_ACTION_MS + 10)).toMatchObject({ index: 1, actionElapsedMs: 10, done: false });
+    expect(autoProgress(plan, AUTO_LEAD_MS + plan[0]!.durationMs + 10)).toMatchObject({ index: 1, actionElapsedMs: 10, done: false });
     const total = AUTO_LEAD_MS + plan.reduce((sum, a) => sum + a.durationMs, 0);
     expect(autoProgress(plan, total).done).toBe(true);
   });
   it('동작이 없으면 처음부터 참가자 차례', () => {
     expect(autoProgress([], 0).done).toBe(true);
   });
-  it('한 화면 자동은 10초 안팎', () => {
+  it('자막을 다 친 뒤 읽을 시간이 남는다', () => {
     for (const sc of scenarios) {
       for (const stage of ['BRIEFING', 'OPINIONS'] as const) {
-        const p = autoPlan(stage, sc);
-        expect(AUTO_LEAD_MS + p.reduce((s, a) => s + a.durationMs, 0)).toBeLessThanOrEqual(10000);
+        for (const a of autoPlan(stage, sc)) {
+          expect(a.durationMs).toBeGreaterThanOrEqual(a.caption.length * AUTO_TYPE_MS + AUTO_READ_MS);
+        }
       }
     }
   });
