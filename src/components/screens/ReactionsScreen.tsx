@@ -286,7 +286,7 @@ export function ReactionsScreen({
         (entry) => entry.stage === 'REACTIONS' && entry.roleId === roleId && entry.status === 'failed',
       ),
   );
-  // T148: scripted 반응 듣기는 임원 네 명과 추가 질문이 한 명씩 "…" 뒤에 뜬다(지난 화면·reduced-motion은 바로).
+  // T148: scripted 반응 듣기는 임원 네 명과 추가 질문이 함께 "…"로 고민한 뒤 한 번에 뜬다(지난 화면·reduced-motion은 바로).
   const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
   const thinking = useThinkingReveal(
     'REACTIONS',
@@ -900,7 +900,7 @@ export function ReactionsScreen({
               <div className="reactions-screen__cards">
                 {EXEC_MEMBER_ORDER.map((memberId, memberIndex) => {
                   if (memberIndex >= thinking.shownCount) {
-                    return thinking.thinkingId === memberId ? (
+                    return thinking.thinkingIds.includes(memberId) ? (
                       <ThinkingCard
                         key={memberId}
                         label={MEMBER_LABELS[memberId]}
@@ -977,7 +977,7 @@ export function ReactionsScreen({
               </div>
             )}
             {thinking.shownCount < THINKING_ORDER.length ? (
-              thinking.thinkingId === 'FOLLOWUP' && (
+              thinking.thinkingIds.includes('FOLLOWUP') && (
                 <ThinkingCard label={`추가 질문 · ${followUpPrompt.askedBy}`} testId="thinking-card-FOLLOWUP" />
               )
             ) : (

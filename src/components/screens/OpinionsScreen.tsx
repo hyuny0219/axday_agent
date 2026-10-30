@@ -81,7 +81,7 @@ export function OpinionsScreen({
   // 한 번 누르면 버튼을 잠가 재요청 의도를 분명히 한다.
   const [retryUsed, setRetryUsed] = useState(false);
 
-  // scripted 임원 발언(T148): 한 명씩 "…"로 1.2~2.4초 뜸을 들인 뒤 발언을 띄우고, 다 뜰 때까지 CTA를
+  // scripted 임원 발언(T148): 임원 모두 함께 "…"로 뜸을 들인 뒤 한 번에 발언을 띄우고, 다 뜰 때까지 CTA를
   // 잠근다(T95 순차 노출을 대체). 지난 화면 보기·reduced-motion은 뜸 없이 바로 보인다(live는 영향 없음).
   const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
   const totalCards = scenario.initialOpinions.length;
@@ -216,12 +216,13 @@ export function OpinionsScreen({
                 </article>
               );
             })}
-            {thinking.thinkingId && (
+            {thinking.thinkingIds.map((memberId) => (
               <ThinkingCard
-                label={MEMBER_LABELS[thinking.thinkingId as ExecMemberId]}
-                testId={`thinking-card-${thinking.thinkingId}`}
+                key={memberId}
+                label={MEMBER_LABELS[memberId as ExecMemberId]}
+                testId={`thinking-card-${memberId}`}
               />
-            )}
+            ))}
           </div>
         </div>
       </div>

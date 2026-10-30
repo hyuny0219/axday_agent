@@ -9,7 +9,7 @@ import { OpinionsScreen } from '../../src/components/screens/OpinionsScreen';
 import { anonBoardScenario } from '../../src/content/scenarios/anonBoard';
 import { scriptedStances } from '../../src/domain/stance';
 import { EXEC_MEMBER_ORDER } from '../../src/domain/voting';
-import { thinkingDurationMs, thinkingRevealTimes } from '../../src/domain/thinking';
+import { GROUP_THINK_MS } from '../../src/domain/thinking';
 import type { RoleStatus } from '../../src/domain/types';
 
 function mockMatchMedia(reducedMotion: boolean) {
@@ -60,21 +60,25 @@ describe('OpinionsScreen(scripted) 순차 노출', () => {
     expect(nextButton).toBeDisabled();
     expect(nextButton).toHaveAccessibleDescription('임원 의견이 다 나오면 열립니다');
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(0);
-    expect(screen.getByTestId('thinking-card-CEO')).toBeInTheDocument();
+    // 임원 모두 함께 "…"로 고민한다.
+    for (const opinion of anonBoardScenario.initialOpinions) {
+      expect(screen.getByTestId(`thinking-card-${opinion.memberId}`)).toBeInTheDocument();
+    }
 
     act(() => {
-      vi.advanceTimersByTime(thinkingDurationMs(0));
+      vi.advanceTimersByTime(GROUP_THINK_MS - 1);
     });
-    expect(screen.getByTestId('thinking-card-CFO')).toBeInTheDocument();
-    expect(document.querySelectorAll('.opinion-card')).toHaveLength(1);
-    // T128: 도착음 감지 표시(src/audio/cues.ts countArrivals)
-    expect(document.querySelectorAll('.opinion-card[data-arrival-card]')).toHaveLength(1);
+    expect(document.querySelectorAll('.opinion-card')).toHaveLength(0);
     expect(nextButton).toBeDisabled();
 
     act(() => {
-      vi.advanceTimersByTime(thinkingRevealTimes(4)[3]! - thinkingDurationMs(0));
+      vi.advanceTimersByTime(1);
     });
+    // 한 번에 모두 뜬다. T128: 도착음 감지 표시(src/audio/cues.ts countArrivals)
     expect(document.querySelectorAll('.opinion-card')).toHaveLength(
+      anonBoardScenario.initialOpinions.length,
+    );
+    expect(document.querySelectorAll('.opinion-card[data-arrival-card]')).toHaveLength(
       anonBoardScenario.initialOpinions.length,
     );
     expect(nextButton).toBeEnabled();
