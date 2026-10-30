@@ -164,6 +164,8 @@ export interface Session {
   coachEnabled: boolean;
   /** 이미 보았거나 건너뛴 코치 단계 번호(1~9). 같은 세션에서는 다시 나오지 않는다. */
   coachDismissed: number[];
+  /** 부스 자동 진행(AI 비서실장 에이전트, T143)을 쓸지. 기본 true, 운영 메뉴·`?auto=off`로 끈다. 켜진 세션은 scripted로 고정한다. */
+  autoPlay: boolean;
   /** 직전 reduce 호출에서 잘못된 단계의 액션을 무시했을 때 남기는 경고. 매 호출마다 새로 채워진다. */
   warnings: string[];
 }

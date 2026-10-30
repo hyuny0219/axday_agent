@@ -34,6 +34,14 @@ export function coachOffByQuery(): boolean {
   return new URLSearchParams(window.location.search).get('coach') === 'off';
 }
 
+/** 운영·테스트용 `?auto=off` — 부스 자동 진행(T143)을 끄고 시작한다. */
+export function autoOffByQuery(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return new URLSearchParams(window.location.search).get('auto') === 'off';
+}
+
 async function checkServerMode(timeoutMs: number): Promise<'live' | 'scripted'> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -62,7 +70,8 @@ async function checkServerMode(timeoutMs: number): Promise<'live' | 'scripted'> 
 /** 세션 시작 전 한 번 호출해 SET_MODE 액션을 만든다. `?mode=scripted`가 있으면 그대로
  * scripted, 아니면 서버가 1.5초 안에 mode:'live'로 응답할 때만 live다. */
 export async function detectInitialMode(): Promise<SessionAction> {
-  if (forcedScriptedByQuery()) {
+  // T143: 자동 진행이 켜진 세션은 scripted로 고정한다(health를 묻지 않는다 → /api 호출 없음).
+  if (forcedScriptedByQuery() || !autoOffByQuery()) {
     return { type: 'SET_MODE', mode: 'scripted' };
   }
   const mode = await checkServerMode(MODE_HEALTH_CHECK_TIMEOUT_MS);

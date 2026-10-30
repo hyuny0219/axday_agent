@@ -28,11 +28,13 @@ export interface HeaderProps {
   onOperatorReset: () => void;
   coachEnabled?: boolean;
   onToggleCoach?: () => void;
+  autoPlay?: boolean;
+  onToggleAutoPlay?: () => void;
   /** 이전·다음 버튼(T126). 없거나 visible이 false이면 그리지 않는다. */
   viewNav?: ViewNavProps;
 }
 
-export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach, viewNav }: HeaderProps) {
+export function Header({ session, scenario, onOperatorReset, coachEnabled, onToggleCoach, autoPlay, onToggleAutoPlay, viewNav }: HeaderProps) {
   // 안건을 고르기 전에는 사건 번호를 숨긴다("사건 --"가 엉뚱해 보임, Opus 최종 검토 should 7).
   const caseLabel = scenario?.incident.caseLabel;
   return (
@@ -60,6 +62,8 @@ export function Header({ session, scenario, onOperatorReset, coachEnabled, onTog
           onNewSession={onOperatorReset}
           coachEnabled={coachEnabled}
           onToggleCoach={onToggleCoach}
+          autoPlay={autoPlay}
+          onToggleAutoPlay={onToggleAutoPlay}
         />
       </div>
     </header>

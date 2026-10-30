@@ -1,0 +1,91 @@
+// 부스 자동 진행(T143): 계획·추가 답변 고르기, 그리고 두 안건 × 찬반 결과표 고정.
+import { describe, expect, it } from 'vitest';
+import { scenarios } from '../../src/content/scenarios';
+import {
+  autoConfirmedConditionIds,
+  autoPhrasePicks,
+  autoPlan,
+  pickAutoFollowUp,
+  type AutoSide,
+} from '../../src/domain/autoPlay';
+import { freezeMotion } from '../../src/domain/motion';
+import { createInitialSession, reduce } from '../../src/domain/session';
+import { decideBoard, participantTargetVote, tally } from '../../src/domain/voting';
+
+const sides: AutoSide[] = ['FOR', 'AGAINST'];
+
+describe('autoPhrasePicks', () => {
+  it('조건이 붙는 문구만, 그 입장 쪽에서만 담는다', () => {
+    for (const sc of scenarios) {
+      for (const side of sides) {
+        const picks = autoPhrasePicks(sc, side);
+        expect(picks.length).toBeGreaterThan(0);
+        for (const p of picks) {
+          expect(p.conditionId).not.toBeNull();
+          expect(['BOTH', side]).toContain(p.side ?? 'FOR');
+        }
+      }
+    }
+  });
+});
+
+describe('pickAutoFollowUp', () => {
+  it('넘어가기·반대편 답변은 고르지 않고, 함정 조건(FULL_AUTO)은 고르지 않는다', () => {
+    for (const sc of scenarios) {
+      for (const side of sides) {
+        const pick = pickAutoFollowUp(sc, side);
+        expect(pick).not.toBeNull();
+        expect(pick?.keepPrevious).toBeFalsy();
+        expect((pick?.side ?? 'FOR') === 'BOTH' || (pick?.side ?? 'FOR') === side).toBe(true);
+        expect(pick?.proposeConditionId).not.toBe('FULL_AUTO');
+      }
+    }
+  });
+  it('같은 입력이면 같은 답변이다(결정적)', () => {
+    for (const sc of scenarios) expect(pickAutoFollowUp(sc, 'FOR')).toBe(pickAutoFollowUp(sc, 'FOR'));
+  });
+});
+
+describe('autoPlan', () => {
+  it('스테이지별 동작이 있고 입장이 필요한 단계는 입장이 없으면 비어 있다', () => {
+    for (const sc of scenarios) {
+      expect(autoPlan('BRIEFING', sc)).toHaveLength(sc.evidence.length);
+      expect(autoPlan('OPINIONS', sc)).toHaveLength(sc.initialOpinions.length);
+      expect(autoPlan('DISCUSS', sc)).toEqual([]);
+      expect(autoPlan('DISCUSS', sc, 'FOR').some((a) => a.kind === 'APPLY_ASSISTANT')).toBe(true);
+      expect(autoPlan('REACTIONS', sc, 'AGAINST').map((a) => a.kind)).toEqual(['ADVANCE_REACTION', 'PICK_FOLLOWUP']);
+      expect(autoPlan('MOTION', sc, 'FOR').length).toBeGreaterThan(0);
+      for (const a of autoPlan('BRIEFING', sc)) expect(a.durationMs).toBeGreaterThanOrEqual(1000);
+    }
+  });
+});
+
+describe('결과표 고정 — 자동 경로 + 자기 입장 표결이면 같은 표 3석 이상', () => {
+  for (const sc of scenarios) {
+    for (const side of sides) {
+      it(`${sc.id} · ${side}`, () => {
+        const pick = pickAutoFollowUp(sc, side);
+        const ids = autoConfirmedConditionIds(sc, side, pick);
+        // 실제 세션 reducer 경로로 한 번 더 확인한다.
+        let s = createInitialSession(0, 'auto');
+        s = reduce(s, { type: 'START' }, 1);
+        s = { ...s, stage: 'REACTIONS', scenarioId: sc.id, followUpUsed: false };
+        s = reduce(
+          s,
+          { type: 'SUBMIT_FOLLOWUP', originalText: '자동', selectedPhraseIds: [], confirmedConditionIds: ids, stance: side },
+          2,
+        );
+        s = reduce(s, { type: 'FREEZE_MOTION', scenario: sc, confirmedConditionIds: ids }, 3);
+        const motion = freezeMotion(sc, ids, 3);
+        const target = participantTargetVote(side);
+        const ballots = [
+          ...decideBoard(sc, motion, side, true),
+          { memberId: 'PARTICIPANT' as const, motionId: motion.id, motionHash: motion.hash, source: 'scripted' as const, vote: target, confirmedAt: 0 },
+        ];
+        const counts = tally(ballots).counts;
+        expect(counts[target]).toBeGreaterThanOrEqual(3);
+        expect(s.followUpAnswered).toBe(true);
+      });
+    }
+  }
+});

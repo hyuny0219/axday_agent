@@ -35,7 +35,7 @@ import { scenarios } from '../content/scenarios';
 import type { ExecMemberId, Scenario } from '../content/types';
 import { appClock } from './testClock';
 import { createRequestRegistry } from './requests';
-import { coachOffByQuery, detectInitialMode } from './mode';
+import { autoOffByQuery, coachOffByQuery, detectInitialMode } from './mode';
 import { isFollowUpGateActive } from './followUpGate';
 import { computeViewportFit, type ViewportFit } from './viewportFit';
 import {
@@ -144,11 +144,13 @@ function SessionProvider({ children }: { children: ReactNode }) {
       }
       const next = reduce(state, action, now);
       // `?coach=off`는 페이지 단위 설정이라 새 체험으로 리셋해도 유지한다(T104).
-      return action.type === 'OPERATOR_RESET' && coachOffByQuery() ? { ...next, coachEnabled: false } : next;
+      if (action.type !== 'OPERATOR_RESET') return next;
+      // `?auto=off`도 같은 방식으로 유지한다(T143).
+      return { ...next, ...(coachOffByQuery() ? { coachEnabled: false } : {}), autoPlay: !autoOffByQuery() };
     },
     undefined,
     // 코치는 기본 켜짐. 운영·테스트용 `?coach=off`로 시작할 때만 끈다(T104).
-    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery() }),
+    () => ({ ...createInitialSession(appClock.now()), coachEnabled: !coachOffByQuery(), autoPlay: !autoOffByQuery() }),
   );
 
   // 회의록 패널의 라운드별 기록(roundLog, v1.0 7절, T41). stage가 실린 SET_ROLE_STATUS만
@@ -819,6 +821,8 @@ function AppShell() {
             onOperatorReset={() => dispatch({ type: 'OPERATOR_RESET', nextSessionId: newSessionId() })}
             coachEnabled={session.coachEnabled}
             onToggleCoach={() => dispatch({ type: 'COACH_SET_ENABLED', enabled: !session.coachEnabled })}
+            autoPlay={session.autoPlay}
+            onToggleAutoPlay={() => dispatch({ type: 'AUTO_PLAY_SET_ENABLED', enabled: !session.autoPlay })}
           />
           {viewPage !== null && <ViewBanner onExit={exitView} />}
           {hasStageBand && scenario ? (
