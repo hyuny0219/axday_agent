@@ -44,6 +44,7 @@ function sessionWith(execVotes: Ballot['vote'][], participant: Ballot['vote'], e
   const yes = execVotes.filter((v) => v === 'YES').length + (participant === 'YES' ? 1 : 0);
   return {
     ...createInitialSession(0, 's-ending'),
+    autoPlay: false,
     followUpAnswered: true,
     stage: 'RESULT',
     mode: 'scripted',

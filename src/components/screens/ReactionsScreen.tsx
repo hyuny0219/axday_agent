@@ -277,7 +277,9 @@ export function ReactionsScreen({
       ),
   );
   // T148: scripted 반응 듣기는 임원 네 명과 추가 질문이 함께 "…"로 고민한 뒤 한 번에 뜬다(지난 화면·reduced-motion은 바로).
-  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  // 부스 자동 진행에서는 움직임 줄이기여도 뜸을 둔다(Windows '애니메이션 효과' 끔, 2026-10-30).
+  const autoRunEnabled = useAutoRun().enabled;
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)') && !autoRunEnabled;
   const thinking = useThinkingReveal(
     'REACTIONS',
     THINKING_ORDER,

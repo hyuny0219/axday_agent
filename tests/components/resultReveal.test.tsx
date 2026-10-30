@@ -41,7 +41,7 @@ afterEach(() => {
   delete document.documentElement.dataset.resultSkip;
 });
 
-function resultSession(): Session {
+function resultSession(autoPlay = false): Session {
   const id = 'motion-under-test';
   const text = scenario.originalMotion.text;
   const motion: Motion = {
@@ -66,6 +66,7 @@ function resultSession(): Session {
   };
   return {
     ...createInitialSession(0, 's-reveal'),
+    autoPlay,
     followUpAnswered: true,
     stage: 'RESULT',
     mode: 'scripted',
@@ -77,8 +78,8 @@ function resultSession(): Session {
   };
 }
 
-function renderResult() {
-  return render(<ResultScreen scenario={scenario} session={resultSession()} roundLog={[]} onReset={() => undefined} />);
+function renderResult(autoPlay = false) {
+  return render(<ResultScreen scenario={scenario} session={resultSession(autoPlay)} roundLog={[]} onReset={() => undefined} />);
 }
 
 describe('revealStateAt(순수 함수)', () => {
@@ -164,6 +165,16 @@ describe('ResultScreen 공개 전 aria-hidden(T114)', () => {
     expect(screen.getByTestId('result-seat-CISO')).not.toHaveAttribute('aria-hidden');
     expect(screen.getByTestId('result-conclusion')).not.toHaveAttribute('aria-hidden');
     expect(screen.getByTestId('result-epilogue')).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('부스 자동 진행이면 움직임 줄이기여도 한 장씩 열리고, 클릭으로 건너뛰지 않는다(2026-10-30)', async () => {
+    setReducedMotion(true);
+    renderResult(true);
+    expect(screen.getByTestId('result-seat-CFO')).toHaveAttribute('aria-hidden', 'true');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    fireEvent.click(window);
+    expect(document.documentElement.dataset.resultSkip).toBeUndefined();
+    expect(screen.getByTestId('result-seat-CISO')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('타이머가 지나면 한 장씩 풀리고 집계는 마지막에 풀린다', () => {

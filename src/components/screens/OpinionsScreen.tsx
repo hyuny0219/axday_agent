@@ -20,6 +20,7 @@ import { statementHighlightTerms } from '../highlightTerms';
 import { HighlightText } from '../parts/HighlightText';
 import { ThinkingCard } from '../parts/ThinkingCard';
 import { useThinkingReveal } from '../parts/thinkingContext';
+import { useAutoRun } from '../parts/autoRunContext';
 import { LiveStatementCards } from '../parts/LiveStatementCards';
 import { StanceBand } from '../parts/StanceBand';
 import '../../styles/screens/opinions.css';
@@ -83,7 +84,9 @@ export function OpinionsScreen({
 
   // scripted 임원 발언(T148): 임원 모두 함께 "…"로 뜸을 들인 뒤 한 번에 발언을 띄우고, 다 뜰 때까지 CTA를
   // 잠근다(T95 순차 노출을 대체). 지난 화면 보기·reduced-motion은 뜸 없이 바로 보인다(live는 영향 없음).
-  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)');
+  // 부스 자동 진행에서는 움직임 줄이기여도 뜸을 둔다(Windows '애니메이션 효과' 끔, 2026-10-30).
+  const autoRunEnabled = useAutoRun().enabled;
+  const reducedMotion = useMatchMedia('(prefers-reduced-motion: reduce)') && !autoRunEnabled;
   const totalCards = scenario.initialOpinions.length;
   const thinkingOrder = useMemo(() => scenario.initialOpinions.map((opinion) => opinion.memberId), [scenario]);
   const thinking = useThinkingReveal(

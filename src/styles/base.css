@@ -65,11 +65,17 @@ h1,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0s !important;
     scroll-behavior: auto !important;
+  }
+  /* 부스 자동 진행(<html data-auto-play>)에서는 지연은 남긴다 — 개표가 한 명씩 열리는 시점이 곧 내용이다
+     (2026-10-30 Windows "애니메이션 효과" 끔에서 개표가 한 번에 나왔다). 움직임 자체는 위 규칙대로 없다. */
+  :root:not([data-auto-play]) *,
+  :root:not([data-auto-play]) *::before,
+  :root:not([data-auto-play]) *::after {
+    animation-delay: 0s !important;
   }
 }
 

@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { App } from '../../src/app/App';
 
 beforeEach(() => {
-  window.history.pushState({}, '', '/?mode=scripted&coach=off');
+  window.history.pushState({}, '', '/?mode=scripted&coach=off&auto=off');
   if (!window.matchMedia) {
     window.matchMedia = ((query: string) => ({
       matches: query.includes('reduce'),

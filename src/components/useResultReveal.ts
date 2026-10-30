@@ -2,7 +2,8 @@
 // animation-delay가 맡고, 이 훅은 스크린리더용 aria-hidden을 같은 시각에 풀기 위해 둔다
 // (공개 전 결과가 낭독되면 연출이 무의미하다). 경과 시간은 렌더 횟수가 아니라 주입된
 // Clock으로 재고, 타이머는 다음 공개 시각까지만 잡는다(언마운트 시 정리).
-// prefers-reduced-motion·운영자 skip이면 처음부터(또는 skip 즉시) 전부 열린 것으로 본다.
+// prefers-reduced-motion·운영자 skip이면 처음부터(또는 skip 즉시) 전부 열린 것으로 본다. 단 부스 자동 진행
+// (keepTiming)에서는 움직임 줄이기여도 한 명씩 연다(Windows '애니메이션 효과' 끔, 2026-10-30).
 
 import { useEffect, useRef, useState } from 'react';
 import { systemClock, type Clock } from '../domain/clock';
@@ -33,10 +34,10 @@ function prefersReducedMotion(): boolean {
     : false;
 }
 
-export function useResultReveal(skip: boolean, clock: Clock = systemClock): ResultRevealState {
+export function useResultReveal(skip: boolean, clock: Clock = systemClock, keepTiming = false): ResultRevealState {
   const reduced = useRef(prefersReducedMotion()).current;
   const startedAt = useRef(clock.now());
-  const immediate = skip || reduced;
+  const immediate = skip || (reduced && !keepTiming);
   const [state, setState] = useState<ResultRevealState>(() => (immediate ? ALL_OPEN : revealStateAt(0)));
 
   useEffect(() => {

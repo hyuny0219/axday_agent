@@ -168,8 +168,12 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
       delete document.documentElement.dataset.resultSkip;
     };
   }, [skip]);
+  // 자동 진행 중에는 개표를 한 명씩 보여 주는 것이 목적이라 클릭·키로 건너뛰지 않는다(2026-10-30
+  // 사용자 보고 "반대 의견을 줬을 경우 개표가 한 번에 돼 버려" — 결과 화면에서 누른 클릭이 건너뛰기로
+  // 잡혀 네 장이 한꺼번에 열렸다).
+  const skipDisabled = session.autoPlay;
   useEffect(() => {
-    if (skip) {
+    if (skip || skipDisabled) {
       return;
     }
     // 결과 화면을 연 바로 그 클릭·키 입력(표결 확정)은 건너뛰기로 세지 않는다 — React가 그
@@ -187,10 +191,10 @@ export function ResultScreen({ scenario, session, roundLog, onReset }: ResultScr
       window.removeEventListener('click', handleSkip);
       window.removeEventListener('keydown', handleSkip);
     };
-  }, [skip]);
+  }, [skip, skipDisabled]);
 
   // T114: 공개 전에는 해당 결과 블록을 스크린리더에서도 가린다(연출은 CSS, 이건 aria-hidden).
-  const reveal = useResultReveal(skip);
+  const reveal = useResultReveal(skip, undefined, session.autoPlay);
   useResultSounds(reveal);
   // 회의 기록 전문도 공개가 끝나기 전에는 FOLLOWUP 방향 단어를 가린다.
   const transcriptEntries = useMemo(

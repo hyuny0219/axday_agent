@@ -118,6 +118,16 @@ export function AutoPlayHost({ session, paused, clock, side = null, children }: 
   const [reactionsStep, setReactionsStep] = useState<AutoReactionsStep>('listen');
   const answerStep = stage === 'REACTIONS' && reactionsStep === 'answer';
 
+  // 자동 진행 중이면 <html data-auto-play>를 켠다 — base.css가 움직임 줄이기에서도 개표 지연을 남긴다.
+  const autoOn = session.autoPlay && scenario !== null;
+  useEffect(() => {
+    if (!autoOn) return;
+    document.documentElement.dataset.autoPlay = 'true';
+    return () => {
+      delete document.documentElement.dataset.autoPlay;
+    };
+  }, [autoOn]);
+
   const plan = useMemo<AutoAction[]>(() => {
     if (!enabled || !scenario) return [];
     if (stage === 'BRIEFING' || stage === 'OPINIONS') return autoPlan(stage, scenario);
